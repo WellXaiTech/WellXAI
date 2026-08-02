@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-const TITLE = "ChatGiZa — Chat, Image & Video AI Assistant";
+const TITLE = "ChatGiZa";
 const DESCRIPTION =
   "ChatGiZa is your AI assistant — chat, generate images and video, search the web, and get deep research reports.";
 

@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 const SITE_NAME = "ChatGiZa";
-const HOME_TITLE = "ChatGiZa — AI Chat, Image & Video Assistant";
+const HOME_TITLE = "ChatGiZa";
 const SITE_DESCRIPTION =
   "ChatGiZa is a conversational AI assistant — chat, generate images and video, search the web, and get deep research reports, with an API for developers who want to build on it.";
 
