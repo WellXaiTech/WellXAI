@@ -19,13 +19,34 @@ const geistMono = Geist_Mono({
 });
 
 const SITE_NAME = "ChatGiZa";
+const HOME_TITLE = "ChatGiZa — AI Chat, Image & Video Assistant by WellX AI";
 const SITE_DESCRIPTION =
   "ChatGiZa is WellX AI's conversational assistant — chat, generate images and video, search the web, and get deep research reports, with an API for developers who want to build on it.";
+
+// Reinforces the site-name signal for Google's search-result header (the line
+// shown above the URL, e.g. "ChatGiZa" instead of the bare domain) — Google's
+// own docs recommend Organization/WebSite structured data for this rather
+// than relying on `og:site_name` alone.
+const STRUCTURED_DATA = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: SITE_NAME,
+    url: "https://chatgiza.com",
+    logo: "https://chatgiza.com/icon.svg",
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE_NAME,
+    url: "https://chatgiza.com",
+  },
+];
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://chatgiza.com"),
   title: {
-    default: SITE_NAME,
+    default: HOME_TITLE,
     template: `%s — ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
@@ -42,7 +63,7 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   openGraph: {
-    title: SITE_NAME,
+    title: HOME_TITLE,
     description: SITE_DESCRIPTION,
     siteName: SITE_NAME,
     url: "https://chatgiza.com",
@@ -50,7 +71,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary",
-    title: SITE_NAME,
+    title: HOME_TITLE,
     description: SITE_DESCRIPTION,
   },
 };
@@ -71,6 +92,11 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }}
+        />
         <Script id="theme-init" strategy="beforeInteractive">
           {`(function(){try{var t=localStorage.getItem("chatgiza:theme");if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t);}var f=localStorage.getItem("chatgiza:font-size");if(f==="small"||f==="medium"||f==="large"||f==="xlarge"){document.documentElement.setAttribute("data-font-size",f);}var a=localStorage.getItem("chatgiza:assistant-color");if(a==="warm"){document.documentElement.setAttribute("data-assistant-color",a);}var c=localStorage.getItem("chatgiza:contrast");if(c==="medium"||c==="increased"){document.documentElement.setAttribute("data-contrast",c);}}catch(e){}})();`}
         </Script>
