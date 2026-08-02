@@ -20,13 +20,11 @@ import OnboardingModal from "@/components/OnboardingModal";
 import SearchChatsOverlay from "@/components/SearchChatsOverlay";
 import LanguagePanel from "@/components/LanguagePanel";
 import UpgradePlanPanel from "@/components/UpgradePlanPanel";
-import ReferralModal from "@/components/ReferralModal";
 import SupportModal from "@/components/SupportModal";
 import CelebrationToast from "@/components/CelebrationToast";
 import UpgradeNudgeBanner, { shouldShowUpgradeNudge, snoozeUpgradeNudge } from "@/components/UpgradeNudgeBanner";
 import type { PlanTier } from "@/lib/plans";
 import { recordVisitAndGetStreak, checkStreakMilestone, bumpCounterAndCheckMilestone } from "@/lib/engagement";
-import { getReferralCode, captureReferralFromUrl, getGuestFreeMessageLimit } from "@/lib/referral";
 import { speakText } from "@/lib/speak";
 import { readAttachment, buildApiContent, type Attachment } from "@/lib/attachments";
 import { getStoredTheme, setTheme as persistTheme, applyTheme, type Theme } from "@/lib/theme";
@@ -297,7 +295,6 @@ function ChatGizaInner() {
   const [userPlan, setUserPlan] = useState<PlanTier | null>(null);
   const [upgradePlanOpen, setUpgradePlanOpen] = useState(false);
   const [upgradeNotice, setUpgradeNotice] = useState<string | null>(null);
-  const [referralOpen, setReferralOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
   const [celebration, setCelebration] = useState<string | null>(null);
   const [showUpgradeNudge, setShowUpgradeNudge] = useState(false);
@@ -355,10 +352,6 @@ function ChatGizaInner() {
 
     setShowUpgradeNudge(shouldShowUpgradeNudge());
   }, []);
-
-  useEffect(() => {
-    captureReferralFromUrl(searchParams.get("ref"));
-  }, [searchParams]);
 
   useEffect(() => {
     // `activeId` always starts null on load (it isn't restored from storage),
@@ -731,7 +724,7 @@ function ChatGizaInner() {
   }
 
   function guestQuotaExceeded(): boolean {
-    if (!signedIn && guestMessageCount >= getGuestFreeMessageLimit(GUEST_FREE_MESSAGES)) {
+    if (!signedIn && guestMessageCount >= GUEST_FREE_MESSAGES) {
       setSignInPromptOpen(true);
       return true;
     }
@@ -1200,7 +1193,6 @@ function ChatGizaInner() {
         onOpenCompanyDashboard={() => setCompanyDashboardOpen(true)}
         onOpenLanguage={() => setLanguageOpen(true)}
         onOpenUpgradePlan={() => setUpgradePlanOpen(true)}
-        onOpenReferral={() => setReferralOpen(true)}
         onOpenSupport={() => setSupportOpen(true)}
         streak={streak}
         projects={projects.map(({ id, name }) => ({ id, name }))}
@@ -1282,9 +1274,6 @@ function ChatGizaInner() {
 
       {signInPromptOpen && <SignInPromptModal onClose={() => setSignInPromptOpen(false)} />}
 
-      {referralOpen && authSession?.user?.id && (
-        <ReferralModal code={getReferralCode(authSession.user.id)} onClose={() => setReferralOpen(false)} />
-      )}
 
       {celebration && <CelebrationToast message={celebration} onDone={() => setCelebration(null)} />}
 

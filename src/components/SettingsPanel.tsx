@@ -8,7 +8,7 @@ import type { ChatFontSize } from "@/lib/fontSize";
 import type { AssistantColor } from "@/lib/assistantColor";
 import type { ChatFont } from "@/lib/chatFont";
 import type { ReduceMotion } from "@/lib/reduceMotion";
-import { COUNTRIES } from "@/lib/countries";
+import { COUNTRIES, COUNTRY_CODES } from "@/lib/countries";
 import {
   getStoredVoiceURI,
   setStoredVoiceURI,
@@ -198,20 +198,37 @@ const ChevronRightIcon = (
   </svg>
 );
 
+// Sizes are in explicit pixel numbers (not Tailwind arbitrary classes) so the
+// thumb's sliding `transform` is set as an inline style — Tailwind's
+// `translate-x-*` utilities weren't emitting any `transform` at all here
+// (computed style came back `transform: none`), leaving the thumb stuck in
+// place instead of sliding between the off/on positions.
+const TOGGLE_TRACK_W = 40;
+const TOGGLE_TRACK_H = 24;
+const TOGGLE_THUMB = 20;
+const TOGGLE_INSET = 2;
+
 function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: () => void; disabled?: boolean }) {
+  const thumbX = checked ? TOGGLE_TRACK_W - TOGGLE_THUMB - TOGGLE_INSET : TOGGLE_INSET;
   return (
     <button
       onClick={onChange}
       disabled={disabled}
       aria-pressed={checked}
-      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-40 ${
-        checked ? "bg-foreground" : "border border-border bg-surface-2"
+      style={{ width: TOGGLE_TRACK_W, height: TOGGLE_TRACK_H }}
+      className={`relative shrink-0 rounded-full transition-colors duration-200 disabled:opacity-40 ${
+        checked ? "bg-[#0a84ff]" : "border border-border bg-surface-2"
       }`}
     >
       <span
-        className={`absolute top-0.5 h-5 w-5 rounded-full bg-background transition-transform ${
-          checked ? "translate-x-5" : "translate-x-0.5"
-        }`}
+        style={{
+          width: TOGGLE_THUMB,
+          height: TOGGLE_THUMB,
+          top: TOGGLE_INSET - 1,
+          left: 0,
+          transform: `translateX(${thumbX}px)`,
+        }}
+        className="absolute rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.3)] transition-transform duration-200"
       />
     </button>
   );
@@ -405,6 +422,69 @@ export default function SettingsPanel({
   const [billingError, setBillingError] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [billingView, setBillingView] = useState<"root" | "edit">("root");
+  const [editEmail, setEditEmail] = useState("");
+  const [editName, setEditName] = useState("");
+  const [editCountry, setEditCountry] = useState("");
+  const [editLine1, setEditLine1] = useState("");
+  const [editLine2, setEditLine2] = useState("");
+  const [editPostalCode, setEditPostalCode] = useState("");
+  const [editCity, setEditCity] = useState("");
+  const [editAddTaxId, setEditAddTaxId] = useState(false);
+  const [editTaxIdType, setEditTaxIdType] = useState("eu_vat");
+  const [editTaxIdValue, setEditTaxIdValue] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  function openEditBillingInfo() {
+    setEditEmail(billing?.billingInfo?.email ?? session?.user?.email ?? "");
+    setEditName(billing?.billingInfo?.name ?? session?.user?.name ?? "");
+    const countryCode = billing?.billingInfo?.address?.country ?? "";
+    setEditCountry(COUNTRIES.find((c) => COUNTRY_CODES[c] === countryCode) ?? "");
+    setEditLine1(billing?.billingInfo?.address?.line1 ?? "");
+    setEditLine2("");
+    setEditPostalCode(billing?.billingInfo?.address?.postal_code ?? "");
+    setEditCity(billing?.billingInfo?.address?.city ?? "");
+    setEditAddTaxId(false);
+    setEditTaxIdValue("");
+    setEditError(null);
+    setBillingView("edit");
+  }
+
+  async function saveBillingInfo(e: React.FormEvent) {
+    e.preventDefault();
+    setEditSaving(true);
+    setEditError(null);
+    try {
+      const res = await fetch("/api/billing/update-info", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: editEmail,
+          name: editName,
+          country: COUNTRY_CODES[editCountry] ?? "",
+          addressLine1: editLine1,
+          addressLine2: editLine2,
+          postalCode: editPostalCode,
+          city: editCity,
+          taxIdType: editAddTaxId ? editTaxIdType : undefined,
+          taxIdValue: editAddTaxId ? editTaxIdValue : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Couldn't save billing information");
+      if (data.taxIdError) {
+        setEditError(`Billing address saved, but the tax ID couldn't be added: ${data.taxIdError}`);
+      } else {
+        setBilling(null);
+        setBillingView("root");
+      }
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : "Couldn't save billing information");
+    } finally {
+      setEditSaving(false);
+    }
+  }
 
   useEffect(() => {
     setVoiceURI(getStoredVoiceURI());
@@ -754,44 +834,46 @@ export default function SettingsPanel({
                 <Toggle checked={allNotificationsEnabled} onChange={onToggleAllNotifications} />
               </div>
 
-              <h3 className="mb-1 mt-4 text-sm font-semibold">In-app notifications</h3>
-              <div className="flex items-center justify-between gap-4 border-b border-border py-3">
-                <div>
-                  <p className="text-sm font-medium">Activity &amp; Tasks</p>
-                  <p className="text-xs text-muted">Get notified when ChatGiZa finishes a response.</p>
-                </div>
-                <Toggle
-                  checked={notifyOnComplete}
-                  disabled={!allNotificationsEnabled}
-                  onChange={() => {
-                    if (
-                      !notifyOnComplete &&
-                      typeof Notification !== "undefined" &&
-                      Notification.permission === "default"
-                    ) {
-                      Notification.requestPermission();
-                    }
-                    onToggleNotifyOnComplete();
-                  }}
-                />
-              </div>
-              <div className="flex items-center justify-between gap-4 py-3">
-                <p className="text-sm font-medium">Image generation</p>
-                <Toggle
-                  checked={notifyImageGen}
-                  disabled={!allNotificationsEnabled}
-                  onChange={() => {
-                    if (
-                      !notifyImageGen &&
-                      typeof Notification !== "undefined" &&
-                      Notification.permission === "default"
-                    ) {
-                      Notification.requestPermission();
-                    }
-                    onToggleNotifyImageGen();
-                  }}
-                />
-              </div>
+              {allNotificationsEnabled && (
+                <>
+                  <h3 className="mb-1 mt-4 text-sm font-semibold">In-app notifications</h3>
+                  <div className="flex items-center justify-between gap-4 border-b border-border py-3">
+                    <div>
+                      <p className="text-sm font-medium">Activity &amp; Tasks</p>
+                      <p className="text-xs text-muted">Get notified when ChatGiZa finishes a response.</p>
+                    </div>
+                    <Toggle
+                      checked={notifyOnComplete}
+                      onChange={() => {
+                        if (
+                          !notifyOnComplete &&
+                          typeof Notification !== "undefined" &&
+                          Notification.permission === "default"
+                        ) {
+                          Notification.requestPermission();
+                        }
+                        onToggleNotifyOnComplete();
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-4 py-3">
+                    <p className="text-sm font-medium">Image generation</p>
+                    <Toggle
+                      checked={notifyImageGen}
+                      onChange={() => {
+                        if (
+                          !notifyImageGen &&
+                          typeof Notification !== "undefined" &&
+                          Notification.permission === "default"
+                        ) {
+                          Notification.requestPermission();
+                        }
+                        onToggleNotifyImageGen();
+                      }}
+                    />
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -1538,9 +1620,9 @@ export default function SettingsPanel({
             </div>
           )}
 
-          {tab === "Billing" && (
+          {tab === "Billing" && billingView === "root" && (
             <div>
-              <h3 className="mb-3 text-sm font-semibold">Billing</h3>
+              <h3 className="mb-3 border-b border-border pb-3 text-lg font-semibold">Billing</h3>
 
               {!session?.user ? (
                 <p className="text-xs text-muted">Sign in to view billing.</p>
@@ -1552,15 +1634,13 @@ export default function SettingsPanel({
                 <>
                   <div className="flex items-center justify-between gap-4 border-b border-border py-3.5">
                     <div>
-                      <p className="text-sm font-medium">
-                        {billing?.subscription ? `ChatGiZa ${billing.subscription.planName}` : "ChatGiZa Free"}
+                      <h2 className="text-base font-semibold">
+                        ChatGiZa {billing?.subscription ? billing.subscription.planName : "Plan"}
+                      </h2>
+                      <p className="mt-1 text-xs text-muted">
+                        {billing?.subscription?.cancelAtPeriodEnd ? "Your plan ends on " : "Your plan auto-renews on "}
+                        {formatDate(billing?.subscription?.currentPeriodEnd ?? Date.now())}
                       </p>
-                      {billing?.subscription?.currentPeriodEnd && (
-                        <p className="text-xs text-muted">
-                          {billing.subscription.cancelAtPeriodEnd ? "Your plan ends on " : "Your plan auto-renews on "}
-                          {formatDate(billing.subscription.currentPeriodEnd)}
-                        </p>
-                      )}
                     </div>
                     {onOpenUpgradePlan && (
                       <button
@@ -1601,11 +1681,10 @@ export default function SettingsPanel({
                   <div className="flex items-center justify-between border-b border-border pb-3">
                     <h4 className="text-sm font-semibold">Billing information</h4>
                     <button
-                      onClick={openBillingPortal}
-                      disabled={portalLoading}
-                      className="rounded-full border border-border px-3 py-1.5 text-xs hover:bg-surface-2 transition-colors disabled:opacity-50"
+                      onClick={openEditBillingInfo}
+                      className="rounded-full border border-border px-3 py-1.5 text-xs hover:bg-surface-2 transition-colors"
                     >
-                      {portalLoading ? "Opening…" : "Edit"}
+                      Edit
                     </button>
                   </div>
                   <div className="border-b border-border py-3 text-sm">
@@ -1689,6 +1768,136 @@ export default function SettingsPanel({
                   )}
                 </>
               )}
+            </div>
+          )}
+
+          {tab === "Billing" && billingView === "edit" && (
+            <div>
+              <button
+                onClick={() => setBillingView("root")}
+                className="mb-4 flex items-center gap-1.5 text-sm font-medium text-muted hover:text-foreground transition-colors"
+              >
+                {ChevronLeftIcon}
+                Billing information
+              </button>
+
+              <form onSubmit={saveBillingInfo}>
+                <label className="mb-1 block text-xs text-muted">Billing email</label>
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  className="mb-4 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+                />
+
+                <label className="mb-1 block text-xs text-muted">Full name</label>
+                <input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="mb-4 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+                />
+
+                <label className="mb-1 block text-xs text-muted">Country or region</label>
+                <div className="mb-4">
+                  <SettingsSelect
+                    value={editCountry}
+                    onChange={setEditCountry}
+                    options={[{ value: "", label: "Select…" }, ...COUNTRIES.map((c) => ({ value: c, label: c }))]}
+                  />
+                </div>
+
+                <label className="mb-1 block text-xs text-muted">Address line 1</label>
+                <input
+                  value={editLine1}
+                  onChange={(e) => setEditLine1(e.target.value)}
+                  className="mb-4 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+                />
+
+                <label className="mb-1 block text-xs text-muted">Address line 2</label>
+                <input
+                  value={editLine2}
+                  onChange={(e) => setEditLine2(e.target.value)}
+                  className="mb-4 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+                />
+
+                <div className="mb-4 grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-xs text-muted">Postal code</label>
+                    <input
+                      value={editPostalCode}
+                      onChange={(e) => setEditPostalCode(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-muted">City</label>
+                    <input
+                      value={editCity}
+                      onChange={(e) => setEditCity(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+                    />
+                  </div>
+                </div>
+
+                <label className="mb-4 flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={editAddTaxId}
+                    onChange={(e) => setEditAddTaxId(e.target.checked)}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  Add tax ID
+                </label>
+
+                {editAddTaxId && (
+                  <div className="mb-4 grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1 block text-xs text-muted">Tax ID type</label>
+                      <SettingsSelect
+                        value={editTaxIdType}
+                        onChange={setEditTaxIdType}
+                        options={[
+                          { value: "eu_vat", label: "EU VAT" },
+                          { value: "gb_vat", label: "UK VAT" },
+                          { value: "us_ein", label: "US EIN" },
+                          { value: "in_gst", label: "India GST" },
+                          { value: "za_vat", label: "South Africa VAT" },
+                          { value: "ae_trn", label: "UAE TRN" },
+                          { value: "au_abn", label: "Australia ABN" },
+                          { value: "ca_bn", label: "Canada BN" },
+                        ]}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs text-muted">Tax ID value</label>
+                      <input
+                        value={editTaxIdValue}
+                        onChange={(e) => setEditTaxIdValue(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {editError && <p className="mb-3 text-xs text-red-500">{editError}</p>}
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBillingView("root")}
+                    className="rounded-full border border-border px-4 py-1.5 text-sm hover:bg-surface-2 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={editSaving}
+                    className="btn-primary rounded-full px-4 py-1.5 text-sm font-medium disabled:opacity-50"
+                  >
+                    {editSaving ? "Saving…" : "Save"}
+                  </button>
+                </div>
+              </form>
             </div>
           )}
         </div>

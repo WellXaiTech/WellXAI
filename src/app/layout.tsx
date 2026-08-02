@@ -18,18 +18,40 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_NAME = "ChatGiZa";
+const SITE_DESCRIPTION =
+  "ChatGiZa is WellX AI's conversational assistant — chat, generate images and video, search the web, and get deep research reports, with an API for developers who want to build on it.";
+
 export const metadata: Metadata = {
-  title: "ChatGiZa",
-  description:
-    "WellX AI is an AI company building ChatGiZa, a conversational assistant, along with an API for developers.",
+  metadataBase: new URL("https://chatgiza.com"),
+  title: {
+    default: SITE_NAME,
+    template: `%s — ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "ChatGiZa",
+    title: SITE_NAME,
   },
   icons: {
     apple: "/icons/apple-touch-icon.png",
+  },
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    siteName: SITE_NAME,
+    url: "https://chatgiza.com",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
   },
 };
 
