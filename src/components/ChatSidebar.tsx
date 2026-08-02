@@ -796,9 +796,9 @@ export default function ChatSidebar({
     return (
       <>
         <div className="flex items-center justify-between px-3 py-4">
-          <Link href="/" className="flex items-center gap-2 text-lg font-extrabold">
+          <button onClick={onNewChat} className="flex items-center gap-2 text-lg font-extrabold">
             <span className="glow-badge rounded-full px-2 py-0.5">ChatGiZa</span>
-          </Link>
+          </button>
           <div className="flex items-center gap-1">
             {streak >= 2 && (
               <span
