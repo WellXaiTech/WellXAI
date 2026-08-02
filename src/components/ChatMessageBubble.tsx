@@ -5,6 +5,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Attachment } from "@/lib/attachments";
 import { textToPdfBlob } from "@/lib/generatePdf";
+import { extractPdfSection, stripPdfMarkers, splitAroundPdfSection, splitTitleAndBody } from "@/lib/pdfMarkers";
+import { speakText, stopSpeaking } from "@/lib/speak";
 
 const FileIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -44,11 +46,11 @@ const DownloadIcon = (
 );
 
 const PdfIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
     <path d="M14 2v6h6" />
     <path d="M12 11v6" />
-    <path d="M9.5 14.5 12 17l2.5-2.5" />
+    <path d="M9 14.5 12 17.5 15 14.5" />
   </svg>
 );
 
@@ -69,11 +71,35 @@ const MoreDotsIcon = (
   </svg>
 );
 
-const TrashIcon = (
+const SpeakerIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M3 6h18" />
-    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+    <path d="M11 5 6 9H2v6h4l5 4Z" />
+    <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+    <path d="M18.5 5.5a9 9 0 0 1 0 13" />
+  </svg>
+);
+
+const SpeakerOffIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M11 5 6 9H2v6h4l5 4Z" />
+    <path d="M23 9l-6 6" />
+    <path d="M17 9l6 6" />
+  </svg>
+);
+
+const CheckIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M20 6 9 17l-5-5" />
+  </svg>
+);
+
+const TrashIcon = (
+  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M7 3.5h6" />
+    <path d="M5 5h10" />
+    <path d="M7 5v10a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1V5" />
+    <path d="M8.5 8v5" />
+    <path d="M11.5 8v5" />
   </svg>
 );
 
@@ -102,18 +128,18 @@ function useOutsideClose(open: boolean, onClose: () => void) {
   return ref;
 }
 
-function MoreMenu({ items }: { items: { label: string; icon: React.ReactNode; onClick: () => void }[] }) {
+function MoreMenu({
+  items,
+}: {
+  items: { label: string; icon: React.ReactNode; onClick: () => void; danger?: boolean }[];
+}) {
   const [open, setOpen] = useState(false);
   const ref = useOutsideClose(open, () => setOpen(false));
 
   return (
     <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        aria-label="More"
-        className="rounded-md p-1.5 text-muted transition-colors hover:text-foreground"
-      >
-        {MoreDotsIcon}
+      <button onClick={() => setOpen((v) => !v)} aria-label="More" className="tool-btn">
+        <span className="icon">{MoreDotsIcon}</span>
       </button>
       {open && (
         <div className="absolute bottom-full left-0 z-50 mb-1 w-40 rounded-xl border border-border bg-surface p-1 shadow-lg">
@@ -124,10 +150,10 @@ function MoreMenu({ items }: { items: { label: string; icon: React.ReactNode; on
                 item.onClick();
                 setOpen(false);
               }}
-              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-muted hover:bg-surface-2 hover:text-foreground transition-colors"
+              className={`menu-item ${item.danger ? "delete" : ""}`}
             >
-              {item.icon}
-              {item.label}
+              <span className="icon">{item.icon}</span>
+              <span>{item.label}</span>
             </button>
           ))}
         </div>
@@ -159,6 +185,48 @@ function MessageAttachments({ attachments }: { attachments: Attachment[] }) {
   );
 }
 
+function PdfFileCard({ title, onDownload }: { title: string; onDownload: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onDownload}
+      className="my-2 flex w-full max-w-sm items-center gap-3 rounded-xl border border-border bg-surface-2 p-3 text-left transition-colors hover:border-foreground/40"
+    >
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-background text-foreground">
+        {PdfIcon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium">{title}</span>
+        <span className="block text-xs text-muted">PDF document</span>
+      </span>
+      <span className="shrink-0 text-muted">{DownloadIcon}</span>
+    </button>
+  );
+}
+
+function PdfFileCardPending() {
+  return (
+    <div className="my-2 flex w-full max-w-sm items-center gap-3 rounded-xl border border-border bg-surface-2 p-3">
+      <span className="shimmer-line flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted">
+        {PdfIcon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="shimmer-line block h-3.5 w-2/3 rounded" />
+        <span className="mt-1.5 block text-xs text-muted">Preparing PDF…</span>
+      </span>
+    </div>
+  );
+}
+
+function slugifyFilename(title: string): string {
+  const slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 60);
+  return slug || "document";
+}
+
 function MediaActionRow({
   url,
   kind,
@@ -185,32 +253,29 @@ function MediaActionRow({
     }
   }
 
-  const menuItems = [{ label: "Download", icon: ShareUpIcon, onClick: onDownload }];
-  if (onDelete) menuItems.push({ label: "Delete", icon: TrashIcon, onClick: onDelete });
+  const menuItems: { label: string; icon: React.ReactNode; onClick: () => void; danger?: boolean }[] = [
+    { label: "Download", icon: ShareUpIcon, onClick: onDownload },
+  ];
+  if (onDelete) menuItems.push({ label: "Delete", icon: TrashIcon, onClick: onDelete, danger: true });
 
   return (
-    <div className="mt-1 flex items-center gap-1 text-muted">
-      <button
-        onClick={handleCopyMedia}
-        aria-label={`Copy ${kind}`}
-        className="flex items-center gap-1 rounded-md px-2 py-1 text-xs hover:text-foreground transition-colors"
-      >
-        {CopyIcon}
-        {copied ? "Copied" : ""}
+    <div className="toolbar mt-1">
+      <button onClick={handleCopyMedia} aria-label={`Copy ${kind}`} className="tool-btn">
+        <span className="icon">{copied ? CheckIcon : CopyIcon}</span>
       </button>
       <button
         onClick={() => setReaction((r) => (r === "up" ? null : "up"))}
         aria-label="Good response"
-        className={`rounded-md p-1.5 transition-colors hover:text-foreground ${reaction === "up" ? "text-foreground" : ""}`}
+        className={`tool-btn ${reaction === "up" ? "is-active" : ""}`}
       >
-        {ThumbsUpIcon}
+        <span className="icon">{ThumbsUpIcon}</span>
       </button>
       <button
         onClick={() => setReaction((r) => (r === "down" ? null : "down"))}
         aria-label="Bad response"
-        className={`rounded-md p-1.5 transition-colors hover:text-foreground ${reaction === "down" ? "text-foreground" : ""}`}
+        className={`tool-btn ${reaction === "down" ? "is-active" : ""}`}
       >
-        {ThumbsDownIcon}
+        <span className="icon">{ThumbsDownIcon}</span>
       </button>
       <MoreMenu items={menuItems} />
     </div>
@@ -274,13 +339,43 @@ export default function ChatMessageBubble({
   const [editingImage, setEditingImage] = useState(false);
   const [overlayCopied, setOverlayCopied] = useState(false);
   const [shareFallbackMsg, setShareFallbackMsg] = useState(false);
+  const [pdfFile, setPdfFile] = useState<{ url: string; filename: string; title: string } | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const { before: beforePdfText, after: afterPdfText, hasSection: hasPdfSection } = splitAroundPdfSection(content);
+
+  useEffect(() => {
+    if (isStreaming || !hasPdfSection) return;
+    let cancelled = false;
+    (async () => {
+      const { title, body } = splitTitleAndBody(extractPdfSection(content), "Document");
+      const blob = await textToPdfBlob(title, body);
+      if (cancelled) return;
+      setPdfFile((prev) => {
+        if (prev) URL.revokeObjectURL(prev.url);
+        return { url: URL.createObjectURL(blob), filename: `${slugifyFilename(title)}.pdf`, title };
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isStreaming, hasPdfSection, content]);
+
+  useEffect(() => {
+    return () => {
+      if (pdfFile) URL.revokeObjectURL(pdfFile.url);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleCopy() {
+    const cleanContent = stripPdfMarkers(content);
     try {
-      await navigator.clipboard.writeText(content);
+      await navigator.clipboard.writeText(cleanContent);
     } catch {
       const textarea = document.createElement("textarea");
-      textarea.value = content;
+      textarea.value = cleanContent;
       textarea.style.position = "fixed";
       textarea.style.opacity = "0";
       document.body.appendChild(textarea);
@@ -296,10 +391,33 @@ export default function ChatMessageBubble({
     setTimeout(() => setCopied(false), 1500);
   }
 
+  function handleSpeak() {
+    if (isSpeaking) {
+      stopSpeaking();
+      setIsSpeaking(false);
+      return;
+    }
+    const plainText = stripPdfMarkers(content)
+      .replace(/```[\s\S]*?```/g, "")
+      .replace(/[#*_`>~-]/g, "")
+      .replace(/\[(.*?)\]\(.*?\)/g, "$1")
+      .trim();
+    if (!plainText) return;
+    setIsSpeaking(true);
+    speakText(plainText, () => setIsSpeaking(false), () => setIsSpeaking(false));
+  }
+
+  useEffect(() => {
+    return () => {
+      if (isSpeaking) stopSpeaking();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function handleShare() {
     if (navigator.share) {
       try {
-        await navigator.share({ text: content });
+        await navigator.share({ text: stripPdfMarkers(content) });
         return;
       } catch {
         // user cancelled or share failed; fall through to clipboard copy
@@ -312,7 +430,10 @@ export default function ChatMessageBubble({
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
+    a.rel = "noopener";
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
   }
 
   async function handleCopyImage(url: string) {
@@ -348,8 +469,12 @@ export default function ChatMessageBubble({
   }
 
   async function handleDownloadPdf() {
-    const title = content.split("\n")[0].replace(/^#{1,6}\s+/, "").slice(0, 80) || "ChatGiZa reply";
-    const blob = await textToPdfBlob(title, content);
+    if (pdfFile) {
+      downloadUrl(pdfFile.url, pdfFile.filename);
+      return;
+    }
+    const { title, body } = splitTitleAndBody(extractPdfSection(content), "ChatGiZa reply");
+    const blob = await textToPdfBlob(title, body);
     const url = URL.createObjectURL(blob);
     downloadUrl(url, "chatgiza-reply.pdf");
     setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -551,44 +676,52 @@ export default function ChatMessageBubble({
       )}
       {content && (
         <div className="markdown assistant-reply chat-text w-full max-w-none">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+          {hasPdfSection ? (
+            <>
+              {beforePdfText.trim() && (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{stripPdfMarkers(beforePdfText)}</ReactMarkdown>
+              )}
+              {pdfFile ? (
+                <PdfFileCard title={pdfFile.title} onDownload={() => downloadUrl(pdfFile.url, pdfFile.filename)} />
+              ) : (
+                <PdfFileCardPending />
+              )}
+              {afterPdfText.trim() && (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{stripPdfMarkers(afterPdfText)}</ReactMarkdown>
+              )}
+            </>
+          ) : (
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{stripPdfMarkers(content)}</ReactMarkdown>
+          )}
         </div>
       )}
       {!isStreaming && content && !imageUrl && !videoUrl && (
-        <div className="mt-1 flex items-center gap-1 text-muted">
-          <button
-            onClick={handleCopy}
-            aria-label="Copy"
-            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs hover:text-foreground transition-colors"
-          >
-            {CopyIcon}
-            {copied ? "Copied" : ""}
+        <div className="toolbar mt-1">
+          <button onClick={handleCopy} aria-label="Copy" className="tool-btn">
+            <span className="icon">{copied ? CheckIcon : CopyIcon}</span>
           </button>
           <ReactionButtons />
-          <button
-            onClick={handleShare}
-            aria-label="Share"
-            className="rounded-md p-1.5 transition-colors hover:text-foreground"
-          >
-            {ShareUpIcon}
+          <button onClick={handleShare} aria-label="Share" className="tool-btn">
+            <span className="icon">{ShareUpIcon}</span>
+          </button>
+          <button onClick={handleDownloadPdf} aria-label="Download as PDF" className="tool-btn">
+            <span className="icon">{PdfIcon}</span>
           </button>
           <button
-            onClick={handleDownloadPdf}
-            aria-label="Download as PDF"
-            className="rounded-md p-1.5 transition-colors hover:text-foreground"
+            onClick={handleSpeak}
+            aria-label={isSpeaking ? "Stop reading aloud" : "Read aloud"}
+            className={`tool-btn ${isSpeaking ? "is-active" : ""}`}
           >
-            {PdfIcon}
+            <span className="icon">{isSpeaking ? SpeakerOffIcon : SpeakerIcon}</span>
           </button>
           {onRegenerate && (
-            <button
-              onClick={onRegenerate}
-              aria-label="Regenerate"
-              className="rounded-md p-1.5 transition-colors hover:text-foreground"
-            >
-              {RegenerateIcon}
+            <button onClick={onRegenerate} aria-label="Regenerate" className="tool-btn">
+              <span className="icon">{RegenerateIcon}</span>
             </button>
           )}
-          {onDelete && <MoreMenu items={[{ label: "Delete", icon: TrashIcon, onClick: onDelete }]} />}
+          {onDelete && (
+            <MoreMenu items={[{ label: "Delete", icon: TrashIcon, onClick: onDelete, danger: true }]} />
+          )}
         </div>
       )}
     </div>
@@ -602,16 +735,16 @@ function ReactionButtons() {
       <button
         onClick={() => setReaction((r) => (r === "up" ? null : "up"))}
         aria-label="Good response"
-        className={`rounded-md p-1.5 transition-colors hover:text-foreground ${reaction === "up" ? "text-foreground" : ""}`}
+        className={`tool-btn ${reaction === "up" ? "is-active" : ""}`}
       >
-        {ThumbsUpIcon}
+        <span className="icon">{ThumbsUpIcon}</span>
       </button>
       <button
         onClick={() => setReaction((r) => (r === "down" ? null : "down"))}
         aria-label="Bad response"
-        className={`rounded-md p-1.5 transition-colors hover:text-foreground ${reaction === "down" ? "text-foreground" : ""}`}
+        className={`tool-btn ${reaction === "down" ? "is-active" : ""}`}
       >
-        {ThumbsDownIcon}
+        <span className="icon">{ThumbsDownIcon}</span>
       </button>
     </>
   );

@@ -1,4 +1,12 @@
 import { streamChatReply, type ChatMessage, type ChatTool, type Personalization } from "@/lib/ai";
+import { auth } from "@/auth";
+import {
+  isPaidAccount,
+  checkIpFreeLimit,
+  recordIpUsage,
+  checkConversationQuota,
+  recordConversationUsage,
+} from "@/lib/usageLimit";
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -7,8 +15,10 @@ export async function POST(request: Request) {
   const personalization: Personalization = {
     nickname: typeof body.profile?.nickname === "string" ? body.profile.nickname : "",
     about: typeof body.profile?.about === "string" ? body.profile.about : "",
+    role: typeof body.profile?.role === "string" ? body.profile.role : "",
     memory: Array.isArray(body.memory) ? body.memory.filter((m: unknown) => typeof m === "string") : [],
     language: typeof body.language === "string" ? body.language : "",
+    location: typeof body.location === "string" ? body.location : "",
     company: {
       name: typeof body.company?.name === "string" ? body.company.name : "",
       description: typeof body.company?.description === "string" ? body.company.description : "",
@@ -23,6 +33,33 @@ export async function POST(request: Request) {
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return Response.json({ error: "messages array is required" }, { status: 400 });
+  }
+
+  const session = await auth();
+  const userId = session?.user?.id;
+  const paid = await isPaidAccount(userId);
+
+  // Mobile/cellular connections get a hard "one free message forever" wall
+  // regardless of account — the backstop against SIM-cycling. WiFi networks
+  // are exempt (see checkIpFreeLimit/isMobileIp).
+  const ipBlockedMessage = await checkIpFreeLimit(request.headers, paid);
+  if (ipBlockedMessage) {
+    return Response.json({ error: ipBlockedMessage }, { status: 403 });
+  }
+
+  // Signed-in, unpaid, non-mobile: 10 free messages per conversation,
+  // silently renewing every 24 hours.
+  const conversationId = typeof body.conversationId === "string" ? body.conversationId : null;
+  if (userId && conversationId) {
+    const quotaMessage = await checkConversationQuota(userId, conversationId, paid);
+    if (quotaMessage) {
+      return Response.json({ error: quotaMessage }, { status: 403 });
+    }
+  }
+
+  await recordIpUsage(request.headers, paid);
+  if (userId && conversationId) {
+    await recordConversationUsage(userId, conversationId, paid);
   }
 
   const stream = streamChatReply(messages, tool, personalization);

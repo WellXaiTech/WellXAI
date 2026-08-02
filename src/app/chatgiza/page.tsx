@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import ChatSidebar from "@/components/ChatSidebar";
 import ChatMessageBubble from "@/components/ChatMessageBubble";
 import ChatComposer, { type ComposerTool } from "@/components/ChatComposer";
@@ -12,15 +12,25 @@ import ProjectsPanel, { type Project } from "@/components/ProjectsPanel";
 import ScheduledPanel, { type ScheduledTask } from "@/components/ScheduledPanel";
 import PluginsPanel, { type PluginKey } from "@/components/PluginsPanel";
 import CodePanel from "@/components/CodePanel";
-import SettingsPanel, { type Profile, type Tab as SettingsTab } from "@/components/SettingsPanel";
+import SettingsPanel, { type Profile, type PrivacyPrefs, type Tab as SettingsTab } from "@/components/SettingsPanel";
 import CompanyDashboard, { type CompanyProfile, type CompanyRequest } from "@/components/CompanyDashboard";
 import ComingSoonModal from "@/components/ComingSoonModal";
+import SignInPromptModal from "@/components/SignInPromptModal";
+import OnboardingModal from "@/components/OnboardingModal";
 import SearchChatsOverlay from "@/components/SearchChatsOverlay";
 import LanguagePanel from "@/components/LanguagePanel";
 import UpgradePlanPanel from "@/components/UpgradePlanPanel";
+import ReferralModal from "@/components/ReferralModal";
+import SupportModal from "@/components/SupportModal";
+import CelebrationToast from "@/components/CelebrationToast";
+import UpgradeNudgeBanner, { shouldShowUpgradeNudge, snoozeUpgradeNudge } from "@/components/UpgradeNudgeBanner";
 import type { PlanTier } from "@/lib/plans";
+import { recordVisitAndGetStreak, checkStreakMilestone, bumpCounterAndCheckMilestone } from "@/lib/engagement";
+import { getReferralCode, captureReferralFromUrl, getGuestFreeMessageLimit } from "@/lib/referral";
+import { speakText } from "@/lib/speak";
 import { readAttachment, buildApiContent, type Attachment } from "@/lib/attachments";
 import { getStoredTheme, setTheme as persistTheme, applyTheme, type Theme } from "@/lib/theme";
+import { getStoredContrast, setContrast as persistContrast, applyContrast, type Contrast } from "@/lib/contrast";
 import { getStoredFontSize, setFontSize as persistFontSize, applyFontSize, type ChatFontSize } from "@/lib/fontSize";
 import {
   getStoredAssistantColor,
@@ -28,6 +38,13 @@ import {
   applyAssistantColor,
   type AssistantColor,
 } from "@/lib/assistantColor";
+import { getStoredChatFont, setChatFont as persistChatFont, applyChatFont, type ChatFont } from "@/lib/chatFont";
+import {
+  getStoredReduceMotion,
+  setReduceMotion as persistReduceMotion,
+  applyReduceMotion,
+  type ReduceMotion,
+} from "@/lib/reduceMotion";
 
 type Message = {
   id: string;
@@ -48,6 +65,7 @@ type Conversation = {
   projectId?: string;
   pinned?: boolean;
   archived?: boolean;
+  shared?: boolean;
 };
 
 type SendOverride = { conversationId: string; baseMessages: Message[] };
@@ -60,20 +78,40 @@ const PROFILE_KEY = "chatgiza:profile";
 const MEMORY_KEY = "chatgiza:memory";
 const MEMORY_ENABLED_KEY = "chatgiza:memory-enabled";
 const HISTORY_ENABLED_KEY = "chatgiza:history-enabled";
+const NOTIFY_ON_COMPLETE_KEY = "chatgiza:notify-on-complete";
+const NOTIFY_IMAGE_GEN_KEY = "chatgiza:notify-image-gen";
+const ALL_NOTIFICATIONS_KEY = "chatgiza:all-notifications";
+const PRIVACY_PREFS_KEY = "chatgiza:privacy-prefs";
+const FEEDBACK_EMAILS_KEY = "chatgiza:feedback-emails-opt-in";
+const GUEST_MESSAGE_COUNT_KEY = "chatgiza:guest-message-count";
+const GUEST_FREE_MESSAGES = 1;
+const ONBOARDING_DISMISSED_KEY = "chatgiza:onboarding-dismissed";
 const LANGUAGE_KEY = "chatgiza:language";
+const LOCATION_KEY = "chatgiza:location";
 const COMPANY_KEY = "chatgiza:company";
 const USER_PLAN_KEY = "chatgiza:user-plan";
 const COMPANY_REQUESTS_KEY = "chatgiza:company-requests";
+const GREETED_SESSION_KEY = "chatgiza:greeted-this-session";
+const GREETING_TEXT = "Karibu sana! Nimefurahi kuwa na wewe leo. Naweza kukusaidia vipi?";
 
 const DEFAULT_PLUGINS: Record<PluginKey, boolean> = {
   web_search: true,
   deep_research: true,
+  deep_think: true,
   image: true,
   video: true,
 };
 
 const DEFAULT_PROFILE: Profile = { nickname: "", about: "" };
 const DEFAULT_COMPANY: CompanyProfile = { name: "", description: "", employees: [] };
+
+const DEFAULT_PRIVACY_PREFS: PrivacyPrefs = {
+  improveModel: false,
+  includeAudioRecordings: false,
+  includeVideoRecordings: false,
+  marketingMeasurement: true,
+  personalizedMarketing: true,
+};
 
 function loadJson<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -84,6 +122,13 @@ function loadJson<T>(key: string, fallback: T): T {
     return fallback;
   }
 }
+
+const TempChatIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5" />
+    <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z" />
+  </svg>
+);
 
 const QUICK_ACTIONS = [
   {
@@ -203,11 +248,13 @@ function ChatGizaInner() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
+  const [showHeroShimmer, setShowHeroShimmer] = useState(true);
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
   const [attachError, setAttachError] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<ComposerTool>(null);
   const [loading, setLoading] = useState(false);
   const [streamingId, setStreamingId] = useState<string | null>(null);
+  const [streamingTool, setStreamingTool] = useState<ComposerTool>(null);
   const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [projectsOpen, setProjectsOpen] = useState(false);
@@ -225,6 +272,18 @@ function ChatGizaInner() {
   const [theme, setThemeState] = useState<Theme>("system");
   const [fontSize, setFontSizeState] = useState<ChatFontSize>("medium");
   const [assistantColor, setAssistantColorState] = useState<AssistantColor>("default");
+  const [chatFont, setChatFontState] = useState<ChatFont>("default");
+  const [reduceMotion, setReduceMotionState] = useState<ReduceMotion>("system");
+  const [notifyOnComplete, setNotifyOnComplete] = useState(false);
+  const [notifyImageGen, setNotifyImageGen] = useState(true);
+  const [allNotificationsEnabled, setAllNotificationsEnabled] = useState(true);
+  const [contrast, setContrastState] = useState<Contrast>("system");
+  const [privacyPrefs, setPrivacyPrefs] = useState<PrivacyPrefs>(DEFAULT_PRIVACY_PREFS);
+  const [feedbackEmailsOptIn, setFeedbackEmailsOptIn] = useState(false);
+  const [guestMessageCount, setGuestMessageCount] = useState(0);
+  const [signInPromptOpen, setSignInPromptOpen] = useState(false);
+  const [onboardingDismissed, setOnboardingDismissed] = useState(true);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
   const [company, setCompany] = useState<CompanyProfile>(DEFAULT_COMPANY);
   const [companyRequests, setCompanyRequests] = useState<CompanyRequest[]>([]);
@@ -233,9 +292,17 @@ function ChatGizaInner() {
   const [historyEnabled, setHistoryEnabled] = useState(true);
   const [language, setLanguage] = useState("Auto-detect");
   const [languageOpen, setLanguageOpen] = useState(false);
+  const [location, setLocationState] = useState("");
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [userPlan, setUserPlan] = useState<PlanTier | null>(null);
   const [upgradePlanOpen, setUpgradePlanOpen] = useState(false);
   const [upgradeNotice, setUpgradeNotice] = useState<string | null>(null);
+  const [referralOpen, setReferralOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [celebration, setCelebration] = useState<string | null>(null);
+  const [showUpgradeNudge, setShowUpgradeNudge] = useState(false);
+  const [streak, setStreak] = useState(0);
+  const [greeting, setGreeting] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const autoSent = useRef(false);
   const historySyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -253,7 +320,18 @@ function ChatGizaInner() {
     setMemory(loadJson(MEMORY_KEY, []));
     setMemoryEnabled(loadJson(MEMORY_ENABLED_KEY, true));
     setHistoryEnabled(loadJson(HISTORY_ENABLED_KEY, true));
+    setNotifyOnComplete(loadJson(NOTIFY_ON_COMPLETE_KEY, false));
+    setNotifyImageGen(loadJson(NOTIFY_IMAGE_GEN_KEY, true));
+    setAllNotificationsEnabled(loadJson(ALL_NOTIFICATIONS_KEY, true));
+    setPrivacyPrefs(loadJson(PRIVACY_PREFS_KEY, DEFAULT_PRIVACY_PREFS));
+    setFeedbackEmailsOptIn(loadJson(FEEDBACK_EMAILS_KEY, false));
+    const storedContrast = getStoredContrast();
+    setContrastState(storedContrast);
+    applyContrast(storedContrast);
+    setGuestMessageCount(loadJson(GUEST_MESSAGE_COUNT_KEY, 0));
+    setOnboardingDismissed(loadJson(ONBOARDING_DISMISSED_KEY, false));
     setLanguage(loadJson(LANGUAGE_KEY, "Auto-detect"));
+    setLocationState(loadJson(LOCATION_KEY, ""));
     const storedTheme = getStoredTheme();
     setThemeState(storedTheme);
     applyTheme(storedTheme);
@@ -263,6 +341,38 @@ function ChatGizaInner() {
     const storedAssistantColor = getStoredAssistantColor();
     setAssistantColorState(storedAssistantColor);
     applyAssistantColor(storedAssistantColor);
+    const storedChatFont = getStoredChatFont();
+    setChatFontState(storedChatFont);
+    applyChatFont(storedChatFont);
+    const storedReduceMotion = getStoredReduceMotion();
+    setReduceMotionState(storedReduceMotion);
+    applyReduceMotion(storedReduceMotion);
+
+    const currentStreak = recordVisitAndGetStreak();
+    setStreak(currentStreak);
+    const streakMessage = checkStreakMilestone(currentStreak);
+    if (streakMessage) setCelebration(streakMessage);
+
+    setShowUpgradeNudge(shouldShowUpgradeNudge());
+  }, []);
+
+  useEffect(() => {
+    captureReferralFromUrl(searchParams.get("ref"));
+  }, [searchParams]);
+
+  useEffect(() => {
+    // `activeId` always starts null on load (it isn't restored from storage),
+    // so this only ever fires on a fresh "Ready when you are" landing, once
+    // per browser tab session — voice first, then the greeting appears as a
+    // bubble on that empty screen. It disappears on its own the moment the
+    // user sends a real message, since the hero screen is replaced by the
+    // actual conversation view; nothing is ever saved to their chat history.
+    if (activeId !== null) return;
+    if (sessionStorage.getItem(GREETED_SESSION_KEY)) return;
+    sessionStorage.setItem(GREETED_SESSION_KEY, "1");
+    setGreeting(GREETING_TEXT);
+    speakText(GREETING_TEXT);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -361,12 +471,103 @@ function ChatGizaInner() {
   }, [historyEnabled]);
 
   useEffect(() => {
+    localStorage.setItem(NOTIFY_ON_COMPLETE_KEY, JSON.stringify(notifyOnComplete));
+  }, [notifyOnComplete]);
+
+  useEffect(() => {
+    localStorage.setItem(NOTIFY_IMAGE_GEN_KEY, JSON.stringify(notifyImageGen));
+  }, [notifyImageGen]);
+
+  useEffect(() => {
+    localStorage.setItem(ALL_NOTIFICATIONS_KEY, JSON.stringify(allNotificationsEnabled));
+  }, [allNotificationsEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem(PRIVACY_PREFS_KEY, JSON.stringify(privacyPrefs));
+  }, [privacyPrefs]);
+
+  useEffect(() => {
+    localStorage.setItem(FEEDBACK_EMAILS_KEY, JSON.stringify(feedbackEmailsOptIn));
+  }, [feedbackEmailsOptIn]);
+
+  useEffect(() => {
+    localStorage.setItem(GUEST_MESSAGE_COUNT_KEY, JSON.stringify(guestMessageCount));
+  }, [guestMessageCount]);
+
+  useEffect(() => {
+    localStorage.setItem(ONBOARDING_DISMISSED_KEY, JSON.stringify(onboardingDismissed));
+  }, [onboardingDismissed]);
+
+  useEffect(() => {
+    // Gated on the account's server-tracked `isNewAccount` flag (set once,
+    // the very first time this Google account ever signs in) rather than
+    // "no local profile data" — the old check re-asked existing users for
+    // their birth date/country every time they opened ChatGiZa on a new
+    // device or browser, since that profile data only ever lived in
+    // localStorage. Existing accounts now never see this again, anywhere.
+    if (signedIn && authSession?.user?.isNewAccount && !onboardingDismissed) {
+      setOnboardingOpen(true);
+    }
+  }, [signedIn, authSession?.user?.isNewAccount, onboardingDismissed]);
+
+  useEffect(() => {
     localStorage.setItem(LANGUAGE_KEY, JSON.stringify(language));
   }, [language]);
+
+  useEffect(() => {
+    localStorage.setItem(LOCATION_KEY, JSON.stringify(location));
+  }, [location]);
+
+  function requestLocation() {
+    setLocationError(null);
+    if (!navigator.geolocation) {
+      setLocationError("Location isn't available in this browser.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`
+          );
+          const data = await res.json();
+          const addr = data.address ?? {};
+          const place = addr.city || addr.town || addr.village || addr.county;
+          const label = [place, addr.country].filter(Boolean).join(", ");
+          setLocationState(label || `${pos.coords.latitude.toFixed(2)}, ${pos.coords.longitude.toFixed(2)}`);
+        } catch {
+          setLocationState(`${pos.coords.latitude.toFixed(2)}, ${pos.coords.longitude.toFixed(2)}`);
+        }
+      },
+      () => setLocationError("Location permission was denied.")
+    );
+  }
+
+  function clearLocation() {
+    setLocationState("");
+    setLocationError(null);
+  }
 
   function handleThemeChange(t: Theme) {
     persistTheme(t);
     setThemeState(t);
+  }
+
+  function handleContrastChange(c: Contrast) {
+    persistContrast(c);
+    setContrastState(c);
+  }
+
+  async function handleDeleteAccount() {
+    try {
+      await fetch("/api/account", { method: "DELETE" });
+    } catch {
+      // Best-effort server cleanup — still sign the browser out below either way.
+    }
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith("chatgiza:"))
+      .forEach((k) => localStorage.removeItem(k));
+    await signOut({ callbackUrl: "/" });
   }
 
   function handleFontSizeChange(s: ChatFontSize) {
@@ -377,6 +578,16 @@ function ChatGizaInner() {
   function handleAssistantColorChange(c: AssistantColor) {
     persistAssistantColor(c);
     setAssistantColorState(c);
+  }
+
+  function handleChatFontChange(f: ChatFont) {
+    persistChatFont(f);
+    setChatFontState(f);
+  }
+
+  function handleReduceMotionChange(m: ReduceMotion) {
+    persistReduceMotion(m);
+    setReduceMotionState(m);
   }
 
   function clearAllHistory() {
@@ -519,7 +730,19 @@ function ChatGizaInner() {
     );
   }
 
+  function guestQuotaExceeded(): boolean {
+    if (!signedIn && guestMessageCount >= getGuestFreeMessageLimit(GUEST_FREE_MESSAGES)) {
+      setSignInPromptOpen(true);
+      return true;
+    }
+    return false;
+  }
+
   function handleSend(text: string, attachments: Attachment[]) {
+    if (guestQuotaExceeded()) return;
+    if (!signedIn) {
+      setGuestMessageCount((c) => c + 1);
+    }
     if (activeTool === "image" && pluginsEnabled.image) return sendImageMessage(text);
     if (activeTool === "video" && pluginsEnabled.video) return sendVideoMessage(text);
     if (!activeTool && attachments.length === 0) {
@@ -531,6 +754,7 @@ function ChatGizaInner() {
   }
 
   function handleEditMessage(messageId: string, newText: string) {
+    if (guestQuotaExceeded()) return;
     if (!active) return;
     const idx = active.messages.findIndex((m) => m.id === messageId);
     if (idx === -1) return;
@@ -550,6 +774,7 @@ function ChatGizaInner() {
   }
 
   function handleRegenerate(assistantMessageId: string) {
+    if (guestQuotaExceeded()) return;
     if (!active) return;
     const idx = active.messages.findIndex((m) => m.id === assistantMessageId);
     if (idx <= 0) return;
@@ -561,6 +786,7 @@ function ChatGizaInner() {
   }
 
   function handleEditImage(sourceImageUrl: string, instruction: string) {
+    if (guestQuotaExceeded()) return;
     sendImageMessage(instruction, undefined, sourceImageUrl);
   }
 
@@ -596,8 +822,23 @@ function ChatGizaInner() {
         body: JSON.stringify({ prompt: trimmed, editSourceUrl }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Couldn't generate that image.");
+      if (!res.ok) {
+        if (res.status === 403) setUpgradePlanOpen(true);
+        throw new Error(data.error ?? "Couldn't generate that image.");
+      }
       updateAssistantMessage(conversationId, assistantId, { imageUrl: data.url });
+      const milestone = bumpCounterAndCheckMilestone("images");
+      if (milestone) setCelebration(milestone);
+      if (
+        allNotificationsEnabled &&
+        notifyImageGen &&
+        typeof document !== "undefined" &&
+        document.visibilityState === "hidden" &&
+        typeof Notification !== "undefined" &&
+        Notification.permission === "granted"
+      ) {
+        new Notification("ChatGiZa", { body: "Your image is ready." });
+      }
     } catch (e) {
       const message = e instanceof Error ? e.message : "Sorry, something went wrong. Please try again.";
       updateAssistantMessage(conversationId, assistantId, { content: message });
@@ -655,7 +896,10 @@ function ChatGizaInner() {
         body: JSON.stringify({ prompt: trimmed }),
       });
       const startData = await startRes.json();
-      if (!startRes.ok) throw new Error(startData.error ?? "Couldn't start video generation.");
+      if (!startRes.ok) {
+        if (startRes.status === 403) setUpgradePlanOpen(true);
+        throw new Error(startData.error ?? "Couldn't start video generation.");
+      }
 
       let currentId = startData.id as string;
       currentId = await pollUntilDone(currentId);
@@ -722,6 +966,7 @@ function ChatGizaInner() {
       trimmed || attachments[0]?.name || "New chat",
       override
     );
+    setStreamingTool(tool);
 
     try {
       const res = await fetch("/api/chat", {
@@ -729,6 +974,7 @@ function ChatGizaInner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tool,
+          conversationId,
           messages: updatedMessages.map((m) => ({
             role: m.role,
             content: m.attachments?.length ? buildApiContent(m.content, m.attachments) : m.content,
@@ -736,13 +982,15 @@ function ChatGizaInner() {
           profile,
           memory: memoryEnabled ? memory : [],
           language,
+          location,
           company,
         }),
       });
 
       if (!res.ok || !res.body) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? "Unknown error");
+        if (res.status === 403) setUpgradePlanOpen(true);
+        throw new Error(data.error ?? "Sorry, something went wrong. Please try again.");
       }
 
       const reader = res.body.getReader();
@@ -767,13 +1015,28 @@ function ChatGizaInner() {
       }
       // Final flush in case the last chunk arrived after the last scheduled frame.
       updateAssistantMessage(conversationId, assistantId, { content: accumulated });
-    } catch {
-      updateAssistantMessage(conversationId, assistantId, {
-        content: "Sorry, something went wrong. Please try again.",
-      });
+      const milestone = bumpCounterAndCheckMilestone("messages");
+      if (milestone) setCelebration(milestone);
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        navigator.vibrate(200);
+      }
+      if (
+        allNotificationsEnabled &&
+        notifyOnComplete &&
+        typeof document !== "undefined" &&
+        document.visibilityState === "hidden" &&
+        typeof Notification !== "undefined" &&
+        Notification.permission === "granted"
+      ) {
+        new Notification("ChatGiZa", { body: "Your response is ready." });
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Sorry, something went wrong. Please try again.";
+      updateAssistantMessage(conversationId, assistantId, { content: message });
     } finally {
       setLoading(false);
       setStreamingId(null);
+      setStreamingTool(null);
     }
   }
 
@@ -790,6 +1053,11 @@ function ChatGizaInner() {
     if (activeId === id) setActiveId(null);
   }
 
+  function archiveAllConversations() {
+    setConversations((prev) => prev.map((c) => ({ ...c, archived: true, pinned: false })));
+    setActiveId(null);
+  }
+
   function deleteConversation(id: string) {
     setConversations((prev) => prev.filter((c) => c.id !== id));
     if (activeId === id) setActiveId(null);
@@ -803,19 +1071,51 @@ function ChatGizaInner() {
       .map((m) => `${m.role === "user" ? "You" : "ChatGiZa"}: ${m.content}`)
       .join("\n\n");
     const text = `${convo.title}\n\n${transcript}`;
+    let shared = false;
     if (navigator.share) {
       try {
         await navigator.share({ title: convo.title, text });
-        return;
+        shared = true;
       } catch {
         // user cancelled or share failed; fall through to clipboard copy
       }
     }
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      // clipboard unavailable; nothing more we can do here
+    if (!shared) {
+      try {
+        await navigator.clipboard.writeText(text);
+        shared = true;
+      } catch {
+        // clipboard unavailable; nothing more we can do here
+      }
     }
+    if (shared) {
+      setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, shared: true } : c)));
+    }
+  }
+
+  function unshareConversation(id: string) {
+    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, shared: false } : c)));
+  }
+
+  function unarchiveConversation(id: string) {
+    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, archived: false } : c)));
+  }
+
+  function exportAllData() {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      conversations,
+      projects,
+      profile,
+      memory,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `chatgiza-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function createProject(id: string, name: string) {
@@ -900,6 +1200,11 @@ function ChatGizaInner() {
         onOpenCompanyDashboard={() => setCompanyDashboardOpen(true)}
         onOpenLanguage={() => setLanguageOpen(true)}
         onOpenUpgradePlan={() => setUpgradePlanOpen(true)}
+        onOpenReferral={() => setReferralOpen(true)}
+        onOpenSupport={() => setSupportOpen(true)}
+        streak={streak}
+        projects={projects.map(({ id, name }) => ({ id, name }))}
+        onMoveToProject={assignConversationToProject}
       />
 
       {languageOpen && (
@@ -916,6 +1221,25 @@ function ChatGizaInner() {
           onFontSizeChange={handleFontSizeChange}
           assistantColor={assistantColor}
           onAssistantColorChange={handleAssistantColorChange}
+          chatFont={chatFont}
+          onChatFontChange={handleChatFontChange}
+          reduceMotion={reduceMotion}
+          onReduceMotionChange={handleReduceMotionChange}
+          notifyOnComplete={notifyOnComplete}
+          onToggleNotifyOnComplete={() => setNotifyOnComplete((v) => !v)}
+          notifyImageGen={notifyImageGen}
+          onToggleNotifyImageGen={() => setNotifyImageGen((v) => !v)}
+          allNotificationsEnabled={allNotificationsEnabled}
+          onToggleAllNotifications={() => setAllNotificationsEnabled((v) => !v)}
+          contrast={contrast}
+          onContrastChange={handleContrastChange}
+          privacyPrefs={privacyPrefs}
+          onPrivacyPrefsChange={setPrivacyPrefs}
+          feedbackEmailsOptIn={feedbackEmailsOptIn}
+          onToggleFeedbackEmailsOptIn={() => setFeedbackEmailsOptIn((v) => !v)}
+          onOpenSupport={() => setSupportOpen(true)}
+          onDeleteAccount={handleDeleteAccount}
+          onOpenUpgradePlan={() => setUpgradePlanOpen(true)}
           profile={profile}
           onProfileChange={setProfile}
           memoryEnabled={memoryEnabled}
@@ -926,6 +1250,17 @@ function ChatGizaInner() {
           historyEnabled={historyEnabled}
           onToggleHistoryEnabled={() => setHistoryEnabled((v) => !v)}
           onClearHistory={clearAllHistory}
+          conversations={conversations}
+          onShareConversation={shareConversation}
+          onUnshareConversation={unshareConversation}
+          onUnarchiveConversation={unarchiveConversation}
+          onDeleteConversation={deleteConversation}
+          onExportData={exportAllData}
+          onArchiveAllConversations={archiveAllConversations}
+          location={location}
+          locationError={locationError}
+          onRequestLocation={requestLocation}
+          onClearLocation={clearLocation}
         />
       )}
 
@@ -944,6 +1279,33 @@ function ChatGizaInner() {
       )}
 
       {comingSoonTitle && <ComingSoonModal title={comingSoonTitle} onClose={() => setComingSoonTitle(null)} />}
+
+      {signInPromptOpen && <SignInPromptModal onClose={() => setSignInPromptOpen(false)} />}
+
+      {referralOpen && authSession?.user?.id && (
+        <ReferralModal code={getReferralCode(authSession.user.id)} onClose={() => setReferralOpen(false)} />
+      )}
+
+      {celebration && <CelebrationToast message={celebration} onDone={() => setCelebration(null)} />}
+
+      {supportOpen && (
+        <SupportModal defaultEmail={authSession?.user?.email ?? undefined} onClose={() => setSupportOpen(false)} />
+      )}
+
+      {onboardingOpen && (
+        <OnboardingModal
+          defaultName={profile.fullName || authSession?.user?.name || ""}
+          onSave={(fullName, birthDate, country) => {
+            setProfile((p) => ({ ...p, fullName, birthDate, country }));
+            setOnboardingDismissed(true);
+            setOnboardingOpen(false);
+          }}
+          onSkip={() => {
+            setOnboardingDismissed(true);
+            setOnboardingOpen(false);
+          }}
+        />
+      )}
 
       {upgradePlanOpen && (
         <UpgradePlanPanel currentTier={userPlan} onClose={() => setUpgradePlanOpen(false)} />
@@ -1017,11 +1379,46 @@ function ChatGizaInner() {
       {codeOpen && <CodePanel onClose={() => setCodeOpen(false)} />}
 
       <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex items-center justify-end px-4 pt-3">
+          <button
+            onClick={() => setActiveId(null)}
+            aria-label="New chat"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-muted transition-all hover:scale-105 hover:border-foreground/30 hover:text-foreground hover:shadow-md"
+          >
+            {TempChatIcon}
+          </button>
+        </div>
         {!active ? (
-          <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center px-4">
-            <h1 className="text-3xl font-semibold tracking-tight">What can I help with?</h1>
+          <div className="relative mx-auto flex w-full max-w-[var(--max-w-chat)] flex-1 flex-col items-center justify-end px-4 pb-6 sm:justify-center sm:pb-0">
+            {signedIn && !userPlan && showUpgradeNudge && (
+              <UpgradeNudgeBanner
+                onUpgrade={() => {
+                  setShowUpgradeNudge(false);
+                  setUpgradePlanOpen(true);
+                }}
+                onDismiss={() => {
+                  snoozeUpgradeNudge();
+                  setShowUpgradeNudge(false);
+                }}
+              />
+            )}
 
-            <div className="mt-8 w-full">
+            {showHeroShimmer && (
+              <div className="hero-shimmer-bg" onAnimationEnd={() => setShowHeroShimmer(false)} />
+            )}
+
+            <h1 className="relative z-10 text-3xl font-semibold tracking-tight">Ready when you are.</h1>
+
+            {greeting && (
+              <div className="relative z-10 mt-5 flex max-w-md items-start gap-2 rounded-2xl border border-border bg-surface px-4 py-3 text-sm leading-6 text-foreground shadow-sm">
+                <span aria-hidden className="mt-0.5 shrink-0 text-base">
+                  🔊
+                </span>
+                <span>{greeting}</span>
+              </div>
+            )}
+
+            <div className="relative z-10 mt-8 w-full">
               <ChatComposer
                 variant="hero"
                 value={input}
@@ -1041,7 +1438,7 @@ function ChatGizaInner() {
               />
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            <div className="relative z-10 mt-4 flex flex-wrap items-center justify-center gap-2">
               {QUICK_ACTIONS.map((action) => (
                 <button
                   key={action.label}
@@ -1058,7 +1455,7 @@ function ChatGizaInner() {
           <>
             <div
               ref={scrollRef}
-              className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto px-4 py-8 space-y-4"
+              className="no-scrollbar mx-auto w-full max-w-[var(--content-width)] flex-1 overflow-y-auto px-4 py-8 space-y-4"
             >
               {active.messages.map((m) => {
                 const isGeneratingMedia = m.id === generatingImageId || Boolean(m.videoStatus);
@@ -1071,11 +1468,14 @@ function ChatGizaInner() {
                       />
                     ) : (
                       <div className="flex items-center gap-3 px-1 py-4">
-                        <span className="thinking-dot h-3.5 w-3.5 shrink-0 rounded-full" />
-                        <div className="flex flex-col gap-2">
-                          <span className="shimmer-line h-2.5 w-44 rounded-full" />
-                          <span className="shimmer-line h-2.5 w-28 rounded-full" />
-                        </div>
+                        <span className="typing-dots shrink-0">
+                          <span />
+                          <span />
+                          <span />
+                        </span>
+                        <span className="text-sm text-muted">
+                          {streamingTool === "deep_think" ? "Thinking…" : "ChatGiZa is thinking…"}
+                        </span>
                       </div>
                     )}
                   </div>

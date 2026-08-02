@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ChatGiZa</string>
+    <string name="title_activity_main">ChatGiZa</string>
+    <string name="package_name">com.wellxai.chatgiza</string>
+    <string name="custom_url_scheme">com.wellxai.chatgiza</string>
+</resources>

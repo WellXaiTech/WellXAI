@@ -8,6 +8,12 @@ export type Attachment = {
   dataUrl?: string;
   text?: string;
   pages?: string[];
+  // The original uploaded file's real size in bytes (from `File.size`), not an
+  // estimate — this is what Settings > Storage reports for uploaded files, so
+  // it matches what was actually uploaded rather than approximating from the
+  // extracted/encoded content (which can be smaller or larger, e.g. a scanned
+  // PDF's re-rendered page images vs. its original file size).
+  sizeBytes?: number;
 };
 
 const MAX_FILE_SIZE = 8 * 1024 * 1024;
@@ -31,7 +37,7 @@ export async function readAttachment(file: File): Promise<Attachment[]> {
 
   if (file.type.startsWith("image/")) {
     const dataUrl = await readAsDataUrl(file);
-    return [{ id, name: file.name, mimeType: file.type, kind: "image", dataUrl }];
+    return [{ id, name: file.name, mimeType: file.type, kind: "image", dataUrl, sizeBytes: file.size }];
   }
 
   if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
@@ -39,7 +45,16 @@ export async function readAttachment(file: File): Promise<Attachment[]> {
     const content = await extractPdfContent(file);
 
     if (content.kind === "text") {
-      return [{ id, name: file.name, mimeType: file.type || "application/pdf", kind: "text", text: content.text }];
+      return [
+        {
+          id,
+          name: file.name,
+          mimeType: file.type || "application/pdf",
+          kind: "text",
+          text: content.text,
+          sizeBytes: file.size,
+        },
+      ];
     }
 
     // Scanned/image-only PDF: keep it as a single PDF-looking attachment in the
@@ -51,6 +66,7 @@ export async function readAttachment(file: File): Promise<Attachment[]> {
         mimeType: "application/pdf",
         kind: "pdf-pages",
         pages: content.images,
+        sizeBytes: file.size,
       },
     ];
   }
@@ -58,7 +74,7 @@ export async function readAttachment(file: File): Promise<Attachment[]> {
   if (file.type.startsWith("text/") || /\.(txt|md)$/i.test(file.name)) {
     const raw = await file.text();
     const text = raw.length > MAX_TEXT_CHARS ? `${raw.slice(0, MAX_TEXT_CHARS)}\n[...truncated]` : raw;
-    return [{ id, name: file.name, mimeType: file.type || "text/plain", kind: "text", text }];
+    return [{ id, name: file.name, mimeType: file.type || "text/plain", kind: "text", text, sizeBytes: file.size }];
   }
 
   throw new Error(`"${file.name}" isn't a supported file type yet (images, PDF, .txt, .md)`);
