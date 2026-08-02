@@ -7,7 +7,7 @@ export default function TermsPage() {
       <p className="mt-2 text-sm text-muted">Last updated: August 2026</p>
 
       <p className="mt-6 text-muted">
-        These terms govern your use of ChatGiZa, a product of WellX AI (&quot;we&quot;, &quot;us&quot;). By
+        These terms govern your use of ChatGiZa (&quot;we&quot;, &quot;us&quot;). By
         signing in or using ChatGiZa, you agree to them.
       </p>
 
@@ -41,7 +41,7 @@ export default function TermsPage() {
       <h2 className="mt-10 text-lg font-medium">No warranty, limitation of liability</h2>
       <p className="mt-3 text-muted">
         ChatGiZa is provided &quot;as is&quot;, without warranties of any kind. To the fullest extent permitted
-        by law, WellX AI is not liable for indirect, incidental, or consequential damages arising from your use
+        by law, we are not liable for indirect, incidental, or consequential damages arising from your use
         of ChatGiZa.
       </p>
 

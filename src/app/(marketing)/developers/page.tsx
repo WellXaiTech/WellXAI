@@ -1,4 +1,4 @@
-const CHAT_EXAMPLE = `curl -X POST https://api.wellx.ai/v1/chat \\
+const CHAT_EXAMPLE = `curl -X POST https://api.chatgiza.com/v1/chat \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -29,7 +29,7 @@ export default function DevelopersPage() {
       <span className="rounded-full border border-border px-3 py-1 text-xs text-muted">
         API Platform — Early Access
       </span>
-      <h1 className="mt-4 text-3xl font-semibold">WellX API</h1>
+      <h1 className="mt-4 text-3xl font-semibold">ChatGiZa API</h1>
       <p className="mt-3 text-muted">
         Bring ChatGiZa directly into your product. The endpoints below show the shape
         the public API will follow — they are not open to everyone yet.
@@ -56,7 +56,7 @@ export default function DevelopersPage() {
       <section className="mt-12 card rounded-2xl p-6">
         <h2 className="text-lg font-semibold">Want early access?</h2>
         <p className="mt-2 text-muted text-sm">
-          Email <span className="text-foreground">hello@wellx.ai</span> to get on the
+          Email <span className="text-foreground">hello@chatgiza.com</span> to get on the
           API early access list.
         </p>
       </section>

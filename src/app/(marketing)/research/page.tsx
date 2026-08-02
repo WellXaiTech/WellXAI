@@ -3,7 +3,7 @@ export default function ResearchPage() {
     <div className="mx-auto max-w-3xl px-4 py-16 w-full">
       <h1 className="text-3xl font-semibold">Research</h1>
       <p className="mt-4 text-muted">
-        WellX AI&apos;s research focuses on making conversational AI more useful, more
+        ChatGiZa&apos;s research focuses on making conversational AI more useful, more
         affordable, and more accessible — especially for languages and regions that
         mainstream AI labs underserve today.
       </p>

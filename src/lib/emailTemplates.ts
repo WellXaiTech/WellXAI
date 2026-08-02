@@ -13,7 +13,7 @@ function wrap(content: string): string {
     <div style="${WRAPPER_STYLE}">
       <div style="font-size: 18px; font-weight: 800; margin-bottom: 24px;">ChatGiZa</div>
       ${content}
-      <div style="${FOOTER_STYLE}">WellX AI · ChatGiZa<br />You're receiving this because it relates to your ChatGiZa account.</div>
+      <div style="${FOOTER_STYLE}">ChatGiZa<br />You're receiving this because it relates to your ChatGiZa account.</div>
     </div>
   `;
 }

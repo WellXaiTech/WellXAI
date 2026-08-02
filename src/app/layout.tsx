@@ -19,9 +19,9 @@ const geistMono = Geist_Mono({
 });
 
 const SITE_NAME = "ChatGiZa";
-const HOME_TITLE = "ChatGiZa — AI Chat, Image & Video Assistant by WellX AI";
+const HOME_TITLE = "ChatGiZa — AI Chat, Image & Video Assistant";
 const SITE_DESCRIPTION =
-  "ChatGiZa is WellX AI's conversational assistant — chat, generate images and video, search the web, and get deep research reports, with an API for developers who want to build on it.";
+  "ChatGiZa is a conversational AI assistant — chat, generate images and video, search the web, and get deep research reports, with an API for developers who want to build on it.";
 
 // Reinforces the site-name signal for Google's search-result header (the line
 // shown above the URL, e.g. "ChatGiZa" instead of the bare domain) — Google's

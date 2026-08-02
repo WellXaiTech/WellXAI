@@ -1,6 +1,6 @@
-# WellX AI
+# ChatGiZa
 
-Next.js app for the WellX AI company website and its AI product, **ChatGiZa** (a ChatGPT-style assistant). This README is written for a new developer or team picking up the project — it covers what exists, how to run it, and how it's put together.
+Next.js app for **ChatGiZa** (a ChatGPT-style assistant). This README is written for a new developer or team picking up the project — it covers what exists, how to run it, and how it's put together.
 
 ## Tech stack
 

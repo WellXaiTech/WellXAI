@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 const TITLE = "ChatGiZa — Chat, Image & Video AI Assistant";
 const DESCRIPTION =
-  "Chat, generate images and video, search the web, and get deep research reports with ChatGiZa — the AI assistant built by WellX AI.";
+  "ChatGiZa is your AI assistant — chat, generate images and video, search the web, and get deep research reports.";
 
 export const metadata: Metadata = {
   // Overrides the root layout's "%s — ChatGiZa" template with an absolute
@@ -24,10 +24,7 @@ export const metadata: Metadata = {
   },
 };
 
-// Marks ChatGiZa as its own product, distinct from the WellX AI company site
-// at "/", while still declaring WellX AI as the owning organization — this is
-// the schema.org-recommended way to represent a product's own identity under
-// a parent company (Google's docs cite this pattern for site-name signals).
+// SoftwareApplication structured data for the product page itself.
 const STRUCTURED_DATA = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
@@ -36,11 +33,6 @@ const STRUCTURED_DATA = {
   operatingSystem: "Web, Android",
   url: "https://chatgiza.com/chatgiza",
   description: DESCRIPTION,
-  creator: {
-    "@type": "Organization",
-    name: "WellX AI",
-    url: "https://chatgiza.com",
-  },
 };
 
 export default function ChatGizaLayout({

@@ -10,10 +10,10 @@ const products = [
   },
   {
     href: "/developers",
-    title: "WellX API",
+    title: "ChatGiZa API",
     tag: "Developers",
     description:
-      "Bring WellX AI into your own product through a simple REST API.",
+      "Bring ChatGiZa into your own product through a simple REST API.",
   },
 ];
 
@@ -22,8 +22,7 @@ export default function ProductsPage() {
     <div className="mx-auto max-w-4xl px-4 py-16 w-full">
       <h1 className="text-3xl font-semibold">Products</h1>
       <p className="mt-4 text-muted max-w-xl">
-        Everything WellX AI builds, in one place. ChatGiZa is the first product — more
-        are on the way.
+        ChatGiZa — the chat app and the API behind it, in one place.
       </p>
       <div className="mt-10 grid gap-6 sm:grid-cols-2">
         {products.map((p) => (

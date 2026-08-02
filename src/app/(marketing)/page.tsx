@@ -23,9 +23,9 @@ const products = [
   },
   {
     href: "/developers",
-    title: "WellX API",
+    title: "ChatGiZa API",
     tag: "Developers",
-    description: "Bring WellX AI into your own product through a simple REST API.",
+    description: "Bring ChatGiZa into your own product through a simple REST API.",
   },
 ];
 

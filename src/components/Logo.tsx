@@ -1,10 +1,11 @@
 export default function Logo({ className = "" }: { className?: string }) {
   return (
     <span className={`inline-flex items-center gap-2 font-semibold tracking-tight ${className}`}>
-      <span className="h-7 w-7 rounded-lg bg-foreground flex items-center justify-center text-background text-sm font-bold">
-        W
-      </span>
-      <span>WellX AI</span>
+      <svg width="28" height="28" viewBox="0 0 512 512" className="shrink-0" aria-hidden>
+        <circle cx="256" cy="256" r="256" fill="currentColor" />
+        <path d="M256 156 L346 356 L166 356 Z" className="fill-background" />
+      </svg>
+      <span>ChatGiZa</span>
     </span>
   );
 }

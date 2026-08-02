@@ -7,8 +7,8 @@ export default function PrivacyPage() {
       <p className="mt-2 text-sm text-muted">Last updated: August 2026</p>
 
       <p className="mt-6 text-muted">
-        ChatGiZa is a product of WellX AI (&quot;we&quot;, &quot;us&quot;). This page explains what information we
-        collect when you use ChatGiZa — on the web or through the Android app — and how we use it.
+        This page explains what information ChatGiZa (&quot;we&quot;, &quot;us&quot;) collects when you use
+        ChatGiZa — on the web or through the Android app — and how we use it.
       </p>
 
       <h2 className="mt-10 text-lg font-medium">Information we collect</h2>
