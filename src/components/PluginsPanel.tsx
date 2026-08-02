@@ -1,10 +1,11 @@
 "use client";
 
-export type PluginKey = "web_search" | "deep_research" | "image" | "video";
+export type PluginKey = "web_search" | "deep_research" | "deep_think" | "image" | "video";
 
 const PLUGINS: { key: PluginKey; title: string; description: string }[] = [
   { key: "web_search", title: "Web search", description: "Let ChatGiZa look up real-time info to answer you." },
   { key: "deep_research", title: "Deep research", description: "Produce structured, cited research reports." },
+  { key: "deep_think", title: "Deep Think", description: "Reason more carefully through hard questions before answering." },
   { key: "image", title: "Create image", description: "Generate images and logos from a text prompt." },
   { key: "video", title: "Create video", description: "Generate short video clips from a text prompt." },
 ];

@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Attachment } from "@/lib/attachments";
 import TypingPlaceholder from "@/components/TypingPlaceholder";
 
-export type ComposerTool = "web_search" | "deep_research" | "image" | "video" | null;
+export type ComposerTool = "web_search" | "deep_research" | "deep_think" | "image" | "video" | null;
 
 type SpeechRecognitionLike = {
   lang: string;
@@ -23,7 +24,7 @@ type SpeechWindow = Window & {
 };
 
 const PlusIcon = (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
     <path d="M12 5v14" />
     <path d="M5 12h14" />
   </svg>
@@ -32,12 +33,6 @@ const PlusIcon = (
 const PaperclipIcon = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.2 9.19a1 1 0 0 1-1.41-1.41l8.49-8.48" />
-  </svg>
-);
-
-const PaperclipStandingIcon = (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M16 6.5v10a3.5 3.5 0 0 1-7 0v-9a2 2 0 0 1 4 0v8.5a.5 .5 0 0 1-1 0v-8" />
   </svg>
 );
 
@@ -71,6 +66,13 @@ const ResearchIcon = (
   </svg>
 );
 
+const BrainIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9.5 3a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3.5 3.5 0 0 0 1 6.5 3 3 0 0 0 3 3.5V6a3 3 0 0 0-1-3Z" />
+    <path d="M14.5 3a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3.5 3.5 0 0 1-1 6.5 3 3 0 0 1-3 3.5V6a3 3 0 0 1 1-3Z" />
+  </svg>
+);
+
 const ChevronDownIcon = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M6 9l6 6 6-6" />
@@ -85,13 +87,13 @@ const ArrowUpIcon = (
 );
 
 const WaveformIcon = (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-    <rect x="2" y="9" width="2" height="6" rx="1" />
-    <rect x="5.6" y="6" width="2" height="12" rx="1" />
-    <rect x="9.2" y="3" width="2" height="18" rx="1" />
-    <rect x="12.8" y="2" width="2" height="20" rx="1" />
-    <rect x="16.4" y="5" width="2" height="14" rx="1" />
-    <rect x="20" y="8" width="2" height="8" rx="1" />
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+    <rect x="1.4" y="9" width="2.6" height="6" rx="1.3" />
+    <rect x="5" y="6" width="2.6" height="12" rx="1.3" />
+    <rect x="8.6" y="3" width="2.6" height="18" rx="1.3" />
+    <rect x="12.2" y="2" width="2.6" height="20" rx="1.3" />
+    <rect x="15.8" y="5" width="2.6" height="14" rx="1.3" />
+    <rect x="19.4" y="8" width="2.6" height="8" rx="1.3" />
   </svg>
 );
 
@@ -113,6 +115,7 @@ const TOOL_LABELS: Record<Exclude<ComposerTool, null>, string> = {
   video: "Create video",
   web_search: "Web search",
   deep_research: "Deep research",
+  deep_think: "Deep Think",
 };
 
 export default function ChatComposer({
@@ -144,22 +147,52 @@ export default function ChatComposer({
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuPanelRef = useRef<HTMLDivElement>(null);
   const toolMenuRef = useRef<HTMLDivElement>(null);
+  const toolMenuPanelRef = useRef<HTMLDivElement>(null);
+  const composerWrapperRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const valueRef = useRef(value);
   valueRef.current = value;
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [toolMenuOpen, setToolMenuOpen] = useState(false);
+  type DropdownCoords = { left: number; top?: number; bottom?: number };
+  const [menuCoords, setMenuCoords] = useState<DropdownCoords | null>(null);
+  const [toolMenuCoords, setToolMenuCoords] = useState<DropdownCoords | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
 
   const isHero = variant === "hero";
 
+  // Dropdowns are portaled to document.body with position:fixed, anchored to
+  // the WHOLE composer wrapper (not the trigger button) — portaling escapes a
+  // real stacking-context bug where an unrelated ancestor div intercepted
+  // clicks even though the dropdown was visually on top (verified via
+  // elementFromPoint). They open downward below the composer by default; if
+  // there isn't enough room below (the bar composer sits near the bottom of
+  // the screen), they flip to opening upward instead so they never render
+  // partly off-screen.
+  function computeDropdownCoords(estimatedHeight = 260): DropdownCoords | null {
+    const rect = composerWrapperRef.current?.getBoundingClientRect();
+    if (!rect) return null;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    if (spaceBelow >= estimatedHeight + 16) {
+      return { left: rect.left, top: rect.bottom + 8 };
+    }
+    return { left: rect.left, bottom: window.innerHeight - rect.top + 8 };
+  }
+
   useEffect(() => {
     if (!menuOpen) return;
     function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(target) &&
+        menuPanelRef.current &&
+        !menuPanelRef.current.contains(target)
+      ) {
         setMenuOpen(false);
       }
     }
@@ -170,7 +203,13 @@ export default function ChatComposer({
   useEffect(() => {
     if (!toolMenuOpen) return;
     function handleClickOutside(e: MouseEvent) {
-      if (toolMenuRef.current && !toolMenuRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        toolMenuRef.current &&
+        !toolMenuRef.current.contains(target) &&
+        toolMenuPanelRef.current &&
+        !toolMenuPanelRef.current.contains(target)
+      ) {
         setToolMenuOpen(false);
       }
     }
@@ -252,13 +291,229 @@ export default function ChatComposer({
       icon: ResearchIcon,
       tool: "deep_research",
     },
+    {
+      title: "Deep Think",
+      description: "Rigorous analysis and reasoning for high-stakes decisions",
+      icon: BrainIcon,
+      tool: "deep_think",
+    },
   ];
 
   const visibleMenuItems = menuItems.filter((item) => !item.tool || enabledTools?.[item.tool] !== false);
-  const toolOnlyItems = visibleMenuItems.filter((item) => item.tool);
+  // Deep Think is a response mode, not an attach-menu action — it only
+  // belongs in the GiZa 5.6 model-selector dropdown, not the "+" menu.
+  const attachMenuItems = visibleMenuItems.filter((item) => item.tool !== "deep_think");
+  const modelOnlyItems = visibleMenuItems.filter((item) => item.tool === "deep_think");
+
+  const fileInputEl = (
+    <input
+      ref={fileInputRef}
+      type="file"
+      multiple
+      accept="image/*,.pdf,.txt,.md,text/plain,application/pdf"
+      className="hidden"
+      onChange={(e) => {
+        onAddFiles(e.target.files);
+        e.target.value = "";
+      }}
+    />
+  );
+
+  const attachMenu = (
+    <div className="relative shrink-0" ref={menuRef}>
+      <button
+        type="button"
+        aria-label="Add"
+        disabled={disabled}
+        onClick={() => {
+          setMenuOpen((v) => {
+            const next = !v;
+            if (next) setMenuCoords(computeDropdownCoords(280));
+            return next;
+          });
+        }}
+        className={`flex items-center justify-center rounded-full border border-white/10 bg-white/5 text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent ${
+          isHero ? "h-10 w-10" : "h-8 w-8"
+        }`}
+      >
+        {PlusIcon}
+      </button>
+
+      {menuOpen &&
+        menuCoords &&
+        createPortal(
+          <div
+            ref={menuPanelRef}
+            style={{
+              position: "fixed",
+              left: menuCoords.left,
+              ...(menuCoords.top !== undefined ? { top: menuCoords.top } : { bottom: menuCoords.bottom }),
+            }}
+            className="z-50 w-72 rounded-2xl border border-border bg-surface p-1.5 shadow-lg"
+          >
+            {attachMenuItems.map((item) => (
+              <button
+                key={item.title}
+                type="button"
+                onClick={() => {
+                  item.onClick?.();
+                  if (item.tool) onSelectTool(item.tool === activeTool ? null : item.tool);
+                  setMenuOpen(false);
+                }}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-2 ${
+                  item.tool && item.tool === activeTool ? "bg-surface-2" : ""
+                }`}
+              >
+                <span className="text-muted">{item.icon}</span>
+                <span className="flex-1">
+                  <span className="block text-sm font-medium">{item.title}</span>
+                  <span className="block text-xs text-muted">{item.description}</span>
+                </span>
+              </button>
+            ))}
+          </div>,
+          document.body
+        )}
+    </div>
+  );
+
+  const toolSelector = (
+    <div className="relative shrink-0" ref={toolMenuRef}>
+      <button
+        type="button"
+        onClick={() => {
+          setToolMenuOpen((v) => {
+            const next = !v;
+            if (next) setToolMenuCoords(computeDropdownCoords(240));
+            return next;
+          });
+        }}
+        className={`flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-2 ${
+          isHero ? "h-10" : "h-8"
+        }`}
+      >
+        {!activeTool && LightningIcon}
+        {activeTool ? TOOL_LABELS[activeTool] : "GiZa 5.6"}
+        {ChevronDownIcon}
+      </button>
+
+      {toolMenuOpen &&
+        toolMenuCoords &&
+        createPortal(
+          <div
+            ref={toolMenuPanelRef}
+            style={{
+              position: "fixed",
+              left: toolMenuCoords.left,
+              ...(toolMenuCoords.top !== undefined
+                ? { top: toolMenuCoords.top }
+                : { bottom: toolMenuCoords.bottom }),
+            }}
+            className="z-50 w-72 rounded-2xl border border-border bg-surface p-1.5 shadow-lg"
+          >
+            <button
+              type="button"
+              onClick={() => {
+                onSelectTool(null);
+                setToolMenuOpen(false);
+              }}
+              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-2 ${
+                !activeTool ? "bg-surface-2" : ""
+              }`}
+            >
+              <span className="text-muted">{LightningIcon}</span>
+              <span className="flex-1">
+                <span className="block text-sm font-medium">GiZa 5.6</span>
+                <span className="block text-xs text-muted">Reliable, efficient performance for daily business tasks</span>
+              </span>
+            </button>
+            {modelOnlyItems.map((item) => (
+              <button
+                key={item.title}
+                type="button"
+                onClick={() => {
+                  onSelectTool(item.tool === activeTool ? null : (item.tool as ComposerTool));
+                  setToolMenuOpen(false);
+                }}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-2 ${
+                  item.tool === activeTool ? "bg-surface-2" : ""
+                }`}
+              >
+                <span className="text-muted">{item.icon}</span>
+                <span className="flex-1">
+                  <span className="block text-sm font-medium">{item.title}</span>
+                  <span className="block text-xs text-muted">{item.description}</span>
+                </span>
+              </button>
+            ))}
+          </div>,
+          document.body
+        )}
+    </div>
+  );
+
+  const micButton = (
+    <button
+      type="button"
+      aria-label="Hold to talk"
+      onPointerDown={startListening}
+      onPointerUp={stopListening}
+      onPointerLeave={stopListening}
+      onPointerCancel={stopListening}
+      disabled={disabled}
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40 ${
+        isListening ? "ring-2 ring-blue-300" : ""
+      }`}
+    >
+      {WaveformIcon}
+    </button>
+  );
+
+  const sendButton = (
+    <button
+      type="submit"
+      aria-label="Send"
+      disabled={disabled || (!value.trim() && attachments.length === 0)}
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+    >
+      {ArrowUpIcon}
+    </button>
+  );
+
+  const formEl = (
+    <form onSubmit={onSubmit} className="inner flex flex-col justify-between gap-2 px-4 pt-3 pb-2">
+      {fileInputEl}
+
+      <div className="relative w-full">
+        <input
+          value={value}
+          onChange={(e) => onValueChange(e.target.value)}
+          disabled={disabled}
+          placeholder={isHero ? undefined : disabled ? "ChatGiZa is typing…" : "Ask anything"}
+          autoComplete="off"
+          className="w-full bg-transparent px-1 py-1 text-sm outline-none disabled:cursor-not-allowed"
+        />
+        {isHero && !value && (
+          <div className="pointer-events-none absolute inset-0 flex items-center px-1 text-sm font-bold text-muted">
+            <TypingPlaceholder />
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        {attachMenu}
+        {toolSelector}
+        <div className="flex-1" />
+        {value.trim() || attachments.length > 0 ? sendButton : micButton}
+      </div>
+    </form>
+  );
 
   return (
-    <div className={isHero ? "w-full" : "mx-auto mb-6 w-full max-w-3xl px-4"}>
+    <div
+      ref={composerWrapperRef}
+      className={isHero ? "w-full" : "mx-auto mb-6 w-full max-w-[var(--max-w-chat)] px-4"}
+    >
       {(attachments.length > 0 || activeTool) && (
         <div className="mb-2 flex flex-wrap gap-2">
           {activeTool && (
@@ -303,187 +558,7 @@ export default function ChatComposer({
         <p className="mb-2 text-xs text-red-500">{error ?? voiceError}</p>
       )}
 
-      <form
-        onSubmit={onSubmit}
-        className={
-          isHero
-            ? "card flex items-center gap-2 rounded-full px-3 py-2"
-            : "card flex items-center gap-1 rounded-full px-2 py-1.5"
-        }
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept="image/*,.pdf,.txt,.md,text/plain,application/pdf"
-          className="hidden"
-          onChange={(e) => {
-            onAddFiles(e.target.files);
-            e.target.value = "";
-          }}
-        />
-
-        <div className="relative shrink-0" ref={menuRef}>
-          <button
-            type="button"
-            aria-label="Add"
-            disabled={disabled}
-            onClick={() => setMenuOpen((v) => !v)}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-          >
-            {isHero ? PlusIcon : PaperclipStandingIcon}
-          </button>
-
-          {menuOpen && (
-            <div className="absolute bottom-full left-0 z-50 mb-2 w-72 rounded-2xl border border-border bg-surface p-1.5 shadow-lg">
-              {visibleMenuItems.map((item) => (
-                <button
-                  key={item.title}
-                  type="button"
-                  onClick={() => {
-                    item.onClick?.();
-                    if (item.tool) onSelectTool(item.tool === activeTool ? null : item.tool);
-                    setMenuOpen(false);
-                  }}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-2 ${
-                    item.tool && item.tool === activeTool ? "bg-surface-2" : ""
-                  }`}
-                >
-                  <span className="text-muted">{item.icon}</span>
-                  <span className="flex-1">
-                    <span className="block text-sm font-medium">{item.title}</span>
-                    <span className="block text-xs text-muted">{item.description}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {isHero ? (
-          <div className="relative flex-1">
-            <input
-              value={value}
-              onChange={(e) => onValueChange(e.target.value)}
-              disabled={disabled}
-              autoComplete="off"
-              className="w-full bg-transparent px-2 py-1.5 text-sm outline-none disabled:cursor-not-allowed"
-            />
-            {!value && (
-              <div className="pointer-events-none absolute inset-0 flex items-center px-2 text-sm text-muted">
-                <TypingPlaceholder />
-              </div>
-            )}
-          </div>
-        ) : (
-          <input
-            value={value}
-            onChange={(e) => onValueChange(e.target.value)}
-            disabled={disabled}
-            placeholder={disabled ? "ChatGiZa is typing…" : "Ask anything"}
-            autoComplete="off"
-            className="flex-1 bg-transparent px-3 py-2 text-sm outline-none disabled:cursor-not-allowed"
-          />
-        )}
-
-        {!isHero && (
-          <div className="relative shrink-0" ref={toolMenuRef}>
-            <button
-              type="button"
-              onClick={() => setToolMenuOpen((v) => !v)}
-              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-foreground transition-colors hover:bg-surface-2"
-            >
-              {!activeTool && LightningIcon}
-              {activeTool ? TOOL_LABELS[activeTool] : "Fast"}
-              {ChevronDownIcon}
-            </button>
-
-            {toolMenuOpen && (
-              <div className="absolute bottom-full right-0 z-50 mb-2 w-56 rounded-2xl border border-border bg-surface p-1.5 shadow-lg">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSelectTool(null);
-                    setToolMenuOpen(false);
-                  }}
-                  className={`flex w-full items-center rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-surface-2 ${
-                    !activeTool ? "bg-surface-2" : ""
-                  }`}
-                >
-                  Fast
-                </button>
-                {toolOnlyItems.map((item) => (
-                  <button
-                    key={item.title}
-                    type="button"
-                    onClick={() => {
-                      onSelectTool(item.tool === activeTool ? null : (item.tool as ComposerTool));
-                      setToolMenuOpen(false);
-                    }}
-                    className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-surface-2 ${
-                      item.tool === activeTool ? "bg-surface-2" : ""
-                    }`}
-                  >
-                    <span className="text-muted">{item.icon}</span>
-                    {item.title}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {isHero ? (
-          <>
-            <button
-              type="button"
-              aria-label="Hold to talk"
-              onPointerDown={startListening}
-              onPointerUp={stopListening}
-              onPointerLeave={stopListening}
-              onPointerCancel={stopListening}
-              disabled={disabled}
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent ${
-                isListening ? "btn-primary" : "text-muted hover:text-foreground hover:bg-surface-2"
-              }`}
-            >
-              {WaveformIcon}
-            </button>
-            <button
-              type="submit"
-              aria-label="Send"
-              disabled={disabled || (!value.trim() && attachments.length === 0)}
-              className="btn-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:opacity-85 disabled:opacity-40"
-            >
-              {ArrowUpIcon}
-            </button>
-          </>
-        ) : value.trim() || attachments.length > 0 ? (
-          <button
-            type="submit"
-            aria-label="Send"
-            disabled={disabled}
-            className="btn-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-85 disabled:opacity-40"
-          >
-            {ArrowUpIcon}
-          </button>
-        ) : (
-          <button
-            type="button"
-            aria-label="Hold to talk"
-            onPointerDown={startListening}
-            onPointerUp={stopListening}
-            onPointerLeave={stopListening}
-            onPointerCancel={stopListening}
-            disabled={disabled}
-            className={`btn-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-opacity disabled:cursor-not-allowed disabled:opacity-40 ${
-              isListening ? "animate-pulse" : "hover:opacity-85"
-            }`}
-          >
-            {WaveformIcon}
-          </button>
-        )}
-      </form>
+      <div className="box mx-auto">{formEl}</div>
 
       {!isHero && (
         <p className="mt-2 text-center text-xs text-muted">ChatGiZa is AI and can make mistakes.</p>

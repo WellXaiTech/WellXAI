@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
+import Link from "next/link";
 import type { Tab as SettingsTab } from "@/components/SettingsPanel";
 
 export type { SettingsTab };
@@ -32,11 +33,18 @@ const MobileIcon = (
   </svg>
 );
 
-const StoreIcon = (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25">
-    <path d="M4 10.5V20h16v-9.5" />
-    <path d="M3 5.5h18l1.2 5a2 2 0 0 1-2 2.5 2.2 2.2 0 0 1-2.2-2M3 5.5l-1.2 5a2 2 0 0 0 2 2.5 2.2 2.2 0 0 0 2.2-2m0 0a2.2 2.2 0 0 0 4.4 0 2.2 2.2 0 0 0 4.4 0 2.2 2.2 0 0 0 4.4 0" />
-    <path d="M9.5 20v-5.5h5V20" />
+const UpgradeIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" />
+  </svg>
+);
+
+const GiftIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="8" width="18" height="4" />
+    <path d="M12 8v13M19 12v9H5v-9" />
+    <path d="M12 8a2.5 2.5 0 1 1-2.5-2.5C11.5 5.5 12 8 12 8Z" />
+    <path d="M12 8a2.5 2.5 0 1 0 2.5-2.5C12.5 5.5 12 8 12 8Z" />
   </svg>
 );
 
@@ -60,20 +68,6 @@ const HelpIcon = (
     <circle cx="12" cy="12" r="9" />
     <path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.7-2.5 2-2.5 3.5" />
     <path d="M12 16.5h.01" />
-  </svg>
-);
-
-const UpgradeIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
-    <path d="M12 3l1.4 5.6L19 10l-5.6 1.4L12 17l-1.4-5.6L5 10l5.6-1.4L12 3Z" />
-  </svg>
-);
-
-const InfoIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="12" cy="12" r="9" />
-    <path d="M12 16v-4.5" />
-    <path d="M12 8h.01" />
   </svg>
 );
 
@@ -111,15 +105,17 @@ function MenuItem({
 export default function AccountMenu({
   variant,
   onOpenSettings,
-  onOpenComingSoon,
   onOpenLanguage,
   onOpenUpgradePlan,
+  onOpenReferral,
+  onOpenSupport,
 }: {
   variant: "expanded" | "collapsed";
   onOpenSettings: (tab: SettingsTab) => void;
-  onOpenComingSoon: (title: string) => void;
   onOpenLanguage: () => void;
   onOpenUpgradePlan: () => void;
+  onOpenReferral: () => void;
+  onOpenSupport: () => void;
 }) {
   const { data: session, status } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -149,21 +145,21 @@ export default function AccountMenu({
 
   if (!session?.user) {
     return variant === "expanded" ? (
-      <button
-        onClick={() => signIn("google", undefined, { prompt: "select_account" })}
+      <Link
+        href="/login"
         className="flex min-w-0 flex-1 items-center gap-2 text-sm text-muted transition-colors hover:text-foreground"
       >
         <span className="flex h-7 w-7 items-center justify-center rounded-full border border-border text-xs">?</span>
         Log in
-      </button>
+      </Link>
     ) : (
-      <button
-        onClick={() => signIn("google", undefined, { prompt: "select_account" })}
+      <Link
+        href="/login"
         aria-label="Log in"
         className="flex h-8 w-8 items-center justify-center rounded-full border border-border text-xs text-muted transition-colors hover:text-foreground"
       >
         ?
-      </button>
+      </Link>
     );
   }
 
@@ -182,16 +178,6 @@ export default function AccountMenu({
 
   function go(tab: SettingsTab) {
     onOpenSettings(tab);
-    setMenuOpen(false);
-  }
-
-  function comingSoon(title: string) {
-    onOpenComingSoon(title);
-    setMenuOpen(false);
-  }
-
-  function openUpgrade() {
-    onOpenUpgradePlan();
     setMenuOpen(false);
   }
 
@@ -217,7 +203,7 @@ export default function AccountMenu({
             appsOpen ? "bg-surface-2 text-foreground" : ""
           }`}
         >
-          {StoreIcon}
+          {GearIcon}
         </button>
       )}
 
@@ -254,6 +240,22 @@ export default function AccountMenu({
 
           <div className="my-1 border-t border-border" />
 
+          <MenuItem
+            icon={UpgradeIcon}
+            label="Upgrade plan"
+            onClick={() => {
+              onOpenUpgradePlan();
+              setMenuOpen(false);
+            }}
+          />
+          <MenuItem
+            icon={GiftIcon}
+            label="Invite a friend"
+            onClick={() => {
+              onOpenReferral();
+              setMenuOpen(false);
+            }}
+          />
           <MenuItem icon={GearIcon} label="Settings" onClick={() => go("General")} />
           <MenuItem
             icon={GlobeIcon}
@@ -268,18 +270,14 @@ export default function AccountMenu({
             icon={HelpIcon}
             label="Get Help"
             trailing={<span className="text-muted">{ChevronRightIcon}</span>}
-            onClick={() => comingSoon("Get Help")}
+            onClick={() => {
+              onOpenSupport();
+              setMenuOpen(false);
+            }}
           />
 
           <div className="my-1 border-t border-border" />
 
-          <MenuItem icon={UpgradeIcon} label="Upgrade plan" onClick={openUpgrade} />
-          <MenuItem
-            icon={InfoIcon}
-            label="Learn more"
-            trailing={<span className="text-muted">{ChevronRightIcon}</span>}
-            onClick={openUpgrade}
-          />
           <MenuItem
             icon={LogoutIcon}
             label="Log out"

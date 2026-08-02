@@ -1,6 +1,7 @@
 "use client";
 
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
+import Link from "next/link";
 
 export default function NavAuthButton() {
   const { data: session, status } = useSession();
@@ -25,11 +26,8 @@ export default function NavAuthButton() {
   }
 
   return (
-    <button
-      onClick={() => signIn("google", undefined, { prompt: "select_account" })}
-      className="hidden sm:inline text-sm text-muted hover:text-foreground"
-    >
+    <Link href="/login" className="hidden sm:inline text-sm text-muted hover:text-foreground">
       Log in
-    </button>
+    </Link>
   );
 }

@@ -68,6 +68,14 @@ export default function Footer() {
         <div className="mx-auto max-w-6xl px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted">
           <Logo className="text-sm" />
           <span>© 2016–{new Date().getFullYear()} WellX AI. All rights reserved.</span>
+          <div className="flex items-center gap-4">
+            <Link href="/privacy" className="hover:text-foreground">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="hover:text-foreground">
+              Terms of Service
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

@@ -15,48 +15,55 @@ export type ConversationSummary = {
 const COLLAPSED_KEY = "chatgiza:sidebar-collapsed";
 
 const PencilIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M12 20h9" />
-    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5" />
+    <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z" />
   </svg>
 );
 
 const SearchIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <circle cx="11" cy="11" r="7" />
     <line x1="21" y1="21" x2="16.65" y2="16.65" />
   </svg>
 );
 
 const PanelIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <rect x="3" y="4" width="18" height="16" rx="2" />
     <line x1="9" y1="4" x2="9" y2="20" />
   </svg>
 );
 
+const MenuIcon = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <line x1="4" y1="8" x2="20" y2="8" />
+    <line x1="4" y1="16" x2="14" y2="16" />
+  </svg>
+);
+
 const LibraryIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <rect x="3" y="3" width="7" height="18" rx="1" />
     <rect x="14" y="3" width="7" height="18" rx="1" />
   </svg>
 );
 
 const ProjectsIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
   </svg>
 );
 
 const CodeIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M9 18l-6-6 6-6" />
     <path d="M15 6l6 6-6 6" />
   </svg>
 );
 
 const DesignIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 2C6.5 2 2 6 2 11c0 3 2 4 4 4h1.5a1.5 1.5 0 0 1 1.5 1.5V18c0 2 2 4 4 4 5.5 0 9-4.5 9-10S17.5 2 12 2Z" />
     <circle cx="7.5" cy="10" r="1.3" fill="currentColor" stroke="none" />
     <circle cx="11" cy="6.5" r="1.3" fill="currentColor" stroke="none" />
@@ -66,14 +73,14 @@ const DesignIcon = (
 );
 
 const StockIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M3 3v18h18" />
     <path d="M7 15l4-5 3 3 5-7" />
   </svg>
 );
 
 const KycIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <rect x="2" y="4" width="20" height="16" rx="2" />
     <circle cx="8" cy="11" r="2" />
     <path d="M5 17c.5-1.7 1.8-3 3-3s2.5 1.3 3 3" />
@@ -82,27 +89,33 @@ const KycIcon = (
 );
 
 const ChevronDownIcon = (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M6 9l6 6 6-6" />
   </svg>
 );
 
+const ChevronRightIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M9 18l6-6-6-6" />
+  </svg>
+);
+
 const PersonIcon = (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <circle cx="12" cy="8" r="4" />
     <path d="M4 20c1.3-3.6 4.4-6 8-6s6.7 2.4 8 6" />
   </svg>
 );
 
 const BuildingIcon = (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <rect x="4" y="3" width="16" height="18" rx="1" />
     <path d="M9 8h1M14 8h1M9 12h1M14 12h1M9 16h1M14 16h1" />
   </svg>
 );
 
 const ImagesIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <rect x="3" y="3" width="18" height="18" rx="2" />
     <circle cx="8.5" cy="8.5" r="1.5" />
     <path d="M21 15l-5-5L5 21" />
@@ -127,15 +140,22 @@ const ShareIcon = (
 
 const PinIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="15" cy="9" r="5" />
-    <path d="M11.5 12.5L4 20" />
+    <g transform="rotate(45 12 12)">
+      <path d="M12 17v5" />
+      <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />
+    </g>
   </svg>
 );
 
 const PinFilledIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="15" cy="9" r="5" fill="currentColor" />
-    <path d="M11.5 12.5L4 20" />
+    <g transform="rotate(45 12 12)">
+      <path d="M12 17v5" />
+      <path
+        d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"
+        fill="currentColor"
+      />
+    </g>
   </svg>
 );
 
@@ -148,10 +168,12 @@ const ArchiveIcon = (
 );
 
 const TrashIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M3 6h18" />
-    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M7 3.5h6" />
+    <path d="M5 5h10" />
+    <path d="M7 5v10a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1V5" />
+    <path d="M8.5 8v5" />
+    <path d="M11.5 8v5" />
   </svg>
 );
 
@@ -169,9 +191,9 @@ function NavItem({
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-2"
+      className="flex h-10 w-full items-center gap-2.5 rounded-xl px-2 text-base font-medium text-foreground transition-colors hover:bg-surface-2"
     >
-      <span className="flex h-5 w-5 items-center justify-center text-muted">{icon}</span>
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center text-muted">{icon}</span>
       {label}
       {trailing && <span className="ml-auto">{trailing}</span>}
     </button>
@@ -186,57 +208,136 @@ function SubItem({ icon, label, onClick }: { icon: React.ReactNode; label: strin
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-surface-2"
+      className="flex h-10 w-full items-center gap-2 rounded-xl px-2 text-left text-base font-medium text-foreground transition-colors hover:bg-surface-2"
     >
-      <span className="text-muted">{icon}</span>
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center text-muted">{icon}</span>
       {label}
     </button>
   );
 }
 
+type MenuCoords = { left: number; top?: number; bottom?: number };
+
+function computeMenuCoords(rect: DOMRect, estimatedHeight: number): MenuCoords {
+  const menuWidth = 240;
+  const left = Math.min(rect.right + 4, window.innerWidth - menuWidth - 8);
+  const spaceBelow = window.innerHeight - rect.top;
+  // Flip the menu to open upward when there isn't enough room below the
+  // trigger — otherwise it silently runs off the bottom of the screen for
+  // rows near the end of a long history list.
+  if (spaceBelow < estimatedHeight && rect.bottom - estimatedHeight > 0) {
+    return { left, bottom: window.innerHeight - rect.bottom };
+  }
+  return { left, top: rect.top };
+}
+
 function ConversationMenu({
   pinned,
+  projects,
+  open,
+  onOpenChange,
   onShare,
   onRename,
   onTogglePin,
   onArchive,
   onDelete,
+  onMoveToProject,
+  getAnchor,
 }: {
   pinned?: boolean;
+  projects: { id: string; name: string }[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onShare: () => void;
   onRename: () => void;
   onTogglePin: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  onMoveToProject: (projectId: string) => void;
+  getAnchor: () => DOMRect | null;
 }) {
-  const [open, setOpen] = useState(false);
-  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+  const [coords, setCoords] = useState<MenuCoords | null>(null);
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const moveTriggerRef = useRef<HTMLButtonElement>(null);
+  const moveMenuRef = useRef<HTMLDivElement>(null);
+  const [moveCoords, setMoveCoords] = useState<MenuCoords | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      setMoveOpen(false);
+      setConfirmDelete(false);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
+    // Recompute on every open (not just the trigger button's own click) so a
+    // long-press-triggered open still lands at the right anchor. Clamped so
+    // the fixed-width panel never overflows off the right edge of narrow
+    // (mobile) viewports.
+    const anchor = getAnchor();
+    if (anchor) {
+      const menuWidth = 240;
+      const left = Math.min(anchor.right + 4, window.innerWidth - menuWidth - 8);
+      setCoords({ top: anchor.top, left });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function close() {
+      onOpenChange(false);
+      setMoveOpen(false);
+    }
+
     function handleClickOutside(e: MouseEvent) {
       const target = e.target as Node;
       if (
         triggerRef.current &&
         !triggerRef.current.contains(target) &&
         menuRef.current &&
-        !menuRef.current.contains(target)
+        !menuRef.current.contains(target) &&
+        moveMenuRef.current &&
+        !moveMenuRef.current.contains(target)
       ) {
-        setOpen(false);
+        close();
       }
     }
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") close();
+    }
+
+    // A fixed-position portal doesn't move with the scrollable conversation
+    // list, so it visually detaches from its trigger row on scroll/resize —
+    // just close it rather than let it drift.
+    function handleScrollOrResize() {
+      close();
+    }
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("scroll", handleScrollOrResize, true);
+    window.addEventListener("resize", handleScrollOrResize);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("scroll", handleScrollOrResize, true);
+      window.removeEventListener("resize", handleScrollOrResize);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const items: { label: string; icon: React.ReactNode; onClick: () => void; danger?: boolean }[] = [
+  const items: { label: string; icon: React.ReactNode; onClick: () => void }[] = [
     { label: "Share", icon: ShareIcon, onClick: onShare },
     { label: "Rename", icon: PencilIcon, onClick: onRename },
     { label: pinned ? "Unpin chat" : "Pin chat", icon: pinned ? PinFilledIcon : PinIcon, onClick: onTogglePin },
     { label: "Archive", icon: ArchiveIcon, onClick: onArchive },
-    { label: "Delete", icon: TrashIcon, onClick: onDelete, danger: true },
   ];
 
   return (
@@ -245,11 +346,8 @@ function ConversationMenu({
         ref={triggerRef}
         onClick={(e) => {
           e.stopPropagation();
-          if (!open && triggerRef.current) {
-            const rect = triggerRef.current.getBoundingClientRect();
-            setCoords({ top: rect.top, left: rect.right + 4 });
-          }
-          setOpen((v) => !v);
+          setMoveOpen(false);
+          onOpenChange(!open);
         }}
         aria-label="Chat options"
         className={`rounded-md p-1.5 text-muted transition-colors hover:text-foreground ${
@@ -261,28 +359,152 @@ function ConversationMenu({
       {open &&
         coords &&
         createPortal(
-          <div
-            ref={menuRef}
-            style={{ position: "fixed", top: coords.top, left: coords.left }}
-            className="z-50 w-44 rounded-xl border border-border bg-surface p-1 shadow-lg"
-          >
-            {items.map((item) => (
-              <button
-                key={item.label}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  item.onClick();
-                  setOpen(false);
-                }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-surface-2 ${
-                  item.danger ? "text-[#b3413e]" : "text-foreground"
-                }`}
-              >
-                {item.icon}
-                {item.label}
-              </button>
-            ))}
-          </div>,
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => {
+                onOpenChange(false);
+                setMoveOpen(false);
+              }}
+            />
+            <div
+              ref={menuRef}
+              style={{
+                position: "fixed",
+                left: coords.left,
+                ...(coords.top !== undefined ? { top: coords.top } : { bottom: coords.bottom }),
+              }}
+              className="z-50 w-60 rounded-2xl border border-border bg-surface p-1.5 shadow-lg"
+            >
+            {confirmDelete ? (
+              <div className="p-2">
+                <p className="px-1 pb-1 text-sm font-medium text-foreground">Delete this chat?</p>
+                <p className="px-1 pb-3 text-xs text-muted">This can&apos;t be undone.</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConfirmDelete(false);
+                    }}
+                    className="flex-1 rounded-lg border border-border px-3 py-1.5 text-sm transition-colors hover:bg-surface-2"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete();
+                      onOpenChange(false);
+                    }}
+                    className="flex-1 rounded-lg bg-[#b3413e] px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {items.slice(0, 2).map((item) => (
+                  <button
+                    key={item.label}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      item.onClick();
+                      onOpenChange(false);
+                    }}
+                    className="menu-item"
+                  >
+                    <span className="icon">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+
+                <button
+                  ref={moveTriggerRef}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!moveOpen && moveTriggerRef.current) {
+                      const rect = moveTriggerRef.current.getBoundingClientRect();
+                      setMoveCoords(computeMenuCoords(rect, 200));
+                    }
+                    setMoveOpen((v) => !v);
+                  }}
+                  className="menu-item"
+                >
+                  <span className="icon">{ProjectsIcon}</span>
+                  <span className="flex-1">Move to project</span>
+                  <span className="text-muted">{ChevronRightIcon}</span>
+                </button>
+
+                {items.slice(2, 4).map((item) => (
+                  <button
+                    key={item.label}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      item.onClick();
+                      onOpenChange(false);
+                    }}
+                    className="menu-item"
+                  >
+                    <span className="icon">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setConfirmDelete(true);
+                  }}
+                  className="menu-item delete"
+                >
+                  <span className="icon">{TrashIcon}</span>
+                  <span>Delete</span>
+                </button>
+              </>
+            )}
+            </div>
+          </>,
+          document.body
+        )}
+      {moveOpen &&
+        moveCoords &&
+        createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setMoveOpen(false)}
+            />
+            <div
+              ref={moveMenuRef}
+              style={{
+                position: "fixed",
+                left: moveCoords.left,
+                ...(moveCoords.top !== undefined ? { top: moveCoords.top } : { bottom: moveCoords.bottom }),
+              }}
+              className="z-50 w-60 rounded-2xl border border-border bg-surface p-1.5 shadow-lg"
+            >
+              {projects.length === 0 ? (
+                <p className="px-3 py-2 text-xs text-muted">No projects yet</p>
+              ) : (
+                projects.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onMoveToProject(p.id);
+                      setMoveOpen(false);
+                      onOpenChange(false);
+                    }}
+                    className="menu-item"
+                  >
+                    <span className="icon">{ProjectsIcon}</span>
+                    <span className="truncate">{p.name}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          </>,
           document.body
         )}
     </>
@@ -303,6 +525,11 @@ function ConversationRow({
   onTogglePin,
   onArchive,
   onDelete,
+  projects,
+  onMoveToProject,
+  menuOpen,
+  onMenuOpenChange,
+  getAnchor,
 }: {
   c: ConversationSummary;
   active: boolean;
@@ -317,7 +544,39 @@ function ConversationRow({
   onTogglePin: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  projects: { id: string; name: string }[];
+  onMoveToProject: (projectId: string) => void;
+  menuOpen: boolean;
+  onMenuOpenChange: (open: boolean) => void;
+  getAnchor: () => DOMRect | null;
 }) {
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressFired = useRef(false);
+
+  function clearPressTimer() {
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
+  }
+
+  function handleTouchStart() {
+    longPressFired.current = false;
+    clearPressTimer();
+    pressTimer.current = setTimeout(() => {
+      longPressFired.current = true;
+      if (navigator.vibrate) navigator.vibrate(15);
+      onMenuOpenChange(true);
+    }, 450);
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    clearPressTimer();
+    if (longPressFired.current) {
+      e.preventDefault();
+    }
+  }
+
   if (editing) {
     return (
       <li>
@@ -343,11 +602,15 @@ function ConversationRow({
     <li className="group relative">
       <button
         onClick={onSelect}
-        className={`block w-full truncate rounded-lg px-2.5 py-2 pr-16 text-left text-sm font-medium text-foreground transition-colors ${
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchMove={clearPressTimer}
+        onTouchCancel={clearPressTimer}
+        className={`flex h-9 w-full items-center rounded-xl px-2 pr-16 text-left text-sm font-medium text-foreground transition-colors ${
           active ? "bg-surface-2" : "hover:bg-surface-2"
         }`}
       >
-        {c.title}
+        <span className="min-w-0 flex-1 truncate">{c.title}</span>
       </button>
       <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
         <button
@@ -364,11 +627,16 @@ function ConversationRow({
         </button>
         <ConversationMenu
           pinned={c.pinned}
+          projects={projects}
+          open={menuOpen}
+          onOpenChange={onMenuOpenChange}
           onShare={onShare}
           onRename={onRename}
           onTogglePin={onTogglePin}
           onArchive={onArchive}
           onDelete={onDelete}
+          onMoveToProject={onMoveToProject}
+          getAnchor={getAnchor}
         />
       </div>
     </li>
@@ -390,10 +658,15 @@ export default function ChatSidebar({
   onOpenCompanyDashboard,
   onOpenLanguage,
   onOpenUpgradePlan,
+  onOpenReferral,
+  onOpenSupport,
+  streak,
   onTogglePin,
   onArchive,
   onDelete,
   onShare,
+  projects,
+  onMoveToProject,
 }: {
   conversations: ConversationSummary[];
   activeId: string | null;
@@ -409,19 +682,55 @@ export default function ChatSidebar({
   onOpenCompanyDashboard: () => void;
   onOpenLanguage: () => void;
   onOpenUpgradePlan: () => void;
+  onOpenReferral: () => void;
+  onOpenSupport: () => void;
+  streak: number;
   onTogglePin: (id: string) => void;
   onArchive: (id: string) => void;
   onDelete: (id: string) => void;
   onShare: (id: string) => void;
+  projects: { id: string; name: string }[];
+  onMoveToProject: (conversationId: string, projectId: string) => void;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const historyAnchorRef = useRef<HTMLDivElement>(null);
+  const getMenuAnchor = () => historyAnchorRef.current?.getBoundingClientRect() ?? null;
   const [collapsed, setCollapsed] = useState(false);
   const [kycOpen, setKycOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     setCollapsed(localStorage.getItem(COLLAPSED_KEY) === "1");
   }, []);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    document.body.style.overflow = "hidden";
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setMobileOpen(false);
+    }
+    function handleResize() {
+      if (window.innerWidth >= 640) setMobileOpen(false);
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", handleResize);
+    return () => {
+      document.body.style.overflow = "";
+      document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [mobileOpen]);
+
+  function closeMobileThen(fn: () => void) {
+    return () => {
+      setMobileOpen(false);
+      fn();
+    };
+  }
 
   function toggleCollapsed() {
     setCollapsed((prev) => {
@@ -448,158 +757,218 @@ export default function ChatSidebar({
   const pinnedConversations = signedIn ? conversations.filter((c) => c.pinned) : [];
   const recentConversations = signedIn ? conversations.filter((c) => !c.pinned) : [];
 
-  if (collapsed) {
+  const collapsedBody = (
+    <>
+      <button
+        onClick={toggleCollapsed}
+        aria-label="Expand sidebar"
+        className="mb-4 flex h-9 w-9 items-center justify-center rounded-xl hover:bg-surface-2 text-muted hover:text-foreground transition-colors"
+      >
+        {PanelIcon}
+      </button>
+      <button
+        onClick={onNewChat}
+        aria-label="New chat"
+        className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl border border-border text-muted shadow-sm transition-all hover:bg-surface-2 hover:text-foreground hover:shadow-md"
+      >
+        {PencilIcon}
+      </button>
+      <button
+        onClick={onOpenSearch}
+        aria-label="Search chats"
+        className="mb-1 flex h-9 w-9 items-center justify-center rounded-xl text-muted hover:bg-surface-2 hover:text-foreground transition-colors"
+      >
+        {SearchIcon}
+      </button>
+      <button
+        onClick={onOpenLibrary}
+        aria-label="Library"
+        className="flex h-9 w-9 items-center justify-center rounded-xl text-muted hover:bg-surface-2 hover:text-foreground transition-colors"
+      >
+        {LibraryIcon}
+      </button>
+
+      <div className="flex-1" />
+
+      <AccountMenu variant="collapsed" onOpenSettings={onOpenSettingsTab} onOpenLanguage={onOpenLanguage} onOpenUpgradePlan={onOpenUpgradePlan} onOpenReferral={onOpenReferral} onOpenSupport={onOpenSupport} />
+    </>
+  );
+
+  function renderExpandedBody(onHeaderClose: () => void, headerCloseLabel: string) {
     return (
-      <aside className="hidden w-16 shrink-0 flex-col items-center border-r border-border bg-surface py-4 sm:flex">
-        <button
-          onClick={toggleCollapsed}
-          aria-label="Expand sidebar"
-          className="mb-4 flex h-8 w-8 items-center justify-center rounded-md hover:bg-surface-2 text-muted hover:text-foreground transition-colors"
-        >
-          {PanelIcon}
-        </button>
-        <button
-          onClick={onNewChat}
-          aria-label="New chat"
-          className="mb-2 flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted shadow-sm transition-all hover:bg-surface-2 hover:text-foreground hover:shadow-md"
-        >
-          {PencilIcon}
-        </button>
-        <button
-          onClick={onOpenSearch}
-          aria-label="Search chats"
-          className="mb-1 flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-surface-2 hover:text-foreground transition-colors"
-        >
-          {SearchIcon}
-        </button>
-        <button
-          onClick={onOpenLibrary}
-          aria-label="Library"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-surface-2 hover:text-foreground transition-colors"
-        >
-          {LibraryIcon}
-        </button>
+      <>
+        <div className="flex items-center justify-between px-3 py-4">
+          <Link href="/" className="flex items-center gap-2 text-lg font-extrabold">
+            <span className="glow-badge rounded-full px-2 py-0.5">ChatGiZa</span>
+          </Link>
+          <div className="flex items-center gap-1">
+            {streak >= 2 && (
+              <span
+                title={`Siku ${streak} mfululizo`}
+                className="flex items-center gap-1 rounded-full border border-border px-2 py-1 text-xs font-medium text-muted"
+              >
+                🔥 {streak}
+              </span>
+            )}
+            <button
+              onClick={onHeaderClose}
+              aria-label={headerCloseLabel}
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+            >
+              {PanelIcon}
+            </button>
+          </div>
+        </div>
 
-        <div className="flex-1" />
+        <div className="sidebar-scroll flex-1 overflow-y-auto px-2">
+          <button
+            onClick={closeMobileThen(onNewChat)}
+            className="mb-2 flex h-10 w-full items-center gap-2 rounded-xl border border-border px-2 text-base font-medium shadow-sm transition-all hover:bg-surface-2 hover:shadow-md"
+          >
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center">{PencilIcon}</span>
+            New chat
+          </button>
+          <NavItem icon={SearchIcon} label="Search chats" onClick={closeMobileThen(onOpenSearch)} />
+          <NavItem icon={ProjectsIcon} label="Projects" onClick={closeMobileThen(onOpenProjects)} />
+          <NavItem icon={ImagesIcon} label="images" onClick={closeMobileThen(onOpenLibrary)} />
+          <NavItem icon={LibraryIcon} label="Library" onClick={closeMobileThen(onOpenLibrary)} />
 
-        <AccountMenu variant="collapsed" onOpenSettings={onOpenSettingsTab} onOpenComingSoon={onOpenComingSoon} onOpenLanguage={onOpenLanguage} onOpenUpgradePlan={onOpenUpgradePlan} />
-      </aside>
+          <NavItem
+            icon={KycIcon}
+            label="KYC"
+            onClick={() => setKycOpen((v) => !v)}
+            trailing={
+              <span className={`transition-transform ${kycOpen ? "rotate-180" : ""}`}>{ChevronDownIcon}</span>
+            }
+          />
+          {kycOpen && (
+            <div className="ml-4 space-y-0.5 border-l border-border pl-2">
+              <SubItem icon={PersonIcon} label="Personal KYC" onClick={closeMobileThen(() => onOpenComingSoon("Personal KYC"))} />
+              <SubItem icon={BuildingIcon} label="Company KYC" onClick={closeMobileThen(onOpenCompanyDashboard)} />
+            </div>
+          )}
+
+          <SectionLabel>Products</SectionLabel>
+          <NavItem icon={DesignIcon} label="Design" onClick={closeMobileThen(() => onOpenComingSoon("Design"))} />
+          <NavItem icon={StockIcon} label="Stock" onClick={closeMobileThen(() => onOpenComingSoon("Stock"))} />
+          <NavItem icon={CodeIcon} label="Code" onClick={closeMobileThen(onOpenCode)} />
+
+        <div
+          ref={historyAnchorRef}
+          className={
+            pinnedConversations.length > 0 || recentConversations.length > 0 ? "mt-3 border-t border-border pt-1" : ""
+          }
+        >
+          {pinnedConversations.length > 0 && (
+            <>
+              <div className="px-2.5 py-1 text-xs text-muted">Pinned</div>
+              <ul className="mb-2 space-y-0">
+                {pinnedConversations.map((c) => (
+                  <ConversationRow
+                    key={c.id}
+                    c={c}
+                    active={c.id === activeId}
+                    editing={editingId === c.id}
+                    editValue={editValue}
+                    onEditValueChange={setEditValue}
+                    onCommitEdit={commitEdit}
+                    onCancelEdit={() => setEditingId(null)}
+                    onSelect={closeMobileThen(() => onSelect(c.id))}
+                    onShare={() => onShare(c.id)}
+                    onRename={() => startEditing(c)}
+                    onTogglePin={() => onTogglePin(c.id)}
+                    onArchive={() => onArchive(c.id)}
+                    onDelete={() => onDelete(c.id)}
+                    projects={projects}
+                    onMoveToProject={(projectId) => onMoveToProject(c.id, projectId)}
+                    menuOpen={openMenuId === c.id}
+                    onMenuOpenChange={(open) => setOpenMenuId(open ? c.id : null)}
+                    getAnchor={getMenuAnchor}
+                  />
+                ))}
+              </ul>
+            </>
+          )}
+
+          {recentConversations.length > 0 && (
+            <>
+              <div className="px-2.5 py-1 text-xs text-muted">Recents</div>
+              <ul className="space-y-0">
+                {recentConversations.map((c) => (
+                  <ConversationRow
+                    key={c.id}
+                    c={c}
+                    active={c.id === activeId}
+                    editing={editingId === c.id}
+                    editValue={editValue}
+                    onEditValueChange={setEditValue}
+                    onCommitEdit={commitEdit}
+                    onCancelEdit={() => setEditingId(null)}
+                    onSelect={closeMobileThen(() => onSelect(c.id))}
+                    onShare={() => onShare(c.id)}
+                    onRename={() => startEditing(c)}
+                    onTogglePin={() => onTogglePin(c.id)}
+                    onArchive={() => onArchive(c.id)}
+                    onDelete={() => onDelete(c.id)}
+                    projects={projects}
+                    onMoveToProject={(projectId) => onMoveToProject(c.id, projectId)}
+                    menuOpen={openMenuId === c.id}
+                    onMenuOpenChange={(open) => setOpenMenuId(open ? c.id : null)}
+                    getAnchor={getMenuAnchor}
+                  />
+                ))}
+              </ul>
+            </>
+          )}
+
+          {!signedIn && status !== "loading" && (
+            <p className="px-2.5 py-2 text-xs text-muted">Log in to save and see your chat history.</p>
+          )}
+        </div>
+        </div>
+
+        <div className="flex items-center px-3 py-3">
+          <AccountMenu variant="expanded" onOpenSettings={onOpenSettingsTab} onOpenLanguage={onOpenLanguage} onOpenUpgradePlan={onOpenUpgradePlan} onOpenReferral={onOpenReferral} onOpenSupport={onOpenSupport} />
+        </div>
+      </>
     );
   }
 
   return (
-    <aside className="hidden w-72 shrink-0 flex-col border-r border-border bg-surface sm:flex">
-      <div className="flex items-center justify-between px-3 py-4">
-        <Link href="/" className="flex items-center gap-2 text-sm font-semibold">
-          <span className="h-6 w-6 rounded-md bg-foreground flex items-center justify-center text-background text-xs font-bold">
-            W
-          </span>
-          ChatGiZa
-        </Link>
-        <button
-          onClick={toggleCollapsed}
-          aria-label="Collapse sidebar"
-          className="text-muted hover:text-foreground transition-colors"
-        >
-          {PanelIcon}
-        </button>
-      </div>
-
-      <div className="px-2">
-        <button
-          onClick={onNewChat}
-          className="mb-2 flex w-full items-center gap-2 rounded-full border border-border px-3 py-2.5 text-sm font-medium shadow-sm transition-all hover:bg-surface-2 hover:shadow-md"
-        >
-          <span className="flex h-5 w-5 items-center justify-center">{PencilIcon}</span>
-          New chat
-        </button>
-        <NavItem icon={SearchIcon} label="Search chats" onClick={onOpenSearch} />
-        <NavItem icon={ProjectsIcon} label="Projects" onClick={onOpenProjects} />
-        <NavItem icon={ImagesIcon} label="images" onClick={onOpenLibrary} />
-        <NavItem icon={LibraryIcon} label="Library" onClick={onOpenLibrary} />
-
-        <NavItem
-          icon={KycIcon}
-          label="KYC"
-          onClick={() => setKycOpen((v) => !v)}
-          trailing={
-            <span className={`transition-transform ${kycOpen ? "rotate-180" : ""}`}>{ChevronDownIcon}</span>
-          }
-        />
-        {kycOpen && (
-          <div className="ml-4 space-y-0.5 border-l border-border pl-2">
-            <SubItem icon={PersonIcon} label="Personal KYC" onClick={() => onOpenComingSoon("Personal KYC")} />
-            <SubItem icon={BuildingIcon} label="Company KYC" onClick={onOpenCompanyDashboard} />
-          </div>
+    <>
+      {mounted &&
+        createPortal(
+          <button
+            onClick={() => setMobileOpen(true)}
+            aria-label="Open menu"
+            className="fixed left-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-sidebar text-foreground shadow-md sm:hidden"
+          >
+            {MenuIcon}
+          </button>,
+          document.body
         )}
 
-        <SectionLabel>Products</SectionLabel>
-        <NavItem icon={DesignIcon} label="Design" onClick={() => onOpenComingSoon("Design")} />
-        <NavItem icon={StockIcon} label="Stock" onClick={() => onOpenComingSoon("Stock")} />
-        <NavItem icon={CodeIcon} label="Code" onClick={onOpenCode} />
-      </div>
-
-      <div className="mt-4 flex-1 overflow-y-auto px-2">
-        {pinnedConversations.length > 0 && (
-          <>
-            <div className="px-2.5 py-1 text-xs text-muted">Pinned</div>
-            <ul className="mb-3 space-y-0.5">
-              {pinnedConversations.map((c) => (
-                <ConversationRow
-                  key={c.id}
-                  c={c}
-                  active={c.id === activeId}
-                  editing={editingId === c.id}
-                  editValue={editValue}
-                  onEditValueChange={setEditValue}
-                  onCommitEdit={commitEdit}
-                  onCancelEdit={() => setEditingId(null)}
-                  onSelect={() => onSelect(c.id)}
-                  onShare={() => onShare(c.id)}
-                  onRename={() => startEditing(c)}
-                  onTogglePin={() => onTogglePin(c.id)}
-                  onArchive={() => onArchive(c.id)}
-                  onDelete={() => onDelete(c.id)}
-                />
-              ))}
-            </ul>
-          </>
+      {mounted &&
+        mobileOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-40 flex sm:hidden">
+            <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
+            <aside className="relative z-10 flex h-full w-[var(--sidebar-width)] max-w-[85vw] flex-col bg-sidebar shadow-xl">
+              {renderExpandedBody(() => setMobileOpen(false), "Close menu")}
+            </aside>
+          </div>,
+          document.body
         )}
 
-        {recentConversations.length > 0 && (
-          <>
-            <div className="px-2.5 py-1 text-xs text-muted">Recents</div>
-            <ul className="space-y-0.5">
-              {recentConversations.map((c) => (
-                <ConversationRow
-                  key={c.id}
-                  c={c}
-                  active={c.id === activeId}
-                  editing={editingId === c.id}
-                  editValue={editValue}
-                  onEditValueChange={setEditValue}
-                  onCommitEdit={commitEdit}
-                  onCancelEdit={() => setEditingId(null)}
-                  onSelect={() => onSelect(c.id)}
-                  onShare={() => onShare(c.id)}
-                  onRename={() => startEditing(c)}
-                  onTogglePin={() => onTogglePin(c.id)}
-                  onArchive={() => onArchive(c.id)}
-                  onDelete={() => onDelete(c.id)}
-                />
-              ))}
-            </ul>
-          </>
-        )}
-
-        {!signedIn && status !== "loading" && (
-          <p className="px-2.5 py-2 text-xs text-muted">Log in to save and see your chat history.</p>
-        )}
-      </div>
-
-      <div className="flex items-center border-t border-border px-3 py-3">
-        <AccountMenu variant="expanded" onOpenSettings={onOpenSettingsTab} onOpenComingSoon={onOpenComingSoon} onOpenLanguage={onOpenLanguage} onOpenUpgradePlan={onOpenUpgradePlan} />
-      </div>
-    </aside>
+      {collapsed ? (
+        <aside className="hidden w-16 shrink-0 flex-col items-center border-r border-border bg-sidebar py-4 sm:flex">
+          {collapsedBody}
+        </aside>
+      ) : (
+        <aside className="hidden w-[var(--sidebar-width)] shrink-0 flex-col border-r border-border bg-sidebar sm:flex">
+          {renderExpandedBody(toggleCollapsed, "Collapse sidebar")}
+        </aside>
+      )}
+    </>
   );
 }
