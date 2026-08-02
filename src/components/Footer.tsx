@@ -67,7 +67,7 @@ export default function Footer() {
       <div className="border-t border-border">
         <div className="mx-auto max-w-6xl px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted">
           <Logo className="text-sm" />
-          <span>© 2016–{new Date().getFullYear()} WellX AI. All rights reserved.</span>
+          <span>© 2016–{new Date().getFullYear()} ChatGiZa. All rights reserved.</span>
           <div className="flex items-center gap-4">
             <Link href="/privacy" className="hover:text-foreground">
               Privacy Policy

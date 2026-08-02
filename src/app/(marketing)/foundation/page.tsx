@@ -1,9 +1,9 @@
 export default function FoundationPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 w-full">
-      <h1 className="text-3xl font-semibold">WellX Foundation</h1>
+      <h1 className="text-3xl font-semibold">ChatGiZa Foundation</h1>
       <p className="mt-4 text-muted">
-        The WellX Foundation is our long-term commitment to making sure the benefits of
+        The ChatGiZa Foundation is our long-term commitment to making sure the benefits of
         AI reach beyond paying customers — supporting education, local language
         technology, and community access to AI tools.
       </p>

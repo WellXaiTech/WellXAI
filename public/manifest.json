@@ -1,7 +1,7 @@
 {
   "name": "ChatGiZa",
   "short_name": "ChatGiZa",
-  "description": "ChatGiZa — conversational AI assistant by WellX AI.",
+  "description": "ChatGiZa — your AI assistant for chat, images, video, and research.",
   "start_url": "/chatgiza",
   "id": "/chatgiza",
   "scope": "/",

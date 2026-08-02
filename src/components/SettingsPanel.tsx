@@ -1097,7 +1097,7 @@ export default function SettingsPanel({
               />
               <Row
                 title="Personalized marketing"
-                description="This helps us personalize and measure WellX AI's own marketing on third-party platforms."
+                description="This helps us personalize and measure ChatGiZa's own marketing on third-party platforms."
                 border={false}
                 control={
                   <Toggle
