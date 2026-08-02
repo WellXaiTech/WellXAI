@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { kv } from "@vercel/kv";
 import { auth } from "@/auth";
-import { getReferralCode } from "@/lib/referral";
 
 // Best-effort cleanup of everything ChatGiZa itself stores server-side for this
 // account (KV only — there is no separate application database). Conversation
@@ -14,7 +13,6 @@ export async function DELETE() {
   }
 
   const userId = session.user.id;
-  const code = getReferralCode(userId);
 
   const keys = [
     `chatgiza:history:${userId}`,
@@ -23,7 +21,6 @@ export async function DELETE() {
     `chatgiza:revoked-sessions:${userId}`,
     `chatgiza:welcomed:${userId}`,
     `chatgiza:stripe-customer:${userId}`,
-    `chatgiza:referral-count:${code}`,
   ];
 
   try {

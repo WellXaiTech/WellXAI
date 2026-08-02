@@ -658,7 +658,6 @@ export default function ChatSidebar({
   onOpenCompanyDashboard,
   onOpenLanguage,
   onOpenUpgradePlan,
-  onOpenReferral,
   onOpenSupport,
   streak,
   onTogglePin,
@@ -682,7 +681,6 @@ export default function ChatSidebar({
   onOpenCompanyDashboard: () => void;
   onOpenLanguage: () => void;
   onOpenUpgradePlan: () => void;
-  onOpenReferral: () => void;
   onOpenSupport: () => void;
   streak: number;
   onTogglePin: (id: string) => void;
@@ -790,7 +788,7 @@ export default function ChatSidebar({
 
       <div className="flex-1" />
 
-      <AccountMenu variant="collapsed" onOpenSettings={onOpenSettingsTab} onOpenLanguage={onOpenLanguage} onOpenUpgradePlan={onOpenUpgradePlan} onOpenReferral={onOpenReferral} onOpenSupport={onOpenSupport} />
+      <AccountMenu variant="collapsed" onOpenSettings={onOpenSettingsTab} onOpenLanguage={onOpenLanguage} onOpenUpgradePlan={onOpenUpgradePlan} onOpenSupport={onOpenSupport} />
     </>
   );
 
@@ -928,7 +926,7 @@ export default function ChatSidebar({
         </div>
 
         <div className="flex items-center px-3 py-3">
-          <AccountMenu variant="expanded" onOpenSettings={onOpenSettingsTab} onOpenLanguage={onOpenLanguage} onOpenUpgradePlan={onOpenUpgradePlan} onOpenReferral={onOpenReferral} onOpenSupport={onOpenSupport} />
+          <AccountMenu variant="expanded" onOpenSettings={onOpenSettingsTab} onOpenLanguage={onOpenLanguage} onOpenUpgradePlan={onOpenUpgradePlan} onOpenSupport={onOpenSupport} />
         </div>
       </>
     );
