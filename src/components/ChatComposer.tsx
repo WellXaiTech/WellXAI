@@ -146,6 +146,7 @@ export default function ChatComposer({
   onSubmit: (e: React.FormEvent) => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuPanelRef = useRef<HTMLDivElement>(null);
   const toolMenuRef = useRef<HTMLDivElement>(null);
@@ -164,6 +165,13 @@ export default function ChatComposer({
   const [voiceError, setVoiceError] = useState<string | null>(null);
 
   const isHero = variant === "hero";
+
+  // Jump straight to typing on the home screen — covers both first opening
+  // the app and pressing "New chat" (which remounts this hero composer).
+  useEffect(() => {
+    if (isHero) messageInputRef.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Dropdowns are portaled to document.body with position:fixed, anchored to
   // the WHOLE composer wrapper (not the trigger button) — portaling escapes a
@@ -486,6 +494,7 @@ export default function ChatComposer({
 
       <div className="relative w-full">
         <input
+          ref={messageInputRef}
           value={value}
           onChange={(e) => onValueChange(e.target.value)}
           disabled={disabled}
