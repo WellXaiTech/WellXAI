@@ -23,7 +23,10 @@ jobs:
           node-version: "20"
 
       - name: Install dependencies
-        run: npm ci
+        shell: bash
+        run: |
+          set -o pipefail
+          npm ci 2>&1 | tee -a /tmp/build.log
 
       # `capacitor-cordova-android-plugins/` (which Gradle needs) is in
       # android/.gitignore on purpose — Capacitor regenerates it from
@@ -32,7 +35,10 @@ jobs:
       # Skipping this step is what "Could not read script
       # .../cordova.variables.gradle as it does not exist" actually meant.
       - name: Sync Capacitor Android project
-        run: npx cap sync android
+        shell: bash
+        run: |
+          set -o pipefail
+          npx cap sync android 2>&1 | tee -a /tmp/build.log
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -44,9 +50,11 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Accept Android SDK licenses and install the compile SDK platform
+        shell: bash
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          set -o pipefail
+          (yes | sdkmanager --licenses > /dev/null || true)
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" 2>&1 | tee -a /tmp/build.log
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
@@ -54,11 +62,9 @@ jobs:
       # ubuntu-latest runners have ~7GB RAM total; a full Android/Capacitor
       # build (AAPT2, D8/R8, multiple JVM workers) can OOM-kill mid-build
       # even with a conservative Gradle heap — extra swap is cheap insurance
-      # when it works. `continue-on-error` because this step has failed for
-      # reasons not visible in the annotation-only diagnostics available here
-      # (likely a runner-image quirk, not something worth blocking the build
-      # over) — --max-workers=1 and the capped heap/metaspace below are the
-      # real fix either way.
+      # when it works. `continue-on-error` because this step has been flaky
+      # for reasons not worth blocking the build over — --max-workers=1 and
+      # the capped heap/metaspace in gradle.properties are the real fix.
       - name: Add swap space
         continue-on-error: true
         run: |
@@ -73,31 +79,29 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          ./gradlew assembleDebug --no-daemon --max-workers=1 --stacktrace 2>&1 | tee /tmp/gradle-build.log
+          ./gradlew assembleDebug --no-daemon --max-workers=1 --stacktrace 2>&1 | tee -a /tmp/build.log
 
       # Job logs require a GitHub login to view, even on a public repo —
       # this surfaces the failure as a check-run annotation instead, which
-      # IS readable without auth via the public API, so the actual Gradle
-      # error is visible without needing repo access.
+      # IS readable without auth via the public API, so the actual error is
+      # visible without needing repo access. Every step above appends to the
+      # same /tmp/build.log, so whichever step failed, its output is here.
       - name: Surface build failure as an annotation
         if: failure()
         shell: bash
         run: |
           set +o pipefail
-          # Gradle's plain-English "what went wrong" summary comes *before*
-          # the (huge, useless-for-diagnosis) internal stack trace — grab
-          # that section specifically instead of just the tail of the log.
-          # (awk self-limits to 60 lines instead of piping into `head`,
-          # which — combined with the default `pipefail` these steps run
-          # under — SIGPIPEs the upstream process the moment `head` closes
-          # its input early, failing this diagnostic step itself.)
-          if [ -f /tmp/gradle-build.log ]; then
-            section=$(awk '/FAILURE: Build failed|What went wrong/{found=1} found{print; n++} n>=60{exit}' /tmp/gradle-build.log)
+          if [ -f /tmp/build.log ]; then
+            # Gradle's plain-English "what went wrong" summary (if this got
+            # that far) comes *before* the huge internal stack trace — prefer
+            # that section; otherwise fall back to the last 80 lines of
+            # whatever step actually failed.
+            section=$(awk '/FAILURE: Build failed|What went wrong/{found=1} found{print; n++} n>=60{exit}' /tmp/build.log)
             if [ -z "$section" ]; then
-              section=$(tail -n 80 /tmp/gradle-build.log)
+              section=$(tail -n 80 /tmp/build.log)
             fi
           else
-            section="(a step before the Gradle build itself failed — no build log was produced)"
+            section="(no log was captured — the failure happened before any logged step)"
           fi
           msg=$(printf '%s' "$section" | sed 's/%/%25/g; s/\r/%0D/g' | awk '{printf "%s%%0A", $0}')
           echo "::error::$msg"
