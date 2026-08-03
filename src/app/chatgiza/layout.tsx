@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import InstallAppPrompt from "@/components/InstallAppPrompt";
 
 const TITLE = "ChatGiZa";
 const DESCRIPTION =
@@ -48,6 +49,7 @@ export default function ChatGizaLayout({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }}
       />
       {children}
+      <InstallAppPrompt />
     </div>
   );
 }
