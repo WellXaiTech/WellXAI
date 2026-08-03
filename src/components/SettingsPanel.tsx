@@ -675,7 +675,27 @@ export default function SettingsPanel({
             <h2 className="text-lg font-semibold">Settings</h2>
           </div>
 
-          <div className="relative mb-3">
+          {session?.user && (
+            <button
+              onClick={() => selectTab("Account")}
+              className="mb-4 flex w-full items-center gap-3 rounded-2xl bg-surface-2 p-3 text-left sm:hidden"
+            >
+              {session.user.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={session.user.image} alt="" className="h-11 w-11 shrink-0 rounded-full" />
+              ) : (
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-base">
+                  {session.user.name?.[0] ?? "?"}
+                </span>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-base font-semibold">{session.user.name}</p>
+                <p className="truncate text-sm text-muted">{session.user.email}</p>
+              </div>
+            </button>
+          )}
+
+          <div className="relative mb-3 hidden sm:block">
             <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted">
               {SearchIcon}
             </span>
@@ -683,7 +703,7 @@ export default function SettingsPanel({
               value={tabSearch}
               onChange={(e) => setTabSearch(e.target.value)}
               placeholder="Search"
-              className="w-full rounded-lg border border-border bg-background py-1.5 pl-8 pr-2 text-sm outline-none focus:border-foreground/40 sm:rounded-lg sm:py-1.5 sm:text-sm"
+              className="w-full rounded-lg border border-border bg-background py-1.5 pl-8 pr-2 text-sm outline-none focus:border-foreground/40"
             />
           </div>
           <div className="mb-1 px-1 sm:block hidden">
@@ -723,6 +743,15 @@ export default function SettingsPanel({
                 ))}
               </ul>
             </>
+          )}
+
+          {session?.user && (
+            <button
+              onClick={() => signOut({ callbackUrl: "/chatgiza" })}
+              className="mt-4 w-full rounded-2xl bg-surface-2 px-3 py-3 text-center text-base font-medium text-red-500 transition-colors hover:bg-surface sm:hidden"
+            >
+              Sign out
+            </button>
           )}
         </div>
 
