@@ -39,10 +39,11 @@ jobs:
       # even with a conservative Gradle heap — extra swap is cheap insurance.
       - name: Add swap space
         run: |
-          sudo fallocate -l 6G /swapfile
+          sudo dd if=/dev/zero of=/swapfile bs=1M count=6144
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
+          free -h
 
       - name: Build debug APK
         working-directory: android
@@ -62,9 +63,13 @@ jobs:
           # Gradle's plain-English "what went wrong" summary comes *before*
           # the (huge, useless-for-diagnosis) internal stack trace — grab
           # that section specifically instead of just the tail of the log.
-          section=$(awk '/FAILURE: Build failed|What went wrong/{found=1} found' /tmp/gradle-build.log | head -n 60)
-          if [ -z "$section" ]; then
-            section=$(tail -n 80 /tmp/gradle-build.log)
+          if [ -f /tmp/gradle-build.log ]; then
+            section=$(awk '/FAILURE: Build failed|What went wrong/{found=1} found' /tmp/gradle-build.log | head -n 60)
+            if [ -z "$section" ]; then
+              section=$(tail -n 80 /tmp/gradle-build.log)
+            fi
+          else
+            section="(a step before the Gradle build itself failed — no build log was produced)"
           fi
           msg=$(printf '%s' "$section" | sed 's/%/%25/g; s/\r/%0D/g' | awk '{printf "%s%%0A", $0}')
           echo "::error::$msg"
