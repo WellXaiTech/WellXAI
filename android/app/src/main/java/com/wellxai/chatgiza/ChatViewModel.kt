@@ -47,6 +47,14 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var sending by mutableStateOf(false)
     private set
 
+  /** One of null (default), "web_search", "deep_research", "deep_think". */
+  var activeTool by mutableStateOf<String?>(null)
+    private set
+
+  fun setActiveTool(tool: String?) {
+    activeTool = tool
+  }
+
   var signingIn by mutableStateOf(false)
     private set
 
@@ -418,7 +426,17 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
     viewModelScope.launch {
       val history = messages.dropLast(1).map { ChatMessage(it.role, it.content) }
-      val result = ChatGizaApi.streamChat(token, history) { chunk ->
+      val result = ChatGizaApi.streamChat(
+        token = token,
+        messages = history,
+        tool = activeTool,
+        conversationId = conversationId,
+        profile = profileData.profile,
+        memory = if (profileData.memoryEnabled) profileData.memory else emptyList(),
+        language = profileData.language,
+        location = settingsData.location,
+        company = settingsData.company
+      ) { chunk ->
         messages = messages.map { m ->
           if (m.id == assistantId) m.copy(content = m.content + chunk) else m
         }
