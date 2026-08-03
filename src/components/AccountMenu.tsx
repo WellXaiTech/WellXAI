@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import Link from "next/link";
 import type { Tab as SettingsTab } from "@/components/SettingsPanel";
+import { CHATGIZA_APK_URL, useInstallPrompt } from "@/lib/useInstallPrompt";
 
 export type { SettingsTab };
 
@@ -111,6 +112,16 @@ export default function AccountMenu({
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [appsOpen, setAppsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { canPrompt, promptInstall } = useInstallPrompt();
+
+  // Chrome's install prompt works for both desktop and Android — it's what
+  // actually installs the app there. Android without PWA support (or a user
+  // who specifically wants the sideloadable file) falls back to the APK.
+  function getApp() {
+    setAppsOpen(false);
+    if (canPrompt) promptInstall();
+    else window.open(CHATGIZA_APK_URL, "_blank", "noopener");
+  }
 
   useEffect(() => {
     if (!menuOpen) setSwitcherOpen(false);
@@ -198,14 +209,8 @@ export default function AccountMenu({
 
       {appsOpen && (
         <div className="absolute bottom-0 left-full z-50 ml-1 w-56 rounded-xl border border-border bg-surface p-1 shadow-lg">
-          <div className={menuItemClass}>
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center text-foreground/70">{DesktopIcon}</span>
-            <span className="flex-1">Get ChatGiZa desktop</span>
-          </div>
-          <div className={menuItemClass}>
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center text-foreground/70">{MobileIcon}</span>
-            <span className="flex-1">Get ChatGiZa mobile</span>
-          </div>
+          <MenuItem icon={DesktopIcon} label="Get ChatGiZa desktop" onClick={getApp} />
+          <MenuItem icon={MobileIcon} label="Get ChatGiZa mobile" onClick={getApp} />
         </div>
       )}
 
