@@ -389,6 +389,8 @@ function ChatGizaInner() {
   const autoSent = useRef(false);
   const historySyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pulledHistoryFor = useRef<string | null>(null);
+  const profileSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pulledProfileFor = useRef<string | null>(null);
 
   useEffect(() => {
     setProjects(loadJson(PROJECTS_KEY, []));
@@ -537,6 +539,46 @@ function ChatGizaInner() {
       if (historySyncTimer.current) clearTimeout(historySyncTimer.current);
     };
   }, [conversations, deletedIds, signedIn, historyEnabled, scope, loadedScope]);
+
+  // Same pull/push pattern as history, for the account-level settings that
+  // used to live only in this device's localStorage (nickname/about, memory,
+  // language) — the native Android app reads/writes the same endpoint, so
+  // editing your profile on one now shows up on the other.
+  useEffect(() => {
+    if (!signedIn) return;
+    const userId = authSession?.user?.id;
+    if (!userId || pulledProfileFor.current === userId) return;
+    pulledProfileFor.current = userId;
+    fetch("/api/profile")
+      .then((res) => (res.ok ? res.json() : null))
+      .then(
+        (
+          data: { profile?: Profile; memory?: string[]; memoryEnabled?: boolean; language?: string } | null
+        ) => {
+          if (!data) return;
+          if (data.profile) setProfile(data.profile);
+          if (data.memory) setMemory(data.memory);
+          if (typeof data.memoryEnabled === "boolean") setMemoryEnabled(data.memoryEnabled);
+          if (data.language) setLanguage(data.language);
+        }
+      )
+      .catch(() => {});
+  }, [signedIn, authSession?.user?.id]);
+
+  useEffect(() => {
+    if (!signedIn) return;
+    if (profileSyncTimer.current) clearTimeout(profileSyncTimer.current);
+    profileSyncTimer.current = setTimeout(() => {
+      fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profile, memory, memoryEnabled, language }),
+      }).catch(() => {});
+    }, 1200);
+    return () => {
+      if (profileSyncTimer.current) clearTimeout(profileSyncTimer.current);
+    };
+  }, [profile, memory, memoryEnabled, language, signedIn]);
 
   useEffect(() => {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));

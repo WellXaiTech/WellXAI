@@ -22,6 +22,7 @@ export async function DELETE() {
     `chatgiza:revoked-sessions:${userId}`,
     `chatgiza:welcomed:${userId}`,
     `chatgiza:stripe-customer:${userId}`,
+    `chatgiza:profile-data:${userId}`,
   ];
 
   try {
