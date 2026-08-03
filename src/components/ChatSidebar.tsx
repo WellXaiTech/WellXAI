@@ -776,10 +776,19 @@ export default function ChatSidebar({
     setEditingId(null);
   }
 
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const signedIn = status === "authenticated";
   const pinnedConversations = signedIn ? conversations.filter((c) => c.pinned) : [];
   const recentConversations = signedIn ? conversations.filter((c) => !c.pinned) : [];
+
+  const mobileHeaderAvatar = session?.user?.image ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={session.user.image} alt="" className="h-8 w-8 shrink-0 rounded-full" />
+  ) : (
+    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border text-xs">
+      {session?.user?.name?.[0] ?? "?"}
+    </span>
+  );
 
   const collapsedBody = (
     <>
@@ -822,7 +831,25 @@ export default function ChatSidebar({
     return (
       <>
         <div className="flex items-center justify-between px-3 py-4">
-          <button onClick={onNewChat} className="flex items-center gap-2 text-lg font-extrabold">
+          {signedIn ? (
+            <button
+              onClick={closeMobileThen(() => onOpenSettingsTab("Account"))}
+              className="flex min-w-0 flex-1 items-center gap-2 text-left sm:hidden"
+            >
+              {mobileHeaderAvatar}
+              <span className="min-w-0 truncate text-sm font-semibold">
+                {session?.user?.name ?? session?.user?.email}
+              </span>
+            </button>
+          ) : (
+            <Link href="/login" className="flex min-w-0 flex-1 items-center gap-2 text-sm text-muted sm:hidden">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border text-xs">
+                ?
+              </span>
+              Log in
+            </Link>
+          )}
+          <button onClick={onNewChat} className="hidden items-center gap-2 text-lg font-extrabold sm:flex">
             <span className="glow-badge rounded-full px-2 py-0.5">ChatGiZa</span>
           </button>
           <div className="flex items-center gap-1">
@@ -852,30 +879,32 @@ export default function ChatSidebar({
             <span className="flex h-5 w-5 shrink-0 items-center justify-center">{PencilIcon}</span>
             New chat
           </button>
-          <NavItem icon={SearchIcon} label="Search chats" onClick={closeMobileThen(onOpenSearch)} />
-          <NavItem icon={ProjectsIcon} label="Projects" onClick={closeMobileThen(onOpenProjects)} />
-          <NavItem icon={ImagesIcon} label="images" onClick={closeMobileThen(onOpenLibrary)} />
-          <NavItem icon={LibraryIcon} label="Library" onClick={closeMobileThen(onOpenLibrary)} />
+          <div className="hidden sm:block">
+            <NavItem icon={SearchIcon} label="Search chats" onClick={closeMobileThen(onOpenSearch)} />
+            <NavItem icon={ProjectsIcon} label="Projects" onClick={closeMobileThen(onOpenProjects)} />
+            <NavItem icon={ImagesIcon} label="images" onClick={closeMobileThen(onOpenLibrary)} />
+            <NavItem icon={LibraryIcon} label="Library" onClick={closeMobileThen(onOpenLibrary)} />
 
-          <NavItem
-            icon={KycIcon}
-            label="KYC"
-            onClick={() => setKycOpen((v) => !v)}
-            trailing={
-              <span className={`transition-transform ${kycOpen ? "rotate-180" : ""}`}>{ChevronDownIcon}</span>
-            }
-          />
-          {kycOpen && (
-            <div className="ml-4 space-y-0.5 border-l border-border pl-2">
-              <SubItem icon={PersonIcon} label="Personal KYC" onClick={closeMobileThen(() => onOpenComingSoon("Personal KYC"))} />
-              <SubItem icon={BuildingIcon} label="Company KYC" onClick={closeMobileThen(onOpenCompanyDashboard)} />
-            </div>
-          )}
+            <NavItem
+              icon={KycIcon}
+              label="KYC"
+              onClick={() => setKycOpen((v) => !v)}
+              trailing={
+                <span className={`transition-transform ${kycOpen ? "rotate-180" : ""}`}>{ChevronDownIcon}</span>
+              }
+            />
+            {kycOpen && (
+              <div className="ml-4 space-y-0.5 border-l border-border pl-2">
+                <SubItem icon={PersonIcon} label="Personal KYC" onClick={closeMobileThen(() => onOpenComingSoon("Personal KYC"))} />
+                <SubItem icon={BuildingIcon} label="Company KYC" onClick={closeMobileThen(onOpenCompanyDashboard)} />
+              </div>
+            )}
 
-          <SectionLabel>Products</SectionLabel>
-          <NavItem icon={DesignIcon} label="Design" onClick={closeMobileThen(() => onOpenComingSoon("Design"))} />
-          <NavItem icon={StockIcon} label="Stock" onClick={closeMobileThen(() => onOpenComingSoon("Stock"))} />
-          <NavItem icon={CodeIcon} label="Code" onClick={closeMobileThen(onOpenCode)} />
+            <SectionLabel>Products</SectionLabel>
+            <NavItem icon={DesignIcon} label="Design" onClick={closeMobileThen(() => onOpenComingSoon("Design"))} />
+            <NavItem icon={StockIcon} label="Stock" onClick={closeMobileThen(() => onOpenComingSoon("Stock"))} />
+            <NavItem icon={CodeIcon} label="Code" onClick={closeMobileThen(onOpenCode)} />
+          </div>
 
         <div
           ref={historyAnchorRef}
@@ -951,11 +980,11 @@ export default function ChatSidebar({
         </div>
         </div>
 
-        <div className="flex items-center px-3 py-3">
+        <div className="hidden items-center px-3 py-3 sm:flex">
           <AccountMenu variant="expanded" onOpenSettings={onOpenSettingsTab} onOpenLanguage={onOpenLanguage} onOpenUpgradePlan={onOpenUpgradePlan} onOpenSupport={onOpenSupport} />
         </div>
 
-        <div className="flex items-center gap-2 border-t border-border px-3 py-2.5">
+        <div className="flex items-center gap-2 border-t border-border px-3 py-2.5 sm:hidden">
           <button
             onClick={closeMobileThen(onOpenSearch)}
             className="flex flex-1 items-center gap-2 rounded-full border border-border bg-surface px-3.5 py-2 text-sm text-muted transition-colors hover:bg-surface-2"
