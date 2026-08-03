@@ -187,7 +187,10 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
   ) { padding ->
     Column(modifier = Modifier.fillMaxSize().padding(padding)) {
       if (viewModel.messages.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+        Box(
+          modifier = Modifier.weight(1f).fillMaxWidth().padding(24.dp),
+          contentAlignment = Alignment.Center
+        ) {
           Text(
             "Ready when you are.",
             fontSize = 22.sp,
