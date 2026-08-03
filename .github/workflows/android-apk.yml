@@ -49,7 +49,14 @@ jobs:
         if: failure()
         shell: bash
         run: |
-          msg=$(tail -n 80 /tmp/gradle-build.log | sed 's/%/%25/g; s/\r/%0D/g' | awk '{printf "%s%%0A", $0}')
+          # Gradle's plain-English "what went wrong" summary comes *before*
+          # the (huge, useless-for-diagnosis) internal stack trace — grab
+          # that section specifically instead of just the tail of the log.
+          section=$(awk '/FAILURE: Build failed|What went wrong/{found=1} found' /tmp/gradle-build.log | head -n 60)
+          if [ -z "$section" ]; then
+            section=$(tail -n 80 /tmp/gradle-build.log)
+          fi
+          msg=$(printf '%s' "$section" | sed 's/%/%25/g; s/\r/%0D/g' | awk '{printf "%s%%0A", $0}')
           echo "::error::$msg"
 
       - name: Upload APK as workflow artifact
