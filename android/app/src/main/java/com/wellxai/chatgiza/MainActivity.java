@@ -2,9 +2,28 @@ package com.wellxai.chatgiza;
 
 import android.os.Bundle;
 import android.webkit.WebSettings;
+import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
+  private static final String HOME_URL = "https://chatgiza.com/chatgiza";
+
+  // Google blocks signing in from inside an embedded WebView (its own
+  // anti-phishing policy), so tapping "Continue with Google" hands off to the
+  // system browser instead — coming back to the app afterwards, the WebView
+  // is sometimes left on a blank/failed page rather than the live site,
+  // because nothing tells it to reload. If it's ever blank on resume, just
+  // reload the site instead of leaving the user stuck on a white screen.
+  @Override
+  public void onResume() {
+    super.onResume();
+    WebView webView = this.bridge.getWebView();
+    String url = webView.getUrl();
+    if (url == null || url.equals("about:blank")) {
+      webView.loadUrl(HOME_URL);
+    }
+  }
+
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
