@@ -282,7 +282,7 @@ export default function AccountMenu({
             label="Log out"
             onClick={() => {
               setMenuOpen(false);
-              signOut();
+              signOut({ callbackUrl: "/login" });
             }}
           />
 

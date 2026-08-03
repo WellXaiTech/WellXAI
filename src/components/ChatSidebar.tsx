@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import Link from "next/link";
 import { useSession } from "next-auth/react";
 import AccountMenu, { type SettingsTab } from "@/components/AccountMenu";
 import type { PlanTier } from "@/lib/plans";
@@ -879,24 +878,15 @@ export default function ChatSidebar({
     return (
       <>
         <div className="flex items-center justify-between px-3 py-4">
-          {signedIn ? (
-            <button
-              onClick={closeMobileThen(() => onOpenSettingsTab("Account"))}
-              className="flex min-w-0 flex-1 items-center gap-2.5 text-left sm:hidden"
-            >
-              {mobileHeaderAvatar}
-              <span className="min-w-0 truncate text-base font-semibold">
-                {session?.user?.name ?? session?.user?.email}
-              </span>
-            </button>
-          ) : (
-            <Link href="/login" className="flex min-w-0 flex-1 items-center gap-2.5 text-base text-muted sm:hidden">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border text-sm">
-                ?
-              </span>
-              Log in
-            </Link>
-          )}
+          <button
+            onClick={closeMobileThen(() => onOpenSettingsTab("Account"))}
+            className="flex min-w-0 flex-1 items-center gap-2.5 text-left sm:hidden"
+          >
+            {mobileHeaderAvatar}
+            <span className="min-w-0 truncate text-base font-semibold">
+              {session?.user?.name ?? session?.user?.email}
+            </span>
+          </button>
           <button onClick={onNewChat} className="hidden items-center gap-2 text-lg font-extrabold sm:flex">
             <span className="glow-badge rounded-full px-2 py-0.5">ChatGiZa</span>
           </button>
@@ -928,7 +918,7 @@ export default function ChatSidebar({
             Automations
           </button>
 
-          {signedIn && !userPlan && (
+          {!userPlan && (
             <button
               onClick={closeMobileThen(onOpenUpgradePlan)}
               className="mb-3 flex h-12 w-full items-center gap-3 rounded-xl bg-blue-600 px-4 text-left text-white transition-colors hover:bg-blue-500 sm:hidden"
@@ -1040,9 +1030,6 @@ export default function ChatSidebar({
             </>
           )}
 
-          {!signedIn && status !== "loading" && (
-            <p className="px-2.5 py-2 text-xs text-muted">Log in to save and see your chat history.</p>
-          )}
         </div>
         </div>
 
