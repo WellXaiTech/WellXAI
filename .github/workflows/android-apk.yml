@@ -17,6 +17,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # `capacitor-cordova-android-plugins/` (which Gradle needs) is in
+      # android/.gitignore on purpose — Capacitor regenerates it from
+      # capacitor.config.ts + node_modules on every sync rather than having
+      # it hand-committed, the same way you wouldn't commit node_modules.
+      # Skipping this step is what "Could not read script
+      # .../cordova.variables.gradle as it does not exist" actually meant.
+      - name: Sync Capacitor Android project
+        run: npx cap sync android
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
