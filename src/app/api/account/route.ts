@@ -23,6 +23,9 @@ export async function DELETE() {
     `chatgiza:welcomed:${userId}`,
     `chatgiza:stripe-customer:${userId}`,
     `chatgiza:profile-data:${userId}`,
+    `chatgiza:settings-data:${userId}`,
+    `chatgiza:projects:${userId}`,
+    `chatgiza:scheduled:${userId}`,
   ];
 
   try {

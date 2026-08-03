@@ -1,15 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { auth } from "@/auth";
+import { getMobileUserId } from "@/lib/mobileAuth";
 import { getStripe, getExistingCustomerId, PLAN_DETAILS, type PlanTier } from "@/lib/stripe";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId = session?.user?.id ?? (await getMobileUserId(req));
+  if (!userId) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
 
-  const customerId = await getExistingCustomerId(session.user.id);
+  const customerId = await getExistingCustomerId(userId);
   if (!customerId) {
     // Never subscribed yet (or KV isn't linked in this environment) — an
     // empty state, not an error.

@@ -42,6 +42,62 @@ data class ProfileData(
   val language: String = ""
 )
 
+data class PrivacyPrefs(
+  val improveModel: Boolean = false,
+  val includeAudioRecordings: Boolean = false,
+  val includeVideoRecordings: Boolean = false,
+  val marketingMeasurement: Boolean = true,
+  val personalizedMarketing: Boolean = true
+)
+
+data class CompanyEmployee(val name: String = "", val role: String = "")
+
+data class CompanyProfile(
+  val name: String = "",
+  val description: String = "",
+  val employees: List<CompanyEmployee> = emptyList()
+)
+
+data class CompanyRequest(
+  val id: String,
+  val customerName: String,
+  val note: String,
+  val status: String,
+  val createdAt: Long
+)
+
+data class PluginsState(
+  val webSearch: Boolean = true,
+  val deepResearch: Boolean = true,
+  val deepThink: Boolean = true,
+  val image: Boolean = true,
+  val video: Boolean = true
+)
+
+data class SettingsData(
+  val plugins: PluginsState = PluginsState(),
+  val notifyOnComplete: Boolean = true,
+  val notifyImageGen: Boolean = true,
+  val allNotificationsEnabled: Boolean = true,
+  val privacy: PrivacyPrefs = PrivacyPrefs(),
+  val location: String = "",
+  val company: CompanyProfile = CompanyProfile(),
+  val companyRequests: List<CompanyRequest> = emptyList()
+)
+
+data class ApiProject(val id: String, val name: String, val createdAt: Long?)
+
+data class ApiScheduledTask(val id: String, val prompt: String, val runAt: String, val fired: Boolean)
+
+data class BillingSubscription(
+  val tier: String?,
+  val planName: String,
+  val currentPeriodEnd: Long?,
+  val cancelAtPeriodEnd: Boolean
+)
+
+data class BillingSummary(val subscription: BillingSubscription?)
+
 sealed class ApiResult<out T> {
   data class Success<T>(val value: T) : ApiResult<T>()
   data class Failure(val message: String) : ApiResult<Nothing>()
@@ -204,6 +260,278 @@ object ChatGizaApi {
     } catch (e: Exception) {
       ApiResult.Failure(e.message ?: "Network error")
     }
+  }
+
+  suspend fun getSettings(token: String): ApiResult<SettingsData> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/settings")
+        .header("Authorization", "Bearer $token")
+        .get()
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(settingsDataFromJson(JSONObject(text)))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun saveSettings(token: String, data: SettingsData): ApiResult<Unit> = withContext(Dispatchers.IO) {
+    try {
+      val payload = settingsDataToJson(data).toString().toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/settings")
+        .header("Authorization", "Bearer $token")
+        .put(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          val text = response.body?.string().orEmpty()
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun getProjects(token: String): ApiResult<List<ApiProject>> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/projects")
+        .header("Authorization", "Bearer $token")
+        .get()
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val arr = JSONObject(text).optJSONArray("projects") ?: JSONArray()
+        ApiResult.Success((0 until arr.length()).map { i ->
+          val p = arr.getJSONObject(i)
+          ApiProject(
+            id = p.getString("id"),
+            name = p.optString("name", ""),
+            createdAt = if (p.has("createdAt") && !p.isNull("createdAt")) p.optLong("createdAt") else null
+          )
+        })
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun saveProjects(token: String, projects: List<ApiProject>): ApiResult<Unit> = withContext(Dispatchers.IO) {
+    try {
+      val arr = JSONArray()
+      for (p in projects) {
+        val pj = JSONObject().put("id", p.id).put("name", p.name)
+        if (p.createdAt != null) pj.put("createdAt", p.createdAt)
+        arr.put(pj)
+      }
+      val payload = JSONObject().put("projects", arr).toString().toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/projects")
+        .header("Authorization", "Bearer $token")
+        .put(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          val text = response.body?.string().orEmpty()
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun getScheduled(token: String): ApiResult<List<ApiScheduledTask>> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/scheduled")
+        .header("Authorization", "Bearer $token")
+        .get()
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val arr = JSONObject(text).optJSONArray("tasks") ?: JSONArray()
+        ApiResult.Success((0 until arr.length()).map { i ->
+          val t = arr.getJSONObject(i)
+          ApiScheduledTask(
+            id = t.getString("id"),
+            prompt = t.optString("prompt", ""),
+            runAt = t.optString("runAt", ""),
+            fired = t.optBoolean("fired", false)
+          )
+        })
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun saveScheduled(token: String, tasks: List<ApiScheduledTask>): ApiResult<Unit> = withContext(Dispatchers.IO) {
+    try {
+      val arr = JSONArray()
+      for (t in tasks) {
+        arr.put(
+          JSONObject()
+            .put("id", t.id)
+            .put("prompt", t.prompt)
+            .put("runAt", t.runAt)
+            .put("fired", t.fired)
+        )
+      }
+      val payload = JSONObject().put("tasks", arr).toString().toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/scheduled")
+        .header("Authorization", "Bearer $token")
+        .put(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          val text = response.body?.string().orEmpty()
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun getBillingSummary(token: String): ApiResult<BillingSummary> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/billing/summary")
+        .header("Authorization", "Bearer $token")
+        .get()
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val json = JSONObject(text)
+        val subJson = json.optJSONObject("subscription")
+        val subscription = if (subJson != null) {
+          BillingSubscription(
+            tier = subJson.optString("tier", null).takeUnless { it.isNullOrEmpty() },
+            planName = subJson.optString("planName", "ChatGiZa"),
+            currentPeriodEnd = if (subJson.has("currentPeriodEnd") && !subJson.isNull("currentPeriodEnd")) subJson.optLong("currentPeriodEnd") else null,
+            cancelAtPeriodEnd = subJson.optBoolean("cancelAtPeriodEnd", false)
+          )
+        } else null
+        ApiResult.Success(BillingSummary(subscription))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  private fun settingsDataFromJson(obj: JSONObject): SettingsData {
+    val pluginsObj = obj.optJSONObject("plugins") ?: JSONObject()
+    val privacyObj = obj.optJSONObject("privacy") ?: JSONObject()
+    val companyObj = obj.optJSONObject("company") ?: JSONObject()
+    val employeesArr = companyObj.optJSONArray("employees") ?: JSONArray()
+    val requestsArr = obj.optJSONArray("companyRequests") ?: JSONArray()
+    return SettingsData(
+      plugins = PluginsState(
+        webSearch = pluginsObj.optBoolean("web_search", true),
+        deepResearch = pluginsObj.optBoolean("deep_research", true),
+        deepThink = pluginsObj.optBoolean("deep_think", true),
+        image = pluginsObj.optBoolean("image", true),
+        video = pluginsObj.optBoolean("video", true)
+      ),
+      notifyOnComplete = obj.optBoolean("notifyOnComplete", true),
+      notifyImageGen = obj.optBoolean("notifyImageGen", true),
+      allNotificationsEnabled = obj.optBoolean("allNotificationsEnabled", true),
+      privacy = PrivacyPrefs(
+        improveModel = privacyObj.optBoolean("improveModel", false),
+        includeAudioRecordings = privacyObj.optBoolean("includeAudioRecordings", false),
+        includeVideoRecordings = privacyObj.optBoolean("includeVideoRecordings", false),
+        marketingMeasurement = privacyObj.optBoolean("marketingMeasurement", true),
+        personalizedMarketing = privacyObj.optBoolean("personalizedMarketing", true)
+      ),
+      location = obj.optString("location", ""),
+      company = CompanyProfile(
+        name = companyObj.optString("name", ""),
+        description = companyObj.optString("description", ""),
+        employees = (0 until employeesArr.length()).map { i ->
+          val e = employeesArr.getJSONObject(i)
+          CompanyEmployee(name = e.optString("name", ""), role = e.optString("role", ""))
+        }
+      ),
+      companyRequests = (0 until requestsArr.length()).map { i ->
+        val r = requestsArr.getJSONObject(i)
+        CompanyRequest(
+          id = r.getString("id"),
+          customerName = r.optString("customerName", ""),
+          note = r.optString("note", ""),
+          status = r.optString("status", "pending"),
+          createdAt = r.optLong("createdAt", 0L)
+        )
+      }
+    )
+  }
+
+  private fun settingsDataToJson(data: SettingsData): JSONObject {
+    val pluginsObj = JSONObject()
+      .put("web_search", data.plugins.webSearch)
+      .put("deep_research", data.plugins.deepResearch)
+      .put("deep_think", data.plugins.deepThink)
+      .put("image", data.plugins.image)
+      .put("video", data.plugins.video)
+
+    val privacyObj = JSONObject()
+      .put("improveModel", data.privacy.improveModel)
+      .put("includeAudioRecordings", data.privacy.includeAudioRecordings)
+      .put("includeVideoRecordings", data.privacy.includeVideoRecordings)
+      .put("marketingMeasurement", data.privacy.marketingMeasurement)
+      .put("personalizedMarketing", data.privacy.personalizedMarketing)
+
+    val employeesArr = JSONArray()
+    for (e in data.company.employees) {
+      employeesArr.put(JSONObject().put("name", e.name).put("role", e.role))
+    }
+    val companyObj = JSONObject()
+      .put("name", data.company.name)
+      .put("description", data.company.description)
+      .put("employees", employeesArr)
+
+    val requestsArr = JSONArray()
+    for (r in data.companyRequests) {
+      requestsArr.put(
+        JSONObject()
+          .put("id", r.id)
+          .put("customerName", r.customerName)
+          .put("note", r.note)
+          .put("status", r.status)
+          .put("createdAt", r.createdAt)
+      )
+    }
+
+    return JSONObject()
+      .put("plugins", pluginsObj)
+      .put("notifyOnComplete", data.notifyOnComplete)
+      .put("notifyImageGen", data.notifyImageGen)
+      .put("allNotificationsEnabled", data.allNotificationsEnabled)
+      .put("privacy", privacyObj)
+      .put("location", data.location)
+      .put("company", companyObj)
+      .put("companyRequests", requestsArr)
   }
 
   private fun profileDataFromJson(obj: JSONObject): ProfileData {
