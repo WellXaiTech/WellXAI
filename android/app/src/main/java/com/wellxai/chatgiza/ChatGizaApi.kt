@@ -17,6 +17,15 @@ data class MobileUser(val id: String, val name: String?, val email: String?, val
 
 data class AuthResult(val token: String, val user: MobileUser)
 
+data class ApiMessage(val id: String, val role: String, val content: String, val createdAt: Long?)
+
+data class ApiConversation(
+  val id: String,
+  val title: String,
+  val messages: List<ApiMessage>,
+  val pinned: Boolean = false
+)
+
 sealed class ApiResult<out T> {
   data class Success<T>(val value: T) : ApiResult<T>()
   data class Failure(val message: String) : ApiResult<Nothing>()
@@ -97,6 +106,83 @@ object ChatGizaApi {
         ApiResult.Failure(e.message ?: "Network error")
       }
     }
+
+  suspend fun getHistory(token: String): ApiResult<List<ApiConversation>> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/history")
+        .header("Authorization", "Bearer $token")
+        .get()
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val json = JSONObject(text)
+        val arr = json.optJSONArray("conversations") ?: JSONArray()
+        ApiResult.Success((0 until arr.length()).map { i -> conversationFromJson(arr.getJSONObject(i)) })
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun saveHistory(token: String, conversations: List<ApiConversation>): ApiResult<Unit> =
+    withContext(Dispatchers.IO) {
+      try {
+        val arr = JSONArray()
+        for (c in conversations) arr.put(conversationToJson(c))
+        val payload = JSONObject().put("conversations", arr).toString().toRequestBody(JSON)
+        val request = Request.Builder()
+          .url("$BASE_URL/api/history")
+          .header("Authorization", "Bearer $token")
+          .put(payload)
+          .build()
+        client.newCall(request).execute().use { response ->
+          if (!response.isSuccessful) {
+            val text = response.body?.string().orEmpty()
+            return@withContext ApiResult.Failure(errorMessage(text, response.code))
+          }
+          ApiResult.Success(Unit)
+        }
+      } catch (e: Exception) {
+        ApiResult.Failure(e.message ?: "Network error")
+      }
+    }
+
+  private fun conversationFromJson(obj: JSONObject): ApiConversation {
+    val messagesArr = obj.optJSONArray("messages") ?: JSONArray()
+    val messages = (0 until messagesArr.length()).map { i ->
+      val m = messagesArr.getJSONObject(i)
+      ApiMessage(
+        id = m.optString("id", java.util.UUID.randomUUID().toString()),
+        role = m.optString("role", "user"),
+        content = m.optString("content", ""),
+        createdAt = if (m.has("createdAt") && !m.isNull("createdAt")) m.optLong("createdAt") else null
+      )
+    }
+    return ApiConversation(
+      id = obj.getString("id"),
+      title = obj.optString("title", "New chat"),
+      messages = messages,
+      pinned = obj.optBoolean("pinned", false)
+    )
+  }
+
+  private fun conversationToJson(c: ApiConversation): JSONObject {
+    val messagesArr = JSONArray()
+    for (m in c.messages) {
+      val mj = JSONObject().put("id", m.id).put("role", m.role).put("content", m.content)
+      if (m.createdAt != null) mj.put("createdAt", m.createdAt)
+      messagesArr.put(mj)
+    }
+    return JSONObject()
+      .put("id", c.id)
+      .put("title", c.title)
+      .put("pinned", c.pinned)
+      .put("messages", messagesArr)
+  }
 
   private fun errorMessage(body: String, code: Int): String {
     return try {
