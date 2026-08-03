@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useSession, signIn } from "next-auth/react";
+import { isNativeShell } from "@/lib/useInstallPrompt";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type GoogleAccountsId = any;
@@ -30,7 +31,12 @@ export default function GoogleOneTap() {
   const started = useRef(false);
 
   useEffect(() => {
-    if (status !== "unauthenticated" || started.current || isSnoozed()) return;
+    // Google's identity SDK treats the Android app's WebView as a "disallowed
+    // user agent" and immediately bounces out to the system browser to even
+    // attempt showing the One Tap prompt — for a guest visitor that fires on
+    // every app open, before they've tapped anything. Skip it entirely inside
+    // the native shell; guests can still sign in manually from the app.
+    if (isNativeShell() || status !== "unauthenticated" || started.current || isSnoozed()) return;
     const clientId = process.env.NEXT_PUBLIC_AUTH_GOOGLE_ID;
     if (!clientId) return;
 
