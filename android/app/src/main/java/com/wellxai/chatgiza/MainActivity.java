@@ -6,7 +6,7 @@ import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
-  private static final String HOME_URL = "https://chatgiza.com/chatgiza";
+  private static final String HOME_URL = "https://www.chatgiza.com/chatgiza";
 
   // The very first onResume() fires right after onCreate(), while Capacitor
   // is still asynchronously navigating the WebView to server.url for the
