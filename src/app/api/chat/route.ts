@@ -1,5 +1,6 @@
 import { streamChatReply, type ChatMessage, type ChatTool, type Personalization } from "@/lib/ai";
 import { auth } from "@/auth";
+import { getMobileUserId } from "@/lib/mobileAuth";
 import {
   isPaidAccount,
   checkIpFreeLimit,
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
   }
 
   const session = await auth();
-  const userId = session?.user?.id;
+  const userId = session?.user?.id ?? (await getMobileUserId(request)) ?? undefined;
   const paid = await isPaidAccount(userId);
 
   // Mobile/cellular connections get a hard "one free message forever" wall

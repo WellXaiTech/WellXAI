@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { kv } from "@vercel/kv";
 import { auth } from "@/auth";
+import { getMobileUserId } from "@/lib/mobileAuth";
 
 type DeletedIds = Record<string, number>;
 
@@ -12,16 +13,17 @@ function deletedIdsKeyFor(userId: string) {
   return `chatgiza:history-deleted:${userId}`;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId = session?.user?.id ?? (await getMobileUserId(req));
+  if (!userId) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
 
   try {
     const [conversations, deletedIds] = await Promise.all([
-      kv.get(keyFor(session.user.id)),
-      kv.get<DeletedIds>(deletedIdsKeyFor(session.user.id)),
+      kv.get(keyFor(userId)),
+      kv.get<DeletedIds>(deletedIdsKeyFor(userId)),
     ]);
     return NextResponse.json({ conversations: conversations ?? [], deletedIds: deletedIds ?? {} });
   } catch (err) {
@@ -33,7 +35,8 @@ export async function GET() {
 
 export async function PUT(req: NextRequest) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId = session?.user?.id ?? (await getMobileUserId(req));
+  if (!userId) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
 
@@ -46,8 +49,8 @@ export async function PUT(req: NextRequest) {
 
   try {
     await Promise.all([
-      kv.set(keyFor(session.user.id), body.conversations),
-      kv.set(deletedIdsKeyFor(session.user.id), deletedIds),
+      kv.set(keyFor(userId), body.conversations),
+      kv.set(deletedIdsKeyFor(userId), deletedIds),
     ]);
     return NextResponse.json({ ok: true });
   } catch (err) {
