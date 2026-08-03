@@ -46,6 +46,41 @@ jobs:
           distribution: temurin
           java-version: "21"
 
+      # A release build must be signed with a consistent key across builds —
+      # otherwise Android refuses to treat build N+1 as an update to build N,
+      # and (more importantly for now) an unsigned/debug-signed APK is flagged
+      # by Play Protect as a dev build when regular users try to install it.
+      # Generated once and committed back to the repo so every future build
+      # reuses the same identity; this is a self-distributed sideload APK,
+      # not a Play Store submission, so keeping the key in the (public) repo
+      # is an acceptable tradeoff for "anyone can build and it just works".
+      - name: Ensure a release signing key exists
+        working-directory: android
+        shell: bash
+        run: |
+          set -o pipefail
+          if [ ! -f release.keystore ]; then
+            keytool -genkeypair -v \
+              -keystore release.keystore \
+              -alias chatgiza \
+              -keyalg RSA -keysize 2048 -validity 36500 \
+              -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD || 'chatgiza-android-2026' }}" \
+              -keypass "${{ secrets.ANDROID_KEYSTORE_PASSWORD || 'chatgiza-android-2026' }}" \
+              -dname "CN=ChatGiZa, OU=ChatGiZa, O=ChatGiZa, L=Unknown, ST=Unknown, C=TZ" \
+              2>&1 | tee -a /tmp/build.log
+            cat > keystore.properties <<EOF
+          storeFile=release.keystore
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD || 'chatgiza-android-2026' }}
+          keyAlias=chatgiza
+          keyPassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD || 'chatgiza-android-2026' }}
+          EOF
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add release.keystore keystore.properties
+            git commit -m "ci: generate persistent Android release signing key [skip ci]"
+            git push
+          fi
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
@@ -74,12 +109,12 @@ jobs:
           sudo swapon /swapfile
           free -h
 
-      - name: Build debug APK
+      - name: Build signed release APK
         working-directory: android
         shell: bash
         run: |
           set -o pipefail
-          ./gradlew assembleDebug --no-daemon --max-workers=1 --stacktrace 2>&1 | tee -a /tmp/build.log
+          ./gradlew assembleRelease --no-daemon --max-workers=1 --stacktrace 2>&1 | tee -a /tmp/build.log
 
       # Job logs require a GitHub login to view, even on a public repo —
       # this surfaces the failure as a check-run annotation instead, which
@@ -109,8 +144,8 @@ jobs:
       - name: Upload APK as workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: chatgiza-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: chatgiza-release-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
 
       # Workflow artifacts require a GitHub login to download. A Release
       # attaches the same APK to a public, direct download URL instead —
@@ -121,10 +156,11 @@ jobs:
           tag_name: android-build-${{ github.run_number }}
           name: "ChatGiZa Android build #${{ github.run_number }}"
           body: |
-            Automated debug build from commit ${{ github.sha }}.
-            Loads the live site (chatgiza.com) in a WebView — sideload for
-            testing only, not a signed release build.
+            Signed release build from commit ${{ github.sha }}.
+            Loads the live site (chatgiza.com) in a WebView. Enable
+            "Install unknown apps" for your browser/file manager to sideload —
+            it is not distributed through the Play Store.
           prerelease: true
-          files: android/app/build/outputs/apk/debug/app-debug.apk
+          files: android/app/build/outputs/apk/release/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
