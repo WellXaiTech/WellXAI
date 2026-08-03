@@ -144,15 +144,56 @@ object ChatGizaApi {
   }
 
   /** Streams the assistant's reply, invoking [onChunk] for each piece of text
-   * as it arrives (the backend sends plain incremental text, not SSE). */
-  suspend fun streamChat(token: String, messages: List<ChatMessage>, onChunk: (String) -> Unit): ApiResult<Unit> =
+   * as it arrives (the backend sends plain incremental text, not SSE). Same
+   * payload shape as the web app's /api/chat call, so tool selection and
+   * personalization (profile/memory/language/location/company) behave
+   * identically on both. */
+  suspend fun streamChat(
+    token: String,
+    messages: List<ChatMessage>,
+    tool: String?,
+    conversationId: String?,
+    profile: ApiProfile,
+    memory: List<String>,
+    language: String,
+    location: String,
+    company: CompanyProfile,
+    onChunk: (String) -> Unit
+  ): ApiResult<Unit> =
     withContext(Dispatchers.IO) {
       try {
         val messagesJson = JSONArray()
         for (m in messages) {
           messagesJson.put(JSONObject().put("role", m.role).put("content", m.content))
         }
-        val payload = JSONObject().put("messages", messagesJson).toString().toRequestBody(JSON)
+        val profileJson = JSONObject()
+          .put("nickname", profile.nickname)
+          .put("about", profile.about)
+        profile.role?.let { profileJson.put("role", it) }
+
+        val memoryJson = JSONArray()
+        for (m in memory) memoryJson.put(m)
+
+        val employeesJson = JSONArray()
+        for (e in company.employees) {
+          employeesJson.put(JSONObject().put("name", e.name).put("role", e.role))
+        }
+        val companyJson = JSONObject()
+          .put("name", company.name)
+          .put("description", company.description)
+          .put("employees", employeesJson)
+
+        val payloadObj = JSONObject()
+          .put("messages", messagesJson)
+          .put("profile", profileJson)
+          .put("memory", memoryJson)
+          .put("language", language)
+          .put("location", location)
+          .put("company", companyJson)
+        if (tool != null) payloadObj.put("tool", tool)
+        if (conversationId != null) payloadObj.put("conversationId", conversationId)
+
+        val payload = payloadObj.toString().toRequestBody(JSON)
         val request = Request.Builder()
           .url("$BASE_URL/api/chat")
           .header("Authorization", "Bearer $token")

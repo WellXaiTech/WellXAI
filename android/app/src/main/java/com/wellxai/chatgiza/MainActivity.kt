@@ -1,10 +1,14 @@
 package com.wellxai.chatgiza
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.speech.RecognizerIntent
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,7 +30,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -37,14 +45,19 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.runtime.Composable
@@ -183,10 +196,19 @@ private fun SignedOutScreen(signingIn: Boolean, error: String?, onSignIn: () -> 
   }
 }
 
+private const val GREETING_TEXT = "Karibu sana! Nimefurahi kuwa na wewe leo. Naweza kukusaidia vipi?"
+
+private val TOOL_LABELS = mapOf(
+  "web_search" to "Web search",
+  "deep_research" to "Deep research",
+  "deep_think" to "Deep Think"
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChatScreenUi(viewModel: ChatViewModel) {
   val listState = rememberLazyListState()
+  var showGreeting by remember { mutableStateOf(true) }
 
   LaunchedEffect(viewModel.messages.size) {
     if (viewModel.messages.isNotEmpty()) {
@@ -207,8 +229,8 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
           IconButton(onClick = { viewModel.openAccount() }) {
             Icon(Icons.Filled.Person, contentDescription = "Account", tint = colorScheme.onBackground)
           }
-          IconButton(onClick = { viewModel.newChat() }) {
-            Icon(Icons.Filled.Add, contentDescription = "New chat", tint = colorScheme.onBackground)
+          IconButton(onClick = { showGreeting = true; viewModel.newChat() }) {
+            Icon(Icons.Filled.Edit, contentDescription = "New chat", tint = colorScheme.onBackground)
           }
           TextButton(onClick = { viewModel.signOut() }) {
             Text("Sign out")
@@ -220,9 +242,10 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
   ) { padding ->
     Column(modifier = Modifier.fillMaxSize().padding(padding)) {
       if (viewModel.messages.isEmpty()) {
-        Box(
+        Column(
           modifier = Modifier.weight(1f).fillMaxWidth().padding(24.dp),
-          contentAlignment = Alignment.Center
+          verticalArrangement = Arrangement.Center,
+          horizontalAlignment = Alignment.CenterHorizontally
         ) {
           Text(
             "Ready when you are.",
@@ -230,6 +253,16 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
             fontWeight = FontWeight.SemiBold,
             color = colorScheme.onBackground.copy(alpha = 0.6f)
           )
+          if (showGreeting) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Box(
+              modifier = Modifier
+                .background(colorScheme.onBackground.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+              Text(GREETING_TEXT, color = colorScheme.onBackground.copy(alpha = 0.85f), fontSize = 14.sp)
+            }
+          }
         }
       } else {
         LazyColumn(
@@ -253,25 +286,74 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
         )
       }
 
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        OutlinedTextField(
-          value = viewModel.input,
-          onValueChange = viewModel::onInputChange,
-          modifier = Modifier.weight(1f),
-          placeholder = { Text("Ask anything") },
-          shape = RoundedCornerShape(24.dp)
+      ChatComposerCard(viewModel) { showGreeting = false }
+    }
+  }
+}
+
+@Composable
+private fun ChatComposerCard(viewModel: ChatViewModel, onSend: () -> Unit) {
+  var toolMenuOpen by remember { mutableStateOf(false) }
+
+  val speechLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+    if (result.resultCode == Activity.RESULT_OK) {
+      val transcript = result.data
+        ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+        ?.firstOrNull()
+      if (!transcript.isNullOrBlank()) {
+        viewModel.onInputChange(if (viewModel.input.isBlank()) transcript else "${viewModel.input} $transcript")
+      }
+    }
+  }
+
+  Card(
+    modifier = Modifier.fillMaxWidth().padding(12.dp),
+    shape = RoundedCornerShape(24.dp),
+    colors = CardDefaults.cardColors(containerColor = colorScheme.onBackground.copy(alpha = 0.06f))
+  ) {
+    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+      TextField(
+        value = viewModel.input,
+        onValueChange = viewModel::onInputChange,
+        modifier = Modifier.fillMaxWidth(),
+        placeholder = { Text("Ask anything") },
+        colors = TextFieldDefaults.colors(
+          unfocusedContainerColor = Color.Transparent,
+          focusedContainerColor = Color.Transparent,
+          unfocusedIndicatorColor = Color.Transparent,
+          focusedIndicatorColor = Color.Transparent
         )
-        Spacer(modifier = Modifier.size(8.dp))
-        IconButton(
-          onClick = { viewModel.sendMessage() },
-          enabled = viewModel.input.isNotBlank() && !viewModel.sending
-        ) {
-          Icon(Icons.Filled.Send, contentDescription = "Send", tint = colorScheme.onBackground)
+      )
+      Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
+        Box {
+          TextButton(onClick = { toolMenuOpen = true }) {
+            Text(viewModel.activeTool?.let { TOOL_LABELS[it] } ?: "GiZa 5.6")
+            Icon(Icons.Filled.ArrowDropDown, contentDescription = null)
+          }
+          DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
+            DropdownMenuItem(text = { Text("GiZa 5.6") }, onClick = { viewModel.setActiveTool(null); toolMenuOpen = false })
+            DropdownMenuItem(text = { Text("Web search") }, onClick = { viewModel.setActiveTool("web_search"); toolMenuOpen = false })
+            DropdownMenuItem(text = { Text("Deep research") }, onClick = { viewModel.setActiveTool("deep_research"); toolMenuOpen = false })
+            DropdownMenuItem(text = { Text("Deep Think") }, onClick = { viewModel.setActiveTool("deep_think"); toolMenuOpen = false })
+          }
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        if (viewModel.input.isNotBlank()) {
+          IconButton(
+            onClick = { onSend(); viewModel.sendMessage() },
+            enabled = !viewModel.sending
+          ) {
+            Icon(Icons.Filled.Send, contentDescription = "Send", tint = colorScheme.onBackground)
+          }
+        } else {
+          IconButton(onClick = {
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+              putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            }
+            runCatching { speechLauncher.launch(intent) }
+          }) {
+            Icon(Icons.Filled.Mic, contentDescription = "Voice input", tint = colorScheme.onBackground)
+          }
         }
       }
     }
