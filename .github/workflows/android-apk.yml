@@ -127,11 +127,14 @@ jobs:
         run: |
           set +o pipefail
           if [ -f /tmp/build.log ]; then
-            # Gradle's plain-English "what went wrong" summary (if this got
-            # that far) comes *before* the huge internal stack trace — prefer
-            # that section; otherwise fall back to the last 80 lines of
-            # whatever step actually failed.
-            section=$(awk '/FAILURE: Build failed|What went wrong/{found=1} found{print; n++} n>=60{exit}' /tmp/build.log)
+            # kotlinc's own "e: ..." error lines (unresolved reference, type
+            # mismatch, etc.) are what's actually wrong and appear *before*
+            # Gradle's generic "Compilation error, see log" wrapper — prefer
+            # those; then Gradle's "what went wrong" summary; then a tail.
+            section=$(grep -A2 "^e: " /tmp/build.log | head -c 4000)
+            if [ -z "$section" ]; then
+              section=$(awk '/FAILURE: Build failed|What went wrong/{found=1} found{print; n++} n>=60{exit}' /tmp/build.log)
+            fi
             if [ -z "$section" ]; then
               section=$(tail -n 80 /tmp/build.log)
             fi
