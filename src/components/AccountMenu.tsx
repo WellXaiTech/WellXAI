@@ -114,24 +114,26 @@ export default function AccountMenu({
   const ref = useRef<HTMLDivElement>(null);
   const { canPrompt, promptInstall } = useInstallPrompt();
 
-  // Chrome's install prompt works for both desktop and Android — it's what
-  // actually installs the app there. Android without PWA support (or a user
-  // who specifically wants the sideloadable file) falls back to the APK.
+  // Android always gets the real signed APK, never Chrome's PWA install —
+  // that path just adds a Chrome-hosted shortcut (shows "Chrome" in the app
+  // switcher, no real standalone app), which reads as broken/fake to anyone
+  // expecting an actual installed app. Chrome's install prompt is only used
+  // where there is no APK equivalent (desktop).
   function getApp() {
     setAppsOpen(false);
-    if (canPrompt) {
-      promptInstall();
+    if (/android/i.test(window.navigator.userAgent)) {
+      // A real <a> click (not window.open) is what makes Chrome file it under
+      // its own Downloads page — so if the installed app gets deleted, the
+      // APK is still there to reinstall from without coming back here.
+      const a = document.createElement("a");
+      a.href = CHATGIZA_APK_URL;
+      a.download = "";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       return;
     }
-    // A real <a> click (not window.open) is what makes Chrome file it under
-    // its own Downloads page — so if the installed app gets deleted, the APK
-    // is still there to reinstall from without needing to come back here.
-    const a = document.createElement("a");
-    a.href = CHATGIZA_APK_URL;
-    a.download = "";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    if (canPrompt) promptInstall();
   }
 
   useEffect(() => {
