@@ -1331,6 +1331,8 @@ function ChatGizaInner() {
         onOpenLanguage={() => setLanguageOpen(true)}
         onOpenUpgradePlan={() => setUpgradePlanOpen(true)}
         onOpenSupport={() => setSupportOpen(true)}
+        onOpenScheduled={() => setScheduledOpen(true)}
+        userPlan={userPlan}
         streak={streak}
         projects={projects.map(({ id, name }) => ({ id, name }))}
         onMoveToProject={assignConversationToProject}
