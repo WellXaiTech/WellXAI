@@ -1,5 +1,7 @@
 package com.wellxai.chatgiza
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,15 +22,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -37,15 +43,20 @@ import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -79,6 +90,10 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Chat -> ChatScreenUi(viewModel)
             is AppScreen.History -> HistoryScreen(viewModel)
             is AppScreen.Account -> AccountScreen(viewModel)
+            is AppScreen.Settings -> SettingsScreen(viewModel)
+            is AppScreen.Projects -> ProjectsScreen(viewModel)
+            is AppScreen.Scheduled -> ScheduledScreen(viewModel)
+            is AppScreen.Billing -> BillingScreen(viewModel)
           }
         }
       }
@@ -391,6 +406,321 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         modifier = Modifier.fillMaxWidth().height(48.dp)
       ) {
         Text(if (viewModel.savingProfile) "Saving…" else "Save")
+      }
+
+      Spacer(modifier = Modifier.height(28.dp))
+      HorizontalDivider(color = colorScheme.onBackground.copy(alpha = 0.1f))
+      Spacer(modifier = Modifier.height(8.dp))
+
+      AccountLinkRow("Settings", "Plugins, notifications, privacy, location") { viewModel.openSettings() }
+      AccountLinkRow("Projects") { viewModel.openProjects() }
+      AccountLinkRow("Automations", "Scheduled messages") { viewModel.openScheduled() }
+      AccountLinkRow("Billing", "Plan and payment") { viewModel.openBilling() }
+    }
+  }
+}
+
+@Composable
+private fun AccountLinkRow(title: String, subtitle: String? = null, onClick: () -> Unit) {
+  Column(
+    modifier = Modifier
+      .fillMaxWidth()
+      .clickable(onClick = onClick)
+      .padding(vertical = 14.dp)
+  ) {
+    Text(title, color = colorScheme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+    if (subtitle != null) {
+      Text(subtitle, color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 12.sp)
+    }
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsScreen(viewModel: ChatViewModel) {
+  val data = viewModel.settingsData
+  Scaffold(
+    topBar = {
+      TopAppBar(
+        title = { Text("Settings", fontWeight = FontWeight.Bold) },
+        navigationIcon = {
+          IconButton(onClick = { viewModel.closeSettings() }) {
+            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
+          }
+        }
+      )
+    },
+    containerColor = Color.Transparent
+  ) { padding ->
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(padding)
+        .verticalScroll(rememberScrollState())
+        .padding(horizontal = 20.dp, vertical = 8.dp)
+    ) {
+      SettingsSectionTitle("Plugins")
+      SettingsSwitchRow("Web search", data.plugins.webSearch) { viewModel.togglePlugin("web_search") }
+      SettingsSwitchRow("Deep research", data.plugins.deepResearch) { viewModel.togglePlugin("deep_research") }
+      SettingsSwitchRow("Deep think", data.plugins.deepThink) { viewModel.togglePlugin("deep_think") }
+      SettingsSwitchRow("Image generation", data.plugins.image) { viewModel.togglePlugin("image") }
+      SettingsSwitchRow("Video generation", data.plugins.video) { viewModel.togglePlugin("video") }
+
+      Spacer(modifier = Modifier.height(20.dp))
+      SettingsSectionTitle("Notifications")
+      SettingsSwitchRow("All notifications", data.allNotificationsEnabled) {
+        viewModel.setAllNotificationsEnabled(!data.allNotificationsEnabled)
+      }
+      SettingsSwitchRow("Notify when a reply finishes", data.notifyOnComplete) {
+        viewModel.setNotifyOnComplete(!data.notifyOnComplete)
+      }
+      SettingsSwitchRow("Notify on image/video generation", data.notifyImageGen) {
+        viewModel.setNotifyImageGen(!data.notifyImageGen)
+      }
+
+      Spacer(modifier = Modifier.height(20.dp))
+      SettingsSectionTitle("Privacy")
+      SettingsSwitchRow("Improve the model with my chats", data.privacy.improveModel) {
+        viewModel.setPrivacyPref { it.copy(improveModel = !it.improveModel) }
+      }
+      SettingsSwitchRow("Include audio recordings", data.privacy.includeAudioRecordings) {
+        viewModel.setPrivacyPref { it.copy(includeAudioRecordings = !it.includeAudioRecordings) }
+      }
+      SettingsSwitchRow("Include video recordings", data.privacy.includeVideoRecordings) {
+        viewModel.setPrivacyPref { it.copy(includeVideoRecordings = !it.includeVideoRecordings) }
+      }
+      SettingsSwitchRow("Marketing measurement", data.privacy.marketingMeasurement) {
+        viewModel.setPrivacyPref { it.copy(marketingMeasurement = !it.marketingMeasurement) }
+      }
+      SettingsSwitchRow("Personalized marketing", data.privacy.personalizedMarketing) {
+        viewModel.setPrivacyPref { it.copy(personalizedMarketing = !it.personalizedMarketing) }
+      }
+
+      Spacer(modifier = Modifier.height(20.dp))
+      SettingsSectionTitle("Location")
+      var locationInput by remember(data.location) { mutableStateOf(data.location) }
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        OutlinedTextField(
+          value = locationInput,
+          onValueChange = { locationInput = it },
+          modifier = Modifier.weight(1f),
+          placeholder = { Text("City, Country") },
+          shape = RoundedCornerShape(12.dp)
+        )
+        Spacer(modifier = Modifier.size(8.dp))
+        TextButton(onClick = { viewModel.setLocation(locationInput) }) {
+          Text("Save")
+        }
+      }
+      Spacer(modifier = Modifier.height(24.dp))
+    }
+  }
+}
+
+@Composable
+private fun SettingsSectionTitle(title: String) {
+  Text(
+    title,
+    color = colorScheme.onBackground.copy(alpha = 0.5f),
+    fontSize = 12.sp,
+    fontWeight = FontWeight.SemiBold,
+    modifier = Modifier.padding(bottom = 4.dp)
+  )
+}
+
+@Composable
+private fun SettingsSwitchRow(label: String, checked: Boolean, onToggle: () -> Unit) {
+  Row(
+    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+    horizontalArrangement = Arrangement.SpaceBetween,
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Text(label, color = colorScheme.onBackground, fontSize = 14.sp, modifier = Modifier.weight(1f))
+    Switch(checked = checked, onCheckedChange = { onToggle() })
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProjectsScreen(viewModel: ChatViewModel) {
+  Scaffold(
+    topBar = {
+      TopAppBar(
+        title = { Text("Projects", fontWeight = FontWeight.Bold) },
+        navigationIcon = {
+          IconButton(onClick = { viewModel.closeProjects() }) {
+            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
+          }
+        }
+      )
+    },
+    containerColor = Color.Transparent
+  ) { padding ->
+    Column(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp, vertical = 12.dp)) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        OutlinedTextField(
+          value = viewModel.newProjectName,
+          onValueChange = viewModel::onNewProjectNameChange,
+          modifier = Modifier.weight(1f),
+          placeholder = { Text("New project name") },
+          shape = RoundedCornerShape(12.dp)
+        )
+        Spacer(modifier = Modifier.size(8.dp))
+        IconButton(onClick = { viewModel.addProject() }) {
+          Icon(Icons.Filled.Add, contentDescription = "Add project", tint = colorScheme.onBackground)
+        }
+      }
+      Spacer(modifier = Modifier.height(12.dp))
+      if (viewModel.loadingProjects) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+          CircularProgressIndicator(color = colorScheme.onBackground)
+        }
+      } else if (viewModel.projects.isEmpty()) {
+        Text("No projects yet.", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 14.sp)
+      } else {
+        LazyColumn {
+          items(viewModel.projects, key = { it.id }) { project ->
+            Row(
+              modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Text(project.name, color = colorScheme.onBackground, fontSize = 15.sp)
+              IconButton(onClick = { viewModel.deleteProject(project.id) }) {
+                Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = colorScheme.onBackground.copy(alpha = 0.6f))
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ScheduledScreen(viewModel: ChatViewModel) {
+  Scaffold(
+    topBar = {
+      TopAppBar(
+        title = { Text("Automations", fontWeight = FontWeight.Bold) },
+        navigationIcon = {
+          IconButton(onClick = { viewModel.closeScheduled() }) {
+            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
+          }
+        }
+      )
+    },
+    containerColor = Color.Transparent
+  ) { padding ->
+    Column(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp, vertical = 12.dp)) {
+      OutlinedTextField(
+        value = viewModel.newTaskPrompt,
+        onValueChange = viewModel::onNewTaskPromptChange,
+        modifier = Modifier.fillMaxWidth(),
+        placeholder = { Text("What should ChatGiZa do?") },
+        shape = RoundedCornerShape(12.dp)
+      )
+      Spacer(modifier = Modifier.height(8.dp))
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        OutlinedTextField(
+          value = viewModel.newTaskRunAt,
+          onValueChange = viewModel::onNewTaskRunAtChange,
+          modifier = Modifier.weight(1f),
+          placeholder = { Text("YYYY-MM-DD HH:mm") },
+          shape = RoundedCornerShape(12.dp)
+        )
+        Spacer(modifier = Modifier.size(8.dp))
+        IconButton(onClick = { viewModel.addScheduledTask() }) {
+          Icon(Icons.Filled.Add, contentDescription = "Add task", tint = colorScheme.onBackground)
+        }
+      }
+      Spacer(modifier = Modifier.height(16.dp))
+      if (viewModel.loadingScheduled) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+          CircularProgressIndicator(color = colorScheme.onBackground)
+        }
+      } else if (viewModel.scheduledTasks.isEmpty()) {
+        Text("No scheduled tasks yet.", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 14.sp)
+      } else {
+        LazyColumn {
+          items(viewModel.scheduledTasks, key = { it.id }) { task ->
+            Row(
+              modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Column(modifier = Modifier.weight(1f)) {
+                Text(task.prompt, color = colorScheme.onBackground, fontSize = 15.sp)
+                Text(
+                  if (task.fired) "${task.runAt} · done" else task.runAt,
+                  color = colorScheme.onBackground.copy(alpha = 0.5f),
+                  fontSize = 12.sp
+                )
+              }
+              IconButton(onClick = { viewModel.deleteScheduledTask(task.id) }) {
+                Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = colorScheme.onBackground.copy(alpha = 0.6f))
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BillingScreen(viewModel: ChatViewModel) {
+  val context = LocalContext.current
+  Scaffold(
+    topBar = {
+      TopAppBar(
+        title = { Text("Billing", fontWeight = FontWeight.Bold) },
+        navigationIcon = {
+          IconButton(onClick = { viewModel.closeBilling() }) {
+            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
+          }
+        }
+      )
+    },
+    containerColor = Color.Transparent
+  ) { padding ->
+    Column(modifier = Modifier.fillMaxSize().padding(padding).padding(20.dp)) {
+      if (viewModel.loadingBilling) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+          CircularProgressIndicator(color = colorScheme.onBackground)
+        }
+      } else {
+        val subscription = viewModel.billingSummary?.subscription
+        if (subscription == null) {
+          Text("No active subscription.", color = colorScheme.onBackground, fontSize = 16.sp)
+        } else {
+          Text(subscription.planName, color = colorScheme.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+          Spacer(modifier = Modifier.height(6.dp))
+          val statusText = if (subscription.cancelAtPeriodEnd) "Cancels" else "Renews"
+          val dateText = subscription.currentPeriodEnd?.let { formatDate(it) }
+          if (dateText != null) {
+            Text("$statusText $dateText", color = colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 13.sp)
+          }
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(
+          onClick = {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/chatgiza"))
+            context.startActivity(intent)
+          },
+          shape = RoundedCornerShape(24.dp),
+          modifier = Modifier.fillMaxWidth().height(48.dp)
+        ) {
+          Text("Manage billing")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+          "Opens ChatGiZa in your browser to change plan, cards, or cancel.",
+          color = colorScheme.onBackground.copy(alpha = 0.5f),
+          fontSize = 12.sp
+        )
       }
     }
   }

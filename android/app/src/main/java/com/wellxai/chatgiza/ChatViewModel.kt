@@ -16,6 +16,10 @@ sealed class AppScreen {
   object Chat : AppScreen()
   object History : AppScreen()
   object Account : AppScreen()
+  object Settings : AppScreen()
+  object Projects : AppScreen()
+  object Scheduled : AppScreen()
+  object Billing : AppScreen()
 }
 
 class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
@@ -58,12 +62,38 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var nicknameInput by mutableStateOf("")
   var aboutInput by mutableStateOf("")
 
+  var settingsData by mutableStateOf(SettingsData())
+    private set
+  var savingSettings by mutableStateOf(false)
+    private set
+
+  var projects by mutableStateOf<List<ApiProject>>(emptyList())
+    private set
+  var loadingProjects by mutableStateOf(false)
+    private set
+  var newProjectName by mutableStateOf("")
+
+  var scheduledTasks by mutableStateOf<List<ApiScheduledTask>>(emptyList())
+    private set
+  var loadingScheduled by mutableStateOf(false)
+    private set
+  var newTaskPrompt by mutableStateOf("")
+  var newTaskRunAt by mutableStateOf("")
+
+  var billingSummary by mutableStateOf<BillingSummary?>(null)
+    private set
+  var loadingBilling by mutableStateOf(false)
+    private set
+
   init {
     if (tokenStore.getToken() != null) {
       userName = tokenStore.getUserName()
       screen = AppScreen.Chat
       loadHistory()
       loadProfile()
+      loadSettings()
+      loadProjects()
+      loadScheduled()
     } else {
       screen = AppScreen.SignedOut
     }
@@ -118,6 +148,169 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     }
   }
 
+  fun loadSettings() {
+    val token = tokenStore.getToken() ?: return
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.getSettings(token)) {
+        is ApiResult.Success -> settingsData = result.value
+        is ApiResult.Failure -> {}
+      }
+    }
+  }
+
+  fun openSettings() {
+    screen = AppScreen.Settings
+  }
+
+  fun closeSettings() {
+    screen = AppScreen.Account
+  }
+
+  private fun persistSettings(updated: SettingsData) {
+    settingsData = updated
+    val token = tokenStore.getToken() ?: return
+    savingSettings = true
+    viewModelScope.launch {
+      ChatGizaApi.saveSettings(token, updated)
+      savingSettings = false
+    }
+  }
+
+  fun togglePlugin(key: String) {
+    val p = settingsData.plugins
+    val updated = when (key) {
+      "web_search" -> p.copy(webSearch = !p.webSearch)
+      "deep_research" -> p.copy(deepResearch = !p.deepResearch)
+      "deep_think" -> p.copy(deepThink = !p.deepThink)
+      "image" -> p.copy(image = !p.image)
+      "video" -> p.copy(video = !p.video)
+      else -> p
+    }
+    persistSettings(settingsData.copy(plugins = updated))
+  }
+
+  fun setNotifyOnComplete(value: Boolean) = persistSettings(settingsData.copy(notifyOnComplete = value))
+  fun setNotifyImageGen(value: Boolean) = persistSettings(settingsData.copy(notifyImageGen = value))
+  fun setAllNotificationsEnabled(value: Boolean) = persistSettings(settingsData.copy(allNotificationsEnabled = value))
+
+  fun setPrivacyPref(patch: (PrivacyPrefs) -> PrivacyPrefs) {
+    persistSettings(settingsData.copy(privacy = patch(settingsData.privacy)))
+  }
+
+  fun setLocation(value: String) = persistSettings(settingsData.copy(location = value))
+
+  fun loadProjects() {
+    val token = tokenStore.getToken() ?: return
+    loadingProjects = true
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.getProjects(token)) {
+        is ApiResult.Success -> projects = result.value
+        is ApiResult.Failure -> errorMessage = result.message
+      }
+      loadingProjects = false
+    }
+  }
+
+  fun openProjects() {
+    screen = AppScreen.Projects
+  }
+
+  fun closeProjects() {
+    screen = AppScreen.Account
+  }
+
+  fun onNewProjectNameChange(value: String) {
+    newProjectName = value
+  }
+
+  fun addProject() {
+    val name = newProjectName.trim()
+    if (name.isEmpty()) return
+    val token = tokenStore.getToken() ?: return
+    val updated = listOf(ApiProject(UUID.randomUUID().toString(), name, System.currentTimeMillis())) + projects
+    projects = updated
+    newProjectName = ""
+    viewModelScope.launch { ChatGizaApi.saveProjects(token, updated) }
+  }
+
+  fun deleteProject(id: String) {
+    val token = tokenStore.getToken() ?: return
+    val updated = projects.filter { it.id != id }
+    projects = updated
+    viewModelScope.launch { ChatGizaApi.saveProjects(token, updated) }
+  }
+
+  fun loadScheduled() {
+    val token = tokenStore.getToken() ?: return
+    loadingScheduled = true
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.getScheduled(token)) {
+        is ApiResult.Success -> scheduledTasks = result.value
+        is ApiResult.Failure -> errorMessage = result.message
+      }
+      loadingScheduled = false
+    }
+  }
+
+  fun openScheduled() {
+    screen = AppScreen.Scheduled
+  }
+
+  fun closeScheduled() {
+    screen = AppScreen.Account
+  }
+
+  fun onNewTaskPromptChange(value: String) {
+    newTaskPrompt = value
+  }
+
+  fun onNewTaskRunAtChange(value: String) {
+    newTaskRunAt = value
+  }
+
+  fun addScheduledTask() {
+    val prompt = newTaskPrompt.trim()
+    // Web parses this with `new Date(runAt)`, which needs the ISO "T"
+    // separator to parse reliably across browsers — a plain space works in
+    // some engines but not all.
+    val runAt = newTaskRunAt.trim().replaceFirst(" ", "T")
+    if (prompt.isEmpty() || runAt.isEmpty()) return
+    val token = tokenStore.getToken() ?: return
+    val updated = listOf(ApiScheduledTask(UUID.randomUUID().toString(), prompt, runAt, false)) + scheduledTasks
+    scheduledTasks = updated
+    newTaskPrompt = ""
+    newTaskRunAt = ""
+    viewModelScope.launch { ChatGizaApi.saveScheduled(token, updated) }
+  }
+
+  fun deleteScheduledTask(id: String) {
+    val token = tokenStore.getToken() ?: return
+    val updated = scheduledTasks.filter { it.id != id }
+    scheduledTasks = updated
+    viewModelScope.launch { ChatGizaApi.saveScheduled(token, updated) }
+  }
+
+  fun loadBilling() {
+    val token = tokenStore.getToken() ?: return
+    loadingBilling = true
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.getBillingSummary(token)) {
+        is ApiResult.Success -> billingSummary = result.value
+        is ApiResult.Failure -> errorMessage = result.message
+      }
+      loadingBilling = false
+    }
+  }
+
+  fun openBilling() {
+    screen = AppScreen.Billing
+    loadBilling()
+  }
+
+  fun closeBilling() {
+    screen = AppScreen.Account
+  }
+
   fun onSignInStart() {
     signingIn = true
     errorMessage = null
@@ -134,6 +327,9 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
           screen = AppScreen.Chat
           loadHistory()
           loadProfile()
+          loadSettings()
+          loadProjects()
+          loadScheduled()
         }
         is ApiResult.Failure -> {
           signingIn = false
@@ -157,6 +353,10 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     profileData = ProfileData()
     nicknameInput = ""
     aboutInput = ""
+    settingsData = SettingsData()
+    projects = emptyList()
+    scheduledTasks = emptyList()
+    billingSummary = null
     screen = AppScreen.SignedOut
   }
 

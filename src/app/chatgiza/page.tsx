@@ -391,6 +391,12 @@ function ChatGizaInner() {
   const pulledHistoryFor = useRef<string | null>(null);
   const profileSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pulledProfileFor = useRef<string | null>(null);
+  const settingsSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pulledSettingsFor = useRef<string | null>(null);
+  const projectsSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pulledProjectsFor = useRef<string | null>(null);
+  const scheduledSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pulledScheduledFor = useRef<string | null>(null);
 
   useEffect(() => {
     setProjects(loadJson(PROJECTS_KEY, []));
@@ -579,6 +585,125 @@ function ChatGizaInner() {
       if (profileSyncTimer.current) clearTimeout(profileSyncTimer.current);
     };
   }, [profile, memory, memoryEnabled, language, signedIn]);
+
+  // Same pull/push pattern, for plugins/notifications/privacy/location/company —
+  // the rest of what used to be localStorage-only settings.
+  useEffect(() => {
+    if (!signedIn) return;
+    const userId = authSession?.user?.id;
+    if (!userId || pulledSettingsFor.current === userId) return;
+    pulledSettingsFor.current = userId;
+    fetch("/api/settings")
+      .then((res) => (res.ok ? res.json() : null))
+      .then(
+        (
+          data: {
+            plugins?: Record<PluginKey, boolean>;
+            notifyOnComplete?: boolean;
+            notifyImageGen?: boolean;
+            allNotificationsEnabled?: boolean;
+            privacy?: PrivacyPrefs;
+            location?: string;
+            company?: CompanyProfile;
+            companyRequests?: CompanyRequest[];
+          } | null
+        ) => {
+          if (!data) return;
+          if (data.plugins) setPluginsEnabled(data.plugins);
+          if (typeof data.notifyOnComplete === "boolean") setNotifyOnComplete(data.notifyOnComplete);
+          if (typeof data.notifyImageGen === "boolean") setNotifyImageGen(data.notifyImageGen);
+          if (typeof data.allNotificationsEnabled === "boolean") setAllNotificationsEnabled(data.allNotificationsEnabled);
+          if (data.privacy) setPrivacyPrefs(data.privacy);
+          if (typeof data.location === "string") setLocationState(data.location);
+          if (data.company) setCompany(data.company);
+          if (data.companyRequests) setCompanyRequests(data.companyRequests);
+        }
+      )
+      .catch(() => {});
+  }, [signedIn, authSession?.user?.id]);
+
+  useEffect(() => {
+    if (!signedIn) return;
+    if (settingsSyncTimer.current) clearTimeout(settingsSyncTimer.current);
+    settingsSyncTimer.current = setTimeout(() => {
+      fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plugins: pluginsEnabled,
+          notifyOnComplete,
+          notifyImageGen,
+          allNotificationsEnabled,
+          privacy: privacyPrefs,
+          location,
+          company,
+          companyRequests,
+        }),
+      }).catch(() => {});
+    }, 1200);
+    return () => {
+      if (settingsSyncTimer.current) clearTimeout(settingsSyncTimer.current);
+    };
+  }, [pluginsEnabled, notifyOnComplete, notifyImageGen, allNotificationsEnabled, privacyPrefs, location, company, companyRequests, signedIn]);
+
+  // Same pull/push pattern, for Projects.
+  useEffect(() => {
+    if (!signedIn) return;
+    const userId = authSession?.user?.id;
+    if (!userId || pulledProjectsFor.current === userId) return;
+    pulledProjectsFor.current = userId;
+    fetch("/api/projects")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { projects?: Project[] } | null) => {
+        if (data?.projects) setProjects(data.projects);
+      })
+      .catch(() => {});
+  }, [signedIn, authSession?.user?.id]);
+
+  useEffect(() => {
+    if (!signedIn) return;
+    if (projectsSyncTimer.current) clearTimeout(projectsSyncTimer.current);
+    projectsSyncTimer.current = setTimeout(() => {
+      fetch("/api/projects", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projects }),
+      }).catch(() => {});
+    }, 1200);
+    return () => {
+      if (projectsSyncTimer.current) clearTimeout(projectsSyncTimer.current);
+    };
+  }, [projects, signedIn]);
+
+  // Same pull/push pattern, for scheduled/automation tasks — firing itself
+  // still happens client-side (whichever device has the tab/app open).
+  useEffect(() => {
+    if (!signedIn) return;
+    const userId = authSession?.user?.id;
+    if (!userId || pulledScheduledFor.current === userId) return;
+    pulledScheduledFor.current = userId;
+    fetch("/api/scheduled")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { tasks?: ScheduledTask[] } | null) => {
+        if (data?.tasks) setScheduledTasks(data.tasks);
+      })
+      .catch(() => {});
+  }, [signedIn, authSession?.user?.id]);
+
+  useEffect(() => {
+    if (!signedIn) return;
+    if (scheduledSyncTimer.current) clearTimeout(scheduledSyncTimer.current);
+    scheduledSyncTimer.current = setTimeout(() => {
+      fetch("/api/scheduled", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tasks: scheduledTasks }),
+      }).catch(() => {});
+    }, 1200);
+    return () => {
+      if (scheduledSyncTimer.current) clearTimeout(scheduledSyncTimer.current);
+    };
+  }, [scheduledTasks, signedIn]);
 
   useEffect(() => {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
