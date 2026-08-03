@@ -15,5 +15,16 @@ public class MainActivity extends BridgeActivity {
     WebSettings settings = this.bridge.getWebView().getSettings();
     settings.setUseWideViewPort(true);
     settings.setLoadWithOverviewMode(true);
+
+    // WebView (unlike Chrome) multiplies CSS text-size by the device's own
+    // accessibility "Font size" setting on top of the page's own responsive
+    // sizing — on a phone with a larger font-size preference this makes text
+    // and the elements sized around it balloon and clip off-screen. Pinning
+    // this to 100 makes the app always render at the size the live site
+    // itself specifies, matching what a normal browser tab would show.
+    settings.setTextZoom(100);
+    settings.setSupportZoom(false);
+    settings.setBuiltInZoomControls(false);
+    settings.setDisplayZoomControls(false);
   }
 }
