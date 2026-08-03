@@ -749,6 +749,41 @@ export default function ChatSidebar({
     };
   }, [mobileOpen]);
 
+  // Swipe to open/close the mobile history drawer, the same gesture as
+  // swiping between photos — swipe right from the screen's left edge to
+  // open it, swipe left anywhere to close it while it's open.
+  useEffect(() => {
+    let startX = 0;
+    let startY = 0;
+    let tracking = false;
+
+    function handleTouchStart(e: TouchEvent) {
+      if (window.innerWidth >= 640) return;
+      const t = e.touches[0];
+      startX = t.clientX;
+      startY = t.clientY;
+      tracking = mobileOpen || startX < 24;
+    }
+
+    function handleTouchEnd(e: TouchEvent) {
+      if (!tracking) return;
+      tracking = false;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      if (!mobileOpen && dx > 0) setMobileOpen(true);
+      else if (mobileOpen && dx < 0) setMobileOpen(false);
+    }
+
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
+    return () => {
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [mobileOpen]);
+
   function closeMobileThen(fn: () => void) {
     return () => {
       setMobileOpen(false);
@@ -783,9 +818,9 @@ export default function ChatSidebar({
 
   const mobileHeaderAvatar = session?.user?.image ? (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={session.user.image} alt="" className="h-8 w-8 shrink-0 rounded-full" />
+    <img src={session.user.image} alt="" className="h-10 w-10 shrink-0 rounded-full" />
   ) : (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border text-xs">
+    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border text-sm">
       {session?.user?.name?.[0] ?? "?"}
     </span>
   );
@@ -834,16 +869,16 @@ export default function ChatSidebar({
           {signedIn ? (
             <button
               onClick={closeMobileThen(() => onOpenSettingsTab("Account"))}
-              className="flex min-w-0 flex-1 items-center gap-2 text-left sm:hidden"
+              className="flex min-w-0 flex-1 items-center gap-2.5 text-left sm:hidden"
             >
               {mobileHeaderAvatar}
-              <span className="min-w-0 truncate text-sm font-semibold">
+              <span className="min-w-0 truncate text-base font-semibold">
                 {session?.user?.name ?? session?.user?.email}
               </span>
             </button>
           ) : (
-            <Link href="/login" className="flex min-w-0 flex-1 items-center gap-2 text-sm text-muted sm:hidden">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border text-xs">
+            <Link href="/login" className="flex min-w-0 flex-1 items-center gap-2.5 text-base text-muted sm:hidden">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border text-sm">
                 ?
               </span>
               Log in
@@ -864,7 +899,7 @@ export default function ChatSidebar({
             <button
               onClick={onHeaderClose}
               aria-label={headerCloseLabel}
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+              className="hidden h-9 w-9 items-center justify-center rounded-xl text-muted transition-colors hover:bg-surface-2 hover:text-foreground sm:flex"
             >
               {PanelIcon}
             </button>
