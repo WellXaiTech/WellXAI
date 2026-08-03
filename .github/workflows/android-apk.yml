@@ -34,12 +34,22 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
+      # ubuntu-latest runners have ~7GB RAM total; a full Android/Capacitor
+      # build (AAPT2, D8/R8, multiple JVM workers) can OOM-kill mid-build
+      # even with a conservative Gradle heap — extra swap is cheap insurance.
+      - name: Add swap space
+        run: |
+          sudo fallocate -l 6G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+
       - name: Build debug APK
         working-directory: android
         shell: bash
         run: |
           set -o pipefail
-          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/gradle-build.log
+          ./gradlew assembleDebug --no-daemon --max-workers=1 --stacktrace 2>&1 | tee /tmp/gradle-build.log
 
       # Job logs require a GitHub login to view, even on a public repo —
       # this surfaces the failure as a check-run annotation instead, which
