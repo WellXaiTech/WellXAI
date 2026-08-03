@@ -10,9 +10,27 @@ export type ConversationSummary = {
   id: string;
   title: string;
   pinned?: boolean;
+  updatedAt?: number;
 };
 
 const COLLAPSED_KEY = "chatgiza:sidebar-collapsed";
+
+// Today shows a time, this week shows the weekday, this year shows "26 Jul",
+// anything older shows "15 Jul 25" — same convention as most chat apps' history lists.
+function formatConversationDate(ts?: number): string {
+  if (!ts) return "";
+  const date = new Date(ts);
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.round((startOfToday.getTime() - startOfDate.getTime()) / 86400000);
+
+  if (diffDays === 0) return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays > 1 && diffDays < 7) return date.toLocaleDateString([], { weekday: "long" });
+  if (date.getFullYear() === now.getFullYear()) return date.toLocaleDateString([], { day: "numeric", month: "short" });
+  return date.toLocaleDateString([], { day: "numeric", month: "short", year: "2-digit" });
+}
 
 const PencilIcon = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -606,11 +624,12 @@ function ConversationRow({
         onTouchEnd={handleTouchEnd}
         onTouchMove={clearPressTimer}
         onTouchCancel={clearPressTimer}
-        className={`flex h-9 w-full items-center rounded-xl px-2 pr-16 text-left text-sm font-medium text-foreground transition-colors ${
+        className={`flex min-h-9 w-full flex-col justify-center gap-0.5 rounded-xl px-2 py-1.5 pr-16 text-left transition-colors ${
           active ? "bg-surface-2" : "hover:bg-surface-2"
         }`}
       >
-        <span className="min-w-0 flex-1 truncate">{c.title}</span>
+        <span className="min-w-0 truncate text-sm font-medium text-foreground">{c.title}</span>
+        {c.updatedAt && <span className="min-w-0 truncate text-xs text-muted">{formatConversationDate(c.updatedAt)}</span>}
       </button>
       <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
         <button

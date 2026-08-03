@@ -1310,7 +1310,7 @@ function ChatGizaInner() {
       <ChatSidebar
         conversations={conversations
           .filter((c) => !c.archived)
-          .map(({ id, title, pinned }) => ({ id, title, pinned }))}
+          .map((c) => ({ id: c.id, title: c.title, pinned: c.pinned, updatedAt: lastActivity(c) }))}
         activeId={activeId}
         onSelect={setActiveId}
         onNewChat={() => setActiveId(null)}
