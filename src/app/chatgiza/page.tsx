@@ -68,7 +68,16 @@ type Conversation = {
 
 type SendOverride = { conversationId: string; baseMessages: Message[] };
 
-const STORAGE_KEY = "chatgiza:conversations";
+// Conversations are scoped per signed-in account (or a shared "guest" bucket
+// when signed out) — a single global key let one Google account's chat
+// history bleed into whichever account next signed in on the same device.
+const GUEST_SCOPE = "guest";
+function storageKeyFor(scope: string) {
+  return `chatgiza:conversations:${scope}`;
+}
+function deletedIdsKeyFor(scope: string) {
+  return `chatgiza:deleted-ids:${scope}`;
+}
 const PROJECTS_KEY = "chatgiza:projects";
 const SCHEDULED_KEY = "chatgiza:scheduled";
 const PLUGINS_KEY = "chatgiza:plugins";
@@ -216,34 +225,110 @@ function pickChunkSeconds(remaining: number): "4" | "8" | "12" {
   return "4";
 }
 
-function loadStoredConversations(): Conversation[] {
+function loadStoredConversations(scope: string): Conversation[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKeyFor(scope));
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
 }
 
-// Never let this tab's in-memory state silently delete a conversation that
-// only exists because another tab (or an earlier session) wrote it to
-// localStorage after this tab last read it.
-function mergeConversations(stored: Conversation[], inMemory: Conversation[]): Conversation[] {
-  const memoryIds = new Set(inMemory.map((c) => c.id));
-  const onlyOnDisk = stored.filter((c) => !memoryIds.has(c.id));
-  return [...inMemory, ...onlyOnDisk];
+// Deletion tombstones: a conversation id disappearing from one side of a
+// merge used to be read as "this device just hasn't seen it yet" and get
+// silently re-added — which meant a conversation deleted on one device kept
+// coming back after the next sync. Recording *when* an id was deleted (and
+// carrying that record along on every merge/sync) lets a real deletion win
+// instead of being treated as data loss to protect against.
+type DeletedIds = Record<string, number>;
+
+function loadDeletedIds(scope: string): DeletedIds {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(deletedIdsKeyFor(scope));
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+// Tombstones older than this are pruned so the deleted-ids record doesn't
+// grow forever — by then every device has long since caught up on the
+// deletion, so there's nothing left it could still be protecting against.
+const TOMBSTONE_TTL_MS = 180 * 24 * 60 * 60 * 1000;
+
+function pruneDeletedIds(ids: DeletedIds): DeletedIds {
+  const cutoff = Date.now() - TOMBSTONE_TTL_MS;
+  const next: DeletedIds = {};
+  for (const [id, ts] of Object.entries(ids)) {
+    if (ts >= cutoff) next[id] = ts;
+  }
+  return next;
+}
+
+function mergeDeletedIds(a: DeletedIds, b: DeletedIds): DeletedIds {
+  const merged: DeletedIds = { ...a };
+  for (const [id, ts] of Object.entries(b)) {
+    if (!merged[id] || ts > merged[id]) merged[id] = ts;
+  }
+  return merged;
+}
+
+function lastActivity(c: Conversation): number {
+  let max = 0;
+  for (const m of c.messages) {
+    if (m.createdAt && m.createdAt > max) max = m.createdAt;
+  }
+  return max;
+}
+
+// Never let this tab's in-memory state silently drop a conversation that
+// only exists because another tab (or another device) wrote it after this
+// tab last read it — unless it's tombstoned, in which case the deletion wins
+// regardless of which side "remembers" the conversation.
+function mergeConversations(a: Conversation[], b: Conversation[], deletedIds: DeletedIds): Conversation[] {
+  const byId = new Map<string, Conversation>();
+  for (const c of [...a, ...b]) {
+    if (deletedIds[c.id]) continue;
+    const existing = byId.get(c.id);
+    if (!existing) {
+      byId.set(c.id, c);
+      continue;
+    }
+    const cActivity = lastActivity(c);
+    const existingActivity = lastActivity(existing);
+    if (cActivity > existingActivity || (cActivity === existingActivity && c.messages.length > existing.messages.length)) {
+      byId.set(c.id, c);
+    }
+  }
+  return Array.from(byId.values());
 }
 
 function ChatGizaInner() {
   const searchParams = useSearchParams();
   const { data: authSession, status: authStatus } = useSession();
   const signedIn = authStatus === "authenticated";
+  // `null` while NextAuth is still resolving the session — deliberately not
+  // "guest" during that window, so a signed-in user's history never gets
+  // read from (or briefly written to) the guest bucket before we actually
+  // know they're signed in.
+  const scope = authStatus === "loading" ? null : signedIn && authSession?.user?.id ? authSession.user.id : GUEST_SCOPE;
   // Starts empty on purpose (must match the server-rendered pass, which has
   // no `window`/localStorage) and gets filled in by the mount effect below —
   // reading localStorage directly in the initializer caused a hydration
   // mismatch (server saw [], client saw real data on the very first render).
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [deletedIds, setDeletedIds] = useState<DeletedIds>({});
+  const deletedIdsRef = useRef<DeletedIds>({});
+  useEffect(() => {
+    deletedIdsRef.current = deletedIds;
+  }, [deletedIds]);
+  // Which account's (or the guest bucket's) data is currently loaded into
+  // `conversations`/`deletedIds` — kept separate from the *target* scope
+  // below so the storage-write effect can tell "we just switched accounts,
+  // don't persist yet" apart from "this really is this account's data."
+  const [loadedScope, setLoadedScope] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [showHeroShimmer, setShowHeroShimmer] = useState(true);
@@ -306,7 +391,6 @@ function ChatGizaInner() {
   const pulledHistoryFor = useRef<string | null>(null);
 
   useEffect(() => {
-    setConversations(loadStoredConversations());
     setProjects(loadJson(PROJECTS_KEY, []));
     setScheduledTasks(loadJson(SCHEDULED_KEY, []));
     setPluginsEnabled(loadJson(PLUGINS_KEY, DEFAULT_PLUGINS));
@@ -368,47 +452,91 @@ function ChatGizaInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Loads whichever scope (a specific account, or the shared guest bucket)
+  // the user currently is, whenever that identity changes — including sign
+  // out, which must swap `conversations` away from the account's data
+  // entirely rather than leaving it sitting in memory for the next person
+  // who uses this device/browser.
   useEffect(() => {
-    if (!historyEnabled) return;
-    const merged = mergeConversations(loadStoredConversations(), conversations);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-  }, [conversations, historyEnabled]);
+    if (!scope || scope === loadedScope) return;
 
-  // Pulls this Google account's synced history once per sign-in (keyed by user
-  // id so switching accounts in the same browser re-pulls) and merges it into
-  // whatever's already loaded from this device's localStorage — never
-  // silently drops local-only conversations the server hasn't seen yet.
+    let nextConversations = loadStoredConversations(scope);
+    let nextDeletedIds = pruneDeletedIds(loadDeletedIds(scope));
+
+    // One-time adoption: if this account (or the guest bucket) has never
+    // been used on this device before, but there's unclaimed guest history
+    // sitting here, claim it instead of starting empty — then clear the
+    // guest bucket so it can't also bleed into some other account later.
+    if (scope !== GUEST_SCOPE && nextConversations.length === 0) {
+      const guestConversations = loadStoredConversations(GUEST_SCOPE);
+      if (guestConversations.length > 0) {
+        nextConversations = guestConversations;
+        nextDeletedIds = mergeDeletedIds(nextDeletedIds, loadDeletedIds(GUEST_SCOPE));
+        localStorage.removeItem(storageKeyFor(GUEST_SCOPE));
+        localStorage.removeItem(deletedIdsKeyFor(GUEST_SCOPE));
+      }
+    }
+
+    setConversations(mergeConversations(nextConversations, [], nextDeletedIds));
+    setDeletedIds(nextDeletedIds);
+    setActiveId(null);
+    pulledHistoryFor.current = null;
+    setLoadedScope(scope);
+  }, [scope, loadedScope]);
+
+  // Writes back to disk only once `conversations`/`deletedIds` actually
+  // belong to the current scope — during the render right after switching
+  // accounts, `conversations` still briefly holds the *previous* scope's
+  // data while `scope` has already moved on, and writing in that window
+  // would leak it into the new scope's storage.
   useEffect(() => {
-    if (!signedIn || !historyEnabled) return;
+    if (!historyEnabled || !scope || scope !== loadedScope) return;
+    const merged = mergeConversations(loadStoredConversations(scope), conversations, deletedIds);
+    localStorage.setItem(storageKeyFor(scope), JSON.stringify(merged));
+    localStorage.setItem(deletedIdsKeyFor(scope), JSON.stringify(deletedIds));
+  }, [conversations, deletedIds, historyEnabled, scope, loadedScope]);
+
+  // Pulls this account's synced history once per sign-in (keyed by user id
+  // so switching accounts in the same browser re-pulls) and merges it into
+  // whatever's already loaded locally — deletion tombstones from the server
+  // are merged in first so a deletion made on another device wins here too,
+  // instead of the conversation just reappearing.
+  useEffect(() => {
+    if (!signedIn || !historyEnabled || !scope) return;
     const userId = authSession?.user?.id;
     if (!userId || pulledHistoryFor.current === userId) return;
     pulledHistoryFor.current = userId;
     fetch("/api/history")
       .then((res) => (res.ok ? res.json() : null))
-      .then((data: { conversations?: Conversation[] } | null) => {
-        if (!data?.conversations) return;
-        setConversations((prev) => mergeConversations(data.conversations!, prev));
+      .then((data: { conversations?: Conversation[]; deletedIds?: DeletedIds } | null) => {
+        if (!data) return;
+        const merged = mergeDeletedIds(deletedIdsRef.current, data.deletedIds ?? {});
+        setDeletedIds(merged);
+        if (data.conversations) {
+          setConversations((prev) => mergeConversations(data.conversations!, prev, merged));
+        }
       })
       .catch(() => {});
-  }, [signedIn, historyEnabled, authSession?.user?.id]);
+  }, [signedIn, historyEnabled, authSession?.user?.id, scope]);
 
-  // Pushes this device's conversations up to the account's synced storage so
-  // logging into the same Google account elsewhere sees the same history.
-  // Debounced since `conversations` also changes on every streamed token.
+  // Pushes this device's conversations (and deletion tombstones) up to the
+  // account's synced storage so logging into the same account elsewhere
+  // sees the same history — including what's been deleted. Debounced since
+  // `conversations` also changes on every streamed token.
   useEffect(() => {
-    if (!signedIn || !historyEnabled) return;
+    if (!signedIn || !historyEnabled || !scope || scope !== loadedScope) return;
     if (historySyncTimer.current) clearTimeout(historySyncTimer.current);
     historySyncTimer.current = setTimeout(() => {
       fetch("/api/history", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversations }),
+        body: JSON.stringify({ conversations, deletedIds }),
       }).catch(() => {});
     }, 1200);
     return () => {
       if (historySyncTimer.current) clearTimeout(historySyncTimer.current);
     };
-  }, [conversations, signedIn, historyEnabled]);
+  }, [conversations, deletedIds, signedIn, historyEnabled, scope, loadedScope]);
 
   useEffect(() => {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
@@ -584,8 +712,14 @@ function ChatGizaInner() {
   }
 
   function clearAllHistory() {
+    const now = Date.now();
+    setDeletedIds((prev) => {
+      const next = { ...prev };
+      for (const c of conversations) next[c.id] = now;
+      return next;
+    });
     setConversations([]);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+    if (scope) localStorage.setItem(storageKeyFor(scope), JSON.stringify([]));
     setActiveId(null);
   }
 
@@ -1053,6 +1187,7 @@ function ChatGizaInner() {
 
   function deleteConversation(id: string) {
     setConversations((prev) => prev.filter((c) => c.id !== id));
+    setDeletedIds((prev) => ({ ...prev, [id]: Date.now() }));
     if (activeId === id) setActiveId(null);
   }
 
