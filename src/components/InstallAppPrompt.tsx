@@ -48,23 +48,15 @@ export default function InstallAppPrompt() {
           <p className="mt-0.5 text-xs leading-5 text-muted">
             Tap <strong>Share</strong>, then <strong>Add to Home Screen</strong> for the full app experience.
           </p>
-        ) : canPrompt ? (
-          <p className="mt-0.5 text-xs leading-5 text-muted">Add ChatGiZa to your home screen for quick access.</p>
         ) : platform === "android" ? (
           <p className="mt-0.5 text-xs leading-5 text-muted">Download the Android app to use ChatGiZa full-screen.</p>
+        ) : canPrompt ? (
+          <p className="mt-0.5 text-xs leading-5 text-muted">Add ChatGiZa to your home screen for quick access.</p>
         ) : (
           <p className="mt-0.5 text-xs leading-5 text-muted">Add ChatGiZa to your device for quick access.</p>
         )}
         <div className="mt-2.5 flex items-center gap-3">
-          {canPrompt ? (
-            <button
-              onClick={install}
-              disabled={installing}
-              className="rounded-full bg-foreground px-3.5 py-1.5 text-xs font-bold text-background transition-opacity hover:opacity-90 disabled:opacity-60"
-            >
-              {installing ? "Installing…" : "Install"}
-            </button>
-          ) : platform === "android" ? (
+          {platform === "android" ? (
             <a
               href={CHATGIZA_APK_URL}
               download
@@ -73,6 +65,14 @@ export default function InstallAppPrompt() {
             >
               Download APK
             </a>
+          ) : canPrompt ? (
+            <button
+              onClick={install}
+              disabled={installing}
+              className="rounded-full bg-foreground px-3.5 py-1.5 text-xs font-bold text-background transition-opacity hover:opacity-90 disabled:opacity-60"
+            >
+              {installing ? "Installing…" : "Install"}
+            </button>
           ) : null}
           <button onClick={dismiss} className="text-xs text-muted transition-colors hover:text-foreground">
             Not now
