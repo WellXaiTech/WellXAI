@@ -16,6 +16,7 @@ export async function DELETE() {
 
   const keys = [
     `chatgiza:history:${userId}`,
+    `chatgiza:history-deleted:${userId}`,
     `chatgiza:plan:${userId}`,
     `chatgiza:sessions:${userId}`,
     `chatgiza:revoked-sessions:${userId}`,
