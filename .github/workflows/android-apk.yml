@@ -36,7 +36,21 @@ jobs:
 
       - name: Build debug APK
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/gradle-build.log
+
+      # Job logs require a GitHub login to view, even on a public repo —
+      # this surfaces the failure as a check-run annotation instead, which
+      # IS readable without auth via the public API, so the actual Gradle
+      # error is visible without needing repo access.
+      - name: Surface build failure as an annotation
+        if: failure()
+        shell: bash
+        run: |
+          msg=$(tail -n 80 /tmp/gradle-build.log | sed 's/%/%25/g; s/\r/%0D/g' | awk '{printf "%s%%0A", $0}')
+          echo "::error::$msg"
 
       - name: Upload APK as workflow artifact
         uses: actions/upload-artifact@v4
