@@ -66,11 +66,16 @@ jobs:
         if: failure()
         shell: bash
         run: |
+          set +o pipefail
           # Gradle's plain-English "what went wrong" summary comes *before*
           # the (huge, useless-for-diagnosis) internal stack trace — grab
           # that section specifically instead of just the tail of the log.
+          # (awk self-limits to 60 lines instead of piping into `head`,
+          # which — combined with the default `pipefail` these steps run
+          # under — SIGPIPEs the upstream process the moment `head` closes
+          # its input early, failing this diagnostic step itself.)
           if [ -f /tmp/gradle-build.log ]; then
-            section=$(awk '/FAILURE: Build failed|What went wrong/{found=1} found' /tmp/gradle-build.log | head -n 60)
+            section=$(awk '/FAILURE: Build failed|What went wrong/{found=1} found{print; n++} n>=60{exit}' /tmp/gradle-build.log)
             if [ -z "$section" ]; then
               section=$(tail -n 80 /tmp/gradle-build.log)
             fi
