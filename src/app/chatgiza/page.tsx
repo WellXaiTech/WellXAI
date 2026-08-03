@@ -1515,7 +1515,7 @@ function ChatGizaInner() {
           </button>
         </div>
         {!active ? (
-          <div className="relative mx-auto flex w-full max-w-[var(--max-w-chat)] flex-1 flex-col items-center justify-end px-4 pb-6 sm:justify-center sm:pb-0">
+          <div className="relative mx-auto flex w-full max-w-[var(--max-w-chat)] flex-1 flex-col items-center justify-end px-4 pb-3 sm:justify-center sm:pb-0">
             {signedIn && !userPlan && showUpgradeNudge && (
               <UpgradeNudgeBanner
                 onUpgrade={() => {
@@ -1564,7 +1564,7 @@ function ChatGizaInner() {
               />
             </div>
 
-            <div className="relative z-10 mt-4 flex flex-wrap items-center justify-center gap-2">
+            <div className="relative z-10 mt-4 hidden flex-wrap items-center justify-center gap-2 sm:flex">
               {QUICK_ACTIONS.map((action) => (
                 <button
                   key={action.label}

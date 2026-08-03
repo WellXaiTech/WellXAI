@@ -909,7 +909,7 @@ export default function ChatSidebar({
         <div className="sidebar-scroll flex-1 overflow-y-auto px-2">
           <button
             onClick={closeMobileThen(onNewChat)}
-            className="mb-2 flex h-10 w-full items-center gap-2 rounded-xl border border-border px-2 text-base font-medium shadow-sm transition-all hover:bg-surface-2 hover:shadow-md"
+            className="mb-2 hidden h-10 w-full items-center gap-2 rounded-xl border border-border px-2 text-base font-medium shadow-sm transition-all hover:bg-surface-2 hover:shadow-md sm:flex"
           >
             <span className="flex h-5 w-5 shrink-0 items-center justify-center">{PencilIcon}</span>
             New chat
