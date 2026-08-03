@@ -931,13 +931,10 @@ export default function ChatSidebar({
           {signedIn && !userPlan && (
             <button
               onClick={closeMobileThen(onOpenUpgradePlan)}
-              className="mb-3 flex w-full items-center gap-3 rounded-2xl bg-blue-600 px-4 py-3 text-left text-white transition-colors hover:bg-blue-500 sm:hidden"
+              className="mb-3 flex h-12 w-full items-center gap-3 rounded-xl bg-blue-600 px-4 text-left text-white transition-colors hover:bg-blue-500 sm:hidden"
             >
-              <span className="min-w-0 flex-1">
-                <span className="block text-base font-semibold">GiZa Pro Offer</span>
-                <span className="block text-sm text-white/80">Faster replies, HD, deep research</span>
-              </span>
-              <span className="shrink-0 rounded-full bg-white/20 px-3 py-1.5 text-sm font-semibold">Upgrade</span>
+              <span className="min-w-0 flex-1 truncate text-base font-semibold">GiZa Pro Offer</span>
+              <span className="shrink-0 rounded-full bg-white/20 px-3 py-1 text-sm font-semibold">Save 20%</span>
             </button>
           )}
 
