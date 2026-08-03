@@ -90,6 +90,46 @@ const TAB_DESCRIPTIONS: Record<Tab, string> = {
   Billing: "Plan, invoices, and payment methods",
 };
 
+const DataControlsIcon = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3Z" />
+  </svg>
+);
+
+const SecurityLockIcon = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="5" y="11" width="14" height="9" rx="2" />
+    <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+  </svg>
+);
+
+const AccountIcon = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 20c0-4 4-6 8-6s8 2 8 6" />
+  </svg>
+);
+
+const MemoryIcon = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="8" />
+    <path d="M12 8v4l3 2" />
+  </svg>
+);
+
+const StorageIcon = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
+  </svg>
+);
+
+const BillingIcon = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="2" y="5" width="20" height="14" rx="2" />
+    <line x1="2" y1="10" x2="22" y2="10" />
+  </svg>
+);
+
 const ChevronDownIcon = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M6 9l6 6 6-6" />
@@ -109,6 +149,16 @@ const GearIcon = (
     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
   </svg>
 );
+
+const TAB_ICONS: Record<Tab, React.ReactNode> = {
+  General: GearIcon,
+  "Data controls": DataControlsIcon,
+  Security: SecurityLockIcon,
+  Account: AccountIcon,
+  Memory: MemoryIcon,
+  Storage: StorageIcon,
+  Billing: BillingIcon,
+};
 
 const SystemIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -719,16 +769,16 @@ export default function SettingsPanel({
           <div className="mb-1 px-1 sm:block hidden">
             <span className="text-xs text-muted">Settings</span>
           </div>
-          <ul className="space-y-0.5 sm:space-y-0.5 rounded-2xl bg-surface-2 p-1 sm:rounded-none sm:bg-transparent sm:p-0">
+          <ul className="divide-y divide-border/60 rounded-2xl bg-surface-2 p-1 sm:space-y-0.5 sm:divide-y-0 sm:rounded-none sm:bg-transparent sm:p-0">
             {visibleTabsGroup1.map((t) => (
               <li key={t}>
                 <button
                   onClick={() => selectTab(t)}
-                  className={`flex w-full items-center gap-2 rounded-xl px-3 py-3 text-left transition-colors sm:rounded-lg sm:px-2.5 sm:py-2 ${
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors sm:gap-2 sm:rounded-lg sm:px-2.5 sm:py-2 ${
                     tab === t ? "bg-surface-2 sm:bg-surface-2" : "hover:bg-surface sm:hover:bg-surface-2"
                   }`}
                 >
-                  {t === "General" && <span className="text-muted">{GearIcon}</span>}
+                  <span className="text-muted">{TAB_ICONS[t]}</span>
                   <span className="min-w-0 flex-1">
                     <span
                       className={`block text-base sm:text-sm ${
@@ -747,23 +797,26 @@ export default function SettingsPanel({
           {visibleTabsGroup2.length > 0 && (
             <>
               <div className="my-3 sm:my-2 sm:border-t sm:border-border" />
-              <ul className="space-y-0.5 rounded-2xl bg-surface-2 p-1 sm:rounded-none sm:bg-transparent sm:p-0">
+              <ul className="divide-y divide-border/60 rounded-2xl bg-surface-2 p-1 sm:space-y-0.5 sm:divide-y-0 sm:rounded-none sm:bg-transparent sm:p-0">
                 {visibleTabsGroup2.map((t) => (
                   <li key={t}>
                     <button
                       onClick={() => selectTab(t)}
-                      className={`w-full rounded-xl px-3 py-3 text-left transition-colors sm:rounded-lg sm:px-2.5 sm:py-2 ${
+                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors sm:gap-2 sm:rounded-lg sm:px-2.5 sm:py-2 ${
                         tab === t ? "bg-surface-2" : "hover:bg-surface sm:hover:bg-surface-2"
                       }`}
                     >
-                      <span
-                        className={`block text-base sm:text-sm ${
-                          tab === t ? "font-medium text-foreground" : "font-medium text-foreground sm:font-normal sm:text-muted"
-                        }`}
-                      >
-                        {t}
+                      <span className="text-muted">{TAB_ICONS[t]}</span>
+                      <span className="min-w-0 flex-1">
+                        <span
+                          className={`block text-base sm:text-sm ${
+                            tab === t ? "font-medium text-foreground" : "font-medium text-foreground sm:font-normal sm:text-muted"
+                          }`}
+                        >
+                          {t}
+                        </span>
+                        <span className="block text-sm text-muted sm:hidden">{TAB_DESCRIPTIONS[t]}</span>
                       </span>
-                      <span className="block text-sm text-muted sm:hidden">{TAB_DESCRIPTIONS[t]}</span>
                     </button>
                   </li>
                 ))}
