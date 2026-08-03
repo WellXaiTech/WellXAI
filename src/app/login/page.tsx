@@ -72,14 +72,21 @@ function LoginPageInner() {
   }
 
   return (
-    <div className="flex min-h-screen w-full bg-background text-foreground">
-      <div className="flex w-full flex-col justify-center px-8 sm:px-16 md:w-[46%] md:px-20">
-        <Link href="/" className="mb-12 text-lg font-extrabold tracking-tight">
+    <div className="flex min-h-screen w-full flex-col bg-background text-foreground md:flex-row">
+      <div className="relative flex h-[34vh] shrink-0 items-center justify-center overflow-hidden bg-surface md:hidden">
+        <div className="hero-shimmer-bg" style={{ position: "absolute" }} />
+        <span className="glow-badge relative z-10 rounded-full px-8 py-3 text-4xl font-extrabold tracking-tight">
+          ChatGiZa
+        </span>
+      </div>
+
+      <div className="flex w-full flex-1 flex-col justify-center px-8 py-8 sm:px-16 md:flex-none md:w-[46%] md:px-20 md:py-0">
+        <Link href="/" className="mb-6 hidden text-lg font-extrabold tracking-tight md:mb-12 md:inline-block">
           ChatGiZa
         </Link>
 
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Sign in to ChatGiZa</h1>
-        <p className="mt-4 max-w-sm text-sm leading-6 text-muted">
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-4xl">Sign in to ChatGiZa</h1>
+        <p className="mt-3 max-w-sm text-sm leading-6 text-muted md:mt-4">
           Save your chat history, pick up conversations across devices, and personalize ChatGiZa to how you work.
         </p>
 
@@ -89,11 +96,11 @@ function LoginPageInner() {
           </p>
         )}
 
-        <div className="mt-10 flex flex-col gap-3">
+        <div className="mt-6 flex flex-col gap-2.5 md:mt-10 md:gap-3">
           <button
             onClick={handleGoogleSignIn}
             disabled={signingIn}
-            className="flex items-center justify-center gap-3 rounded-full border border-border bg-surface px-5 py-4 text-sm font-bold transition-colors hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex items-center justify-center gap-3 rounded-full border border-border bg-surface px-5 py-3 text-sm font-bold transition-colors hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60 md:py-4"
           >
             {GoogleIcon}
             {signingIn ? "Opening Google…" : "Continue with Google"}
@@ -101,7 +108,7 @@ function LoginPageInner() {
 
           <button
             onClick={() => setComingSoon("Apple")}
-            className="flex items-center justify-center gap-3 rounded-full border border-border bg-surface px-5 py-4 text-sm font-bold transition-colors hover:bg-surface-2"
+            className="flex items-center justify-center gap-3 rounded-full border border-border bg-surface px-5 py-3 text-sm font-bold transition-colors hover:bg-surface-2 md:py-4"
           >
             {AppleIcon}
             Continue with Apple
@@ -109,7 +116,7 @@ function LoginPageInner() {
 
           <button
             onClick={() => setComingSoon("Microsoft")}
-            className="flex items-center justify-center gap-3 rounded-full border border-border bg-surface px-5 py-4 text-sm font-bold transition-colors hover:bg-surface-2"
+            className="flex items-center justify-center gap-3 rounded-full border border-border bg-surface px-5 py-3 text-sm font-bold transition-colors hover:bg-surface-2 md:py-4"
           >
             {MicrosoftIcon}
             Continue with Microsoft
@@ -122,7 +129,7 @@ function LoginPageInner() {
           </p>
         )}
 
-        <p className="mt-10 text-xs text-muted">
+        <p className="mt-6 text-xs text-muted md:mt-10">
           By continuing, you agree to ChatGiZa&apos;s{" "}
           <Link href="/terms" className="underline hover:text-foreground">
             Terms of Service
