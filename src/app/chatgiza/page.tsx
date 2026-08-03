@@ -688,7 +688,7 @@ function ChatGizaInner() {
     Object.keys(localStorage)
       .filter((k) => k.startsWith("chatgiza:"))
       .forEach((k) => localStorage.removeItem(k));
-    await signOut({ callbackUrl: "/" });
+    await signOut({ callbackUrl: "/login" });
   }
 
   function handleFontSizeChange(s: ChatFontSize) {

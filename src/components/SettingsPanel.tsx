@@ -609,7 +609,7 @@ export default function SettingsPanel({
 
   async function logoutAllSessions() {
     await fetch("/api/sessions/revoke-all", { method: "POST" }).catch(() => {});
-    signOut({ callbackUrl: "/" });
+    signOut({ callbackUrl: "/login" });
   }
 
   async function openBillingPortal() {
@@ -826,7 +826,7 @@ export default function SettingsPanel({
 
           {session?.user && (
             <button
-              onClick={() => signOut({ callbackUrl: "/chatgiza" })}
+              onClick={() => signOut({ callbackUrl: "/login" })}
               className="mt-4 w-full rounded-2xl bg-surface-2 px-3 py-3 text-center text-base font-medium text-red-500 transition-colors hover:bg-surface sm:hidden"
             >
               Sign out
@@ -1442,7 +1442,7 @@ export default function SettingsPanel({
                     <p className="truncate text-xs text-muted">{session.user.email}</p>
                   </div>
                   <button
-                    onClick={() => signOut()}
+                    onClick={() => signOut({ callbackUrl: "/login" })}
                     className="shrink-0 rounded-full border border-border px-3 py-1.5 text-xs hover:bg-surface-2 transition-colors"
                   >
                     Sign out

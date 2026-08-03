@@ -13,7 +13,7 @@ export default function NavAuthButton() {
   if (session?.user) {
     return (
       <button
-        onClick={() => signOut()}
+        onClick={() => signOut({ callbackUrl: "/login" })}
         className="hidden items-center gap-2 text-sm text-muted hover:text-foreground sm:flex"
       >
         {session.user.image ? (
