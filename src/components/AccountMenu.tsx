@@ -119,8 +119,19 @@ export default function AccountMenu({
   // who specifically wants the sideloadable file) falls back to the APK.
   function getApp() {
     setAppsOpen(false);
-    if (canPrompt) promptInstall();
-    else window.open(CHATGIZA_APK_URL, "_blank", "noopener");
+    if (canPrompt) {
+      promptInstall();
+      return;
+    }
+    // A real <a> click (not window.open) is what makes Chrome file it under
+    // its own Downloads page — so if the installed app gets deleted, the APK
+    // is still there to reinstall from without needing to come back here.
+    const a = document.createElement("a");
+    a.href = CHATGIZA_APK_URL;
+    a.download = "";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 
   useEffect(() => {

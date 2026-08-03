@@ -67,6 +67,7 @@ export default function InstallAppPrompt() {
           ) : platform === "android" ? (
             <a
               href={CHATGIZA_APK_URL}
+              download
               onClick={dismiss}
               className="rounded-full bg-foreground px-3.5 py-1.5 text-xs font-bold text-background transition-opacity hover:opacity-90"
             >
