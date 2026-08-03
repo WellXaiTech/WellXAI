@@ -38,6 +38,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -77,6 +78,7 @@ class MainActivity : ComponentActivity() {
             )
             is AppScreen.Chat -> ChatScreenUi(viewModel)
             is AppScreen.History -> HistoryScreen(viewModel)
+            is AppScreen.Account -> AccountScreen(viewModel)
           }
         }
       }
@@ -187,6 +189,9 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
           }
         },
         actions = {
+          IconButton(onClick = { viewModel.openAccount() }) {
+            Icon(Icons.Filled.Person, contentDescription = "Account", tint = colorScheme.onBackground)
+          }
           IconButton(onClick = { viewModel.newChat() }) {
             Icon(Icons.Filled.Add, contentDescription = "New chat", tint = colorScheme.onBackground)
           }
@@ -316,6 +321,77 @@ private fun HistoryRow(convo: ApiConversation, onClick: () -> Unit) {
     )
     if (dateText.isNotEmpty()) {
       Text(dateText, color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 12.sp)
+    }
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AccountScreen(viewModel: ChatViewModel) {
+  Scaffold(
+    topBar = {
+      TopAppBar(
+        title = { Text("Account", fontWeight = FontWeight.Bold) },
+        navigationIcon = {
+          IconButton(onClick = { viewModel.closeAccount() }) {
+            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
+          }
+        }
+      )
+    },
+    containerColor = Color.Transparent
+  ) { padding ->
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(padding)
+        .padding(20.dp)
+    ) {
+      Text(
+        "What should ChatGiZa call you?",
+        fontSize = 13.sp,
+        color = colorScheme.onBackground.copy(alpha = 0.6f)
+      )
+      Spacer(modifier = Modifier.height(6.dp))
+      OutlinedTextField(
+        value = viewModel.nicknameInput,
+        onValueChange = viewModel::onNicknameChange,
+        modifier = Modifier.fillMaxWidth(),
+        placeholder = { Text("Nickname") },
+        shape = RoundedCornerShape(12.dp)
+      )
+
+      Spacer(modifier = Modifier.height(20.dp))
+
+      Text(
+        "Anything ChatGiZa should know about you?",
+        fontSize = 13.sp,
+        color = colorScheme.onBackground.copy(alpha = 0.6f)
+      )
+      Spacer(modifier = Modifier.height(6.dp))
+      OutlinedTextField(
+        value = viewModel.aboutInput,
+        onValueChange = viewModel::onAboutChange,
+        modifier = Modifier.fillMaxWidth().height(140.dp),
+        placeholder = { Text("e.g. I run a bakery and prefer short, direct answers.") },
+        shape = RoundedCornerShape(12.dp)
+      )
+
+      if (viewModel.errorMessage != null) {
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(viewModel.errorMessage ?: "", color = Color(0xFFFF6B6B), fontSize = 13.sp)
+      }
+
+      Spacer(modifier = Modifier.height(20.dp))
+
+      Button(
+        onClick = { viewModel.saveProfile() },
+        enabled = !viewModel.savingProfile,
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier.fillMaxWidth().height(48.dp)
+      ) {
+        Text(if (viewModel.savingProfile) "Saving…" else "Save")
+      }
     }
   }
 }

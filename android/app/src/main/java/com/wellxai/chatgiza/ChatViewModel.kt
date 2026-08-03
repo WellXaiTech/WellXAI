@@ -15,6 +15,7 @@ sealed class AppScreen {
   object SignedOut : AppScreen()
   object Chat : AppScreen()
   object History : AppScreen()
+  object Account : AppScreen()
 }
 
 class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
@@ -48,13 +49,72 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var errorMessage by mutableStateOf<String?>(null)
     private set
 
+  var profileData by mutableStateOf(ProfileData())
+    private set
+
+  var savingProfile by mutableStateOf(false)
+    private set
+
+  var nicknameInput by mutableStateOf("")
+  var aboutInput by mutableStateOf("")
+
   init {
     if (tokenStore.getToken() != null) {
       userName = tokenStore.getUserName()
       screen = AppScreen.Chat
       loadHistory()
+      loadProfile()
     } else {
       screen = AppScreen.SignedOut
+    }
+  }
+
+  fun loadProfile() {
+    val token = tokenStore.getToken() ?: return
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.getProfile(token)) {
+        is ApiResult.Success -> {
+          profileData = result.value
+          nicknameInput = result.value.profile.nickname
+          aboutInput = result.value.profile.about
+        }
+        is ApiResult.Failure -> {} // Account screen just shows blank fields; not worth surfacing.
+      }
+    }
+  }
+
+  fun openAccount() {
+    screen = AppScreen.Account
+  }
+
+  fun closeAccount() {
+    screen = AppScreen.Chat
+  }
+
+  fun onNicknameChange(value: String) {
+    nicknameInput = value
+  }
+
+  fun onAboutChange(value: String) {
+    aboutInput = value
+  }
+
+  fun saveProfile() {
+    val token = tokenStore.getToken() ?: return
+    savingProfile = true
+    val updated = profileData.copy(profile = profileData.profile.copy(nickname = nicknameInput, about = aboutInput))
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.saveProfile(token, updated)) {
+        is ApiResult.Success -> {
+          profileData = updated
+          savingProfile = false
+          screen = AppScreen.Chat
+        }
+        is ApiResult.Failure -> {
+          errorMessage = result.message
+          savingProfile = false
+        }
+      }
     }
   }
 
@@ -73,6 +133,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
           signingIn = false
           screen = AppScreen.Chat
           loadHistory()
+          loadProfile()
         }
         is ApiResult.Failure -> {
           signingIn = false
@@ -93,6 +154,9 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     messages = emptyList()
     activeConversationId = null
     userName = null
+    profileData = ProfileData()
+    nicknameInput = ""
+    aboutInput = ""
     screen = AppScreen.SignedOut
   }
 
