@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +35,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -72,6 +76,7 @@ class MainActivity : ComponentActivity() {
               onSignIn = ::startGoogleSignIn
             )
             is AppScreen.Chat -> ChatScreenUi(viewModel)
+            is AppScreen.History -> HistoryScreen(viewModel)
           }
         }
       }
@@ -176,7 +181,15 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
     topBar = {
       TopAppBar(
         title = { Text("ChatGiZa", fontWeight = FontWeight.Bold) },
+        navigationIcon = {
+          IconButton(onClick = { viewModel.openHistory() }) {
+            Icon(Icons.Filled.Menu, contentDescription = "History", tint = colorScheme.onBackground)
+          }
+        },
         actions = {
+          IconButton(onClick = { viewModel.newChat() }) {
+            Icon(Icons.Filled.Add, contentDescription = "New chat", tint = colorScheme.onBackground)
+          }
           TextButton(onClick = { viewModel.signOut() }) {
             Text("Sign out")
           }
@@ -243,6 +256,73 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
       }
     }
   }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HistoryScreen(viewModel: ChatViewModel) {
+  Scaffold(
+    topBar = {
+      TopAppBar(
+        title = { Text("History", fontWeight = FontWeight.Bold) },
+        navigationIcon = {
+          IconButton(onClick = { viewModel.closeHistory() }) {
+            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
+          }
+        }
+      )
+    },
+    containerColor = Color.Transparent
+  ) { padding ->
+    Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+      if (viewModel.loadingHistory) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+          CircularProgressIndicator(color = colorScheme.onBackground)
+        }
+      } else if (viewModel.conversations.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+          Text(
+            "No conversations yet.",
+            color = colorScheme.onBackground.copy(alpha = 0.6f),
+            fontSize = 16.sp
+          )
+        }
+      } else {
+        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 8.dp)) {
+          items(viewModel.conversations, key = { it.id }) { convo ->
+            HistoryRow(convo) { viewModel.selectConversation(convo.id) }
+          }
+        }
+      }
+    }
+  }
+}
+
+@Composable
+private fun HistoryRow(convo: ApiConversation, onClick: () -> Unit) {
+  val lastMessage = convo.messages.lastOrNull()
+  val dateText = lastMessage?.createdAt?.let { formatDate(it) } ?: ""
+  Column(
+    modifier = Modifier
+      .fillMaxWidth()
+      .clickable(onClick = onClick)
+      .padding(horizontal = 16.dp, vertical = 12.dp)
+  ) {
+    Text(
+      text = convo.title.ifBlank { "New chat" },
+      color = colorScheme.onBackground,
+      fontSize = 16.sp,
+      fontWeight = FontWeight.Medium
+    )
+    if (dateText.isNotEmpty()) {
+      Text(dateText, color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 12.sp)
+    }
+  }
+}
+
+private fun formatDate(millis: Long): String {
+  val fmt = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
+  return fmt.format(java.util.Date(millis))
 }
 
 @Composable
