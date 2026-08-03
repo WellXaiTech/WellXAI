@@ -1019,10 +1019,10 @@ export default function ChatSidebar({
           <AccountMenu variant="expanded" onOpenSettings={onOpenSettingsTab} onOpenLanguage={onOpenLanguage} onOpenUpgradePlan={onOpenUpgradePlan} onOpenSupport={onOpenSupport} />
         </div>
 
-        <div className="flex items-center gap-2 border-t border-border px-3 py-2.5 sm:hidden">
+        <div className="flex items-center gap-3 border-t border-border px-3 py-3 sm:hidden">
           <button
             onClick={closeMobileThen(onOpenSearch)}
-            className="flex flex-1 items-center gap-2 rounded-full border border-border bg-surface px-3.5 py-2 text-sm text-muted transition-colors hover:bg-surface-2"
+            className="flex flex-1 items-center gap-2.5 rounded-full border border-border bg-surface px-4 py-3 text-base text-muted transition-colors hover:bg-surface-2 [&>svg]:h-6 [&>svg]:w-6"
           >
             {SearchIcon}
             <span>Search</span>
@@ -1030,14 +1030,14 @@ export default function ChatSidebar({
           <button
             onClick={closeMobileThen(() => onOpenSettingsTab("General"))}
             aria-label="Settings"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground [&>svg]:h-6 [&>svg]:w-6"
           >
             {GearIcon}
           </button>
           <button
             onClick={closeMobileThen(onNewChat)}
             aria-label="New chat"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground [&>svg]:h-6 [&>svg]:w-6"
           >
             {PencilIcon}
           </button>
