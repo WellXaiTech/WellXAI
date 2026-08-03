@@ -80,6 +80,16 @@ const TABS_GROUP_1 = ["General", "Data controls", "Security"] as const;
 const TABS_GROUP_2 = ["Account", "Memory", "Storage", "Billing"] as const;
 export type Tab = (typeof TABS_GROUP_1)[number] | (typeof TABS_GROUP_2)[number];
 
+const TAB_DESCRIPTIONS: Record<Tab, string> = {
+  General: "Appearance, language, and behavior",
+  "Data controls": "Manage your data and privacy",
+  Security: "Password, sessions, and login",
+  Account: "Profile and personal info",
+  Memory: "What ChatGiZa remembers about you",
+  Storage: "Files, images, and space used",
+  Billing: "Plan, invoices, and payment methods",
+};
+
 const ChevronDownIcon = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M6 9l6 6 6-6" />
@@ -677,20 +687,20 @@ export default function SettingsPanel({
 
           {session?.user && (
             <button
-              onClick={() => selectTab("Account")}
-              className="mb-4 flex w-full items-center gap-3 rounded-2xl bg-surface-2 p-3 text-left sm:hidden"
+              onClick={onOpenUpgradePlan ?? (() => selectTab("Account"))}
+              className="mb-4 flex w-full items-center gap-4 rounded-2xl bg-surface-2 p-4 text-left sm:hidden"
             >
               {session.user.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={session.user.image} alt="" className="h-11 w-11 shrink-0 rounded-full" />
+                <img src={session.user.image} alt="" className="h-14 w-14 shrink-0 rounded-full" />
               ) : (
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-base">
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-border text-lg">
                   {session.user.name?.[0] ?? "?"}
                 </span>
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-base font-semibold">{session.user.name}</p>
-                <p className="truncate text-sm text-muted">{session.user.email}</p>
+                <p className="truncate text-lg font-semibold">{session.user.name}</p>
+                <p className="truncate text-sm text-muted">Upgrade your plan</p>
               </div>
             </button>
           )}
@@ -714,12 +724,21 @@ export default function SettingsPanel({
               <li key={t}>
                 <button
                   onClick={() => selectTab(t)}
-                  className={`flex w-full items-center gap-2 rounded-xl px-3 py-3 text-left text-base transition-colors sm:rounded-lg sm:px-2.5 sm:py-2 sm:text-sm ${
-                    tab === t ? "bg-surface-2 font-medium sm:bg-surface-2" : "font-medium text-foreground hover:bg-surface sm:font-normal sm:text-muted sm:hover:bg-surface-2 sm:hover:text-foreground"
+                  className={`flex w-full items-center gap-2 rounded-xl px-3 py-3 text-left transition-colors sm:rounded-lg sm:px-2.5 sm:py-2 ${
+                    tab === t ? "bg-surface-2 sm:bg-surface-2" : "hover:bg-surface sm:hover:bg-surface-2"
                   }`}
                 >
                   {t === "General" && <span className="text-muted">{GearIcon}</span>}
-                  {t}
+                  <span className="min-w-0 flex-1">
+                    <span
+                      className={`block text-base sm:text-sm ${
+                        tab === t ? "font-medium text-foreground" : "font-medium text-foreground sm:font-normal sm:text-muted"
+                      }`}
+                    >
+                      {t}
+                    </span>
+                    <span className="block text-sm text-muted sm:hidden">{TAB_DESCRIPTIONS[t]}</span>
+                  </span>
                 </button>
               </li>
             ))}
@@ -733,11 +752,18 @@ export default function SettingsPanel({
                   <li key={t}>
                     <button
                       onClick={() => selectTab(t)}
-                      className={`w-full rounded-xl px-3 py-3 text-left text-base transition-colors sm:rounded-lg sm:px-2.5 sm:py-2 sm:text-sm ${
-                        tab === t ? "bg-surface-2 font-medium" : "font-medium text-foreground hover:bg-surface sm:font-normal sm:text-muted sm:hover:bg-surface-2 sm:hover:text-foreground"
+                      className={`w-full rounded-xl px-3 py-3 text-left transition-colors sm:rounded-lg sm:px-2.5 sm:py-2 ${
+                        tab === t ? "bg-surface-2" : "hover:bg-surface sm:hover:bg-surface-2"
                       }`}
                     >
-                      {t}
+                      <span
+                        className={`block text-base sm:text-sm ${
+                          tab === t ? "font-medium text-foreground" : "font-medium text-foreground sm:font-normal sm:text-muted"
+                        }`}
+                      >
+                        {t}
+                      </span>
+                      <span className="block text-sm text-muted sm:hidden">{TAB_DESCRIPTIONS[t]}</span>
                     </button>
                   </li>
                 ))}
