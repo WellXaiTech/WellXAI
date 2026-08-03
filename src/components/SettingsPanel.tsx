@@ -192,6 +192,13 @@ const ChevronLeftIcon = (
   </svg>
 );
 
+const CloseIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M18 6L6 18" />
+    <path d="M6 6l12 12" />
+  </svg>
+);
+
 const ChevronRightIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M9 18l6-6-6-6" />
@@ -647,9 +654,9 @@ export default function SettingsPanel({
   const storagePct = Math.min(100, Math.round((storageBytesUsed / storageCapBytes) * 100));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-6 sm:p-10" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-0 sm:p-10" onClick={onClose}>
       <div
-        className="card flex max-h-full w-full max-w-3xl overflow-hidden rounded-2xl"
+        className="card flex h-full max-h-full w-full max-w-3xl overflow-hidden rounded-none sm:h-auto sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div
@@ -657,6 +664,17 @@ export default function SettingsPanel({
             mobileShowContent ? "hidden" : "block"
           }`}
         >
+          <div className="mb-4 flex items-center gap-3 sm:hidden">
+            <button
+              onClick={onClose}
+              aria-label="Close settings"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-foreground transition-colors hover:bg-surface-2"
+            >
+              {CloseIcon}
+            </button>
+            <h2 className="text-lg font-semibold">Settings</h2>
+          </div>
+
           <div className="relative mb-3">
             <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted">
               {SearchIcon}
@@ -665,19 +683,19 @@ export default function SettingsPanel({
               value={tabSearch}
               onChange={(e) => setTabSearch(e.target.value)}
               placeholder="Search"
-              className="w-full rounded-lg border border-border bg-background py-1.5 pl-8 pr-2 text-sm outline-none focus:border-foreground/40"
+              className="w-full rounded-lg border border-border bg-background py-1.5 pl-8 pr-2 text-sm outline-none focus:border-foreground/40 sm:rounded-lg sm:py-1.5 sm:text-sm"
             />
           </div>
-          <div className="mb-1 px-1">
+          <div className="mb-1 px-1 sm:block hidden">
             <span className="text-xs text-muted">Settings</span>
           </div>
-          <ul className="space-y-0.5">
+          <ul className="space-y-0.5 sm:space-y-0.5 rounded-2xl bg-surface-2 p-1 sm:rounded-none sm:bg-transparent sm:p-0">
             {visibleTabsGroup1.map((t) => (
               <li key={t}>
                 <button
                   onClick={() => selectTab(t)}
-                  className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors ${
-                    tab === t ? "bg-surface-2 font-medium" : "text-muted hover:bg-surface-2 hover:text-foreground"
+                  className={`flex w-full items-center gap-2 rounded-xl px-3 py-3 text-left text-base transition-colors sm:rounded-lg sm:px-2.5 sm:py-2 sm:text-sm ${
+                    tab === t ? "bg-surface-2 font-medium sm:bg-surface-2" : "font-medium text-foreground hover:bg-surface sm:font-normal sm:text-muted sm:hover:bg-surface-2 sm:hover:text-foreground"
                   }`}
                 >
                   {t === "General" && <span className="text-muted">{GearIcon}</span>}
@@ -689,14 +707,14 @@ export default function SettingsPanel({
 
           {visibleTabsGroup2.length > 0 && (
             <>
-              <div className="my-2 border-t border-border" />
-              <ul className="space-y-0.5">
+              <div className="my-3 sm:my-2 sm:border-t sm:border-border" />
+              <ul className="space-y-0.5 rounded-2xl bg-surface-2 p-1 sm:rounded-none sm:bg-transparent sm:p-0">
                 {visibleTabsGroup2.map((t) => (
                   <li key={t}>
                     <button
                       onClick={() => selectTab(t)}
-                      className={`w-full rounded-lg px-2.5 py-2 text-left text-sm transition-colors ${
-                        tab === t ? "bg-surface-2 font-medium" : "text-muted hover:bg-surface-2 hover:text-foreground"
+                      className={`w-full rounded-xl px-3 py-3 text-left text-base transition-colors sm:rounded-lg sm:px-2.5 sm:py-2 sm:text-sm ${
+                        tab === t ? "bg-surface-2 font-medium" : "font-medium text-foreground hover:bg-surface sm:font-normal sm:text-muted sm:hover:bg-surface-2 sm:hover:text-foreground"
                       }`}
                     >
                       {t}
@@ -709,7 +727,7 @@ export default function SettingsPanel({
         </div>
 
         <div
-          className={`no-scrollbar w-full max-h-[80vh] overflow-y-auto p-5 sm:block sm:flex-1 ${
+          className={`no-scrollbar w-full max-h-full overflow-y-auto p-5 sm:block sm:max-h-[80vh] sm:flex-1 ${
             mobileShowContent ? "block" : "hidden"
           }`}
         >
