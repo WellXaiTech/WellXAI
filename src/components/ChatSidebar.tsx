@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import AccountMenu, { type SettingsTab } from "@/components/AccountMenu";
+import type { PlanTier } from "@/lib/plans";
 
 export type ConversationSummary = {
   id: string;
@@ -43,6 +44,14 @@ const SearchIcon = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <circle cx="11" cy="11" r="7" />
     <line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+);
+
+const AutomationIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M3 12a9 9 0 1 1 2.64 6.36" />
+    <path d="M3 18v-4h4" />
+    <path d="M12 8v4l3 2" />
   </svg>
 );
 
@@ -685,6 +694,8 @@ export default function ChatSidebar({
   onOpenLanguage,
   onOpenUpgradePlan,
   onOpenSupport,
+  onOpenScheduled,
+  userPlan,
   streak,
   onTogglePin,
   onArchive,
@@ -708,6 +719,8 @@ export default function ChatSidebar({
   onOpenLanguage: () => void;
   onOpenUpgradePlan: () => void;
   onOpenSupport: () => void;
+  onOpenScheduled: () => void;
+  userPlan: PlanTier | null;
   streak: number;
   onTogglePin: (id: string) => void;
   onArchive: (id: string) => void;
@@ -907,6 +920,27 @@ export default function ChatSidebar({
         </div>
 
         <div className="sidebar-scroll flex-1 overflow-y-auto px-2">
+          <button
+            onClick={closeMobileThen(onOpenScheduled)}
+            className="mb-3 flex h-12 w-full items-center gap-3 rounded-xl bg-surface-2 px-3 text-base font-medium transition-colors hover:bg-surface sm:hidden"
+          >
+            <span className="text-muted">{AutomationIcon}</span>
+            Automations
+          </button>
+
+          {signedIn && !userPlan && (
+            <button
+              onClick={closeMobileThen(onOpenUpgradePlan)}
+              className="mb-3 flex w-full items-center gap-3 rounded-2xl bg-blue-600 px-4 py-3 text-left text-white transition-colors hover:bg-blue-500 sm:hidden"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block text-base font-semibold">GiZa Pro Offer</span>
+                <span className="block text-sm text-white/80">Faster replies, HD, deep research</span>
+              </span>
+              <span className="shrink-0 rounded-full bg-white/20 px-3 py-1.5 text-sm font-semibold">Upgrade</span>
+            </button>
+          )}
+
           <button
             onClick={closeMobileThen(onNewChat)}
             className="mb-2 hidden h-10 w-full items-center gap-2 rounded-xl border border-border px-2 text-base font-medium shadow-sm transition-all hover:bg-surface-2 hover:shadow-md sm:flex"
