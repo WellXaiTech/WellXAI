@@ -36,8 +36,14 @@ jobs:
 
       # ubuntu-latest runners have ~7GB RAM total; a full Android/Capacitor
       # build (AAPT2, D8/R8, multiple JVM workers) can OOM-kill mid-build
-      # even with a conservative Gradle heap — extra swap is cheap insurance.
+      # even with a conservative Gradle heap — extra swap is cheap insurance
+      # when it works. `continue-on-error` because this step has failed for
+      # reasons not visible in the annotation-only diagnostics available here
+      # (likely a runner-image quirk, not something worth blocking the build
+      # over) — --max-workers=1 and the capped heap/metaspace below are the
+      # real fix either way.
       - name: Add swap space
+        continue-on-error: true
         run: |
           sudo dd if=/dev/zero of=/swapfile bs=1M count=6144
           sudo chmod 600 /swapfile
