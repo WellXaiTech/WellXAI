@@ -938,6 +938,7 @@ function ChatGizaInner() {
       id: crypto.randomUUID(),
       role: "user",
       content: editSourceUrl ? `Edit image: ${trimmed}` : trimmed,
+      createdAt: Date.now(),
     };
     const { conversationId, assistantId } = startConversation(userMessage, trimmed, override);
     setGeneratingImageId(assistantId);
@@ -986,7 +987,7 @@ function ChatGizaInner() {
     setActiveTool(null);
     setLoading(true);
 
-    const userMessage: Message = { id: crypto.randomUUID(), role: "user", content: trimmed };
+    const userMessage: Message = { id: crypto.randomUUID(), role: "user", content: trimmed, createdAt: Date.now() };
     const { conversationId, assistantId } = startConversation(userMessage, trimmed, override);
     updateAssistantMessage(conversationId, assistantId, { videoStatus: "queued", videoProgress: 0 });
 
@@ -1087,6 +1088,7 @@ function ChatGizaInner() {
       role: "user",
       content: trimmed,
       attachments: attachments.length > 0 ? attachments : undefined,
+      createdAt: Date.now(),
     };
     const { conversationId, assistantId, updatedMessages } = startConversation(
       userMessage,

@@ -46,6 +46,13 @@ const SearchIcon = (
   </svg>
 );
 
+const GearIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+  </svg>
+);
+
 const PanelIcon = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <rect x="3" y="4" width="18" height="16" rx="2" />
@@ -947,6 +954,30 @@ export default function ChatSidebar({
         <div className="flex items-center px-3 py-3">
           <AccountMenu variant="expanded" onOpenSettings={onOpenSettingsTab} onOpenLanguage={onOpenLanguage} onOpenUpgradePlan={onOpenUpgradePlan} onOpenSupport={onOpenSupport} />
         </div>
+
+        <div className="flex items-center gap-2 border-t border-border px-3 py-2.5">
+          <button
+            onClick={closeMobileThen(onOpenSearch)}
+            className="flex flex-1 items-center gap-2 rounded-full border border-border bg-surface px-3.5 py-2 text-sm text-muted transition-colors hover:bg-surface-2"
+          >
+            {SearchIcon}
+            <span>Search</span>
+          </button>
+          <button
+            onClick={closeMobileThen(() => onOpenSettingsTab("General"))}
+            aria-label="Settings"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+          >
+            {GearIcon}
+          </button>
+          <button
+            onClick={closeMobileThen(onNewChat)}
+            aria-label="New chat"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+          >
+            {PencilIcon}
+          </button>
+        </div>
       </>
     );
   }
@@ -970,7 +1001,7 @@ export default function ChatSidebar({
         createPortal(
           <div className="fixed inset-0 z-40 flex sm:hidden">
             <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
-            <aside className="relative z-10 flex h-full w-[var(--sidebar-width)] max-w-[85vw] flex-col bg-sidebar shadow-xl">
+            <aside className="relative z-10 flex h-full w-full flex-col bg-sidebar shadow-xl">
               {renderExpandedBody(() => setMobileOpen(false), "Close menu")}
             </aside>
           </div>,
