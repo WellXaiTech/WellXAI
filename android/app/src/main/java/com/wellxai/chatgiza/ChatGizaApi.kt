@@ -26,6 +26,22 @@ data class ApiConversation(
   val pinned: Boolean = false
 )
 
+data class ApiProfile(
+  val nickname: String = "",
+  val about: String = "",
+  val role: String? = null,
+  val fullName: String? = null,
+  val birthDate: String? = null,
+  val country: String? = null
+)
+
+data class ProfileData(
+  val profile: ApiProfile = ApiProfile(),
+  val memory: List<String> = emptyList(),
+  val memoryEnabled: Boolean = true,
+  val language: String = ""
+)
+
 sealed class ApiResult<out T> {
   data class Success<T>(val value: T) : ApiResult<T>()
   data class Failure(val message: String) : ApiResult<Nothing>()
@@ -150,6 +166,82 @@ object ChatGizaApi {
         ApiResult.Failure(e.message ?: "Network error")
       }
     }
+
+  suspend fun getProfile(token: String): ApiResult<ProfileData> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/profile")
+        .header("Authorization", "Bearer $token")
+        .get()
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(profileDataFromJson(JSONObject(text)))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun saveProfile(token: String, data: ProfileData): ApiResult<Unit> = withContext(Dispatchers.IO) {
+    try {
+      val payload = profileDataToJson(data).toString().toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/profile")
+        .header("Authorization", "Bearer $token")
+        .put(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          val text = response.body?.string().orEmpty()
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  private fun profileDataFromJson(obj: JSONObject): ProfileData {
+    val profileObj = obj.optJSONObject("profile") ?: JSONObject()
+    val memoryArr = obj.optJSONArray("memory") ?: JSONArray()
+    return ProfileData(
+      profile = ApiProfile(
+        nickname = profileObj.optString("nickname", ""),
+        about = profileObj.optString("about", ""),
+        role = profileObj.optString("role", null),
+        fullName = profileObj.optString("fullName", null),
+        birthDate = profileObj.optString("birthDate", null),
+        country = profileObj.optString("country", null)
+      ),
+      memory = (0 until memoryArr.length()).map { memoryArr.getString(it) },
+      memoryEnabled = obj.optBoolean("memoryEnabled", true),
+      language = obj.optString("language", "")
+    )
+  }
+
+  private fun profileDataToJson(data: ProfileData): JSONObject {
+    val profileObj = JSONObject()
+      .put("nickname", data.profile.nickname)
+      .put("about", data.profile.about)
+    data.profile.role?.let { profileObj.put("role", it) }
+    data.profile.fullName?.let { profileObj.put("fullName", it) }
+    data.profile.birthDate?.let { profileObj.put("birthDate", it) }
+    data.profile.country?.let { profileObj.put("country", it) }
+
+    val memoryArr = JSONArray()
+    for (m in data.memory) memoryArr.put(m)
+
+    return JSONObject()
+      .put("profile", profileObj)
+      .put("memory", memoryArr)
+      .put("memoryEnabled", data.memoryEnabled)
+      .put("language", data.language)
+  }
 
   private fun conversationFromJson(obj: JSONObject): ApiConversation {
     val messagesArr = obj.optJSONArray("messages") ?: JSONArray()
