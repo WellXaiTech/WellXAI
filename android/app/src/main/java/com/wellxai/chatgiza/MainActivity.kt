@@ -11,6 +11,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -72,7 +73,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Bolt
-import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.ModeEdit
 import androidx.compose.material.icons.outlined.PushPin
@@ -88,7 +88,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -230,6 +235,37 @@ private fun TwoLineMenuIcon(tint: Color) {
   Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
     Box(modifier = Modifier.width(20.dp).height(2.dp).background(tint))
     Box(modifier = Modifier.width(20.dp).height(2.dp).background(tint))
+  }
+}
+
+/** A wide trash-can outline with two vertical lines inside — the classic
+ * delete glyph, which isn't available under any name in the Material
+ * icon set used here (DeleteOutline/DeleteForever draw different shapes). */
+@Composable
+private fun DeleteIcon(tint: Color, modifier: Modifier = Modifier) {
+  Canvas(modifier = modifier.size(22.dp)) {
+    val w = size.width
+    val h = size.height
+    val strokeW = w * 0.08f
+    drawLine(
+      color = tint,
+      start = Offset(w * 0.14f, h * 0.26f),
+      end = Offset(w * 0.86f, h * 0.26f),
+      strokeWidth = strokeW,
+      cap = StrokeCap.Round
+    )
+    drawLine(color = tint, start = Offset(w * 0.40f, h * 0.26f), end = Offset(w * 0.40f, h * 0.12f), strokeWidth = strokeW * 0.85f, cap = StrokeCap.Round)
+    drawLine(color = tint, start = Offset(w * 0.60f, h * 0.26f), end = Offset(w * 0.60f, h * 0.12f), strokeWidth = strokeW * 0.85f, cap = StrokeCap.Round)
+    drawLine(color = tint, start = Offset(w * 0.40f, h * 0.12f), end = Offset(w * 0.60f, h * 0.12f), strokeWidth = strokeW * 0.85f, cap = StrokeCap.Round)
+    drawRoundRect(
+      color = tint,
+      topLeft = Offset(w * 0.20f, h * 0.30f),
+      size = Size(w * 0.60f, h * 0.62f),
+      cornerRadius = CornerRadius(w * 0.08f, w * 0.08f),
+      style = Stroke(width = strokeW)
+    )
+    drawLine(color = tint, start = Offset(w * 0.40f, h * 0.42f), end = Offset(w * 0.40f, h * 0.80f), strokeWidth = strokeW, cap = StrokeCap.Round)
+    drawLine(color = tint, start = Offset(w * 0.60f, h * 0.42f), end = Offset(w * 0.60f, h * 0.80f), strokeWidth = strokeW, cap = StrokeCap.Round)
   }
 }
 
@@ -721,7 +757,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             })
             .padding(vertical = 14.dp)
         ) {
-          Icon(Icons.Outlined.DeleteOutline, contentDescription = null, tint = Color(0xFFFF6B6B))
+          DeleteIcon(tint = Color(0xFFFF6B6B))
           Spacer(modifier = Modifier.size(16.dp))
           Text("Delete", color = Color(0xFFFF6B6B), fontSize = 16.sp)
         }
@@ -1103,7 +1139,7 @@ private fun ProjectsScreen(viewModel: ChatViewModel) {
             ) {
               Text(project.name, color = colorScheme.onBackground, fontSize = 15.sp)
               IconButton(onClick = { viewModel.deleteProject(project.id) }) {
-                Icon(Icons.Outlined.DeleteOutline, contentDescription = "Delete", tint = colorScheme.onBackground.copy(alpha = 0.6f))
+                DeleteIcon(tint = colorScheme.onBackground.copy(alpha = 0.6f))
               }
             }
           }
@@ -1175,7 +1211,7 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
                 )
               }
               IconButton(onClick = { viewModel.deleteScheduledTask(task.id) }) {
-                Icon(Icons.Outlined.DeleteOutline, contentDescription = "Delete", tint = colorScheme.onBackground.copy(alpha = 0.6f))
+                DeleteIcon(tint = colorScheme.onBackground.copy(alpha = 0.6f))
               }
             }
           }
