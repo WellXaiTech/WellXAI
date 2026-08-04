@@ -422,12 +422,20 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     screen = AppScreen.SignedOut
   }
 
+  private var deletedIds: Map<String, Long> = emptyMap()
+
+  private fun sortConversations(list: List<ApiConversation>): List<ApiConversation> =
+    list.sortedWith(compareByDescending<ApiConversation> { it.pinned }.thenByDescending { it.lastActivity() })
+
   fun loadHistory() {
     val token = tokenStore.getToken() ?: return
     loadingHistory = true
     viewModelScope.launch {
       when (val result = ChatGizaApi.getHistory(token)) {
-        is ApiResult.Success -> conversations = result.value.sortedByDescending { it.lastActivity() }
+        is ApiResult.Success -> {
+          conversations = sortConversations(result.value.conversations)
+          deletedIds = result.value.deletedIds
+        }
         is ApiResult.Failure -> errorMessage = result.message
       }
       loadingHistory = false
@@ -440,6 +448,35 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeHistory() {
     screen = AppScreen.Chat
+  }
+
+  fun deleteConversation(id: String) {
+    val token = tokenStore.getToken() ?: return
+    val updated = conversations.filter { it.id != id }
+    val updatedDeleted = deletedIds + (id to System.currentTimeMillis())
+    conversations = updated
+    deletedIds = updatedDeleted
+    if (activeConversationId == id) {
+      activeConversationId = null
+      messages = emptyList()
+    }
+    viewModelScope.launch { ChatGizaApi.saveHistory(token, updated, updatedDeleted) }
+  }
+
+  fun renameConversation(id: String, newTitle: String) {
+    val token = tokenStore.getToken() ?: return
+    val trimmed = newTitle.trim()
+    if (trimmed.isEmpty()) return
+    val updated = conversations.map { if (it.id == id) it.copy(title = trimmed) else it }
+    conversations = updated
+    viewModelScope.launch { ChatGizaApi.saveHistory(token, updated, deletedIds) }
+  }
+
+  fun togglePin(id: String) {
+    val token = tokenStore.getToken() ?: return
+    val updated = sortConversations(conversations.map { if (it.id == id) it.copy(pinned = !it.pinned) else it })
+    conversations = updated
+    viewModelScope.launch { ChatGizaApi.saveHistory(token, updated, deletedIds) }
   }
 
   fun selectConversation(id: String) {
@@ -515,7 +552,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
       } else {
         conversations.map { if (it.id == conversationId) updated else it }
       }
-      ChatGizaApi.saveHistory(token, conversations)
+      ChatGizaApi.saveHistory(token, conversations, deletedIds)
     }
   }
 }

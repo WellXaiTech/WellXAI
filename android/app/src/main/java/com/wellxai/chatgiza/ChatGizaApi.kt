@@ -26,6 +26,8 @@ data class ApiConversation(
   val pinned: Boolean = false
 )
 
+data class HistorySnapshot(val conversations: List<ApiConversation>, val deletedIds: Map<String, Long>)
+
 data class ApiProfile(
   val nickname: String = "",
   val about: String = "",
@@ -220,7 +222,7 @@ object ChatGizaApi {
       }
     }
 
-  suspend fun getHistory(token: String): ApiResult<List<ApiConversation>> = withContext(Dispatchers.IO) {
+  suspend fun getHistory(token: String): ApiResult<HistorySnapshot> = withContext(Dispatchers.IO) {
     try {
       val request = Request.Builder()
         .url("$BASE_URL/api/history")
@@ -234,19 +236,29 @@ object ChatGizaApi {
         }
         val json = JSONObject(text)
         val arr = json.optJSONArray("conversations") ?: JSONArray()
-        ApiResult.Success((0 until arr.length()).map { i -> conversationFromJson(arr.getJSONObject(i)) })
+        val conversations = (0 until arr.length()).map { i -> conversationFromJson(arr.getJSONObject(i)) }
+        val deletedObj = json.optJSONObject("deletedIds") ?: JSONObject()
+        val deletedIds = mutableMapOf<String, Long>()
+        val keys = deletedObj.keys()
+        while (keys.hasNext()) {
+          val k = keys.next()
+          deletedIds[k] = deletedObj.optLong(k, 0L)
+        }
+        ApiResult.Success(HistorySnapshot(conversations, deletedIds))
       }
     } catch (e: Exception) {
       ApiResult.Failure(e.message ?: "Network error")
     }
   }
 
-  suspend fun saveHistory(token: String, conversations: List<ApiConversation>): ApiResult<Unit> =
+  suspend fun saveHistory(token: String, conversations: List<ApiConversation>, deletedIds: Map<String, Long>): ApiResult<Unit> =
     withContext(Dispatchers.IO) {
       try {
         val arr = JSONArray()
         for (c in conversations) arr.put(conversationToJson(c))
-        val payload = JSONObject().put("conversations", arr).toString().toRequestBody(JSON)
+        val deletedObj = JSONObject()
+        for ((k, v) in deletedIds) deletedObj.put(k, v)
+        val payload = JSONObject().put("conversations", arr).put("deletedIds", deletedObj).toString().toRequestBody(JSON)
         val request = Request.Builder()
           .url("$BASE_URL/api/history")
           .header("Authorization", "Bearer $token")
