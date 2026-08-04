@@ -18,6 +18,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Live Vision isn't configured on this server" }, { status: 500 });
   }
 
+  const body = await req.json().catch(() => null);
+  const language = typeof body?.language === "string" && body.language.trim() ? body.language.trim() : null;
+
+  const languageInstruction = language
+    ? `Always speak and reply in ${language}, no matter what language the user's audio sounds like — never switch to ` +
+      `another language mid-conversation.`
+    : "Detect the language the user is actually speaking from their audio (most users of this app speak Swahili, " +
+      "but follow whatever language you actually hear) and always reply in that same language — never switch to a " +
+      "different language than what the user just spoke, and never guess a language you didn't actually hear.";
+
   try {
     const res = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
       method: "POST",
@@ -30,10 +40,13 @@ export async function POST(req: NextRequest) {
           type: "realtime",
           model: "gpt-realtime",
           instructions:
-            "You are ChatGiZa's live vision assistant. The user is showing you their camera feed in real " +
-            "time and talking to you. Describe what you see, identify objects/people/animals/vehicles/scenes, " +
-            "read any visible text aloud when asked, and answer questions about the live view conversationally " +
-            "and concisely, as if looking over their shoulder. Reply in the language the user speaks.",
+            "You are ChatGiZa's live vision assistant. The user is showing you their camera feed in real time and " +
+            "talking to you — you receive a fresh photo from their camera every second or two alongside their live " +
+            "audio, so always base what you say on the MOST RECENT image you were sent, not older ones. Describe " +
+            "what you see, identify objects/people/animals/vehicles/scenes, read any visible text aloud when asked, " +
+            "and answer questions about the live view conversationally and concisely, as if looking over their " +
+            "shoulder. If you haven't received any image yet, say so instead of guessing. " +
+            languageInstruction,
         },
       }),
     });

@@ -614,11 +614,11 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
     }
   }
 
-  val controller = remember { RealtimeVisionController(TokenStore(context.applicationContext), coroutineScope) }
+  val controller = remember { RealtimeVisionController(context, TokenStore(context.applicationContext), coroutineScope) }
   val ready = hasCameraPermission && hasMicPermission
 
   DisposableEffect(ready) {
-    if (ready) controller.start()
+    if (ready) controller.start(viewModel.profileData.language)
     onDispose { controller.stop() }
   }
 
@@ -654,7 +654,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               var lastSentAt = 0L
               analysis.setAnalyzer(ContextCompat.getMainExecutor(ctx)) { imageProxy ->
                 val now = System.currentTimeMillis()
-                if (now - lastSentAt >= 2000) {
+                if (now - lastSentAt >= 1200) {
                   lastSentAt = now
                   runCatching { controller.sendFrame(imageProxyToJpeg(imageProxy)) }
                 }
@@ -663,8 +663,8 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               try {
                 cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
-              } catch (_: Exception) {
-                // Camera failed to bind — preview just stays blank rather than crashing.
+              } catch (e: Exception) {
+                controller.reportCameraError(e.message ?: "Camera failed to start")
               }
             }, ContextCompat.getMainExecutor(ctx))
             previewView
