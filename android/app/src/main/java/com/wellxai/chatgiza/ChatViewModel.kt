@@ -20,6 +20,7 @@ sealed class AppScreen {
   object Projects : AppScreen()
   object Scheduled : AppScreen()
   object Billing : AppScreen()
+  object Imagine : AppScreen()
 }
 
 class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
@@ -28,6 +29,51 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   var userName by mutableStateOf<String?>(null)
     private set
+  var userEmail by mutableStateOf<String?>(null)
+    private set
+  var userImage by mutableStateOf<String?>(null)
+    private set
+
+  var historySearchQuery by mutableStateOf("")
+
+  fun onHistorySearchQueryChange(value: String) {
+    historySearchQuery = value
+  }
+
+  var imaginePrompt by mutableStateOf("")
+  var generatingImage by mutableStateOf(false)
+    private set
+  var generatedImageUrl by mutableStateOf<String?>(null)
+    private set
+  var imagineError by mutableStateOf<String?>(null)
+    private set
+
+  fun onImaginePromptChange(value: String) {
+    imaginePrompt = value
+  }
+
+  fun openImagine() {
+    screen = AppScreen.Imagine
+  }
+
+  fun closeImagine() {
+    screen = AppScreen.Chat
+  }
+
+  fun generateImage() {
+    val prompt = imaginePrompt.trim()
+    val token = tokenStore.getToken()
+    if (prompt.isEmpty() || token == null || generatingImage) return
+    generatingImage = true
+    imagineError = null
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.generateImage(token, prompt)) {
+        is ApiResult.Success -> generatedImageUrl = result.value
+        is ApiResult.Failure -> imagineError = result.message
+      }
+      generatingImage = false
+    }
+  }
 
   /** All of the signed-in user's conversations, most-recent-first. */
   var conversations by mutableStateOf<List<ApiConversation>>(emptyList())
@@ -96,6 +142,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   init {
     if (tokenStore.getToken() != null) {
       userName = tokenStore.getUserName()
+      userEmail = tokenStore.getUserEmail()
+      userImage = tokenStore.getUserImage()
       screen = AppScreen.Chat
       loadHistory()
       loadProfile()
@@ -331,6 +379,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
           tokenStore.setToken(result.value.token)
           tokenStore.setUser(result.value.user.name, result.value.user.email, result.value.user.image)
           userName = result.value.user.name
+          userEmail = result.value.user.email
+          userImage = result.value.user.image
           signingIn = false
           screen = AppScreen.Chat
           loadHistory()
@@ -358,6 +408,10 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     messages = emptyList()
     activeConversationId = null
     userName = null
+    userEmail = null
+    userImage = null
+    generatedImageUrl = null
+    imaginePrompt = ""
     profileData = ProfileData()
     nicknameInput = ""
     aboutInput = ""
