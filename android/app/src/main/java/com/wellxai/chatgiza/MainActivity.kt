@@ -330,10 +330,10 @@ private fun ChatComposerCard(viewModel: ChatViewModel, onSend: () -> Unit) {
             Icon(Icons.Filled.ArrowDropDown, contentDescription = null)
           }
           DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
-            DropdownMenuItem(text = { Text("GiZa 5.6") }, onClick = { viewModel.setActiveTool(null); toolMenuOpen = false })
-            DropdownMenuItem(text = { Text("Web search") }, onClick = { viewModel.setActiveTool("web_search"); toolMenuOpen = false })
-            DropdownMenuItem(text = { Text("Deep research") }, onClick = { viewModel.setActiveTool("deep_research"); toolMenuOpen = false })
-            DropdownMenuItem(text = { Text("Deep Think") }, onClick = { viewModel.setActiveTool("deep_think"); toolMenuOpen = false })
+            DropdownMenuItem(text = { Text("GiZa 5.6") }, onClick = { viewModel.selectTool(null); toolMenuOpen = false })
+            DropdownMenuItem(text = { Text("Web search") }, onClick = { viewModel.selectTool("web_search"); toolMenuOpen = false })
+            DropdownMenuItem(text = { Text("Deep research") }, onClick = { viewModel.selectTool("deep_research"); toolMenuOpen = false })
+            DropdownMenuItem(text = { Text("Deep Think") }, onClick = { viewModel.selectTool("deep_think"); toolMenuOpen = false })
           }
         }
         Spacer(modifier = Modifier.weight(1f))

@@ -51,7 +51,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var activeTool by mutableStateOf<String?>(null)
     private set
 
-  fun setActiveTool(tool: String?) {
+  fun selectTool(tool: String?) {
     activeTool = tool
   }
 
