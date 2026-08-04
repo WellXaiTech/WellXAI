@@ -19,7 +19,12 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => null);
-  const language = typeof body?.language === "string" && body.language.trim() ? body.language.trim() : null;
+  const rawLanguage = typeof body?.language === "string" ? body.language.trim() : "";
+  // "Auto-detect" is the app's own placeholder for "no language chosen" (see
+  // LANGUAGE_KEY's default in page.tsx) — it isn't a real language name, so
+  // passing it straight through told the model to "speak in Auto-detect",
+  // which is nonsense and was making it pick languages at random.
+  const language = rawLanguage && rawLanguage.toLowerCase() !== "auto-detect" ? rawLanguage : null;
 
   const languageInstruction = language
     ? `Always speak and reply in ${language}, no matter what language the user's audio sounds like — never switch to ` +

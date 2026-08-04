@@ -7,6 +7,9 @@ import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
+import android.media.audiofx.AcousticEchoCanceler
+import android.media.audiofx.AutomaticGainControl
+import android.media.audiofx.NoiseSuppressor
 import android.util.Base64
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,6 +68,9 @@ class RealtimeVisionController(
   private var audioTrack: AudioTrack? = null
   private var captureJob: Job? = null
   private var connectJob: Job? = null
+  private var echoCanceler: AcousticEchoCanceler? = null
+  private var noiseSuppressor: NoiseSuppressor? = null
+  private var gainControl: AutomaticGainControl? = null
 
   // Tracks the assistant item currently being spoken, and how much of its
   // audio we've actually written to the speaker — needed to tell the server
@@ -244,6 +250,21 @@ class RealtimeVisionController(
       return
     }
     audioRecord = record
+
+    // Explicit platform audio effects — picking VOICE_COMMUNICATION as the
+    // source doesn't guarantee these run on every device; they have to be
+    // attached to this specific recording session for the mic to actually
+    // reject the echo of the AI's own voice and background noise.
+    if (AcousticEchoCanceler.isAvailable()) {
+      echoCanceler = AcousticEchoCanceler.create(record.audioSessionId)?.apply { enabled = true }
+    }
+    if (NoiseSuppressor.isAvailable()) {
+      noiseSuppressor = NoiseSuppressor.create(record.audioSessionId)?.apply { enabled = true }
+    }
+    if (AutomaticGainControl.isAvailable()) {
+      gainControl = AutomaticGainControl.create(record.audioSessionId)?.apply { enabled = true }
+    }
+
     record.startRecording()
 
     captureJob = scope.launch(Dispatchers.IO) {
@@ -292,6 +313,12 @@ class RealtimeVisionController(
   private fun stopInternal() {
     captureJob?.cancel()
     captureJob = null
+    echoCanceler?.release()
+    echoCanceler = null
+    noiseSuppressor?.release()
+    noiseSuppressor = null
+    gainControl?.release()
+    gainControl = null
     audioRecord?.let {
       runCatching { it.stop() }
       it.release()
