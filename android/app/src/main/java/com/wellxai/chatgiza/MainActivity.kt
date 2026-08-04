@@ -33,6 +33,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -48,6 +49,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -65,6 +67,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
@@ -599,6 +602,11 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
     viewModel.conversations.filter { it.title.contains(query, ignoreCase = true) }
   }
 
+  var menuConvo by remember { mutableStateOf<ApiConversation?>(null) }
+  var deleteConfirmConvo by remember { mutableStateOf<ApiConversation?>(null) }
+  var renameConvo by remember { mutableStateOf<ApiConversation?>(null) }
+  var renameText by remember { mutableStateOf("") }
+
   Scaffold(
     containerColor = Color.Transparent,
     bottomBar = {
@@ -766,32 +774,144 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
       } else {
         LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(vertical = 8.dp)) {
           items(visibleConversations, key = { it.id }) { convo ->
-            HistoryRow(convo) { viewModel.selectConversation(convo.id) }
+            HistoryRow(
+              convo,
+              onClick = { viewModel.selectConversation(convo.id) },
+              onMenuClick = { menuConvo = convo }
+            )
           }
         }
       }
     }
   }
+
+  val sheetConvo = menuConvo
+  if (sheetConvo != null) {
+    ModalBottomSheet(onDismissRequest = { menuConvo = null }) {
+      Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = {
+              menuConvo = null
+              deleteConfirmConvo = sheetConvo
+            })
+            .padding(vertical = 14.dp)
+        ) {
+          Icon(Icons.Filled.Delete, contentDescription = null, tint = Color(0xFFFF6B6B))
+          Spacer(modifier = Modifier.size(16.dp))
+          Text("Delete", color = Color(0xFFFF6B6B), fontSize = 16.sp)
+        }
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = {
+              renameText = sheetConvo.title
+              menuConvo = null
+              renameConvo = sheetConvo
+            })
+            .padding(vertical = 14.dp)
+        ) {
+          Icon(Icons.Filled.Edit, contentDescription = null, tint = colorScheme.onBackground)
+          Spacer(modifier = Modifier.size(16.dp))
+          Text("Rename", color = colorScheme.onBackground, fontSize = 16.sp)
+        }
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = {
+              viewModel.togglePin(sheetConvo.id)
+              menuConvo = null
+            })
+            .padding(vertical = 14.dp)
+        ) {
+          Text("📌", fontSize = 18.sp)
+          Spacer(modifier = Modifier.size(16.dp))
+          Text(if (sheetConvo.pinned) "Unpin" else "Pin", color = colorScheme.onBackground, fontSize = 16.sp)
+        }
+      }
+    }
+  }
+
+  val toDelete = deleteConfirmConvo
+  if (toDelete != null) {
+    AlertDialog(
+      onDismissRequest = { deleteConfirmConvo = null },
+      title = { Text("Delete conversation?") },
+      text = { Text("This conversation will be deleted from your account. This action can't be undone.") },
+      confirmButton = {
+        TextButton(onClick = {
+          viewModel.deleteConversation(toDelete.id)
+          deleteConfirmConvo = null
+        }) {
+          Text("Delete", color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold)
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = { deleteConfirmConvo = null }) {
+          Text("Cancel", fontWeight = FontWeight.Bold)
+        }
+      }
+    )
+  }
+
+  val toRename = renameConvo
+  if (toRename != null) {
+    AlertDialog(
+      onDismissRequest = { renameConvo = null },
+      title = { Text("Rename conversation") },
+      text = {
+        OutlinedTextField(
+          value = renameText,
+          onValueChange = { renameText = it },
+          singleLine = true,
+          shape = RoundedCornerShape(12.dp)
+        )
+      },
+      confirmButton = {
+        TextButton(onClick = {
+          viewModel.renameConversation(toRename.id, renameText)
+          renameConvo = null
+        }) {
+          Text("Save", fontWeight = FontWeight.Bold)
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = { renameConvo = null }) {
+          Text("Cancel")
+        }
+      }
+    )
+  }
 }
 
 @Composable
-private fun HistoryRow(convo: ApiConversation, onClick: () -> Unit) {
+private fun HistoryRow(convo: ApiConversation, onClick: () -> Unit, onMenuClick: () -> Unit) {
   val lastMessage = convo.messages.lastOrNull()
   val dateText = lastMessage?.createdAt?.let { formatDate(it) } ?: ""
-  Column(
+  Row(
     modifier = Modifier
       .fillMaxWidth()
       .clickable(onClick = onClick)
-      .padding(horizontal = 16.dp, vertical = 12.dp)
+      .padding(horizontal = 8.dp, vertical = 4.dp),
+    verticalAlignment = Alignment.CenterVertically
   ) {
-    Text(
-      text = convo.title.ifBlank { "New chat" },
-      color = colorScheme.onBackground,
-      fontSize = 16.sp,
-      fontWeight = FontWeight.Medium
-    )
-    if (dateText.isNotEmpty()) {
-      Text(dateText, color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 12.sp)
+    Column(modifier = Modifier.weight(1f).padding(horizontal = 8.dp, vertical = 8.dp)) {
+      Text(
+        text = (if (convo.pinned) "📌 " else "") + convo.title.ifBlank { "New chat" },
+        color = colorScheme.onBackground,
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Medium
+      )
+      if (dateText.isNotEmpty()) {
+        Text(dateText, color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 12.sp)
+      }
+    }
+    IconButton(onClick = onMenuClick) {
+      Icon(Icons.Filled.MoreVert, contentDescription = "Options", tint = colorScheme.onBackground.copy(alpha = 0.6f))
     }
   }
 }
