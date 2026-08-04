@@ -155,6 +155,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Chat -> ChatScreenUi(viewModel)
             is AppScreen.History -> HistoryScreen(viewModel)
             is AppScreen.Account -> AccountScreen(viewModel)
+            is AppScreen.Customize -> CustomizeScreen(viewModel)
             is AppScreen.Settings -> SettingsScreen(viewModel)
             is AppScreen.Projects -> ProjectsScreen(viewModel)
             is AppScreen.Scheduled -> ScheduledScreen(viewModel)
@@ -1210,13 +1211,13 @@ private fun HistoryRow(convo: ApiConversation, onClick: () -> Unit, onMenuClick:
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AccountScreen(viewModel: ChatViewModel) {
+private fun CustomizeScreen(viewModel: ChatViewModel) {
   Scaffold(
     topBar = {
       TopAppBar(
-        title = { Text("Account", fontWeight = FontWeight.Bold) },
+        title = { Text("Customize ChatGiZa", fontWeight = FontWeight.Bold) },
         navigationIcon = {
-          IconButton(onClick = { viewModel.closeAccount() }) {
+          IconButton(onClick = { viewModel.closeCustomize() }) {
             Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
           }
         }
@@ -1275,15 +1276,103 @@ private fun AccountScreen(viewModel: ChatViewModel) {
       ) {
         Text(if (viewModel.savingProfile) "Saving…" else "Save")
       }
+    }
+  }
+}
 
-      Spacer(modifier = Modifier.height(28.dp))
-      HorizontalDivider(color = colorScheme.onBackground.copy(alpha = 0.1f))
-      Spacer(modifier = Modifier.height(8.dp))
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AccountScreen(viewModel: ChatViewModel) {
+  Scaffold(
+    topBar = {
+      TopAppBar(
+        title = { Text("Settings", fontWeight = FontWeight.Bold) },
+        navigationIcon = {
+          IconButton(onClick = { viewModel.closeAccount() }) {
+            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
+          }
+        }
+      )
+    },
+    containerColor = Color.Transparent
+  ) { padding ->
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(padding)
+        .verticalScroll(rememberScrollState())
+        .padding(horizontal = 20.dp, vertical = 8.dp)
+    ) {
+      Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        if (viewModel.userImage != null) {
+          AsyncImage(
+            model = viewModel.userImage,
+            contentDescription = "Profile",
+            modifier = Modifier.size(52.dp).clip(CircleShape)
+          )
+        } else {
+          Icon(
+            Icons.Filled.Person,
+            contentDescription = "Profile",
+            tint = colorScheme.onBackground,
+            modifier = Modifier.size(52.dp)
+          )
+        }
+        Spacer(modifier = Modifier.size(12.dp))
+        Column {
+          Text(viewModel.userName ?: "", color = colorScheme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+          if (viewModel.userEmail != null) {
+            Text(viewModel.userEmail ?: "", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 13.sp)
+          }
+        }
+      }
 
-      AccountLinkRow("Settings", "Plugins, notifications, privacy, location") { viewModel.openSettings() }
-      AccountLinkRow("Projects") { viewModel.openProjects() }
-      AccountLinkRow("Automations", "Scheduled messages") { viewModel.openScheduled() }
-      AccountLinkRow("Billing", "Plan and payment") { viewModel.openBilling() }
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(vertical = 4.dp)
+          .clip(RoundedCornerShape(16.dp))
+          .background(Color(0xFF2563EB))
+          .clickable(onClick = { viewModel.openBilling() })
+          .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Column(modifier = Modifier.weight(1f)) {
+          Text("Save 66% on GiZa Pro", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+          Text("Upgrade for higher limits", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
+        }
+        Box(
+          modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+        ) {
+          Text("Claim Offer", color = Color(0xFF2563EB), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        }
+      }
+
+      SettingsSectionHeader("App")
+      SettingsMenuRow("Preferences", "Plugins, notifications, privacy, location") { viewModel.openSettings() }
+      SettingsMenuRow("Appearance", "Dark")
+      SettingsMenuRow("App Language")
+
+      SettingsSectionHeader("ChatGiZa")
+      SettingsMenuRow("Customize ChatGiZa") { viewModel.openCustomize() }
+      SettingsMenuRow("Projects") { viewModel.openProjects() }
+      SettingsMenuRow("Automations", "Scheduled messages") { viewModel.openScheduled() }
+      SettingsMenuRow("Connectors")
+
+      SettingsSectionHeader("Voice")
+      SettingsMenuRow("Voice", "Default")
+
+      SettingsSectionHeader("Data & Information")
+      SettingsMenuRow("Data Controls")
+      SettingsMenuRow("Terms of Use")
+      SettingsMenuRow("Privacy Policy")
+      SettingsMenuRow("Report a Problem")
 
       Spacer(modifier = Modifier.height(12.dp))
       HorizontalDivider(color = colorScheme.onBackground.copy(alpha = 0.1f))
@@ -1291,19 +1380,38 @@ private fun AccountScreen(viewModel: ChatViewModel) {
       TextButton(onClick = { viewModel.signOut() }) {
         Text("Sign out", color = Color(0xFFFF6B6B))
       }
+      Spacer(modifier = Modifier.height(24.dp))
     }
   }
 }
 
 @Composable
-private fun AccountLinkRow(title: String, subtitle: String? = null, onClick: () -> Unit) {
+private fun SettingsSectionHeader(title: String) {
+  Text(
+    title,
+    color = colorScheme.onBackground.copy(alpha = 0.5f),
+    fontSize = 12.sp,
+    fontWeight = FontWeight.SemiBold,
+    modifier = Modifier.padding(top = 20.dp, bottom = 6.dp)
+  )
+}
+
+/** A settings row — real and clickable when [onClick] is given, otherwise a
+ * plain (dimmed) label reserving its place in the menu until it's wired up. */
+@Composable
+private fun SettingsMenuRow(title: String, subtitle: String? = null, onClick: (() -> Unit)? = null) {
   Column(
     modifier = Modifier
       .fillMaxWidth()
-      .clickable(onClick = onClick)
+      .let { if (onClick != null) it.clickable(onClick = onClick) else it }
       .padding(vertical = 14.dp)
   ) {
-    Text(title, color = colorScheme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+    Text(
+      title,
+      color = colorScheme.onBackground.copy(alpha = if (onClick != null) 1f else 0.4f),
+      fontSize = 16.sp,
+      fontWeight = FontWeight.Medium
+    )
     if (subtitle != null) {
       Text(subtitle, color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 12.sp)
     }

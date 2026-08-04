@@ -16,6 +16,7 @@ sealed class AppScreen {
   object Chat : AppScreen()
   object History : AppScreen()
   object Account : AppScreen()
+  object Customize : AppScreen()
   object Settings : AppScreen()
   object Projects : AppScreen()
   object Scheduled : AppScreen()
@@ -186,6 +187,14 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     screen = AppScreen.Chat
   }
 
+  fun openCustomize() {
+    screen = AppScreen.Customize
+  }
+
+  fun closeCustomize() {
+    screen = AppScreen.Account
+  }
+
   fun onNicknameChange(value: String) {
     nicknameInput = value
   }
@@ -203,7 +212,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         is ApiResult.Success -> {
           profileData = updated
           savingProfile = false
-          screen = AppScreen.Chat
+          screen = AppScreen.Account
         }
         is ApiResult.Failure -> {
           errorMessage = result.message
