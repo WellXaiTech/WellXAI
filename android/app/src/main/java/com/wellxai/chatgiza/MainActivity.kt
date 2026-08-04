@@ -107,6 +107,12 @@ import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.SettingsBrightness
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Feedback
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MicNone
 import androidx.compose.material.icons.outlined.ModeEdit
@@ -189,6 +195,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Customize -> CustomizeScreen(viewModel)
             is AppScreen.Appearance -> AppearanceScreen(viewModel)
             is AppScreen.Voice -> VoiceScreen(viewModel)
+            is AppScreen.ReportProblem -> ReportProblemScreen(viewModel)
             is AppScreen.Settings -> SettingsScreen(viewModel)
             is AppScreen.Projects -> ProjectsScreen(viewModel)
             is AppScreen.Scheduled -> ScheduledScreen(viewModel)
@@ -1583,6 +1590,138 @@ private fun VoiceScreen(viewModel: ChatViewModel) {
   }
 }
 
+private enum class FeedbackType(val label: String, val icon: ImageVector) {
+  GENERAL("General Feedback", Icons.Outlined.ChatBubbleOutline),
+  BUG("Report an issue / bug", Icons.Outlined.BugReport),
+  RESPONSE("Response feedback", Icons.Outlined.Feedback)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReportProblemScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeReportProblem() }
+  var selectedType by remember { mutableStateOf(FeedbackType.GENERAL) }
+  var typeMenuOpen by remember { mutableStateOf(false) }
+  var description by remember { mutableStateOf("") }
+  var attachedImageUri by remember { mutableStateOf<Uri?>(null) }
+  var submitted by remember { mutableStateOf(false) }
+
+  val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    if (uri != null) attachedImageUri = uri
+  }
+
+  Scaffold(containerColor = Color.Transparent) { padding ->
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(padding)
+        .verticalScroll(rememberScrollState())
+        .padding(20.dp)
+    ) {
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+      ) {
+        Text("Send Feedback", color = colorScheme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        IconButton(onClick = { viewModel.closeReportProblem() }, modifier = Modifier.size(30.dp)) {
+          Icon(Icons.Outlined.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(30.dp))
+        }
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+
+      Box {
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color(0xFF2F2F2F))
+            .clickable { typeMenuOpen = true }
+            .padding(horizontal = 16.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Icon(selectedType.icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
+          Spacer(modifier = Modifier.width(16.dp))
+          Text(selectedType.label, color = colorScheme.onBackground, fontSize = 16.sp, modifier = Modifier.weight(1f))
+          Icon(
+            Icons.Outlined.KeyboardArrowDown,
+            contentDescription = "Choose feedback type",
+            tint = Color(0xFFBDBDBD),
+            modifier = Modifier.size(24.dp)
+          )
+        }
+        DropdownMenu(expanded = typeMenuOpen, onDismissRequest = { typeMenuOpen = false }) {
+          FeedbackType.entries.forEach { type ->
+            val isSelected = type == selectedType
+            DropdownMenuItem(
+              text = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  Icon(
+                    type.icon,
+                    contentDescription = null,
+                    tint = if (isSelected) Color.White else Color(0xFFBDBDBD),
+                    modifier = Modifier.size(30.dp)
+                  )
+                  Spacer(modifier = Modifier.width(16.dp))
+                  Text(type.label, modifier = Modifier.weight(1f))
+                  if (isSelected) {
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Icon(Icons.Filled.Check, contentDescription = "Selected", tint = Color.White, modifier = Modifier.size(28.dp))
+                  }
+                }
+              },
+              onClick = {
+                selectedType = type
+                typeMenuOpen = false
+              }
+            )
+          }
+        }
+      }
+
+      Spacer(modifier = Modifier.height(16.dp))
+
+      OutlinedTextField(
+        value = description,
+        onValueChange = { description = it },
+        modifier = Modifier.fillMaxWidth().height(140.dp),
+        placeholder = { Text("Describe the issue…") },
+        shape = RoundedCornerShape(14.dp)
+      )
+
+      Spacer(modifier = Modifier.height(16.dp))
+
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clickable { imagePicker.launch("image/*") },
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Icon(Icons.Outlined.Image, contentDescription = "Attach images", tint = Color.White, modifier = Modifier.size(28.dp))
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+          if (attachedImageUri != null) "1 image attached" else "Attach Images",
+          color = colorScheme.onBackground,
+          fontSize = 16.sp
+        )
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+
+      Button(
+        onClick = { submitted = true },
+        enabled = description.isNotBlank() && !submitted,
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier.fillMaxWidth().height(48.dp)
+      ) {
+        Text(if (submitted) "Sent — thank you!" else "Submit")
+      }
+    }
+  }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AccountScreen(viewModel: ChatViewModel) {
@@ -1671,7 +1810,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
       SettingsMenuRow("Privacy Policy")
 
       SettingsSectionHeader("Support")
-      SettingsMenuRow("Report a Problem")
+      SettingsMenuRow("Report a Problem") { viewModel.openReportProblem() }
 
       SettingsSectionHeader("Account")
       SettingsMenuRow("Sign out", textColor = Color(0xFFFF6B6B)) { viewModel.signOut() }
