@@ -700,31 +700,36 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
         else -> "Go ahead"
       }
 
+      IconButton(
+        onClick = { viewModel.closeLiveVision() },
+        modifier = Modifier.align(Alignment.TopStart).padding(top = 48.dp, start = 12.dp)
+      ) {
+        Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(32.dp))
+      }
+
       Column(
         modifier = Modifier
-          .fillMaxSize()
-          .padding(top = 64.dp, bottom = 20.dp),
+          .align(Alignment.BottomCenter)
+          .fillMaxWidth()
+          .padding(bottom = 22.dp, start = 16.dp, end = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
       ) {
-        IconButton(onClick = { viewModel.closeLiveVision() }) {
-          Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(32.dp))
-        }
-        Spacer(modifier = Modifier.height(24.dp))
         if (statusText.isNotEmpty()) {
           Row(
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
             modifier = Modifier
-              .clip(RoundedCornerShape(20.dp))
+              .size(width = 150.dp, height = 50.dp)
+              .clip(RoundedCornerShape(25.dp))
               .background(Color.White.copy(alpha = 0.12f))
-              .padding(horizontal = 20.dp, vertical = 10.dp)
           ) {
             Icon(Icons.Outlined.RecordVoiceOver, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.size(8.dp))
-            Text(statusText, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Text(statusText, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
           }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(18.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
           VoiceControlPill(icon = Icons.Outlined.Videocam, contentDescription = "Camera", active = cameraEnabled) {
@@ -750,17 +755,17 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         Row(
-          modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+          modifier = Modifier.fillMaxWidth(),
           verticalAlignment = Alignment.CenterVertically
         ) {
           Box {
             Box(
               modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(28.dp))
+                .size(44.dp)
+                .clip(RoundedCornerShape(22.dp))
                 .background(Color(0xFF1A1A1A))
                 .clickable(onClick = { toolMenuOpen = true }),
               contentAlignment = Alignment.Center
@@ -778,8 +783,8 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           Box(
             modifier = Modifier
               .weight(1f)
-              .height(56.dp)
-              .clip(RoundedCornerShape(28.dp))
+              .height(62.dp)
+              .clip(RoundedCornerShape(31.dp))
               .background(Color(0xFF1A1A1A)),
             contentAlignment = Alignment.CenterStart
           ) {
@@ -801,8 +806,8 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           Spacer(modifier = Modifier.size(8.dp))
           Box(
             modifier = Modifier
-              .height(56.dp)
-              .clip(RoundedCornerShape(28.dp))
+              .size(width = 112.dp, height = 62.dp)
+              .clip(RoundedCornerShape(31.dp))
               .background(Color.White)
               .clickable(onClick = {
                 if (viewModel.input.isNotBlank()) {
@@ -813,8 +818,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
                   controller.stop()
                   viewModel.closeLiveVision()
                 }
-              })
-              .padding(horizontal = 24.dp),
+              }),
             contentAlignment = Alignment.Center
           ) {
             Text("Stop", color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
@@ -829,10 +833,10 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
 private fun VoiceControlPill(icon: ImageVector, contentDescription: String, active: Boolean = true, onClick: () -> Unit) {
   Box(
     modifier = Modifier
-      .size(width = 86.dp, height = 68.dp)
-      .clip(RoundedCornerShape(22.dp))
+      .size(width = 78.dp, height = 58.dp)
+      .clip(RoundedCornerShape(18.dp))
       .background(Color(0xFF1F1F1F))
-      .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(22.dp))
+      .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(18.dp))
       .clickable(onClick = onClick),
     contentAlignment = Alignment.Center
   ) {
