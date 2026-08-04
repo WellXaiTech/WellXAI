@@ -17,6 +17,7 @@ sealed class AppScreen {
   object History : AppScreen()
   object Account : AppScreen()
   object Customize : AppScreen()
+  object Appearance : AppScreen()
   object Settings : AppScreen()
   object Projects : AppScreen()
   object Scheduled : AppScreen()
@@ -192,6 +193,14 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeCustomize() {
+    screen = AppScreen.Account
+  }
+
+  fun openAppearance() {
+    screen = AppScreen.Appearance
+  }
+
+  fun closeAppearance() {
     screen = AppScreen.Account
   }
 
