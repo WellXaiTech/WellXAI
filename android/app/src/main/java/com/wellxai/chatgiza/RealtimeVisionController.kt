@@ -79,6 +79,16 @@ class RealtimeVisionController(
   private var playedAudioBytes: Long = 0
 
   private val sampleRate = 24000
+  private var speakerEnabled = true
+  private var micMuted = false
+
+  fun setSpeakerEnabled(enabled: Boolean) {
+    speakerEnabled = enabled
+  }
+
+  fun setMicMuted(muted: Boolean) {
+    micMuted = muted
+  }
 
   fun start(language: String) {
     if (connectionState != ConnectionState.Idle) return
@@ -151,7 +161,7 @@ class RealtimeVisionController(
         if (delta.isNotEmpty()) {
           val bytes = Base64.decode(delta, Base64.NO_WRAP)
           playedAudioBytes += bytes.size
-          audioTrack?.write(bytes, 0, bytes.size)
+          if (speakerEnabled) audioTrack?.write(bytes, 0, bytes.size)
         }
       }
       "response.output_audio.done", "response.done" -> {
@@ -271,7 +281,7 @@ class RealtimeVisionController(
       val buffer = ByteArray(bufferSize)
       while (audioRecord != null) {
         val read = record.read(buffer, 0, buffer.size)
-        if (read > 0) {
+        if (read > 0 && !micMuted) {
           val chunk = buffer.copyOf(read)
           val b64 = Base64.encodeToString(chunk, Base64.NO_WRAP)
           val event = JSONObject().put("type", "input_audio_buffer.append").put("audio", b64)
