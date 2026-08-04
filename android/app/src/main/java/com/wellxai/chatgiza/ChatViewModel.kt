@@ -18,6 +18,7 @@ sealed class AppScreen {
   object Account : AppScreen()
   object Customize : AppScreen()
   object Appearance : AppScreen()
+  object Voice : AppScreen()
   object Settings : AppScreen()
   object Projects : AppScreen()
   object Scheduled : AppScreen()
@@ -202,6 +203,21 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeAppearance() {
     screen = AppScreen.Account
+  }
+
+  fun openVoice() {
+    screen = AppScreen.Voice
+  }
+
+  fun closeVoice() {
+    screen = AppScreen.Account
+  }
+
+  var selectedVoiceId by mutableStateOf("default")
+    private set
+
+  fun selectVoice(id: String) {
+    selectedVoiceId = id
   }
 
   fun onNicknameChange(value: String) {
