@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -34,6 +35,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -50,6 +52,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material.icons.Icons
@@ -58,7 +61,6 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.runtime.Composable
@@ -209,6 +211,14 @@ private val TOOL_LABELS = mapOf(
 )
 
 @Composable
+private fun TwoLineMenuIcon(tint: Color) {
+  Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Box(modifier = Modifier.width(20.dp).height(2.dp).background(tint))
+    Box(modifier = Modifier.width(20.dp).height(2.dp).background(tint))
+  }
+}
+
+@Composable
 private fun AskImagineTabs(current: String, onAsk: () -> Unit, onImagine: () -> Unit) {
   Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
     Text(
@@ -240,18 +250,19 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
 
   Scaffold(
     topBar = {
-      TopAppBar(
+      CenterAlignedTopAppBar(
         title = { AskImagineTabs(current = "Ask", onAsk = {}, onImagine = { viewModel.openImagine() }) },
         navigationIcon = {
           IconButton(onClick = { viewModel.openHistory() }) {
-            Icon(Icons.Filled.Menu, contentDescription = "History", tint = colorScheme.onBackground)
+            TwoLineMenuIcon(tint = colorScheme.onBackground)
           }
         },
         actions = {
           IconButton(onClick = { viewModel.openAccount() }) {
             Icon(Icons.Filled.Person, contentDescription = "Account", tint = colorScheme.onBackground)
           }
-        }
+        },
+        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
       )
     },
     containerColor = Color.Transparent
@@ -414,18 +425,19 @@ private fun ChatComposerCard(viewModel: ChatViewModel, onSend: () -> Unit) {
 private fun ImagineScreen(viewModel: ChatViewModel) {
   Scaffold(
     topBar = {
-      TopAppBar(
+      CenterAlignedTopAppBar(
         title = { AskImagineTabs(current = "Imagine", onAsk = { viewModel.closeImagine() }, onImagine = {}) },
         navigationIcon = {
           IconButton(onClick = { viewModel.openHistory() }) {
-            Icon(Icons.Filled.Menu, contentDescription = "History", tint = colorScheme.onBackground)
+            TwoLineMenuIcon(tint = colorScheme.onBackground)
           }
         },
         actions = {
           IconButton(onClick = { viewModel.openAccount() }) {
             Icon(Icons.Filled.Person, contentDescription = "Account", tint = colorScheme.onBackground)
           }
-        }
+        },
+        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
       )
     },
     containerColor = Color.Transparent
@@ -487,12 +499,13 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   Scaffold(
     topBar = {
       TopAppBar(
-        title = { Text("Menu", fontWeight = FontWeight.Bold) },
+        title = {},
         navigationIcon = {
           IconButton(onClick = { viewModel.closeHistory() }) {
             Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
           }
-        }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
       )
     },
     containerColor = Color.Transparent,
