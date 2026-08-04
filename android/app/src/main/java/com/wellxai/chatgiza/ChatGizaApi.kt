@@ -276,6 +276,25 @@ object ChatGizaApi {
       }
     }
 
+  suspend fun deleteAccount(token: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/account")
+        .header("Authorization", "Bearer $token")
+        .delete()
+        .build()
+      client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          val text = response.body?.string().orEmpty()
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
   suspend fun getProfile(token: String): ApiResult<ProfileData> = withContext(Dispatchers.IO) {
     try {
       val request = Request.Builder()

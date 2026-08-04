@@ -20,6 +20,8 @@ sealed class AppScreen {
   object Appearance : AppScreen()
   object Voice : AppScreen()
   object ReportProblem : AppScreen()
+  object DataControls : AppScreen()
+  object ManageCloudStorage : AppScreen()
   object Settings : AppScreen()
   object Projects : AppScreen()
   object Scheduled : AppScreen()
@@ -229,12 +231,50 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     screen = AppScreen.Account
   }
 
+  fun openDataControls() {
+    screen = AppScreen.DataControls
+  }
+
+  fun closeDataControls() {
+    screen = AppScreen.Account
+  }
+
+  fun openManageCloudStorage() {
+    screen = AppScreen.ManageCloudStorage
+  }
+
+  fun closeManageCloudStorage() {
+    screen = AppScreen.DataControls
+  }
+
   fun onNicknameChange(value: String) {
     nicknameInput = value
   }
 
   fun onAboutChange(value: String) {
     aboutInput = value
+  }
+
+  private fun persistProfile(updated: ProfileData) {
+    profileData = updated
+    val token = tokenStore.getToken() ?: return
+    viewModelScope.launch { ChatGizaApi.saveProfile(token, updated) }
+  }
+
+  fun setMemoryEnabled(value: Boolean) = persistProfile(profileData.copy(memoryEnabled = value))
+
+  var personalizeChatGizaEnabled by mutableStateOf(true)
+    private set
+
+  fun setPersonalizeChatGiza(value: Boolean) {
+    personalizeChatGizaEnabled = value
+  }
+
+  var chatLinkSharingEnabled by mutableStateOf(true)
+    private set
+
+  fun setChatLinkSharing(value: Boolean) {
+    chatLinkSharingEnabled = value
   }
 
   fun saveProfile() {
@@ -513,6 +553,37 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
       messages = emptyList()
     }
     viewModelScope.launch { ChatGizaApi.saveHistory(token, updated, updatedDeleted) }
+  }
+
+  fun deleteAllConversations() {
+    val token = tokenStore.getToken() ?: return
+    val now = System.currentTimeMillis()
+    val updatedDeleted = deletedIds + conversations.associate { it.id to now }
+    conversations = emptyList()
+    deletedIds = updatedDeleted
+    activeConversationId = null
+    messages = emptyList()
+    viewModelScope.launch { ChatGizaApi.saveHistory(token, emptyList(), updatedDeleted) }
+  }
+
+  var deletingAccount by mutableStateOf(false)
+    private set
+
+  fun deleteAccount() {
+    val token = tokenStore.getToken() ?: return
+    deletingAccount = true
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.deleteAccount(token)) {
+        is ApiResult.Success -> {
+          deletingAccount = false
+          signOut()
+        }
+        is ApiResult.Failure -> {
+          deletingAccount = false
+          errorMessage = result.message
+        }
+      }
+    }
   }
 
   fun renameConversation(id: String, newTitle: String) {

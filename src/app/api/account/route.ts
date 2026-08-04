@@ -1,18 +1,18 @@
 import { NextResponse } from "next/server";
 import { kv } from "@vercel/kv";
 import { auth } from "@/auth";
+import { getMobileUserId } from "@/lib/mobileAuth";
 
 // Best-effort cleanup of everything ChatGiZa itself stores server-side for this
 // account (KV only — there is no separate application database). Conversation
 // content otherwise lives in the browser's localStorage, which the client
 // clears itself right after this call succeeds.
-export async function DELETE() {
+export async function DELETE(request: Request) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId = session?.user?.id ?? (await getMobileUserId(request));
+  if (!userId) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
-
-  const userId = session.user.id;
 
   const keys = [
     `chatgiza:history:${userId}`,

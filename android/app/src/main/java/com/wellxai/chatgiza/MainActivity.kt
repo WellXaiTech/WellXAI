@@ -94,9 +94,11 @@ import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.LightMode
@@ -105,6 +107,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.SettingsBrightness
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.BugReport
@@ -196,6 +199,8 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Appearance -> AppearanceScreen(viewModel)
             is AppScreen.Voice -> VoiceScreen(viewModel)
             is AppScreen.ReportProblem -> ReportProblemScreen(viewModel)
+            is AppScreen.DataControls -> DataControlsScreen(viewModel)
+            is AppScreen.ManageCloudStorage -> ManageCloudStorageScreen(viewModel)
             is AppScreen.Settings -> SettingsScreen(viewModel)
             is AppScreen.Projects -> ProjectsScreen(viewModel)
             is AppScreen.Scheduled -> ScheduledScreen(viewModel)
@@ -1722,6 +1727,208 @@ private fun ReportProblemScreen(viewModel: ChatViewModel) {
   }
 }
 
+@Composable
+private fun DataControlsAppBar(title: String, onBack: () -> Unit) {
+  Row(
+    modifier = Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 20.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    IconButton(onClick = onBack, modifier = Modifier.size(28.dp)) {
+      Icon(Icons.Filled.ArrowBackIosNew, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
+    }
+    Spacer(modifier = Modifier.width(20.dp))
+    Text(title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+  }
+}
+
+@Composable
+private fun DataControlToggleRow(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+  Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    Column(modifier = Modifier.weight(1f)) {
+      Text(title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+      Spacer(modifier = Modifier.height(4.dp))
+      Text(subtitle, color = Color(0xFFA8A8A8), fontSize = 16.sp, fontWeight = FontWeight.Normal)
+    }
+    Spacer(modifier = Modifier.width(12.dp))
+    Switch(checked = checked, onCheckedChange = onCheckedChange)
+  }
+}
+
+@Composable
+private fun DangerRow(label: String, onClick: () -> Unit) {
+  Text(
+    label,
+    color = Color(0xFFFF3B30),
+    fontSize = 18.sp,
+    fontWeight = FontWeight.Bold,
+    modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
+  )
+}
+
+@Composable
+private fun ConfirmDangerDialog(title: String, message: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = { Text(title) },
+    text = { Text(message) },
+    confirmButton = {
+      TextButton(onClick = { onConfirm(); onDismiss() }) {
+        Text("Delete", color = Color(0xFFFF3B30))
+      }
+    },
+    dismissButton = {
+      TextButton(onClick = onDismiss) { Text("Cancel") }
+    }
+  )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DataControlsScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeDataControls() }
+  var confirmDeleteConversations by remember { mutableStateOf(false) }
+  var confirmDeleteMedia by remember { mutableStateOf(false) }
+  var confirmDeleteAccount by remember { mutableStateOf(false) }
+
+  Scaffold(containerColor = Color.Transparent) { padding ->
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(padding)
+        .verticalScroll(rememberScrollState())
+        .padding(horizontal = 20.dp)
+    ) {
+      DataControlsAppBar("Data Controls") { viewModel.closeDataControls() }
+
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clickable { viewModel.openManageCloudStorage() }
+      ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Column(modifier = Modifier.weight(1f)) {
+            Text("Manage Cloud Storage", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+              "See all the files and assets you have uploaded to ChatGiZa. You can also delete them here.",
+              color = Color(0xFFA8A8A8),
+              fontSize = 16.sp
+            )
+          }
+          Spacer(modifier = Modifier.width(12.dp))
+          Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color(0xFFA8A8A8), modifier = Modifier.size(24.dp))
+        }
+      }
+      Spacer(modifier = Modifier.height(32.dp))
+
+      DataControlToggleRow(
+        title = "Personalize with memories",
+        subtitle = "Allow ChatGiZa to remember details from your previous conversations. Private chats are never stored.",
+        checked = viewModel.profileData.memoryEnabled,
+        onCheckedChange = { viewModel.setMemoryEnabled(it) }
+      )
+      Spacer(modifier = Modifier.height(32.dp))
+
+      DataControlToggleRow(
+        title = "Improve the Model",
+        subtitle = "Allow ChatGiZa to use conversation data to improve future AI responses while protecting user privacy.",
+        checked = viewModel.settingsData.privacy.improveModel,
+        onCheckedChange = { value -> viewModel.setPrivacyPref { it.copy(improveModel = value) } }
+      )
+      Spacer(modifier = Modifier.height(32.dp))
+
+      DataControlToggleRow(
+        title = "Personalize ChatGiZa",
+        subtitle = "Allow your account preferences and usage to personalize your ChatGiZa experience.",
+        checked = viewModel.personalizeChatGizaEnabled,
+        onCheckedChange = { viewModel.setPersonalizeChatGiza(it) }
+      )
+      Spacer(modifier = Modifier.height(32.dp))
+
+      DataControlToggleRow(
+        title = "Allow Chat Link Sharing",
+        subtitle = "Allow sharing conversations using secure public links.",
+        checked = viewModel.chatLinkSharingEnabled,
+        onCheckedChange = { viewModel.setChatLinkSharing(it) }
+      )
+      Spacer(modifier = Modifier.height(40.dp))
+
+      DangerRow("Delete All Conversations") { confirmDeleteConversations = true }
+      Spacer(modifier = Modifier.height(32.dp))
+      DangerRow("Delete All Images & Media") { confirmDeleteMedia = true }
+      Spacer(modifier = Modifier.height(32.dp))
+      DangerRow("Delete Account") { confirmDeleteAccount = true }
+      Spacer(modifier = Modifier.height(24.dp))
+    }
+  }
+
+  if (confirmDeleteConversations) {
+    ConfirmDangerDialog(
+      title = "Delete all conversations?",
+      message = "This permanently deletes every conversation in your ChatGiZa history. This can't be undone.",
+      onConfirm = { viewModel.deleteAllConversations() },
+      onDismiss = { confirmDeleteConversations = false }
+    )
+  }
+  if (confirmDeleteMedia) {
+    ConfirmDangerDialog(
+      title = "Delete all images & media?",
+      message = "This can't be undone.",
+      onConfirm = {},
+      onDismiss = { confirmDeleteMedia = false }
+    )
+  }
+  if (confirmDeleteAccount) {
+    ConfirmDangerDialog(
+      title = "Delete account?",
+      message = "This permanently deletes your ChatGiZa account and all associated data. This can't be undone.",
+      onConfirm = { viewModel.deleteAccount() },
+      onDismiss = { confirmDeleteAccount = false }
+    )
+  }
+}
+
+@Composable
+private fun ManageCloudStorageScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeManageCloudStorage() }
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .padding(horizontal = 20.dp)
+  ) {
+    Row(
+      modifier = Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 20.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      IconButton(onClick = { viewModel.closeManageCloudStorage() }, modifier = Modifier.size(28.dp)) {
+        Icon(Icons.Filled.ArrowBackIosNew, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
+      }
+      Spacer(modifier = Modifier.width(20.dp))
+      Column(modifier = Modifier.weight(1f)) {
+        Text("0 B", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text("0% used", color = Color(0xFFA8A8A8), fontSize = 16.sp)
+      }
+      Icon(Icons.Filled.Tune, contentDescription = "Filter", tint = Color.White, modifier = Modifier.size(26.dp))
+    }
+
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+      Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(Icons.Outlined.Image, contentDescription = null, tint = Color(0xFFA8A8A8), modifier = Modifier.size(40.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+        Text("No files yet", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+          "Images, videos, and documents you upload to ChatGiZa will show up here.",
+          color = Color(0xFFA8A8A8),
+          fontSize = 15.sp,
+          textAlign = TextAlign.Center,
+          modifier = Modifier.padding(horizontal = 32.dp)
+        )
+      }
+    }
+  }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AccountScreen(viewModel: ChatViewModel) {
@@ -1804,7 +2011,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
 
       SettingsSectionHeader("Data & Information")
       SettingsMenuRow("Shared Conversations")
-      SettingsMenuRow("Data Controls")
+      SettingsMenuRow("Data Controls") { viewModel.openDataControls() }
       SettingsMenuRow("Open Source Licenses")
       SettingsMenuRow("Terms of Use")
       SettingsMenuRow("Privacy Policy")
