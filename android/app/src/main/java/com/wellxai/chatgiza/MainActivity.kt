@@ -1286,7 +1286,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
   Scaffold(
     topBar = {
       TopAppBar(
-        title = { Text("Settings", fontWeight = FontWeight.Bold) },
+        title = {},
         navigationIcon = {
           IconButton(onClick = { viewModel.closeAccount() }) {
             Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
@@ -1355,31 +1355,32 @@ private fun AccountScreen(viewModel: ChatViewModel) {
       }
 
       SettingsSectionHeader("App")
-      SettingsMenuRow("Preferences", "Plugins, notifications, privacy, location") { viewModel.openSettings() }
-      SettingsMenuRow("Appearance", "Dark")
+      SettingsMenuRow("Appearance")
+      SettingsMenuRow("Haptics")
+      SettingsMenuRow("Widgets")
       SettingsMenuRow("App Language")
+      SettingsMenuRow("Advanced")
 
-      SettingsSectionHeader("ChatGiZa")
-      SettingsMenuRow("Customize ChatGiZa") { viewModel.openCustomize() }
-      SettingsMenuRow("Projects") { viewModel.openProjects() }
-      SettingsMenuRow("Automations", "Scheduled messages") { viewModel.openScheduled() }
+      SettingsSectionHeader("GiZa")
+      SettingsMenuRow("Customize GiZa") { viewModel.openCustomize() }
       SettingsMenuRow("Connectors")
+      SettingsMenuRow("NSFW Preferences")
 
       SettingsSectionHeader("Voice")
-      SettingsMenuRow("Voice", "Default")
+      SettingsMenuRow("Voice")
 
       SettingsSectionHeader("Data & Information")
+      SettingsMenuRow("Shared Conversations")
       SettingsMenuRow("Data Controls")
+      SettingsMenuRow("Open Source Licenses")
       SettingsMenuRow("Terms of Use")
       SettingsMenuRow("Privacy Policy")
+
+      SettingsSectionHeader("Support")
       SettingsMenuRow("Report a Problem")
 
-      Spacer(modifier = Modifier.height(12.dp))
-      HorizontalDivider(color = colorScheme.onBackground.copy(alpha = 0.1f))
-      Spacer(modifier = Modifier.height(8.dp))
-      TextButton(onClick = { viewModel.signOut() }) {
-        Text("Sign out", color = Color(0xFFFF6B6B))
-      }
+      SettingsSectionHeader("Account")
+      SettingsMenuRow("Sign out", textColor = Color(0xFFFF6B6B)) { viewModel.signOut() }
       Spacer(modifier = Modifier.height(24.dp))
     }
   }
@@ -1399,7 +1400,11 @@ private fun SettingsSectionHeader(title: String) {
 /** A settings row — real and clickable when [onClick] is given, otherwise a
  * plain (dimmed) label reserving its place in the menu until it's wired up. */
 @Composable
-private fun SettingsMenuRow(title: String, subtitle: String? = null, onClick: (() -> Unit)? = null) {
+private fun SettingsMenuRow(
+  title: String,
+  textColor: Color? = null,
+  onClick: (() -> Unit)? = null
+) {
   Column(
     modifier = Modifier
       .fillMaxWidth()
@@ -1408,13 +1413,10 @@ private fun SettingsMenuRow(title: String, subtitle: String? = null, onClick: ((
   ) {
     Text(
       title,
-      color = colorScheme.onBackground.copy(alpha = if (onClick != null) 1f else 0.4f),
+      color = textColor ?: colorScheme.onBackground.copy(alpha = if (onClick != null) 1f else 0.4f),
       fontSize = 16.sp,
       fontWeight = FontWeight.Medium
     )
-    if (subtitle != null) {
-      Text(subtitle, color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 12.sp)
-    }
   }
 }
 
