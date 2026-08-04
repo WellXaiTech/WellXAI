@@ -22,6 +22,7 @@ sealed class AppScreen {
   object ReportProblem : AppScreen()
   object DataControls : AppScreen()
   object ManageCloudStorage : AppScreen()
+  object Widgets : AppScreen()
   object Settings : AppScreen()
   object Projects : AppScreen()
   object Scheduled : AppScreen()
@@ -228,6 +229,14 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeReportProblem() {
+    screen = AppScreen.Account
+  }
+
+  fun openWidgets() {
+    screen = AppScreen.Widgets
+  }
+
+  fun closeWidgets() {
     screen = AppScreen.Account
   }
 

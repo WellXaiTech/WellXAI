@@ -93,6 +93,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddToHomeScreen
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -199,6 +200,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Appearance -> AppearanceScreen(viewModel)
             is AppScreen.Voice -> VoiceScreen(viewModel)
             is AppScreen.ReportProblem -> ReportProblemScreen(viewModel)
+            is AppScreen.Widgets -> WidgetsScreen(viewModel)
             is AppScreen.DataControls -> DataControlsScreen(viewModel)
             is AppScreen.ManageCloudStorage -> ManageCloudStorageScreen(viewModel)
             is AppScreen.Settings -> SettingsScreen(viewModel)
@@ -1929,6 +1931,179 @@ private fun ManageCloudStorageScreen(viewModel: ChatViewModel) {
   }
 }
 
+/** Drawn mockup of the ChatGiZa home-screen widget — there's no real
+ * AppWidgetProvider yet, so this stands in for the widget_preview /
+ * widget_large drawables a real implementation would render. */
+@Composable
+private fun WidgetMockPreview(modifier: Modifier = Modifier) {
+  Box(
+    modifier = modifier
+      .clip(RoundedCornerShape(18.dp))
+      .background(Color(0xFF1A1A1A))
+      .padding(16.dp)
+  ) {
+    Column {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+          modifier = Modifier.size(28.dp).clip(CircleShape).background(Color.White),
+          contentAlignment = Alignment.Center
+        ) {
+          Text("G", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Text("ChatGiZa", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+      }
+      Spacer(modifier = Modifier.height(14.dp))
+      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        WidgetMockAction(Icons.Outlined.ModeEdit, "Chat", Modifier.weight(1f))
+        WidgetMockAction(Icons.Filled.AutoAwesome, "Imagine", Modifier.weight(1f))
+        WidgetMockAction(Icons.Filled.GraphicEq, "Voice", Modifier.weight(1f))
+      }
+    }
+  }
+}
+
+@Composable
+private fun WidgetMockAction(icon: ImageVector, label: String, modifier: Modifier = Modifier) {
+  Column(
+    modifier = modifier
+      .clip(RoundedCornerShape(12.dp))
+      .background(Color.White.copy(alpha = 0.08f))
+      .padding(vertical = 10.dp),
+    horizontalAlignment = Alignment.CenterHorizontally
+  ) {
+    Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+    Spacer(modifier = Modifier.height(4.dp))
+    Text(label, color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WidgetsScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeWidgets() }
+  var showBottomSheet by remember { mutableStateOf(false) }
+  var addedMessage by remember { mutableStateOf(false) }
+
+  Scaffold(
+    containerColor = Color(0xFF262626),
+    topBar = {
+      TopAppBar(
+        title = { Text("Widget") },
+        navigationIcon = {
+          IconButton(onClick = { viewModel.closeWidgets() }) {
+            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+          }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF262626))
+      )
+    }
+  ) { padding ->
+    Column(
+      modifier = Modifier
+        .padding(padding)
+        .padding(20.dp)
+    ) {
+      Card(
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+      ) {
+        WidgetMockPreview(
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(20.dp)
+            .height(140.dp)
+        )
+
+        Text(
+          text = "Get quick access to chat, imagine and voice with ChatGiZa",
+          color = Color.White,
+          fontSize = 18.sp,
+          textAlign = TextAlign.Center,
+          modifier = Modifier.fillMaxWidth().padding(20.dp)
+        )
+      }
+
+      Spacer(modifier = Modifier.height(12.dp))
+
+      Card(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clickable { showBottomSheet = true },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+      ) {
+        Row(
+          modifier = Modifier.padding(20.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Icon(Icons.Filled.AddToHomeScreen, contentDescription = null, tint = Color.White)
+          Spacer(modifier = Modifier.width(16.dp))
+          Text("Add Widget", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        }
+      }
+
+      if (addedMessage) {
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+          "Home-screen widgets are coming soon — this preview shows what it'll look like.",
+          color = Color(0xFFA8A8A8),
+          fontSize = 13.sp
+        )
+      }
+    }
+  }
+
+  if (showBottomSheet) {
+    ModalBottomSheet(
+      onDismissRequest = { showBottomSheet = false },
+      containerColor = Color(0xFF2F2F2F)
+    ) {
+      Text(
+        "Add to Desktop",
+        color = Color.White,
+        fontSize = 28.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(24.dp)
+      )
+
+      Text(
+        "ChatGiZa",
+        color = Color.White,
+        fontSize = 24.sp,
+        modifier = Modifier.align(Alignment.CenterHorizontally)
+      )
+
+      Text(
+        "Quick access to ChatGiZa features",
+        color = Color(0xFFA8A8A8),
+        modifier = Modifier.align(Alignment.CenterHorizontally)
+      )
+
+      WidgetMockPreview(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(24.dp)
+          .height(220.dp)
+      )
+
+      Button(
+        onClick = {
+          showBottomSheet = false
+          addedMessage = true
+        },
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(24.dp)
+          .height(56.dp),
+        shape = RoundedCornerShape(28.dp)
+      ) {
+        Text("Add")
+      }
+    }
+  }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AccountScreen(viewModel: ChatViewModel) {
@@ -1997,7 +2172,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
       SettingsSectionHeader("App")
       SettingsMenuRow("Appearance") { viewModel.openAppearance() }
       SettingsMenuRow("Haptics")
-      SettingsMenuRow("Widgets")
+      SettingsMenuRow("Widgets") { viewModel.openWidgets() }
       SettingsMenuRow("App Language")
       SettingsMenuRow("Advanced")
 
