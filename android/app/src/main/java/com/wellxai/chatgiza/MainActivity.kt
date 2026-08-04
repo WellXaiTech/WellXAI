@@ -65,18 +65,18 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.outlined.ModeEdit
+import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -283,7 +283,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
         },
         actions = {
           IconButton(onClick = { viewModel.openAccount() }) {
-            Icon(Icons.Filled.Edit, contentDescription = "Account", tint = colorScheme.onBackground)
+            Icon(Icons.Outlined.ModeEdit, contentDescription = "Account", tint = colorScheme.onBackground)
           }
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
@@ -410,7 +410,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
                 .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
               if (viewModel.activeTool == null) {
-                Icon(Icons.Filled.Bolt, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(18.dp))
+                Icon(Icons.Outlined.Bolt, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.size(6.dp))
               }
               Text(viewModel.activeTool?.let { TOOL_LABELS[it] } ?: "GiZa Pro", color = colorScheme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
@@ -418,7 +418,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             }
             Spacer(modifier = Modifier.weight(1f))
             IconButton(onClick = { launchSpeech(autoSend = false) }) {
-              Icon(Icons.Filled.Mic, contentDescription = "Voice input", tint = colorScheme.onBackground)
+              Icon(Icons.Outlined.Mic, contentDescription = "Voice input", tint = colorScheme.onBackground)
             }
             Spacer(modifier = Modifier.size(4.dp))
             Button(
@@ -461,7 +461,7 @@ private fun ImagineScreen(viewModel: ChatViewModel) {
         },
         actions = {
           IconButton(onClick = { viewModel.openAccount() }) {
-            Icon(Icons.Filled.Edit, contentDescription = "Account", tint = colorScheme.onBackground)
+            Icon(Icons.Outlined.ModeEdit, contentDescription = "Account", tint = colorScheme.onBackground)
           }
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
@@ -579,7 +579,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             contentColor = colorScheme.onBackground
           )
         ) {
-          Icon(Icons.Filled.Edit, contentDescription = "New chat")
+          Icon(Icons.Outlined.ModeEdit, contentDescription = "New chat")
         }
       }
     }
@@ -632,7 +632,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             .background(colorScheme.onBackground.copy(alpha = 0.1f)),
           contentAlignment = Alignment.Center
         ) {
-          Icon(Icons.Filled.Schedule, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp))
+          Icon(Icons.Outlined.Schedule, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp))
         }
         Spacer(modifier = Modifier.size(12.dp))
         Text("Automations", color = colorScheme.onBackground, fontSize = 15.sp)
@@ -721,7 +721,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             })
             .padding(vertical = 14.dp)
         ) {
-          Icon(Icons.Filled.Delete, contentDescription = null, tint = Color(0xFFFF6B6B))
+          Icon(Icons.Outlined.DeleteOutline, contentDescription = null, tint = Color(0xFFFF6B6B))
           Spacer(modifier = Modifier.size(16.dp))
           Text("Delete", color = Color(0xFFFF6B6B), fontSize = 16.sp)
         }
@@ -736,7 +736,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             })
             .padding(vertical = 14.dp)
         ) {
-          Icon(Icons.Filled.Edit, contentDescription = null, tint = colorScheme.onBackground)
+          Icon(Icons.Outlined.ModeEdit, contentDescription = null, tint = colorScheme.onBackground)
           Spacer(modifier = Modifier.size(16.dp))
           Text("Rename", color = colorScheme.onBackground, fontSize = 16.sp)
         }
@@ -750,7 +750,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             })
             .padding(vertical = 14.dp)
         ) {
-          Icon(Icons.Filled.PushPin, contentDescription = null, tint = colorScheme.onBackground)
+          Icon(Icons.Outlined.PushPin, contentDescription = null, tint = colorScheme.onBackground)
           Spacer(modifier = Modifier.size(16.dp))
           Text(if (sheetConvo.pinned) "Unpin" else "Pin", color = colorScheme.onBackground, fontSize = 16.sp)
         }
@@ -825,7 +825,7 @@ private fun HistoryRow(convo: ApiConversation, onClick: () -> Unit, onMenuClick:
       Row(verticalAlignment = Alignment.CenterVertically) {
         if (convo.pinned) {
           Icon(
-            Icons.Filled.PushPin,
+            Icons.Outlined.PushPin,
             contentDescription = "Pinned",
             tint = colorScheme.onBackground.copy(alpha = 0.6f),
             modifier = Modifier.size(14.dp)
@@ -1103,7 +1103,7 @@ private fun ProjectsScreen(viewModel: ChatViewModel) {
             ) {
               Text(project.name, color = colorScheme.onBackground, fontSize = 15.sp)
               IconButton(onClick = { viewModel.deleteProject(project.id) }) {
-                Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = colorScheme.onBackground.copy(alpha = 0.6f))
+                Icon(Icons.Outlined.DeleteOutline, contentDescription = "Delete", tint = colorScheme.onBackground.copy(alpha = 0.6f))
               }
             }
           }
@@ -1175,7 +1175,7 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
                 )
               }
               IconButton(onClick = { viewModel.deleteScheduledTask(task.id) }) {
-                Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = colorScheme.onBackground.copy(alpha = 0.6f))
+                Icon(Icons.Outlined.DeleteOutline, contentDescription = "Delete", tint = colorScheme.onBackground.copy(alpha = 0.6f))
               }
             }
           }
