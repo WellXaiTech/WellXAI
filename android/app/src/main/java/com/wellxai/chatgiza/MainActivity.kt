@@ -434,11 +434,11 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
   }
 
   Card(
-    modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 12.dp),
+    modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 10.dp),
     shape = RoundedCornerShape(24.dp),
     colors = CardDefaults.cardColors(containerColor = colorScheme.onBackground.copy(alpha = 0.06f))
   ) {
-    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)) {
       TextField(
         value = viewModel.input,
         onValueChange = viewModel::onInputChange,
@@ -512,9 +512,9 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
               ),
               contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
             ) {
-              Icon(Icons.Filled.GraphicEq, contentDescription = null, modifier = Modifier.size(16.dp))
+              Icon(Icons.Filled.GraphicEq, contentDescription = null, modifier = Modifier.size(18.dp))
               Spacer(modifier = Modifier.size(6.dp))
-              Text("Speak", fontSize = 13.sp, maxLines = 1, softWrap = false)
+              Text("Speak", fontSize = 14.sp, maxLines = 1, softWrap = false)
             }
           }
           DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
