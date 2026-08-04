@@ -465,49 +465,56 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
         }
       } else {
         Box {
-          Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
+          Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             FilledIconButton(
               onClick = { toolMenuOpen = true },
+              modifier = Modifier.size(36.dp),
               colors = IconButtonDefaults.filledIconButtonColors(
                 containerColor = colorScheme.onBackground.copy(alpha = 0.1f),
                 contentColor = colorScheme.onBackground
               )
             ) {
-              Icon(Icons.Filled.Add, contentDescription = "Tools")
+              Icon(Icons.Filled.Add, contentDescription = "Tools", modifier = Modifier.size(18.dp))
             }
-            Spacer(modifier = Modifier.size(8.dp))
+            Spacer(modifier = Modifier.size(6.dp))
             Row(
               verticalAlignment = Alignment.CenterVertically,
               modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(18.dp))
                 .background(colorScheme.onBackground.copy(alpha = 0.08f))
                 .clickable(onClick = { toolMenuOpen = true })
-                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
               if (viewModel.activeTool == null) {
-                Icon(Icons.Outlined.Bolt, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.size(6.dp))
+                Icon(Icons.Outlined.Bolt, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.size(4.dp))
               }
-              Text(viewModel.activeTool?.let { TOOL_LABELS[it] } ?: "GiZa Pro", color = colorScheme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-              Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = colorScheme.onBackground)
+              Text(
+                viewModel.activeTool?.let { TOOL_LABELS[it] } ?: "GiZa Pro",
+                color = colorScheme.onBackground,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1
+              )
+              Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(18.dp))
             }
             Spacer(modifier = Modifier.weight(1f))
-            IconButton(onClick = { launchSpeech(autoSend = false) }) {
-              Icon(Icons.Outlined.Mic, contentDescription = "Voice input", tint = colorScheme.onBackground)
+            IconButton(onClick = { launchSpeech(autoSend = false) }, modifier = Modifier.size(36.dp)) {
+              Icon(Icons.Outlined.Mic, contentDescription = "Voice input", tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
             }
-            Spacer(modifier = Modifier.size(4.dp))
+            Spacer(modifier = Modifier.size(6.dp))
             Button(
               onClick = { launchSpeech(autoSend = true) },
-              shape = RoundedCornerShape(20.dp),
+              shape = RoundedCornerShape(18.dp),
               colors = ButtonDefaults.buttonColors(
                 containerColor = colorScheme.onBackground,
                 contentColor = colorScheme.background
               ),
-              contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+              contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
             ) {
               Icon(Icons.Filled.GraphicEq, contentDescription = null, modifier = Modifier.size(16.dp))
               Spacer(modifier = Modifier.size(6.dp))
-              Text("Speak", fontSize = 13.sp)
+              Text("Speak", fontSize = 13.sp, maxLines = 1, softWrap = false)
             }
           }
           DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
