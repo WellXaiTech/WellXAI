@@ -29,7 +29,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -67,6 +69,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -75,6 +78,7 @@ import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
+import coil.compose.AsyncImage
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.launch
@@ -106,6 +110,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Projects -> ProjectsScreen(viewModel)
             is AppScreen.Scheduled -> ScheduledScreen(viewModel)
             is AppScreen.Billing -> BillingScreen(viewModel)
+            is AppScreen.Imagine -> ImagineScreen(viewModel)
           }
         }
       }
@@ -203,6 +208,24 @@ private val TOOL_LABELS = mapOf(
   "deep_think" to "Deep Think"
 )
 
+@Composable
+private fun AskImagineTabs(current: String, onAsk: () -> Unit, onImagine: () -> Unit) {
+  Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+    Text(
+      "Ask",
+      fontWeight = if (current == "Ask") FontWeight.Bold else FontWeight.Normal,
+      color = colorScheme.onBackground.copy(alpha = if (current == "Ask") 1f else 0.5f),
+      modifier = Modifier.clickable(onClick = onAsk)
+    )
+    Text(
+      "Imagine",
+      fontWeight = if (current == "Imagine") FontWeight.Bold else FontWeight.Normal,
+      color = colorScheme.onBackground.copy(alpha = if (current == "Imagine") 1f else 0.5f),
+      modifier = Modifier.clickable(onClick = onImagine)
+    )
+  }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChatScreenUi(viewModel: ChatViewModel) {
@@ -218,7 +241,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
   Scaffold(
     topBar = {
       TopAppBar(
-        title = { Text("ChatGiZa", fontWeight = FontWeight.Bold) },
+        title = { AskImagineTabs(current = "Ask", onAsk = {}, onImagine = { viewModel.openImagine() }) },
         navigationIcon = {
           IconButton(onClick = { viewModel.openHistory() }) {
             Icon(Icons.Filled.Menu, contentDescription = "History", tint = colorScheme.onBackground)
@@ -227,12 +250,6 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
         actions = {
           IconButton(onClick = { viewModel.openAccount() }) {
             Icon(Icons.Filled.Person, contentDescription = "Account", tint = colorScheme.onBackground)
-          }
-          IconButton(onClick = { showGreeting = true; viewModel.newChat() }) {
-            Icon(Icons.Filled.Edit, contentDescription = "New chat", tint = colorScheme.onBackground)
-          }
-          TextButton(onClick = { viewModel.signOut() }) {
-            Text("Sign out")
           }
         }
       )
@@ -293,16 +310,32 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
 @Composable
 private fun ChatComposerCard(viewModel: ChatViewModel, onSend: () -> Unit) {
   var toolMenuOpen by remember { mutableStateOf(false) }
+  var pendingAutoSend by remember { mutableStateOf(false) }
 
   val speechLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+    val autoSend = pendingAutoSend
+    pendingAutoSend = false
     if (result.resultCode == Activity.RESULT_OK) {
       val transcript = result.data
         ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
         ?.firstOrNull()
       if (!transcript.isNullOrBlank()) {
-        viewModel.onInputChange(if (viewModel.input.isBlank()) transcript else "${viewModel.input} $transcript")
+        val combined = if (viewModel.input.isBlank()) transcript else "${viewModel.input} $transcript"
+        viewModel.onInputChange(combined)
+        if (autoSend) {
+          onSend()
+          viewModel.sendMessage()
+        }
       }
     }
+  }
+
+  fun launchSpeech(autoSend: Boolean) {
+    pendingAutoSend = autoSend
+    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+      putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+    }
+    runCatching { speechLauncher.launch(intent) }
   }
 
   Card(
@@ -323,35 +356,52 @@ private fun ChatComposerCard(viewModel: ChatViewModel, onSend: () -> Unit) {
           focusedIndicatorColor = Color.Transparent
         )
       )
-      Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
-        Box {
-          TextButton(onClick = { toolMenuOpen = true }) {
-            Text(viewModel.activeTool?.let { TOOL_LABELS[it] } ?: "GiZa 5.6")
-            Icon(Icons.Filled.ArrowDropDown, contentDescription = null)
-          }
-          DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
-            DropdownMenuItem(text = { Text("GiZa 5.6") }, onClick = { viewModel.selectTool(null); toolMenuOpen = false })
-            DropdownMenuItem(text = { Text("Web search") }, onClick = { viewModel.selectTool("web_search"); toolMenuOpen = false })
-            DropdownMenuItem(text = { Text("Deep research") }, onClick = { viewModel.selectTool("deep_research"); toolMenuOpen = false })
-            DropdownMenuItem(text = { Text("Deep Think") }, onClick = { viewModel.selectTool("deep_think"); toolMenuOpen = false })
-          }
-        }
-        Spacer(modifier = Modifier.weight(1f))
-        if (viewModel.input.isNotBlank()) {
+      if (viewModel.input.isNotBlank()) {
+        Row(
+          horizontalArrangement = Arrangement.End,
+          modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
+        ) {
           IconButton(
             onClick = { onSend(); viewModel.sendMessage() },
             enabled = !viewModel.sending
           ) {
             Icon(Icons.Filled.Send, contentDescription = "Send", tint = colorScheme.onBackground)
           }
-        } else {
-          IconButton(onClick = {
-            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-              putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+        }
+      } else {
+        Box {
+          Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
+            IconButton(onClick = { toolMenuOpen = true }) {
+              Icon(Icons.Filled.Add, contentDescription = "Tools", tint = colorScheme.onBackground)
             }
-            runCatching { speechLauncher.launch(intent) }
-          }) {
-            Text("🎙", fontSize = 18.sp)
+            TextButton(onClick = { toolMenuOpen = true }) {
+              Text(viewModel.activeTool?.let { TOOL_LABELS[it] } ?: "GiZa Pro")
+              Icon(Icons.Filled.ArrowDropDown, contentDescription = null)
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            IconButton(onClick = { launchSpeech(autoSend = false) }) {
+              Text("🎙", fontSize = 18.sp)
+            }
+            Spacer(modifier = Modifier.size(4.dp))
+            Button(
+              onClick = { launchSpeech(autoSend = true) },
+              shape = RoundedCornerShape(20.dp),
+              colors = ButtonDefaults.buttonColors(
+                containerColor = colorScheme.onBackground,
+                contentColor = colorScheme.background
+              ),
+              contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+            ) {
+              Text("🔊", fontSize = 14.sp)
+              Spacer(modifier = Modifier.size(6.dp))
+              Text("Speak", fontSize = 13.sp)
+            }
+          }
+          DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
+            DropdownMenuItem(text = { Text("GiZa Pro") }, onClick = { viewModel.selectTool(null); toolMenuOpen = false })
+            DropdownMenuItem(text = { Text("Web search") }, onClick = { viewModel.selectTool("web_search"); toolMenuOpen = false })
+            DropdownMenuItem(text = { Text("Deep research") }, onClick = { viewModel.selectTool("deep_research"); toolMenuOpen = false })
+            DropdownMenuItem(text = { Text("Deep Think") }, onClick = { viewModel.selectTool("deep_think"); toolMenuOpen = false })
           }
         }
       }
@@ -361,11 +411,83 @@ private fun ChatComposerCard(viewModel: ChatViewModel, onSend: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HistoryScreen(viewModel: ChatViewModel) {
+private fun ImagineScreen(viewModel: ChatViewModel) {
   Scaffold(
     topBar = {
       TopAppBar(
-        title = { Text("History", fontWeight = FontWeight.Bold) },
+        title = { AskImagineTabs(current = "Imagine", onAsk = { viewModel.closeImagine() }, onImagine = {}) },
+        navigationIcon = {
+          IconButton(onClick = { viewModel.openHistory() }) {
+            Icon(Icons.Filled.Menu, contentDescription = "History", tint = colorScheme.onBackground)
+          }
+        },
+        actions = {
+          IconButton(onClick = { viewModel.openAccount() }) {
+            Icon(Icons.Filled.Person, contentDescription = "Account", tint = colorScheme.onBackground)
+          }
+        }
+      )
+    },
+    containerColor = Color.Transparent
+  ) { padding ->
+    Column(
+      modifier = Modifier.fillMaxSize().padding(padding).padding(20.dp),
+      horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+      Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+        when {
+          viewModel.generatingImage -> CircularProgressIndicator(color = colorScheme.onBackground)
+          viewModel.generatedImageUrl != null -> AsyncImage(
+            model = viewModel.generatedImageUrl,
+            contentDescription = viewModel.imaginePrompt,
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+          )
+          else -> Text(
+            "Describe what you'd like to see.",
+            color = colorScheme.onBackground.copy(alpha = 0.5f),
+            fontSize = 15.sp
+          )
+        }
+      }
+      if (viewModel.imagineError != null) {
+        Text(viewModel.imagineError ?: "", color = Color(0xFFFF6B6B), fontSize = 12.sp)
+        Spacer(modifier = Modifier.height(8.dp))
+      }
+      Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        OutlinedTextField(
+          value = viewModel.imaginePrompt,
+          onValueChange = viewModel::onImaginePromptChange,
+          modifier = Modifier.weight(1f),
+          placeholder = { Text("A logo for a coffee shop…") },
+          shape = RoundedCornerShape(24.dp)
+        )
+        Spacer(modifier = Modifier.size(8.dp))
+        IconButton(
+          onClick = { viewModel.generateImage() },
+          enabled = viewModel.imaginePrompt.isNotBlank() && !viewModel.generatingImage
+        ) {
+          Icon(Icons.Filled.Send, contentDescription = "Generate", tint = colorScheme.onBackground)
+        }
+      }
+    }
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HistoryScreen(viewModel: ChatViewModel) {
+  var searchOpen by remember { mutableStateOf(false) }
+  val query = viewModel.historySearchQuery.trim()
+  val visibleConversations = if (query.isEmpty()) {
+    viewModel.conversations
+  } else {
+    viewModel.conversations.filter { it.title.contains(query, ignoreCase = true) }
+  }
+
+  Scaffold(
+    topBar = {
+      TopAppBar(
+        title = { Text("Menu", fontWeight = FontWeight.Bold) },
         navigationIcon = {
           IconButton(onClick = { viewModel.closeHistory() }) {
             Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
@@ -373,24 +495,114 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
         }
       )
     },
-    containerColor = Color.Transparent
+    containerColor = Color.Transparent,
+    bottomBar = {
+      Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceAround,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        IconButton(onClick = { searchOpen = !searchOpen }) {
+          Text("🔍", fontSize = 18.sp)
+        }
+        IconButton(onClick = { viewModel.openSettings() }) {
+          Text("⚙", fontSize = 18.sp, color = colorScheme.onBackground)
+        }
+        IconButton(onClick = { viewModel.newChat() }) {
+          Icon(Icons.Filled.Edit, contentDescription = "New chat", tint = colorScheme.onBackground)
+        }
+      }
+    }
   ) { padding ->
     Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clickable(onClick = { viewModel.openAccount() })
+          .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        if (viewModel.userImage != null) {
+          AsyncImage(
+            model = viewModel.userImage,
+            contentDescription = "Profile",
+            modifier = Modifier.size(40.dp).clip(CircleShape)
+          )
+        } else {
+          Icon(
+            Icons.Filled.Person,
+            contentDescription = "Profile",
+            tint = colorScheme.onBackground,
+            modifier = Modifier.size(40.dp)
+          )
+        }
+        Spacer(modifier = Modifier.size(12.dp))
+        Column {
+          Text(viewModel.userName ?: "", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+          if (viewModel.userEmail != null) {
+            Text(viewModel.userEmail ?: "", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 12.sp)
+          }
+        }
+      }
+
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clickable(onClick = { viewModel.openScheduled() })
+          .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Text("Automations", color = colorScheme.onBackground, fontSize = 15.sp)
+      }
+
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(horizontal = 16.dp, vertical = 8.dp)
+          .clip(RoundedCornerShape(16.dp))
+          .background(colorScheme.onBackground.copy(alpha = 0.1f))
+          .clickable(onClick = { viewModel.openBilling() })
+          .padding(horizontal = 16.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Text("Save 66% on GiZa Pro Plan", color = colorScheme.onBackground, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text("Claim Offer", color = colorScheme.onBackground, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+      }
+
+      if (searchOpen) {
+        OutlinedTextField(
+          value = viewModel.historySearchQuery,
+          onValueChange = viewModel::onHistorySearchQueryChange,
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+          placeholder = { Text("Search conversations") },
+          shape = RoundedCornerShape(24.dp)
+        )
+      }
+
+      Text(
+        "Conversations",
+        color = colorScheme.onBackground.copy(alpha = 0.5f),
+        fontSize = 12.sp,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+      )
+
       if (viewModel.loadingHistory) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
           CircularProgressIndicator(color = colorScheme.onBackground)
         }
-      } else if (viewModel.conversations.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+      } else if (visibleConversations.isEmpty()) {
+        Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
           Text(
-            "No conversations yet.",
+            if (query.isEmpty()) "No conversations yet." else "No matches.",
             color = colorScheme.onBackground.copy(alpha = 0.6f),
             fontSize = 16.sp
           )
         }
       } else {
-        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 8.dp)) {
-          items(viewModel.conversations, key = { it.id }) { convo ->
+        LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(vertical = 8.dp)) {
+          items(visibleConversations, key = { it.id }) { convo ->
             HistoryRow(convo) { viewModel.selectConversation(convo.id) }
           }
         }
@@ -497,6 +709,13 @@ private fun AccountScreen(viewModel: ChatViewModel) {
       AccountLinkRow("Projects") { viewModel.openProjects() }
       AccountLinkRow("Automations", "Scheduled messages") { viewModel.openScheduled() }
       AccountLinkRow("Billing", "Plan and payment") { viewModel.openBilling() }
+
+      Spacer(modifier = Modifier.height(12.dp))
+      HorizontalDivider(color = colorScheme.onBackground.copy(alpha = 0.1f))
+      Spacer(modifier = Modifier.height(8.dp))
+      TextButton(onClick = { viewModel.signOut() }) {
+        Text("Sign out", color = Color(0xFFFF6B6B))
+      }
     }
   }
 }

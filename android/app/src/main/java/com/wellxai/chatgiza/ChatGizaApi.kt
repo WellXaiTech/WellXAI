@@ -303,6 +303,27 @@ object ChatGizaApi {
     }
   }
 
+  suspend fun generateImage(token: String, prompt: String): ApiResult<String> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject().put("prompt", prompt).toString().toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/image")
+        .header("Authorization", "Bearer $token")
+        .post(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val url = JSONObject(text).optString("url", "")
+        if (url.isEmpty()) ApiResult.Failure("No image returned") else ApiResult.Success(url)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
   suspend fun getSettings(token: String): ApiResult<SettingsData> = withContext(Dispatchers.IO) {
     try {
       val request = Request.Builder()
