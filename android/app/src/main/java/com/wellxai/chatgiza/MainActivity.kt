@@ -196,11 +196,20 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun ChatGizaTheme(content: @Composable () -> Unit) {
+  val appBackground = Color(0xFF262626)
   val colors = darkColorScheme(
-    background = Color.Black,
-    surface = Color(0xFF111111),
+    background = appBackground,
+    surface = appBackground,
+    surfaceVariant = appBackground,
+    surfaceContainer = appBackground,
+    surfaceContainerHigh = appBackground,
+    surfaceContainerHighest = appBackground,
+    surfaceContainerLow = appBackground,
+    surfaceContainerLowest = appBackground,
+    surfaceTint = appBackground,
     onBackground = Color.White,
     onSurface = Color.White,
+    onSurfaceVariant = Color.White,
     primary = Color.White,
     onPrimary = Color.Black
   )
