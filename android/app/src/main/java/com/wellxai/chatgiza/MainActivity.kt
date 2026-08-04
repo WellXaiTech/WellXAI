@@ -289,19 +289,56 @@ private fun WaveformIcon(tint: Color, modifier: Modifier = Modifier) {
 }
 
 @Composable
+private fun AskImagineTab(label: String, selected: Boolean, onClick: () -> Unit) {
+  Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(onClick = onClick)) {
+    Text(
+      label,
+      fontSize = 20.sp,
+      fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+      color = colorScheme.onBackground.copy(alpha = if (selected) 1f else 0.5f)
+    )
+    Spacer(modifier = Modifier.height(6.dp))
+    Box(
+      modifier = Modifier
+        .width(20.dp)
+        .height(3.dp)
+        .clip(RoundedCornerShape(2.dp))
+        .background(if (selected) colorScheme.onBackground.copy(alpha = 0.5f) else Color.Transparent)
+    )
+  }
+}
+
+@Composable
 private fun AskImagineTabs(current: String, onAsk: () -> Unit, onImagine: () -> Unit) {
   Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-    Text(
-      "Ask",
-      fontWeight = if (current == "Ask") FontWeight.Bold else FontWeight.Normal,
-      color = colorScheme.onBackground.copy(alpha = if (current == "Ask") 1f else 0.5f),
-      modifier = Modifier.clickable(onClick = onAsk)
+    AskImagineTab("Ask", current == "Ask", onAsk)
+    AskImagineTab("Imagine", current == "Imagine", onImagine)
+  }
+}
+
+@Composable
+private fun ComposeIcon(tint: Color, modifier: Modifier = Modifier) {
+  Canvas(modifier = modifier.size(22.dp)) {
+    val w = size.width
+    val h = size.height
+    val strokeW = w * 0.08f
+    val squareSize = w * 0.68f
+    drawRoundRect(
+      color = tint,
+      topLeft = Offset(w * 0.06f, h * 0.32f),
+      size = Size(squareSize, squareSize),
+      cornerRadius = CornerRadius(squareSize * 0.22f, squareSize * 0.22f),
+      style = Stroke(width = strokeW)
     )
-    Text(
-      "Imagine",
-      fontWeight = if (current == "Imagine") FontWeight.Bold else FontWeight.Normal,
-      color = colorScheme.onBackground.copy(alpha = if (current == "Imagine") 1f else 0.5f),
-      modifier = Modifier.clickable(onClick = onImagine)
+    val tipStart = Offset(w * 0.5f, h * 0.42f)
+    val tipEnd = Offset(w * 0.92f, h * 0.0f)
+    drawLine(color = tint, start = tipStart, end = tipEnd, strokeWidth = strokeW, cap = StrokeCap.Round)
+    drawLine(
+      color = tint,
+      start = tipEnd,
+      end = Offset(tipEnd.x - w * 0.18f, tipEnd.y + h * 0.02f),
+      strokeWidth = strokeW * 0.7f,
+      cap = StrokeCap.Round
     )
   }
 }
@@ -329,7 +366,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
         },
         actions = {
           IconButton(onClick = { viewModel.openAccount() }) {
-            Icon(Icons.Filled.Person, contentDescription = "Account", tint = colorScheme.onBackground)
+            ComposeIcon(tint = colorScheme.onBackground)
           }
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
@@ -511,7 +548,7 @@ private fun ImagineScreen(viewModel: ChatViewModel) {
         },
         actions = {
           IconButton(onClick = { viewModel.openAccount() }) {
-            Icon(Icons.Filled.Person, contentDescription = "Account", tint = colorScheme.onBackground)
+            ComposeIcon(tint = colorScheme.onBackground)
           }
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
