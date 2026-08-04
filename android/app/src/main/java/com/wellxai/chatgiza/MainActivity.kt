@@ -123,8 +123,13 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -1750,11 +1755,19 @@ private fun MessageBubble(message: UiMessage, onSpeak: () -> Unit) {
           )
           .padding(horizontal = 14.dp, vertical = 10.dp)
       ) {
-        Text(
-          text = message.content.ifEmpty { "…" },
-          color = colorScheme.onBackground,
-          fontSize = 15.sp
-        )
+        if (isUser) {
+          Text(
+            text = message.content.ifEmpty { "…" },
+            color = colorScheme.onBackground,
+            fontSize = 15.sp
+          )
+        } else {
+          MarkdownText(
+            text = message.content.ifEmpty { "…" },
+            baseColor = colorScheme.onBackground,
+            fontSize = 15.sp
+          )
+        }
       }
     }
     if (!isUser && message.content.isNotBlank()) {
@@ -1765,6 +1778,147 @@ private fun MessageBubble(message: UiMessage, onSpeak: () -> Unit) {
           tint = colorScheme.onBackground.copy(alpha = 0.5f),
           modifier = Modifier.size(18.dp)
         )
+      }
+    }
+  }
+}
+
+// Lightweight Markdown renderer matching the subset the website's
+// react-markdown + remark-gfm renders for assistant replies (headings,
+// bold/italic, inline code, bullet/numbered lists, fenced code blocks) so
+// AI output looks the same on both surfaces instead of showing raw syntax.
+private sealed class MdBlock {
+  data class Heading(val level: Int, val text: String) : MdBlock()
+  data class Paragraph(val text: String) : MdBlock()
+  data class Bullet(val text: String) : MdBlock()
+  data class Numbered(val index: String, val text: String) : MdBlock()
+  data class CodeBlock(val code: String) : MdBlock()
+}
+
+private fun parseMarkdownBlocks(source: String): List<MdBlock> {
+  val blocks = mutableListOf<MdBlock>()
+  val lines = source.split("\n")
+  val paragraphBuffer = StringBuilder()
+  fun flushParagraph() {
+    if (paragraphBuffer.isNotBlank()) blocks.add(MdBlock.Paragraph(paragraphBuffer.toString().trim()))
+    paragraphBuffer.clear()
+  }
+  var i = 0
+  val numberedRegex = Regex("^(\\d+)\\.\\s+(.*)$")
+  while (i < lines.size) {
+    val trimmed = lines[i].trim()
+    val numberedMatch = numberedRegex.find(trimmed)
+    when {
+      trimmed.startsWith("```") -> {
+        flushParagraph()
+        val code = StringBuilder()
+        i++
+        while (i < lines.size && !lines[i].trim().startsWith("```")) {
+          code.append(lines[i]).append("\n")
+          i++
+        }
+        blocks.add(MdBlock.CodeBlock(code.toString().trimEnd()))
+      }
+      trimmed.startsWith("### ") -> { flushParagraph(); blocks.add(MdBlock.Heading(3, trimmed.removePrefix("### "))) }
+      trimmed.startsWith("## ") -> { flushParagraph(); blocks.add(MdBlock.Heading(2, trimmed.removePrefix("## "))) }
+      trimmed.startsWith("# ") -> { flushParagraph(); blocks.add(MdBlock.Heading(1, trimmed.removePrefix("# "))) }
+      trimmed.startsWith("- ") || trimmed.startsWith("* ") -> { flushParagraph(); blocks.add(MdBlock.Bullet(trimmed.drop(2))) }
+      numberedMatch != null -> {
+        flushParagraph()
+        blocks.add(MdBlock.Numbered(numberedMatch.groupValues[1], numberedMatch.groupValues[2]))
+      }
+      trimmed.isEmpty() -> flushParagraph()
+      else -> {
+        if (paragraphBuffer.isNotEmpty()) paragraphBuffer.append(" ")
+        paragraphBuffer.append(trimmed)
+      }
+    }
+    i++
+  }
+  flushParagraph()
+  return blocks
+}
+
+private fun inlineMarkdown(raw: String) = buildAnnotatedString {
+  var idx = 0
+  val len = raw.length
+  while (idx < len) {
+    when {
+      raw.startsWith("**", idx) -> {
+        val end = raw.indexOf("**", idx + 2)
+        if (end == -1) {
+          append(raw.substring(idx)); idx = len
+        } else {
+          withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(raw.substring(idx + 2, end)) }
+          idx = end + 2
+        }
+      }
+      raw.startsWith("`", idx) -> {
+        val end = raw.indexOf("`", idx + 1)
+        if (end == -1) {
+          append(raw.substring(idx)); idx = len
+        } else {
+          withStyle(
+            SpanStyle(fontFamily = FontFamily.Monospace, background = Color.White.copy(alpha = 0.1f))
+          ) { append(raw.substring(idx + 1, end)) }
+          idx = end + 1
+        }
+      }
+      raw.startsWith("*", idx) -> {
+        val end = raw.indexOf("*", idx + 1)
+        if (end == -1) {
+          append(raw.substring(idx)); idx = len
+        } else {
+          withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(raw.substring(idx + 1, end)) }
+          idx = end + 1
+        }
+      }
+      else -> {
+        append(raw[idx]); idx++
+      }
+    }
+  }
+}
+
+@Composable
+private fun MarkdownText(
+  text: String,
+  baseColor: Color,
+  fontSize: TextUnit,
+  modifier: Modifier = Modifier
+) {
+  val blocks = remember(text) { parseMarkdownBlocks(text) }
+  Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    for (block in blocks) {
+      when (block) {
+        is MdBlock.Heading -> Text(
+          text = inlineMarkdown(block.text),
+          color = baseColor,
+          fontWeight = FontWeight.Bold,
+          fontSize = when (block.level) {
+            1 -> fontSize * 1.3f
+            2 -> fontSize * 1.2f
+            else -> fontSize * 1.1f
+          }
+        )
+        is MdBlock.Paragraph -> Text(text = inlineMarkdown(block.text), color = baseColor, fontSize = fontSize)
+        is MdBlock.Bullet -> Row {
+          Text("•  ", color = baseColor, fontSize = fontSize)
+          Text(inlineMarkdown(block.text), color = baseColor, fontSize = fontSize, modifier = Modifier.weight(1f))
+        }
+        is MdBlock.Numbered -> Row {
+          Text("${block.index}.  ", color = baseColor, fontSize = fontSize)
+          Text(inlineMarkdown(block.text), color = baseColor, fontSize = fontSize, modifier = Modifier.weight(1f))
+        }
+        is MdBlock.CodeBlock -> Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.White.copy(alpha = 0.06f))
+            .padding(10.dp)
+        ) {
+          Text(block.code, color = baseColor, fontFamily = FontFamily.Monospace, fontSize = fontSize * 0.9f)
+        }
       }
     }
   }
