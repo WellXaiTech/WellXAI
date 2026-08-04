@@ -488,7 +488,6 @@ private fun ImagineScreen(viewModel: ChatViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HistoryScreen(viewModel: ChatViewModel) {
-  var searchOpen by remember { mutableStateOf(false) }
   val query = viewModel.historySearchQuery.trim()
   val visibleConversations = if (query.isEmpty()) {
     viewModel.conversations
@@ -511,13 +510,34 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
     containerColor = Color.Transparent,
     bottomBar = {
       Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceAround,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        IconButton(onClick = { searchOpen = !searchOpen }) {
-          Text("🔍", fontSize = 18.sp)
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          modifier = Modifier
+            .weight(1f)
+            .clip(RoundedCornerShape(24.dp))
+            .background(colorScheme.onBackground.copy(alpha = 0.08f))
+            .padding(horizontal = 16.dp)
+        ) {
+          Text("🔍", fontSize = 15.sp, color = colorScheme.onBackground.copy(alpha = 0.6f))
+          Spacer(modifier = Modifier.size(8.dp))
+          TextField(
+            value = viewModel.historySearchQuery,
+            onValueChange = viewModel::onHistorySearchQueryChange,
+            modifier = Modifier.weight(1f),
+            placeholder = { Text("Search", color = colorScheme.onBackground.copy(alpha = 0.6f)) },
+            singleLine = true,
+            colors = TextFieldDefaults.colors(
+              unfocusedContainerColor = Color.Transparent,
+              focusedContainerColor = Color.Transparent,
+              unfocusedIndicatorColor = Color.Transparent,
+              focusedIndicatorColor = Color.Transparent
+            )
+          )
         }
+        Spacer(modifier = Modifier.size(12.dp))
         IconButton(onClick = { viewModel.openSettings() }) {
           Text("⚙", fontSize = 18.sp, color = colorScheme.onBackground)
         }
@@ -581,16 +601,6 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
       ) {
         Text("Save 66% on GiZa Pro Plan", color = colorScheme.onBackground, fontSize = 13.sp, fontWeight = FontWeight.Medium)
         Text("Claim Offer", color = colorScheme.onBackground, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-      }
-
-      if (searchOpen) {
-        OutlinedTextField(
-          value = viewModel.historySearchQuery,
-          onValueChange = viewModel::onHistorySearchQueryChange,
-          modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-          placeholder = { Text("Search conversations") },
-          shape = RoundedCornerShape(24.dp)
-        )
       }
 
       Text(
