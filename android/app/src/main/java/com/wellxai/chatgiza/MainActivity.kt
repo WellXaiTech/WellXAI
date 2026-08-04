@@ -84,6 +84,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
@@ -269,6 +270,24 @@ private fun MicIcon(tint: Color, modifier: Modifier = Modifier) {
       strokeWidth = strokeW,
       cap = StrokeCap.Round
     )
+  }
+}
+
+@Composable
+private fun BoltIcon(tint: Color, modifier: Modifier = Modifier) {
+  Canvas(modifier = modifier.size(16.dp)) {
+    val w = size.width
+    val h = size.height
+    val path = Path().apply {
+      moveTo(w * 0.55f, 0f)
+      lineTo(w * 0.15f, h * 0.58f)
+      lineTo(w * 0.45f, h * 0.58f)
+      lineTo(w * 0.35f, h)
+      lineTo(w * 0.9f, h * 0.38f)
+      lineTo(w * 0.55f, h * 0.38f)
+      close()
+    }
+    drawPath(path, color = tint)
   }
 }
 
@@ -499,18 +518,29 @@ private fun ChatComposerCard(viewModel: ChatViewModel, onSend: () -> Unit) {
       } else {
         Box {
           Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
-            IconButton(onClick = { toolMenuOpen = true }) {
-              Icon(Icons.Filled.Add, contentDescription = "Tools", tint = colorScheme.onBackground)
+            FilledIconButton(
+              onClick = { toolMenuOpen = true },
+              colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = colorScheme.onBackground.copy(alpha = 0.1f),
+                contentColor = colorScheme.onBackground
+              )
+            ) {
+              Icon(Icons.Filled.Add, contentDescription = "Tools")
             }
+            Spacer(modifier = Modifier.size(8.dp))
             Row(
               verticalAlignment = Alignment.CenterVertically,
               modifier = Modifier
                 .clip(RoundedCornerShape(20.dp))
                 .background(colorScheme.onBackground.copy(alpha = 0.08f))
                 .clickable(onClick = { toolMenuOpen = true })
-                .padding(horizontal = 12.dp, vertical = 6.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
-              Text(viewModel.activeTool?.let { TOOL_LABELS[it] } ?: "GiZa Pro", color = colorScheme.onBackground, fontSize = 14.sp)
+              if (viewModel.activeTool == null) {
+                BoltIcon(tint = colorScheme.onBackground)
+                Spacer(modifier = Modifier.size(6.dp))
+              }
+              Text(viewModel.activeTool?.let { TOOL_LABELS[it] } ?: "GiZa Pro", color = colorScheme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
               Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = colorScheme.onBackground)
             }
             Spacer(modifier = Modifier.weight(1f))
