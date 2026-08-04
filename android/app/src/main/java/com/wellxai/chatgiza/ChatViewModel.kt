@@ -21,6 +21,7 @@ sealed class AppScreen {
   object Scheduled : AppScreen()
   object Billing : AppScreen()
   object Imagine : AppScreen()
+  object LiveVision : AppScreen()
 }
 
 class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
@@ -57,6 +58,14 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeImagine() {
+    screen = AppScreen.Chat
+  }
+
+  fun openLiveVision() {
+    screen = AppScreen.LiveVision
+  }
+
+  fun closeLiveVision() {
     screen = AppScreen.Chat
   }
 

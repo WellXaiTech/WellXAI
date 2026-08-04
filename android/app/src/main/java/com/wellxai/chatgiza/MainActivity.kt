@@ -1,7 +1,12 @@
 package com.wellxai.chatgiza
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.ImageFormat
+import android.graphics.Rect
+import android.graphics.YuvImage
 import android.net.Uri
 import android.os.Bundle
 import android.speech.RecognizerIntent
@@ -10,6 +15,14 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -77,6 +90,7 @@ import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.ModeEdit
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -84,6 +98,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -99,14 +114,17 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
 import coil.compose.AsyncImage
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.launch
 
 private const val GOOGLE_WEB_CLIENT_ID =
@@ -137,6 +155,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Scheduled -> ScheduledScreen(viewModel)
             is AppScreen.Billing -> BillingScreen(viewModel)
             is AppScreen.Imagine -> ImagineScreen(viewModel)
+            is AppScreen.LiveVision -> LiveVisionScreen(viewModel)
           }
         }
       }
@@ -335,6 +354,9 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
           }
         },
         actions = {
+          IconButton(onClick = { viewModel.openLiveVision() }) {
+            Icon(Icons.Outlined.Videocam, contentDescription = "Live Vision", tint = colorScheme.onBackground)
+          }
           IconButton(onClick = { viewModel.openAccount() }) {
             Icon(Icons.Outlined.ModeEdit, contentDescription = "Account", tint = colorScheme.onBackground)
           }
@@ -563,6 +585,148 @@ private fun ImagineScreen(viewModel: ChatViewModel) {
       }
     }
   }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LiveVisionScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeLiveVision() }
+
+  val context = LocalContext.current
+  val lifecycleOwner = LocalLifecycleOwner.current
+  val coroutineScope = rememberCoroutineScope()
+
+  var hasCameraPermission by remember {
+    mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
+  }
+  var hasMicPermission by remember {
+    mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
+  }
+
+  val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+    hasCameraPermission = result[Manifest.permission.CAMERA] ?: hasCameraPermission
+    hasMicPermission = result[Manifest.permission.RECORD_AUDIO] ?: hasMicPermission
+  }
+
+  LaunchedEffect(Unit) {
+    if (!hasCameraPermission || !hasMicPermission) {
+      permissionLauncher.launch(arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO))
+    }
+  }
+
+  val controller = remember { RealtimeVisionController(TokenStore(context.applicationContext), coroutineScope) }
+  val ready = hasCameraPermission && hasMicPermission
+
+  DisposableEffect(ready) {
+    if (ready) controller.start()
+    onDispose { controller.stop() }
+  }
+
+  Scaffold(
+    topBar = {
+      TopAppBar(
+        title = { Text("Live Vision", fontWeight = FontWeight.Bold, color = Color.White) },
+        navigationIcon = {
+          IconButton(onClick = { viewModel.closeLiveVision() }) {
+            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+          }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black.copy(alpha = 0.35f))
+      )
+    },
+    containerColor = Color.Black
+  ) { padding ->
+    Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+      if (ready) {
+        AndroidView(
+          modifier = Modifier.fillMaxSize(),
+          factory = { ctx ->
+            val previewView = PreviewView(ctx)
+            val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+            cameraProviderFuture.addListener({
+              val cameraProvider = cameraProviderFuture.get()
+              val preview = Preview.Builder().build().also {
+                it.setSurfaceProvider(previewView.surfaceProvider)
+              }
+              val analysis = ImageAnalysis.Builder()
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .build()
+              var lastSentAt = 0L
+              analysis.setAnalyzer(ContextCompat.getMainExecutor(ctx)) { imageProxy ->
+                val now = System.currentTimeMillis()
+                if (now - lastSentAt >= 2000) {
+                  lastSentAt = now
+                  runCatching { controller.sendFrame(imageProxyToJpeg(imageProxy)) }
+                }
+                imageProxy.close()
+              }
+              try {
+                cameraProvider.unbindAll()
+                cameraProvider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
+              } catch (_: Exception) {
+                // Camera failed to bind — preview just stays blank rather than crashing.
+              }
+            }, ContextCompat.getMainExecutor(ctx))
+            previewView
+          }
+        )
+
+        val statusText = when {
+          controller.errorMessage != null -> controller.errorMessage ?: ""
+          controller.connectionState == RealtimeVisionController.ConnectionState.Connecting -> "Connecting…"
+          controller.isAiSpeaking -> "ChatGiZa is speaking…"
+          controller.connectionState == RealtimeVisionController.ConnectionState.Listening -> "Listening…"
+          else -> ""
+        }
+        if (statusText.isNotEmpty()) {
+          Box(
+            modifier = Modifier
+              .align(Alignment.BottomCenter)
+              .padding(bottom = 32.dp)
+              .clip(RoundedCornerShape(20.dp))
+              .background(Color.Black.copy(alpha = 0.55f))
+              .padding(horizontal = 20.dp, vertical = 10.dp)
+          ) {
+            Text(statusText, color = Color.White, fontSize = 14.sp)
+          }
+        }
+      } else {
+        Column(
+          modifier = Modifier.fillMaxSize().padding(32.dp),
+          verticalArrangement = Arrangement.Center,
+          horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+          Text(
+            "Live Vision needs camera and microphone access.",
+            color = Color.White,
+            fontSize = 15.sp,
+            textAlign = TextAlign.Center
+          )
+          Spacer(modifier = Modifier.height(16.dp))
+          Button(onClick = { permissionLauncher.launch(arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)) }) {
+            Text("Grant access")
+          }
+        }
+      }
+    }
+  }
+}
+
+private fun imageProxyToJpeg(image: ImageProxy): ByteArray {
+  val yBuffer = image.planes[0].buffer
+  val uBuffer = image.planes[1].buffer
+  val vBuffer = image.planes[2].buffer
+  val ySize = yBuffer.remaining()
+  val uSize = uBuffer.remaining()
+  val vSize = vBuffer.remaining()
+  val nv21 = ByteArray(ySize + uSize + vSize)
+  yBuffer.get(nv21, 0, ySize)
+  vBuffer.get(nv21, ySize, vSize)
+  uBuffer.get(nv21, ySize + vSize, uSize)
+  val yuvImage = YuvImage(nv21, ImageFormat.NV21, image.width, image.height, null)
+  val out = ByteArrayOutputStream()
+  yuvImage.compressToJpeg(Rect(0, 0, image.width, image.height), 70, out)
+  return out.toByteArray()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
