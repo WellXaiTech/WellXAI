@@ -40,9 +40,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -62,7 +64,9 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -521,7 +525,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             .background(colorScheme.onBackground.copy(alpha = 0.08f))
             .padding(horizontal = 16.dp)
         ) {
-          Text("🔍", fontSize = 15.sp, color = colorScheme.onBackground.copy(alpha = 0.6f))
+          Icon(Icons.Filled.Search, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
           Spacer(modifier = Modifier.size(8.dp))
           TextField(
             value = viewModel.historySearchQuery,
@@ -538,11 +542,24 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           )
         }
         Spacer(modifier = Modifier.size(12.dp))
-        IconButton(onClick = { viewModel.openSettings() }) {
-          Text("⚙", fontSize = 18.sp, color = colorScheme.onBackground)
+        FilledIconButton(
+          onClick = { viewModel.openSettings() },
+          colors = IconButtonDefaults.filledIconButtonColors(
+            containerColor = colorScheme.onBackground.copy(alpha = 0.12f),
+            contentColor = colorScheme.onBackground
+          )
+        ) {
+          Icon(Icons.Filled.Settings, contentDescription = "Settings")
         }
-        IconButton(onClick = { viewModel.newChat() }) {
-          Icon(Icons.Filled.Edit, contentDescription = "New chat", tint = colorScheme.onBackground)
+        Spacer(modifier = Modifier.size(8.dp))
+        FilledIconButton(
+          onClick = { viewModel.newChat() },
+          colors = IconButtonDefaults.filledIconButtonColors(
+            containerColor = colorScheme.onBackground.copy(alpha = 0.12f),
+            contentColor = colorScheme.onBackground
+          )
+        ) {
+          Icon(Icons.Filled.Edit, contentDescription = "New chat")
         }
       }
     }
@@ -581,10 +598,23 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
       Row(
         modifier = Modifier
           .fillMaxWidth()
+          .padding(horizontal = 16.dp, vertical = 6.dp)
+          .clip(RoundedCornerShape(16.dp))
+          .background(colorScheme.onBackground.copy(alpha = 0.08f))
           .clickable(onClick = { viewModel.openScheduled() })
-          .padding(horizontal = 16.dp, vertical = 12.dp),
+          .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
+        Box(
+          modifier = Modifier
+            .size(28.dp)
+            .clip(CircleShape)
+            .background(colorScheme.onBackground.copy(alpha = 0.1f)),
+          contentAlignment = Alignment.Center
+        ) {
+          Text("🕐", fontSize = 14.sp)
+        }
+        Spacer(modifier = Modifier.size(12.dp))
         Text("Automations", color = colorScheme.onBackground, fontSize = 15.sp)
       }
 
@@ -593,14 +623,34 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           .fillMaxWidth()
           .padding(horizontal = 16.dp, vertical = 8.dp)
           .clip(RoundedCornerShape(16.dp))
-          .background(colorScheme.onBackground.copy(alpha = 0.1f))
+          .background(Color(0xFF2563EB))
           .clickable(onClick = { viewModel.openBilling() })
-          .padding(horizontal = 16.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+          .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Text("Save 66% on GiZa Pro Plan", color = colorScheme.onBackground, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-        Text("Claim Offer", color = colorScheme.onBackground, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Box(
+          modifier = Modifier
+            .size(28.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.2f)),
+          contentAlignment = Alignment.Center
+        ) {
+          Text("✨", fontSize = 14.sp)
+        }
+        Spacer(modifier = Modifier.size(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+          Text("Save 66% on GiZa Pro", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+          Text("Early access to new features", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
+        }
+        Spacer(modifier = Modifier.size(8.dp))
+        Box(
+          modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+        ) {
+          Text("Claim Offer", color = Color(0xFF2563EB), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        }
       }
 
       Text(
