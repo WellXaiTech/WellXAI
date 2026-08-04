@@ -1283,17 +1283,8 @@ private fun CustomizeScreen(viewModel: ChatViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AccountScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeAccount() }
   Scaffold(
-    topBar = {
-      TopAppBar(
-        title = {},
-        navigationIcon = {
-          IconButton(onClick = { viewModel.closeAccount() }) {
-            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
-          }
-        }
-      )
-    },
     containerColor = Color.Transparent
   ) { padding ->
     Column(
