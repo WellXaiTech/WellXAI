@@ -26,6 +26,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -87,6 +88,7 @@ import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.outlined.MicNone
 import androidx.compose.material.icons.outlined.MicOff
 import androidx.compose.material.icons.outlined.ModeEdit
 import androidx.compose.material.icons.outlined.PushPin
@@ -709,7 +711,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
         horizontalAlignment = Alignment.CenterHorizontally
       ) {
         IconButton(onClick = { viewModel.closeLiveVision() }) {
-          Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+          Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(32.dp))
         }
         Spacer(modifier = Modifier.height(24.dp))
         if (statusText.isNotEmpty()) {
@@ -747,7 +749,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
             controller.setSpeakerEnabled(speakerEnabled)
           }
           VoiceControlPill(
-            icon = if (micMuted) Icons.Outlined.MicOff else Icons.Outlined.Mic,
+            icon = if (micMuted) Icons.Outlined.MicOff else Icons.Outlined.MicNone,
             contentDescription = "Microphone"
           ) {
             micMuted = !micMuted
@@ -768,11 +770,11 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
             FilledIconButton(
               onClick = { toolMenuOpen = true },
               colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = Color.White.copy(alpha = 0.12f),
+                containerColor = Color(0xFF1A1A1A),
                 contentColor = Color.White
               )
             ) {
-              Icon(Icons.Filled.Add, contentDescription = "Tools")
+              Icon(Icons.Filled.Add, contentDescription = "Tools", modifier = Modifier.size(34.dp))
             }
             DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
               DropdownMenuItem(text = { Text("GiZa Pro") }, onClick = { viewModel.selectTool(null); toolMenuOpen = false })
@@ -785,14 +787,14 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           Box(
             modifier = Modifier
               .weight(1f)
-              .clip(RoundedCornerShape(24.dp))
-              .background(Color.White.copy(alpha = 0.1f))
+              .clip(RoundedCornerShape(30.dp))
+              .background(Color(0xFF1A1A1A))
           ) {
             TextField(
               value = viewModel.input,
               onValueChange = viewModel::onInputChange,
               modifier = Modifier.fillMaxWidth(),
-              placeholder = { Text("Ask anything", color = Color.White.copy(alpha = 0.5f)) },
+              placeholder = { Text("Ask anything", color = Color.White.copy(alpha = 0.38f)) },
               colors = TextFieldDefaults.colors(
                 unfocusedContainerColor = Color.Transparent,
                 focusedContainerColor = Color.Transparent,
@@ -804,21 +806,24 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
             )
           }
           Spacer(modifier = Modifier.size(8.dp))
-          Button(
-            onClick = {
-              if (viewModel.input.isNotBlank()) {
-                controller.stop()
-                viewModel.closeLiveVision()
-                viewModel.sendMessage()
-              } else {
-                controller.stop()
-                viewModel.closeLiveVision()
-              }
-            },
-            shape = RoundedCornerShape(20.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black)
+          Box(
+            modifier = Modifier
+              .size(width = 120.dp, height = 64.dp)
+              .clip(RoundedCornerShape(32.dp))
+              .background(Color.White)
+              .clickable(onClick = {
+                if (viewModel.input.isNotBlank()) {
+                  controller.stop()
+                  viewModel.closeLiveVision()
+                  viewModel.sendMessage()
+                } else {
+                  controller.stop()
+                  viewModel.closeLiveVision()
+                }
+              }),
+            contentAlignment = Alignment.Center
           ) {
-            Text("Stop", fontWeight = FontWeight.SemiBold)
+            Text("Stop", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
           }
         }
       }
@@ -830,13 +835,14 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
 private fun VoiceControlPill(icon: ImageVector, contentDescription: String, onClick: () -> Unit) {
   Box(
     modifier = Modifier
-      .size(width = 72.dp, height = 60.dp)
-      .clip(RoundedCornerShape(20.dp))
-      .background(Color.White.copy(alpha = 0.12f))
+      .size(width = 86.dp, height = 68.dp)
+      .clip(RoundedCornerShape(22.dp))
+      .background(Color(0xFF1F1F1F))
+      .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(22.dp))
       .clickable(onClick = onClick),
     contentAlignment = Alignment.Center
   ) {
-    Icon(icon, contentDescription = contentDescription, tint = Color.White)
+    Icon(icon, contentDescription = contentDescription, tint = Color.White, modifier = Modifier.size(30.dp))
   }
 }
 
