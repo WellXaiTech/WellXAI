@@ -11,7 +11,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -65,10 +64,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
@@ -83,13 +88,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -231,83 +230,6 @@ private fun TwoLineMenuIcon(tint: Color) {
   Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
     Box(modifier = Modifier.width(20.dp).height(2.dp).background(tint))
     Box(modifier = Modifier.width(20.dp).height(2.dp).background(tint))
-  }
-}
-
-@Composable
-private fun MicIcon(tint: Color, modifier: Modifier = Modifier) {
-  Canvas(modifier = modifier.size(20.dp)) {
-    val w = size.width
-    val h = size.height
-    val bodyWidth = w * 0.32f
-    val bodyHeight = h * 0.5f
-    val strokeW = w * 0.09f
-    drawRoundRect(
-      color = tint,
-      topLeft = Offset((w - bodyWidth) / 2f, 0f),
-      size = Size(bodyWidth, bodyHeight),
-      cornerRadius = CornerRadius(bodyWidth / 2f, bodyWidth / 2f)
-    )
-    drawArc(
-      color = tint,
-      startAngle = 0f,
-      sweepAngle = 180f,
-      useCenter = false,
-      style = Stroke(width = strokeW, cap = StrokeCap.Round),
-      topLeft = Offset(w * 0.12f, h * 0.28f),
-      size = Size(w * 0.76f, h * 0.5f)
-    )
-    drawLine(
-      color = tint,
-      start = Offset(w / 2f, h * 0.78f),
-      end = Offset(w / 2f, h * 0.95f),
-      strokeWidth = strokeW,
-      cap = StrokeCap.Round
-    )
-    drawLine(
-      color = tint,
-      start = Offset(w * 0.3f, h * 0.97f),
-      end = Offset(w * 0.7f, h * 0.97f),
-      strokeWidth = strokeW,
-      cap = StrokeCap.Round
-    )
-  }
-}
-
-@Composable
-private fun BoltIcon(tint: Color, modifier: Modifier = Modifier) {
-  Canvas(modifier = modifier.size(16.dp)) {
-    val w = size.width
-    val h = size.height
-    val path = Path().apply {
-      moveTo(w * 0.55f, 0f)
-      lineTo(w * 0.15f, h * 0.58f)
-      lineTo(w * 0.45f, h * 0.58f)
-      lineTo(w * 0.35f, h)
-      lineTo(w * 0.9f, h * 0.38f)
-      lineTo(w * 0.55f, h * 0.38f)
-      close()
-    }
-    drawPath(path, color = tint)
-  }
-}
-
-@Composable
-private fun WaveformIcon(tint: Color, modifier: Modifier = Modifier) {
-  Canvas(modifier = modifier.size(width = 20.dp, height = 16.dp)) {
-    val bars = listOf(0.3f, 0.55f, 0.9f, 1f, 0.7f, 0.4f)
-    val barWidth = size.width / (bars.size * 2f)
-    var x = 0f
-    for (frac in bars) {
-      val barHeight = size.height * frac
-      drawRoundRect(
-        color = tint,
-        topLeft = Offset(x, (size.height - barHeight) / 2f),
-        size = Size(barWidth, barHeight),
-        cornerRadius = CornerRadius(barWidth / 2f, barWidth / 2f)
-      )
-      x += barWidth * 2f
-    }
   }
 }
 
@@ -488,7 +410,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
                 .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
               if (viewModel.activeTool == null) {
-                BoltIcon(tint = colorScheme.onBackground)
+                Icon(Icons.Filled.Bolt, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.size(6.dp))
               }
               Text(viewModel.activeTool?.let { TOOL_LABELS[it] } ?: "GiZa Pro", color = colorScheme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
@@ -496,7 +418,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             }
             Spacer(modifier = Modifier.weight(1f))
             IconButton(onClick = { launchSpeech(autoSend = false) }) {
-              MicIcon(tint = colorScheme.onBackground)
+              Icon(Icons.Filled.Mic, contentDescription = "Voice input", tint = colorScheme.onBackground)
             }
             Spacer(modifier = Modifier.size(4.dp))
             Button(
@@ -508,7 +430,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
               ),
               contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
             ) {
-              WaveformIcon(tint = colorScheme.background, modifier = Modifier.size(width = 16.dp, height = 14.dp))
+              Icon(Icons.Filled.GraphicEq, contentDescription = null, modifier = Modifier.size(16.dp))
               Spacer(modifier = Modifier.size(6.dp))
               Text("Speak", fontSize = 13.sp)
             }
@@ -710,7 +632,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             .background(colorScheme.onBackground.copy(alpha = 0.1f)),
           contentAlignment = Alignment.Center
         ) {
-          Text("🕐", fontSize = 14.sp)
+          Icon(Icons.Filled.Schedule, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp))
         }
         Spacer(modifier = Modifier.size(12.dp))
         Text("Automations", color = colorScheme.onBackground, fontSize = 15.sp)
@@ -733,7 +655,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             .background(Color.White.copy(alpha = 0.2f)),
           contentAlignment = Alignment.Center
         ) {
-          Text("✨", fontSize = 14.sp)
+          Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
         }
         Spacer(modifier = Modifier.size(10.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -828,7 +750,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             })
             .padding(vertical = 14.dp)
         ) {
-          Text("📌", fontSize = 18.sp)
+          Icon(Icons.Filled.PushPin, contentDescription = null, tint = colorScheme.onBackground)
           Spacer(modifier = Modifier.size(16.dp))
           Text(if (sheetConvo.pinned) "Unpin" else "Pin", color = colorScheme.onBackground, fontSize = 16.sp)
         }
@@ -900,12 +822,23 @@ private fun HistoryRow(convo: ApiConversation, onClick: () -> Unit, onMenuClick:
     verticalAlignment = Alignment.CenterVertically
   ) {
     Column(modifier = Modifier.weight(1f).padding(horizontal = 8.dp, vertical = 8.dp)) {
-      Text(
-        text = (if (convo.pinned) "📌 " else "") + convo.title.ifBlank { "New chat" },
-        color = colorScheme.onBackground,
-        fontSize = 16.sp,
-        fontWeight = FontWeight.Medium
-      )
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        if (convo.pinned) {
+          Icon(
+            Icons.Filled.PushPin,
+            contentDescription = "Pinned",
+            tint = colorScheme.onBackground.copy(alpha = 0.6f),
+            modifier = Modifier.size(14.dp)
+          )
+          Spacer(modifier = Modifier.size(6.dp))
+        }
+        Text(
+          text = convo.title.ifBlank { "New chat" },
+          color = colorScheme.onBackground,
+          fontSize = 16.sp,
+          fontWeight = FontWeight.Medium
+        )
+      }
       if (dateText.isNotEmpty()) {
         Text(dateText, color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 12.sp)
       }
