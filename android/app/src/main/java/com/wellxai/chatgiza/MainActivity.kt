@@ -36,9 +36,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -382,9 +385,16 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
       )
     },
-    containerColor = Color.Transparent
+    containerColor = Color.Transparent,
+    contentWindowInsets = WindowInsets(0, 0, 0, 0)
   ) { padding ->
-    Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(padding)
+        .navigationBarsPadding()
+        .imePadding()
+    ) {
       if (viewModel.messages.isEmpty()) {
         Box(modifier = Modifier.weight(1f).fillMaxWidth())
       } else {
@@ -727,6 +737,8 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
         modifier = Modifier
           .align(Alignment.BottomCenter)
           .fillMaxWidth()
+          .imePadding()
+          .navigationBarsPadding()
           .padding(bottom = 22.dp, start = 16.dp, end = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
       ) {
