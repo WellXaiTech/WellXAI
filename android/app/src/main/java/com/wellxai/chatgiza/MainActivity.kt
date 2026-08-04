@@ -77,7 +77,9 @@ import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.ModeEdit
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -301,10 +303,25 @@ private fun AskImagineTabs(current: String, onAsk: () -> Unit, onImagine: () -> 
 @Composable
 private fun ChatScreenUi(viewModel: ChatViewModel) {
   val listState = rememberLazyListState()
+  val context = LocalContext.current
+  val tts = remember { TtsController(context) }
+  DisposableEffect(Unit) {
+    onDispose { tts.shutdown() }
+  }
 
   LaunchedEffect(viewModel.messages.size) {
     if (viewModel.messages.isNotEmpty()) {
       listState.animateScrollToItem(viewModel.messages.size - 1)
+    }
+  }
+
+  LaunchedEffect(viewModel.sending, viewModel.autoSpeakNextReply) {
+    if (!viewModel.sending && viewModel.autoSpeakNextReply) {
+      val lastAssistant = viewModel.messages.lastOrNull { it.role == "assistant" }
+      if (lastAssistant != null && lastAssistant.content.isNotBlank()) {
+        tts.speak(lastAssistant.content)
+      }
+      viewModel.clearAutoSpeak()
     }
   }
 
@@ -338,7 +355,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
           verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
           items(viewModel.messages, key = { it.id }) { message ->
-            MessageBubble(message)
+            MessageBubble(message, onSpeak = { tts.speak(message.content) })
           }
         }
       }
@@ -373,7 +390,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
         val combined = if (viewModel.input.isBlank()) transcript else "${viewModel.input} $transcript"
         viewModel.onInputChange(combined)
         if (autoSend) {
-          viewModel.sendMessage()
+          viewModel.sendMessage(viaVoice = true)
         }
       }
     }
@@ -1289,25 +1306,37 @@ private fun formatDate(millis: Long): String {
 }
 
 @Composable
-private fun MessageBubble(message: UiMessage) {
+private fun MessageBubble(message: UiMessage, onSpeak: () -> Unit) {
   val isUser = message.role == "user"
-  Row(
-    modifier = Modifier.fillMaxWidth(),
-    horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
-  ) {
-    Box(
-      modifier = Modifier
-        .background(
-          color = if (isUser) colorScheme.onBackground.copy(alpha = 0.12f) else Color.Transparent,
-          shape = RoundedCornerShape(16.dp)
-        )
-        .padding(horizontal = 14.dp, vertical = 10.dp)
+  Column(modifier = Modifier.fillMaxWidth()) {
+    Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
     ) {
-      Text(
-        text = message.content.ifEmpty { "…" },
-        color = colorScheme.onBackground,
-        fontSize = 15.sp
-      )
+      Box(
+        modifier = Modifier
+          .background(
+            color = if (isUser) colorScheme.onBackground.copy(alpha = 0.12f) else Color.Transparent,
+            shape = RoundedCornerShape(16.dp)
+          )
+          .padding(horizontal = 14.dp, vertical = 10.dp)
+      ) {
+        Text(
+          text = message.content.ifEmpty { "…" },
+          color = colorScheme.onBackground,
+          fontSize = 15.sp
+        )
+      }
+    }
+    if (!isUser && message.content.isNotBlank()) {
+      IconButton(onClick = onSpeak, modifier = Modifier.size(32.dp)) {
+        Icon(
+          Icons.Outlined.VolumeUp,
+          contentDescription = "Read aloud",
+          tint = colorScheme.onBackground.copy(alpha = 0.5f),
+          modifier = Modifier.size(18.dp)
+        )
+      }
     }
   }
 }

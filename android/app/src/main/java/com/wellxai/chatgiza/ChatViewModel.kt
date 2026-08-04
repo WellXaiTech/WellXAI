@@ -498,10 +498,18 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     input = value
   }
 
-  fun sendMessage() {
+  var autoSpeakNextReply by mutableStateOf(false)
+    private set
+
+  fun clearAutoSpeak() {
+    autoSpeakNextReply = false
+  }
+
+  fun sendMessage(viaVoice: Boolean = false) {
     val text = input.trim()
     val token = tokenStore.getToken()
     if (text.isEmpty() || sending || token == null) return
+    autoSpeakNextReply = viaVoice
 
     val now = System.currentTimeMillis()
     val userMsg = UiMessage(UUID.randomUUID().toString(), "user", text, now)
