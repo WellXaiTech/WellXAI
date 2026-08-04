@@ -27,6 +27,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -95,6 +96,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.LightMode
@@ -186,6 +188,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Account -> AccountScreen(viewModel)
             is AppScreen.Customize -> CustomizeScreen(viewModel)
             is AppScreen.Appearance -> AppearanceScreen(viewModel)
+            is AppScreen.Voice -> VoiceScreen(viewModel)
             is AppScreen.Settings -> SettingsScreen(viewModel)
             is AppScreen.Projects -> ProjectsScreen(viewModel)
             is AppScreen.Scheduled -> ScheduledScreen(viewModel)
@@ -1502,6 +1505,84 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
   }
 }
 
+private data class VoiceOption(val id: String, val name: String, val description: String)
+
+private val VOICE_OPTIONS = listOf(
+  VoiceOption("default", "Default", "Balanced and natural"),
+  VoiceOption("warm", "Warm", "Warm and steady"),
+  VoiceOption("calm", "Calm", "Calm and clear"),
+  VoiceOption("bright", "Bright", "Bright and energetic"),
+  VoiceOption("deep", "Deep", "Deep and confident")
+)
+
+@Composable
+private fun VoiceCard(option: VoiceOption, selected: Boolean, onClick: () -> Unit) {
+  val checkAlpha by animateFloatAsState(
+    targetValue = if (selected) 1f else 0f,
+    animationSpec = tween(250),
+    label = "voiceCheckAlpha"
+  )
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .height(78.dp)
+      .clip(RoundedCornerShape(18.dp))
+      .background(Color(0xFF2F2F2F))
+      .clickable(onClick = onClick)
+      .padding(start = 18.dp, end = 18.dp, top = 16.dp, bottom = 16.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Column(modifier = Modifier.weight(1f)) {
+      Text(option.name, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+      Spacer(modifier = Modifier.height(2.dp))
+      Text(option.description, color = Color(0xFFA8A8A8), fontSize = 15.sp, fontWeight = FontWeight.Normal)
+    }
+    if (checkAlpha > 0f) {
+      Icon(
+        Icons.Filled.Check,
+        contentDescription = "Selected",
+        tint = Color.White.copy(alpha = checkAlpha),
+        modifier = Modifier.size(28.dp).padding(end = 8.dp)
+      )
+    }
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VoiceScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeVoice() }
+  Scaffold(containerColor = Color.Transparent) { padding ->
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(padding)
+        .verticalScroll(rememberScrollState())
+        .padding(20.dp)
+    ) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = { viewModel.closeVoice() }, modifier = Modifier.size(28.dp)) {
+          Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground, modifier = Modifier.size(28.dp))
+        }
+        Spacer(modifier = Modifier.width(20.dp))
+        Text("Voice", color = colorScheme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+
+      Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        VOICE_OPTIONS.forEach { option ->
+          VoiceCard(
+            option = option,
+            selected = viewModel.selectedVoiceId == option.id,
+            onClick = { viewModel.selectVoice(option.id) }
+          )
+        }
+      }
+    }
+  }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AccountScreen(viewModel: ChatViewModel) {
@@ -1580,7 +1661,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
       SettingsMenuRow("NSFW Preferences")
 
       SettingsSectionHeader("Voice")
-      SettingsMenuRow("Voice")
+      SettingsMenuRow("Voice") { viewModel.openVoice() }
 
       SettingsSectionHeader("Data & Information")
       SettingsMenuRow("Shared Conversations")
