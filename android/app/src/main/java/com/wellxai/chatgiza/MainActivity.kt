@@ -89,13 +89,11 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MicNone
-import androidx.compose.material.icons.outlined.MicOff
 import androidx.compose.material.icons.outlined.ModeEdit
 import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material.icons.outlined.RecordVoiceOver
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.VideocamOff
-import androidx.compose.material.icons.outlined.VolumeOff
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.runtime.Composable
@@ -698,10 +696,8 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
     } else {
       val statusText = when {
         controller.errorMessage != null -> controller.errorMessage ?: ""
-        controller.connectionState == RealtimeVisionController.ConnectionState.Connecting -> "Connecting…"
         controller.isAiSpeaking -> "ChatGiZa is speaking…"
-        controller.connectionState == RealtimeVisionController.ConnectionState.Listening -> "Go ahead"
-        else -> ""
+        else -> "Go ahead"
       }
 
       Column(
@@ -715,12 +711,15 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
         }
         Spacer(modifier = Modifier.height(24.dp))
         if (statusText.isNotEmpty()) {
-          Box(
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
               .clip(RoundedCornerShape(20.dp))
               .background(Color.White.copy(alpha = 0.12f))
               .padding(horizontal = 20.dp, vertical = 10.dp)
           ) {
+            Icon(Icons.Outlined.RecordVoiceOver, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.size(8.dp))
             Text(statusText, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
           }
         }
@@ -728,10 +727,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
         Spacer(modifier = Modifier.weight(1f))
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-          VoiceControlPill(
-            icon = if (cameraEnabled) Icons.Outlined.Videocam else Icons.Outlined.VideocamOff,
-            contentDescription = "Camera"
-          ) {
+          VoiceControlPill(icon = Icons.Outlined.Videocam, contentDescription = "Camera", active = cameraEnabled) {
             if (cameraEnabled) {
               cameraProviderRef?.unbindAll()
               cameraEnabled = false
@@ -741,17 +737,11 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
             }
           }
-          VoiceControlPill(
-            icon = if (speakerEnabled) Icons.Outlined.VolumeUp else Icons.Outlined.VolumeOff,
-            contentDescription = "Speaker"
-          ) {
+          VoiceControlPill(icon = Icons.Outlined.VolumeUp, contentDescription = "Speaker", active = speakerEnabled) {
             speakerEnabled = !speakerEnabled
             controller.setSpeakerEnabled(speakerEnabled)
           }
-          VoiceControlPill(
-            icon = if (micMuted) Icons.Outlined.MicOff else Icons.Outlined.MicNone,
-            contentDescription = "Microphone"
-          ) {
+          VoiceControlPill(icon = Icons.Outlined.MicNone, contentDescription = "Microphone", active = !micMuted) {
             micMuted = !micMuted
             controller.setMicMuted(micMuted)
           }
@@ -767,14 +757,15 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           verticalAlignment = Alignment.CenterVertically
         ) {
           Box {
-            FilledIconButton(
-              onClick = { toolMenuOpen = true },
-              colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = Color(0xFF1A1A1A),
-                contentColor = Color.White
-              )
+            Box(
+              modifier = Modifier
+                .size(56.dp)
+                .clip(RoundedCornerShape(28.dp))
+                .background(Color(0xFF1A1A1A))
+                .clickable(onClick = { toolMenuOpen = true }),
+              contentAlignment = Alignment.Center
             ) {
-              Icon(Icons.Filled.Add, contentDescription = "Tools", modifier = Modifier.size(34.dp))
+              Icon(Icons.Filled.Add, contentDescription = "Tools", tint = Color.White, modifier = Modifier.size(22.dp))
             }
             DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
               DropdownMenuItem(text = { Text("GiZa Pro") }, onClick = { viewModel.selectTool(null); toolMenuOpen = false })
@@ -787,8 +778,10 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           Box(
             modifier = Modifier
               .weight(1f)
-              .clip(RoundedCornerShape(30.dp))
-              .background(Color(0xFF1A1A1A))
+              .height(56.dp)
+              .clip(RoundedCornerShape(28.dp))
+              .background(Color(0xFF1A1A1A)),
+            contentAlignment = Alignment.CenterStart
           ) {
             TextField(
               value = viewModel.input,
@@ -808,8 +801,8 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           Spacer(modifier = Modifier.size(8.dp))
           Box(
             modifier = Modifier
-              .size(width = 120.dp, height = 64.dp)
-              .clip(RoundedCornerShape(32.dp))
+              .height(56.dp)
+              .clip(RoundedCornerShape(28.dp))
               .background(Color.White)
               .clickable(onClick = {
                 if (viewModel.input.isNotBlank()) {
@@ -820,10 +813,11 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
                   controller.stop()
                   viewModel.closeLiveVision()
                 }
-              }),
+              })
+              .padding(horizontal = 24.dp),
             contentAlignment = Alignment.Center
           ) {
-            Text("Stop", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            Text("Stop", color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
           }
         }
       }
@@ -832,7 +826,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
 }
 
 @Composable
-private fun VoiceControlPill(icon: ImageVector, contentDescription: String, onClick: () -> Unit) {
+private fun VoiceControlPill(icon: ImageVector, contentDescription: String, active: Boolean = true, onClick: () -> Unit) {
   Box(
     modifier = Modifier
       .size(width = 86.dp, height = 68.dp)
@@ -842,7 +836,12 @@ private fun VoiceControlPill(icon: ImageVector, contentDescription: String, onCl
       .clickable(onClick = onClick),
     contentAlignment = Alignment.Center
   ) {
-    Icon(icon, contentDescription = contentDescription, tint = Color.White, modifier = Modifier.size(30.dp))
+    Icon(
+      icon,
+      contentDescription = contentDescription,
+      tint = Color.White.copy(alpha = if (active) 1f else 0.35f),
+      modifier = Modifier.size(24.dp)
+    )
   }
 }
 
