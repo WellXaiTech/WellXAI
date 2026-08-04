@@ -872,7 +872,7 @@ private fun HistoryRow(convo: ApiConversation, onClick: () -> Unit, onMenuClick:
           text = convo.title.ifBlank { "New chat" },
           color = colorScheme.onBackground,
           fontSize = 16.sp,
-          fontWeight = FontWeight.Medium
+          fontWeight = FontWeight.Normal
         )
       }
       if (dateText.isNotEmpty()) {
@@ -880,7 +880,12 @@ private fun HistoryRow(convo: ApiConversation, onClick: () -> Unit, onMenuClick:
       }
     }
     IconButton(onClick = onMenuClick) {
-      Icon(Icons.Filled.MoreVert, contentDescription = "Options", tint = colorScheme.onBackground.copy(alpha = 0.6f))
+      Icon(
+        Icons.Filled.MoreVert,
+        contentDescription = "Options",
+        tint = colorScheme.onBackground.copy(alpha = 0.6f),
+        modifier = Modifier.size(18.dp)
+      )
     }
   }
 }
