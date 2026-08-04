@@ -57,7 +57,6 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.runtime.Composable
@@ -352,7 +351,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel, onSend: () -> Unit) {
             }
             runCatching { speechLauncher.launch(intent) }
           }) {
-            Icon(Icons.Filled.Mic, contentDescription = "Voice input", tint = colorScheme.onBackground)
+            Text("🎙", fontSize = 18.sp)
           }
         }
       }
