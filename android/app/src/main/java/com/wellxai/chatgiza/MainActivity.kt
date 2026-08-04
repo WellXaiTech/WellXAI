@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.speech.RecognizerIntent
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -492,6 +493,8 @@ private fun ImagineScreen(viewModel: ChatViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HistoryScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeHistory() }
+
   val query = viewModel.historySearchQuery.trim()
   val visibleConversations = if (query.isEmpty()) {
     viewModel.conversations
@@ -500,17 +503,6 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   }
 
   Scaffold(
-    topBar = {
-      TopAppBar(
-        title = {},
-        navigationIcon = {
-          IconButton(onClick = { viewModel.closeHistory() }) {
-            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
-          }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-      )
-    },
     containerColor = Color.Transparent,
     bottomBar = {
       Row(
@@ -525,13 +517,14 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             .background(colorScheme.onBackground.copy(alpha = 0.08f))
             .padding(horizontal = 16.dp)
         ) {
-          Icon(Icons.Filled.Search, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
+          Icon(Icons.Filled.Search, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.size(24.dp))
           Spacer(modifier = Modifier.size(8.dp))
           TextField(
             value = viewModel.historySearchQuery,
             onValueChange = viewModel::onHistorySearchQueryChange,
             modifier = Modifier.weight(1f),
-            placeholder = { Text("Search", color = colorScheme.onBackground.copy(alpha = 0.6f)) },
+            placeholder = { Text("Search", color = colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 17.sp) },
+            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 17.sp, color = colorScheme.onBackground),
             singleLine = true,
             colors = TextFieldDefaults.colors(
               unfocusedContainerColor = Color.Transparent,
@@ -569,28 +562,28 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
         modifier = Modifier
           .fillMaxWidth()
           .clickable(onClick = { viewModel.openAccount() })
-          .padding(horizontal = 16.dp, vertical = 12.dp),
+          .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
         if (viewModel.userImage != null) {
           AsyncImage(
             model = viewModel.userImage,
             contentDescription = "Profile",
-            modifier = Modifier.size(40.dp).clip(CircleShape)
+            modifier = Modifier.size(56.dp).clip(CircleShape)
           )
         } else {
           Icon(
             Icons.Filled.Person,
             contentDescription = "Profile",
             tint = colorScheme.onBackground,
-            modifier = Modifier.size(40.dp)
+            modifier = Modifier.size(56.dp)
           )
         }
-        Spacer(modifier = Modifier.size(12.dp))
+        Spacer(modifier = Modifier.size(14.dp))
         Column {
-          Text(viewModel.userName ?: "", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+          Text(viewModel.userName ?: "", color = colorScheme.onBackground, fontSize = 19.sp, fontWeight = FontWeight.Bold)
           if (viewModel.userEmail != null) {
-            Text(viewModel.userEmail ?: "", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 12.sp)
+            Text(viewModel.userEmail ?: "", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 13.sp)
           }
         }
       }
@@ -621,11 +614,11 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .padding(horizontal = 16.dp, vertical = 8.dp)
+          .padding(horizontal = 16.dp, vertical = 6.dp)
           .clip(RoundedCornerShape(16.dp))
           .background(Color(0xFF2563EB))
           .clickable(onClick = { viewModel.openBilling() })
-          .padding(horizontal = 14.dp, vertical = 12.dp),
+          .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
         Box(
