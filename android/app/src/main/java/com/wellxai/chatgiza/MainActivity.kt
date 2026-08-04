@@ -11,6 +11,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -77,7 +78,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -220,6 +226,65 @@ private fun TwoLineMenuIcon(tint: Color) {
   Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
     Box(modifier = Modifier.width(20.dp).height(2.dp).background(tint))
     Box(modifier = Modifier.width(20.dp).height(2.dp).background(tint))
+  }
+}
+
+@Composable
+private fun MicIcon(tint: Color, modifier: Modifier = Modifier) {
+  Canvas(modifier = modifier.size(20.dp)) {
+    val w = size.width
+    val h = size.height
+    val bodyWidth = w * 0.32f
+    val bodyHeight = h * 0.5f
+    val strokeW = w * 0.09f
+    drawRoundRect(
+      color = tint,
+      topLeft = Offset((w - bodyWidth) / 2f, 0f),
+      size = Size(bodyWidth, bodyHeight),
+      cornerRadius = CornerRadius(bodyWidth / 2f, bodyWidth / 2f)
+    )
+    drawArc(
+      color = tint,
+      startAngle = 0f,
+      sweepAngle = 180f,
+      useCenter = false,
+      style = Stroke(width = strokeW, cap = StrokeCap.Round),
+      topLeft = Offset(w * 0.12f, h * 0.28f),
+      size = Size(w * 0.76f, h * 0.5f)
+    )
+    drawLine(
+      color = tint,
+      start = Offset(w / 2f, h * 0.78f),
+      end = Offset(w / 2f, h * 0.95f),
+      strokeWidth = strokeW,
+      cap = StrokeCap.Round
+    )
+    drawLine(
+      color = tint,
+      start = Offset(w * 0.3f, h * 0.97f),
+      end = Offset(w * 0.7f, h * 0.97f),
+      strokeWidth = strokeW,
+      cap = StrokeCap.Round
+    )
+  }
+}
+
+@Composable
+private fun WaveformIcon(tint: Color, modifier: Modifier = Modifier) {
+  Canvas(modifier = modifier.size(width = 20.dp, height = 16.dp)) {
+    val bars = listOf(0.3f, 0.55f, 0.9f, 1f, 0.7f, 0.4f)
+    val barWidth = size.width / (bars.size * 2f)
+    var x = 0f
+    for (frac in bars) {
+      val barHeight = size.height * frac
+      drawRoundRect(
+        color = tint,
+        topLeft = Offset(x, (size.height - barHeight) / 2f),
+        size = Size(barWidth, barHeight),
+        cornerRadius = CornerRadius(barWidth / 2f, barWidth / 2f)
+      )
+      x += barWidth * 2f
+    }
   }
 }
 
@@ -390,13 +455,20 @@ private fun ChatComposerCard(viewModel: ChatViewModel, onSend: () -> Unit) {
             IconButton(onClick = { toolMenuOpen = true }) {
               Icon(Icons.Filled.Add, contentDescription = "Tools", tint = colorScheme.onBackground)
             }
-            TextButton(onClick = { toolMenuOpen = true }) {
-              Text(viewModel.activeTool?.let { TOOL_LABELS[it] } ?: "GiZa Pro")
-              Icon(Icons.Filled.ArrowDropDown, contentDescription = null)
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              modifier = Modifier
+                .clip(RoundedCornerShape(20.dp))
+                .background(colorScheme.onBackground.copy(alpha = 0.08f))
+                .clickable(onClick = { toolMenuOpen = true })
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+              Text(viewModel.activeTool?.let { TOOL_LABELS[it] } ?: "GiZa Pro", color = colorScheme.onBackground, fontSize = 14.sp)
+              Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = colorScheme.onBackground)
             }
             Spacer(modifier = Modifier.weight(1f))
             IconButton(onClick = { launchSpeech(autoSend = false) }) {
-              Text("🎙", fontSize = 18.sp)
+              MicIcon(tint = colorScheme.onBackground)
             }
             Spacer(modifier = Modifier.size(4.dp))
             Button(
@@ -408,7 +480,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel, onSend: () -> Unit) {
               ),
               contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
             ) {
-              Text("🔊", fontSize = 14.sp)
+              WaveformIcon(tint = colorScheme.background, modifier = Modifier.size(width = 16.dp, height = 14.dp))
               Spacer(modifier = Modifier.size(6.dp))
               Text("Speak", fontSize = 13.sp)
             }
