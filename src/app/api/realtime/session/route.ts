@@ -24,14 +24,39 @@ export async function POST(req: NextRequest) {
   // LANGUAGE_KEY's default in page.tsx) — it isn't a real language name, so
   // passing it straight through told the model to "speak in Auto-detect",
   // which is nonsense and was making it pick languages at random.
-  const language = rawLanguage && rawLanguage.toLowerCase() !== "auto-detect" ? rawLanguage : null;
+  const hasExplicitLanguage = rawLanguage && rawLanguage.toLowerCase() !== "auto-detect";
+  // Asking the model to "detect the language from audio" proved unreliable in
+  // practice (it would confidently reply in the wrong language) — most users
+  // of this app speak Swahili, so default to that outright instead of
+  // guessing when no language is explicitly chosen in Settings.
+  const language = hasExplicitLanguage ? rawLanguage : "Swahili";
 
-  const languageInstruction = language
-    ? `Always speak and reply in ${language}, no matter what language the user's audio sounds like — never switch to ` +
-      `another language mid-conversation.`
-    : "Detect the language the user is actually speaking from their audio (most users of this app speak Swahili, " +
-      "but follow whatever language you actually hear) and always reply in that same language — never switch to a " +
-      "different language than what the user just spoke, and never guess a language you didn't actually hear.";
+  const languageInstruction =
+    `Always speak and reply in ${language}. Every single reply must be in ${language}, with no exceptions — even if ` +
+    `you mishear the user's audio or aren't fully sure what they said, respond in ${language} anyway rather than ` +
+    `switching languages.`;
+
+  // ISO-639-1 hint for the speech-to-text model — significantly improves
+  // transcription accuracy for non-English languages (Swahili especially),
+  // which in turn is what was likely causing the wrong-language replies:
+  // the model was mishearing the words, not just mistranslating them.
+  const LANGUAGE_CODES: Record<string, string> = {
+    swahili: "sw",
+    english: "en",
+    french: "fr",
+    arabic: "ar",
+    spanish: "es",
+    portuguese: "pt",
+    german: "de",
+    "chinese (simplified)": "zh",
+    "chinese (traditional)": "zh",
+    hindi: "hi",
+    amharic: "am",
+    somali: "so",
+    hausa: "ha",
+    igbo: "ig",
+  };
+  const transcriptionLanguage = LANGUAGE_CODES[language.toLowerCase()];
 
   try {
     const res = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
@@ -52,6 +77,15 @@ export async function POST(req: NextRequest) {
             "and answer questions about the live view conversationally and concisely, as if looking over their " +
             "shoulder. If you haven't received any image yet, say so instead of guessing. " +
             languageInstruction,
+          audio: {
+            input: {
+              transcription: {
+                model: "gpt-4o-mini-transcribe",
+                ...(transcriptionLanguage ? { language: transcriptionLanguage } : {}),
+              },
+              noise_reduction: { type: "near_field" },
+            },
+          },
         },
       }),
     });
