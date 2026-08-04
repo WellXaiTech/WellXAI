@@ -66,6 +66,12 @@ class RealtimeVisionController(
   private var captureJob: Job? = null
   private var connectJob: Job? = null
 
+  // Tracks the assistant item currently being spoken, and how much of its
+  // audio we've actually written to the speaker — needed to tell the server
+  // exactly where playback was cut off when the user barges in.
+  private var currentAssistantItemId: String? = null
+  private var playedAudioBytes: Long = 0
+
   private val sampleRate = 24000
 
   fun start(language: String) {
@@ -133,20 +139,56 @@ class RealtimeVisionController(
     when (json.optString("type")) {
       "response.output_audio.delta" -> {
         isAiSpeaking = true
+        val itemId = json.optString("item_id", null)
+        if (itemId != null) currentAssistantItemId = itemId
         val delta = json.optString("delta", "")
         if (delta.isNotEmpty()) {
           val bytes = Base64.decode(delta, Base64.NO_WRAP)
+          playedAudioBytes += bytes.size
           audioTrack?.write(bytes, 0, bytes.size)
         }
       }
       "response.output_audio.done", "response.done" -> {
         isAiSpeaking = false
+        currentAssistantItemId = null
+        playedAudioBytes = 0
       }
+      // Server-side VAD fires this the instant it hears the user start
+      // talking — this is the actual barge-in signal. The server already
+      // cancels its own in-progress response (interrupt_response is on by
+      // default), so our job is purely local: stop the speaker output
+      // immediately (don't wait for it to finish its sentence), and tell
+      // the server exactly how much of its last reply we actually played
+      // so it doesn't think we heard words we cut off.
+      "input_audio_buffer.speech_started" -> handleBargeIn()
       "error" -> {
         val message = json.optJSONObject("error")?.optString("message") ?: "Realtime error"
         errorMessage = message
       }
     }
+  }
+
+  private fun handleBargeIn() {
+    audioTrack?.let {
+      runCatching {
+        it.pause()
+        it.flush()
+        it.play()
+      }
+    }
+    val itemId = currentAssistantItemId
+    if (itemId != null && playedAudioBytes > 0) {
+      val playedMs = (playedAudioBytes / 2) * 1000 / sampleRate
+      val truncateEvent = JSONObject()
+        .put("type", "conversation.item.truncate")
+        .put("item_id", itemId)
+        .put("content_index", 0)
+        .put("audio_end_ms", playedMs)
+      webSocket?.send(truncateEvent.toString())
+    }
+    isAiSpeaking = false
+    currentAssistantItemId = null
+    playedAudioBytes = 0
   }
 
   fun reportCameraError(message: String) {
@@ -262,6 +304,8 @@ class RealtimeVisionController(
     audioTrack = null
     webSocket = null
     isAiSpeaking = false
+    currentAssistantItemId = null
+    playedAudioBytes = 0
     connectionState = ConnectionState.Idle
     audioManager.isSpeakerphoneOn = false
     audioManager.mode = previousAudioMode
