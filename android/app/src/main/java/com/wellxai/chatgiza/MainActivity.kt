@@ -78,6 +78,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -85,6 +87,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -456,8 +459,15 @@ private fun ChatComposerCard(viewModel: ChatViewModel, onSend: () -> Unit) {
     runCatching { speechLauncher.launch(intent) }
   }
 
+  val focusRequester = remember { FocusRequester() }
+  val keyboardController = LocalSoftwareKeyboardController.current
+  LaunchedEffect(Unit) {
+    focusRequester.requestFocus()
+    keyboardController?.show()
+  }
+
   Card(
-    modifier = Modifier.fillMaxWidth().padding(12.dp),
+    modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 12.dp),
     shape = RoundedCornerShape(24.dp),
     colors = CardDefaults.cardColors(containerColor = colorScheme.onBackground.copy(alpha = 0.06f))
   ) {
@@ -465,7 +475,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel, onSend: () -> Unit) {
       TextField(
         value = viewModel.input,
         onValueChange = viewModel::onInputChange,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
         placeholder = { Text("Ask anything") },
         colors = TextFieldDefaults.colors(
           unfocusedContainerColor = Color.Transparent,
