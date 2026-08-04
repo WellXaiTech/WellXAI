@@ -39,8 +39,31 @@ class TokenStore(context: Context) {
       .apply()
   }
 
+  fun getHapticsEnabled(): Boolean = prefs.getBoolean(KEY_HAPTICS_ENABLED, true)
+  fun setHapticsEnabled(value: Boolean) {
+    prefs.edit().putBoolean(KEY_HAPTICS_ENABLED, value).apply()
+  }
+
+  fun getHapticsOnPress(): Boolean = prefs.getBoolean(KEY_HAPTICS_ON_PRESS, true)
+  fun setHapticsOnPress(value: Boolean) {
+    prefs.edit().putBoolean(KEY_HAPTICS_ON_PRESS, value).apply()
+  }
+
+  fun getHapticsOnResponse(): Boolean = prefs.getBoolean(KEY_HAPTICS_ON_RESPONSE, true)
+  fun setHapticsOnResponse(value: Boolean) {
+    prefs.edit().putBoolean(KEY_HAPTICS_ON_RESPONSE, value).apply()
+  }
+
+  /** Wipes the session but keeps device-level prefs (haptics) that aren't
+   * tied to any particular account. */
   fun clear() {
+    val hapticsEnabled = getHapticsEnabled()
+    val hapticsOnPress = getHapticsOnPress()
+    val hapticsOnResponse = getHapticsOnResponse()
     prefs.edit().clear().apply()
+    setHapticsEnabled(hapticsEnabled)
+    setHapticsOnPress(hapticsOnPress)
+    setHapticsOnResponse(hapticsOnResponse)
   }
 
   companion object {
@@ -48,5 +71,8 @@ class TokenStore(context: Context) {
     private const val KEY_NAME = "user_name"
     private const val KEY_EMAIL = "user_email"
     private const val KEY_IMAGE = "user_image"
+    private const val KEY_HAPTICS_ENABLED = "haptics_enabled"
+    private const val KEY_HAPTICS_ON_PRESS = "haptics_on_press"
+    private const val KEY_HAPTICS_ON_RESPONSE = "haptics_on_response"
   }
 }

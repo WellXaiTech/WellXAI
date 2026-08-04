@@ -124,6 +124,7 @@ import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.RecordVoiceOver
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Vibration
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.runtime.Composable
@@ -146,7 +147,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -201,6 +204,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Voice -> VoiceScreen(viewModel)
             is AppScreen.ReportProblem -> ReportProblemScreen(viewModel)
             is AppScreen.Widgets -> WidgetsScreen(viewModel)
+            is AppScreen.Haptics -> HapticsScreen(viewModel)
             is AppScreen.DataControls -> DataControlsScreen(viewModel)
             is AppScreen.ManageCloudStorage -> ManageCloudStorageScreen(viewModel)
             is AppScreen.Settings -> SettingsScreen(viewModel)
@@ -386,6 +390,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
   val listState = rememberLazyListState()
   val context = LocalContext.current
   val tts = remember { TtsController(context) }
+  val haptic = LocalHapticFeedback.current
   DisposableEffect(Unit) {
     onDispose { tts.shutdown() }
   }
@@ -404,6 +409,14 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
       }
       viewModel.clearAutoSpeak()
     }
+  }
+
+  var wasSending by remember { mutableStateOf(false) }
+  LaunchedEffect(viewModel.sending) {
+    if (wasSending && !viewModel.sending && viewModel.hapticsEnabled && viewModel.hapticsOnResponse) {
+      haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+    }
+    wasSending = viewModel.sending
   }
 
   Scaffold(
@@ -466,6 +479,12 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
 private fun ChatComposerCard(viewModel: ChatViewModel) {
   var toolMenuOpen by remember { mutableStateOf(false) }
   var pendingAutoSend by remember { mutableStateOf(false) }
+  val haptic = LocalHapticFeedback.current
+  fun tapHaptic() {
+    if (viewModel.hapticsEnabled && viewModel.hapticsOnPress) {
+      haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+    }
+  }
 
   val speechLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
     val autoSend = pendingAutoSend
@@ -523,7 +542,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
           modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
         ) {
           IconButton(
-            onClick = { viewModel.sendMessage() },
+            onClick = { tapHaptic(); viewModel.sendMessage() },
             enabled = !viewModel.sending
           ) {
             Icon(Icons.Filled.Send, contentDescription = "Send", tint = colorScheme.onBackground)
@@ -2104,6 +2123,115 @@ private fun WidgetsScreen(viewModel: ChatViewModel) {
   }
 }
 
+@Composable
+private fun HapticCard(icon: ImageVector, title: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+  Card(
+    modifier = Modifier.fillMaxWidth(),
+    shape = RoundedCornerShape(22.dp),
+    colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+  ) {
+    Row(
+      modifier = Modifier.padding(20.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Icon(imageVector = icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
+      Spacer(Modifier.width(18.dp))
+      Text(text = title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+      Spacer(Modifier.weight(1f))
+      Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+  }
+}
+
+@Composable
+private fun ToggleCard(title: String, checked: Boolean, enabled: Boolean, onCheckedChange: (Boolean) -> Unit) {
+  Card(
+    modifier = Modifier.fillMaxWidth(),
+    shape = RoundedCornerShape(18.dp),
+    colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+  ) {
+    Row(
+      modifier = Modifier.padding(20.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Text(
+        text = title,
+        color = if (enabled) Color.White else Color.White.copy(alpha = 0.4f),
+        fontSize = 19.sp,
+        fontWeight = FontWeight.Bold
+      )
+      Spacer(Modifier.weight(1f))
+      Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
+    }
+  }
+}
+
+@Composable
+private fun HapticsScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeHaptics() }
+  val haptic = LocalHapticFeedback.current
+
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color(0xFF262626))
+      .padding(20.dp)
+  ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      IconButton(onClick = { viewModel.closeHaptics() }) {
+        Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+      }
+      Spacer(Modifier.width(18.dp))
+      Text(text = "Haptics", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+    }
+
+    Spacer(Modifier.height(28.dp))
+
+    HapticCard(
+      icon = Icons.Outlined.Vibration,
+      title = "Haptics",
+      checked = viewModel.hapticsEnabled,
+      onCheckedChange = { value ->
+        viewModel.setHapticsEnabled(value)
+        if (value) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+      }
+    )
+
+    Spacer(Modifier.height(28.dp))
+
+    Text(
+      text = "When is haptic needed",
+      color = Color.Gray,
+      fontSize = 17.sp,
+      fontWeight = FontWeight.SemiBold
+    )
+
+    Spacer(Modifier.height(18.dp))
+
+    ToggleCard(
+      "Pressing buttons",
+      checked = viewModel.hapticsOnPress,
+      enabled = viewModel.hapticsEnabled,
+      onCheckedChange = { value ->
+        viewModel.setHapticsOnPress(value)
+        if (value) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+      }
+    )
+
+    Spacer(Modifier.height(2.dp))
+
+    ToggleCard(
+      "ChatGiZa is responding",
+      checked = viewModel.hapticsOnResponse,
+      enabled = viewModel.hapticsEnabled,
+      onCheckedChange = { value ->
+        viewModel.setHapticsOnResponse(value)
+        if (value) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+      }
+    )
+  }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AccountScreen(viewModel: ChatViewModel) {
@@ -2171,7 +2299,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
 
       SettingsSectionHeader("App")
       SettingsMenuRow("Appearance") { viewModel.openAppearance() }
-      SettingsMenuRow("Haptics")
+      SettingsMenuRow("Haptics") { viewModel.openHaptics() }
       SettingsMenuRow("Widgets") { viewModel.openWidgets() }
       SettingsMenuRow("App Language")
       SettingsMenuRow("Advanced")
