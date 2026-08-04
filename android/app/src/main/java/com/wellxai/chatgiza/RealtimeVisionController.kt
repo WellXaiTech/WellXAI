@@ -1,7 +1,9 @@
 package com.wellxai.chatgiza
 
+import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
+import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
@@ -37,9 +39,14 @@ import kotlin.math.max
  * decides when to reply (and lets the user interrupt it by talking again).
  */
 class RealtimeVisionController(
+  context: Context,
   private val tokenStore: TokenStore,
   private val scope: CoroutineScope
 ) {
+  private val appContext = context.applicationContext
+  private val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+  private var previousAudioMode = AudioManager.MODE_NORMAL
+
   var connectionState by mutableStateOf(ConnectionState.Idle)
     private set
   var isAiSpeaking by mutableStateOf(false)
@@ -61,10 +68,20 @@ class RealtimeVisionController(
 
   private val sampleRate = 24000
 
-  fun start() {
+  fun start(language: String) {
     if (connectionState != ConnectionState.Idle) return
     connectionState = ConnectionState.Connecting
     errorMessage = null
+
+    // MODE_IN_COMMUNICATION pairs with USAGE_VOICE_COMMUNICATION on the
+    // playback side (started once the socket is open) so the platform can
+    // apply echo cancellation between them — without it, the mic tends to
+    // pick up the AI's own voice as if the user said it, garbling turns.
+    // Route to the speaker since the user is holding the phone up to look
+    // through the camera, not holding it to their ear.
+    previousAudioMode = audioManager.mode
+    audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+    audioManager.isSpeakerphoneOn = true
 
     connectJob = scope.launch {
       val token = tokenStore.getToken()
@@ -73,7 +90,7 @@ class RealtimeVisionController(
         connectionState = ConnectionState.Idle
         return@launch
       }
-      when (val result = ChatGizaApi.getRealtimeToken(token)) {
+      when (val result = ChatGizaApi.getRealtimeToken(token, language)) {
         is ApiResult.Success -> openSocket(result.value)
         is ApiResult.Failure -> {
           errorMessage = result.message
@@ -130,6 +147,10 @@ class RealtimeVisionController(
         errorMessage = message
       }
     }
+  }
+
+  fun reportCameraError(message: String) {
+    errorMessage = message
   }
 
   /** Sends one camera frame as a still image the model can see, alongside
@@ -242,5 +263,7 @@ class RealtimeVisionController(
     webSocket = null
     isAiSpeaking = false
     connectionState = ConnectionState.Idle
+    audioManager.isSpeakerphoneOn = false
+    audioManager.mode = previousAudioMode
   }
 }

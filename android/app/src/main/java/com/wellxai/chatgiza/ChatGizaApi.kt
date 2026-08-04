@@ -315,12 +315,13 @@ object ChatGizaApi {
     }
   }
 
-  suspend fun getRealtimeToken(token: String): ApiResult<String> = withContext(Dispatchers.IO) {
+  suspend fun getRealtimeToken(token: String, language: String): ApiResult<String> = withContext(Dispatchers.IO) {
     try {
+      val payload = JSONObject().put("language", language).toString().toRequestBody(JSON)
       val request = Request.Builder()
         .url("$BASE_URL/api/realtime/session")
         .header("Authorization", "Bearer $token")
-        .post(ByteArray(0).toRequestBody(null))
+        .post(payload)
         .build()
       client.newCall(request).execute().use { response ->
         val text = response.body?.string().orEmpty()
