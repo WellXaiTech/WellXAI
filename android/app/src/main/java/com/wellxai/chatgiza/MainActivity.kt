@@ -87,9 +87,13 @@ import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.outlined.MicOff
 import androidx.compose.material.icons.outlined.ModeEdit
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.VideocamOff
+import androidx.compose.material.icons.outlined.VolumeOff
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.runtime.Composable
@@ -111,6 +115,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -354,9 +359,6 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
           }
         },
         actions = {
-          IconButton(onClick = { viewModel.openLiveVision() }) {
-            Icon(Icons.Outlined.Videocam, contentDescription = "Live Vision", tint = colorScheme.onBackground)
-          }
           IconButton(onClick = { viewModel.openAccount() }) {
             Icon(Icons.Outlined.ModeEdit, contentDescription = "Account", tint = colorScheme.onBackground)
           }
@@ -504,7 +506,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             }
             Spacer(modifier = Modifier.size(6.dp))
             Button(
-              onClick = { launchSpeech(autoSend = true) },
+              onClick = { viewModel.openLiveVision() },
               shape = RoundedCornerShape(18.dp),
               colors = ButtonDefaults.buttonColors(
                 containerColor = colorScheme.onBackground,
@@ -603,119 +605,238 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
   val lifecycleOwner = LocalLifecycleOwner.current
   val coroutineScope = rememberCoroutineScope()
 
-  var hasCameraPermission by remember {
-    mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
-  }
   var hasMicPermission by remember {
     mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
   }
+  var hasCameraPermission by remember {
+    mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
+  }
+  var cameraEnabled by remember { mutableStateOf(false) }
+  var speakerEnabled by remember { mutableStateOf(true) }
+  var micMuted by remember { mutableStateOf(false) }
+  var toolMenuOpen by remember { mutableStateOf(false) }
+  var cameraProviderRef by remember { mutableStateOf<ProcessCameraProvider?>(null) }
 
-  val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-    hasCameraPermission = result[Manifest.permission.CAMERA] ?: hasCameraPermission
-    hasMicPermission = result[Manifest.permission.RECORD_AUDIO] ?: hasMicPermission
+  val micPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+    hasMicPermission = granted
+  }
+  val cameraPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+    hasCameraPermission = granted
+    if (granted) cameraEnabled = true
   }
 
   LaunchedEffect(Unit) {
-    if (!hasCameraPermission || !hasMicPermission) {
-      permissionLauncher.launch(arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO))
-    }
+    if (!hasMicPermission) micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
   }
 
   val controller = remember { RealtimeVisionController(context, TokenStore(context.applicationContext), coroutineScope) }
-  val ready = hasCameraPermission && hasMicPermission
 
-  DisposableEffect(ready) {
-    if (ready) controller.start(viewModel.profileData.language)
-    onDispose { controller.stop() }
+  DisposableEffect(hasMicPermission) {
+    if (hasMicPermission) controller.start(viewModel.profileData.language)
+    onDispose {
+      controller.stop()
+      cameraProviderRef?.unbindAll()
+    }
   }
 
-  Scaffold(
-    topBar = {
-      TopAppBar(
-        title = { Text("Live Vision", fontWeight = FontWeight.Bold, color = Color.White) },
-        navigationIcon = {
-          IconButton(onClick = { viewModel.closeLiveVision() }) {
-            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
-          }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black.copy(alpha = 0.35f))
-      )
-    },
-    containerColor = Color.Black
-  ) { padding ->
-    Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-      if (ready) {
-        AndroidView(
-          modifier = Modifier.fillMaxSize(),
-          factory = { ctx ->
-            val previewView = PreviewView(ctx)
-            val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
-            cameraProviderFuture.addListener({
-              val cameraProvider = cameraProviderFuture.get()
-              val preview = Preview.Builder().build().also {
-                it.setSurfaceProvider(previewView.surfaceProvider)
+  Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+    if (cameraEnabled && hasCameraPermission) {
+      AndroidView(
+        modifier = Modifier.fillMaxSize(),
+        factory = { ctx ->
+          val previewView = PreviewView(ctx)
+          val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+          cameraProviderFuture.addListener({
+            val cameraProvider = cameraProviderFuture.get()
+            cameraProviderRef = cameraProvider
+            val preview = Preview.Builder().build().also {
+              it.setSurfaceProvider(previewView.surfaceProvider)
+            }
+            val analysis = ImageAnalysis.Builder()
+              .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+              .build()
+            var lastSentAt = 0L
+            analysis.setAnalyzer(ContextCompat.getMainExecutor(ctx)) { imageProxy ->
+              val now = System.currentTimeMillis()
+              if (now - lastSentAt >= 1200) {
+                lastSentAt = now
+                runCatching { controller.sendFrame(imageProxyToJpeg(imageProxy)) }
               }
-              val analysis = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build()
-              var lastSentAt = 0L
-              analysis.setAnalyzer(ContextCompat.getMainExecutor(ctx)) { imageProxy ->
-                val now = System.currentTimeMillis()
-                if (now - lastSentAt >= 1200) {
-                  lastSentAt = now
-                  runCatching { controller.sendFrame(imageProxyToJpeg(imageProxy)) }
-                }
-                imageProxy.close()
-              }
-              try {
-                cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
-              } catch (e: Exception) {
-                controller.reportCameraError(e.message ?: "Camera failed to start")
-              }
-            }, ContextCompat.getMainExecutor(ctx))
-            previewView
-          }
-        )
-
-        val statusText = when {
-          controller.errorMessage != null -> controller.errorMessage ?: ""
-          controller.connectionState == RealtimeVisionController.ConnectionState.Connecting -> "Connecting…"
-          controller.isAiSpeaking -> "ChatGiZa is speaking…"
-          controller.connectionState == RealtimeVisionController.ConnectionState.Listening -> "Listening…"
-          else -> ""
+              imageProxy.close()
+            }
+            try {
+              cameraProvider.unbindAll()
+              cameraProvider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
+            } catch (e: Exception) {
+              controller.reportCameraError(e.message ?: "Camera failed to start")
+            }
+          }, ContextCompat.getMainExecutor(ctx))
+          previewView
         }
+      )
+    }
+
+    if (!hasMicPermission) {
+      Column(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+      ) {
+        Text(
+          "Live Vision needs microphone access.",
+          color = Color.White,
+          fontSize = 15.sp,
+          textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = { micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }) {
+          Text("Grant access")
+        }
+      }
+    } else {
+      val statusText = when {
+        controller.errorMessage != null -> controller.errorMessage ?: ""
+        controller.connectionState == RealtimeVisionController.ConnectionState.Connecting -> "Connecting…"
+        controller.isAiSpeaking -> "ChatGiZa is speaking…"
+        controller.connectionState == RealtimeVisionController.ConnectionState.Listening -> "Go ahead"
+        else -> ""
+      }
+
+      Column(
+        modifier = Modifier
+          .fillMaxSize()
+          .padding(top = 64.dp, bottom = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+      ) {
+        IconButton(onClick = { viewModel.closeLiveVision() }) {
+          Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+        }
+        Spacer(modifier = Modifier.height(24.dp))
         if (statusText.isNotEmpty()) {
           Box(
             modifier = Modifier
-              .align(Alignment.BottomCenter)
-              .padding(bottom = 32.dp)
               .clip(RoundedCornerShape(20.dp))
-              .background(Color.Black.copy(alpha = 0.55f))
+              .background(Color.White.copy(alpha = 0.12f))
               .padding(horizontal = 20.dp, vertical = 10.dp)
           ) {
-            Text(statusText, color = Color.White, fontSize = 14.sp)
+            Text(statusText, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
           }
         }
-      } else {
-        Column(
-          modifier = Modifier.fillMaxSize().padding(32.dp),
-          verticalArrangement = Arrangement.Center,
-          horizontalAlignment = Alignment.CenterHorizontally
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+          VoiceControlPill(
+            icon = if (cameraEnabled) Icons.Outlined.Videocam else Icons.Outlined.VideocamOff,
+            contentDescription = "Camera"
+          ) {
+            if (cameraEnabled) {
+              cameraProviderRef?.unbindAll()
+              cameraEnabled = false
+            } else if (hasCameraPermission) {
+              cameraEnabled = true
+            } else {
+              cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+            }
+          }
+          VoiceControlPill(
+            icon = if (speakerEnabled) Icons.Outlined.VolumeUp else Icons.Outlined.VolumeOff,
+            contentDescription = "Speaker"
+          ) {
+            speakerEnabled = !speakerEnabled
+            controller.setSpeakerEnabled(speakerEnabled)
+          }
+          VoiceControlPill(
+            icon = if (micMuted) Icons.Outlined.MicOff else Icons.Outlined.Mic,
+            contentDescription = "Microphone"
+          ) {
+            micMuted = !micMuted
+            controller.setMicMuted(micMuted)
+          }
+          VoiceControlPill(icon = Icons.Outlined.Settings, contentDescription = "Settings") {
+            viewModel.openSettings()
+          }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+          verticalAlignment = Alignment.CenterVertically
         ) {
-          Text(
-            "Live Vision needs camera and microphone access.",
-            color = Color.White,
-            fontSize = 15.sp,
-            textAlign = TextAlign.Center
-          )
-          Spacer(modifier = Modifier.height(16.dp))
-          Button(onClick = { permissionLauncher.launch(arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)) }) {
-            Text("Grant access")
+          Box {
+            FilledIconButton(
+              onClick = { toolMenuOpen = true },
+              colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = Color.White.copy(alpha = 0.12f),
+                contentColor = Color.White
+              )
+            ) {
+              Icon(Icons.Filled.Add, contentDescription = "Tools")
+            }
+            DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
+              DropdownMenuItem(text = { Text("GiZa Pro") }, onClick = { viewModel.selectTool(null); toolMenuOpen = false })
+              DropdownMenuItem(text = { Text("Web search") }, onClick = { viewModel.selectTool("web_search"); toolMenuOpen = false })
+              DropdownMenuItem(text = { Text("Deep research") }, onClick = { viewModel.selectTool("deep_research"); toolMenuOpen = false })
+              DropdownMenuItem(text = { Text("Deep Think") }, onClick = { viewModel.selectTool("deep_think"); toolMenuOpen = false })
+            }
+          }
+          Spacer(modifier = Modifier.size(8.dp))
+          Box(
+            modifier = Modifier
+              .weight(1f)
+              .clip(RoundedCornerShape(24.dp))
+              .background(Color.White.copy(alpha = 0.1f))
+          ) {
+            TextField(
+              value = viewModel.input,
+              onValueChange = viewModel::onInputChange,
+              modifier = Modifier.fillMaxWidth(),
+              placeholder = { Text("Ask anything", color = Color.White.copy(alpha = 0.5f)) },
+              colors = TextFieldDefaults.colors(
+                unfocusedContainerColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedTextColor = Color.White,
+                focusedTextColor = Color.White
+              )
+            )
+          }
+          Spacer(modifier = Modifier.size(8.dp))
+          Button(
+            onClick = {
+              if (viewModel.input.isNotBlank()) {
+                controller.stop()
+                viewModel.closeLiveVision()
+                viewModel.sendMessage()
+              } else {
+                controller.stop()
+                viewModel.closeLiveVision()
+              }
+            },
+            shape = RoundedCornerShape(20.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black)
+          ) {
+            Text("Stop", fontWeight = FontWeight.SemiBold)
           }
         }
       }
     }
+  }
+}
+
+@Composable
+private fun VoiceControlPill(icon: ImageVector, contentDescription: String, onClick: () -> Unit) {
+  Box(
+    modifier = Modifier
+      .size(width = 72.dp, height = 60.dp)
+      .clip(RoundedCornerShape(20.dp))
+      .background(Color.White.copy(alpha = 0.12f))
+      .clickable(onClick = onClick),
+    contentAlignment = Alignment.Center
+  ) {
+    Icon(icon, contentDescription = contentDescription, tint = Color.White)
   }
 }
 
