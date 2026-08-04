@@ -23,6 +23,7 @@ sealed class AppScreen {
   object DataControls : AppScreen()
   object ManageCloudStorage : AppScreen()
   object Widgets : AppScreen()
+  object Haptics : AppScreen()
   object Settings : AppScreen()
   object Projects : AppScreen()
   object Scheduled : AppScreen()
@@ -238,6 +239,36 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeWidgets() {
     screen = AppScreen.Account
+  }
+
+  fun openHaptics() {
+    screen = AppScreen.Haptics
+  }
+
+  fun closeHaptics() {
+    screen = AppScreen.Account
+  }
+
+  var hapticsEnabled by mutableStateOf(tokenStore.getHapticsEnabled())
+    private set
+  var hapticsOnPress by mutableStateOf(tokenStore.getHapticsOnPress())
+    private set
+  var hapticsOnResponse by mutableStateOf(tokenStore.getHapticsOnResponse())
+    private set
+
+  fun setHapticsEnabled(value: Boolean) {
+    hapticsEnabled = value
+    tokenStore.setHapticsEnabled(value)
+  }
+
+  fun setHapticsOnPress(value: Boolean) {
+    hapticsOnPress = value
+    tokenStore.setHapticsOnPress(value)
+  }
+
+  fun setHapticsOnResponse(value: Boolean) {
+    hapticsOnResponse = value
+    tokenStore.setHapticsOnResponse(value)
   }
 
   fun openDataControls() {
