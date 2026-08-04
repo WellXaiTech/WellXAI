@@ -26,25 +26,35 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -85,11 +95,14 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.SettingsBrightness
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Mic
@@ -125,6 +138,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -140,6 +154,7 @@ import coil.compose.AsyncImage
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import java.io.ByteArrayOutputStream
+import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 private const val GOOGLE_WEB_CLIENT_ID =
@@ -170,6 +185,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.History -> HistoryScreen(viewModel)
             is AppScreen.Account -> AccountScreen(viewModel)
             is AppScreen.Customize -> CustomizeScreen(viewModel)
+            is AppScreen.Appearance -> AppearanceScreen(viewModel)
             is AppScreen.Settings -> SettingsScreen(viewModel)
             is AppScreen.Projects -> ProjectsScreen(viewModel)
             is AppScreen.Scheduled -> ScheduledScreen(viewModel)
@@ -1312,6 +1328,180 @@ private fun CustomizeScreen(viewModel: ChatViewModel) {
   }
 }
 
+private enum class AppTheme(val label: String, val icon: ImageVector) {
+  LIGHT("Light", Icons.Filled.LightMode),
+  DARK("Dark", Icons.Filled.DarkMode),
+  SYSTEM("System", Icons.Filled.SettingsBrightness)
+}
+
+@Composable
+private fun ThemeCard(theme: AppTheme, selected: Boolean, onClick: () -> Unit) {
+  val bg by animateColorAsState(
+    targetValue = if (selected) Color.White else Color(0xFF2F2F2F),
+    animationSpec = tween(250),
+    label = "themeCardBg"
+  )
+  val iconTint by animateColorAsState(
+    targetValue = if (selected) Color.Black else Color(0xFFA0A0A0),
+    animationSpec = tween(250),
+    label = "themeCardIcon"
+  )
+  Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Box(
+      modifier = Modifier
+        .size(88.dp)
+        .clip(RoundedCornerShape(22.dp))
+        .background(bg)
+        .clickable(onClick = onClick),
+      contentAlignment = Alignment.Center
+    ) {
+      Icon(theme.icon, contentDescription = theme.label, tint = iconTint, modifier = Modifier.size(30.dp))
+    }
+    Spacer(modifier = Modifier.height(10.dp))
+    Text(
+      theme.label,
+      color = colorScheme.onBackground,
+      fontSize = 16.sp,
+      fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+    )
+  }
+}
+
+@Composable
+private fun PreviewSlider(value: Float, onValueChange: (Float) -> Unit, modifier: Modifier = Modifier) {
+  val density = LocalDensity.current
+  BoxWithConstraints(modifier = modifier.height(18.dp)) {
+    val trackWidthPx = with(density) { maxWidth.toPx() }
+    val thumbPx = with(density) { 18.dp.toPx() }
+    val usableWidth = (trackWidthPx - thumbPx).coerceAtLeast(0f)
+    val thumbOffsetPx = value.coerceIn(0f, 1f) * usableWidth
+
+    Box(
+      modifier = Modifier
+        .align(Alignment.CenterStart)
+        .fillMaxWidth()
+        .height(6.dp)
+        .clip(RoundedCornerShape(999.dp))
+        .background(Color.White.copy(alpha = 0.12f))
+    ) {
+      Box(
+        modifier = Modifier
+          .fillMaxHeight()
+          .width(with(density) { (thumbOffsetPx + thumbPx / 2f).toDp() })
+          .clip(RoundedCornerShape(999.dp))
+          .background(Color.White)
+      )
+    }
+
+    Box(
+      modifier = Modifier
+        .align(Alignment.CenterStart)
+        .offset { IntOffset(thumbOffsetPx.roundToInt(), 0) }
+        .size(18.dp)
+        .clip(CircleShape)
+        .background(Color.White)
+        .draggable(
+          orientation = Orientation.Horizontal,
+          state = rememberDraggableState { delta ->
+            if (usableWidth > 0f) {
+              val newOffset = (thumbOffsetPx + delta).coerceIn(0f, usableWidth)
+              onValueChange(newOffset / usableWidth)
+            }
+          }
+        )
+    )
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AppearanceScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeAppearance() }
+  var selectedTheme by remember { mutableStateOf(AppTheme.DARK) }
+  var textSize by remember { mutableStateOf(0.5f) }
+  val previewFontSize = (14f + 8f * textSize).sp
+
+  Scaffold(containerColor = Color.Transparent) { padding ->
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(padding)
+        .verticalScroll(rememberScrollState())
+        .padding(horizontal = 20.dp)
+        .padding(top = 20.dp, bottom = 24.dp)
+    ) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = { viewModel.closeAppearance() }, modifier = Modifier.size(28.dp)) {
+          Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground, modifier = Modifier.size(28.dp))
+        }
+        Spacer(modifier = Modifier.width(20.dp))
+        Text("Appearance", color = colorScheme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+      Text("Theme", color = colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+      Spacer(modifier = Modifier.height(10.dp))
+      Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        AppTheme.entries.forEach { theme ->
+          ThemeCard(theme = theme, selected = selectedTheme == theme, onClick = { selectedTheme = theme })
+        }
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+      Text("Text Size", color = colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+      Spacer(modifier = Modifier.height(10.dp))
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(320.dp)
+          .clip(RoundedCornerShape(28.dp))
+          .background(Color(0xFF2F2F2F))
+          .padding(24.dp)
+      ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+          PreviewSlider(
+            value = textSize,
+            onValueChange = { textSize = it },
+            modifier = Modifier.fillMaxWidth()
+          )
+
+          Spacer(modifier = Modifier.height(24.dp))
+
+          Box(
+            modifier = Modifier
+              .height(48.dp)
+              .clip(RoundedCornerShape(24.dp))
+              .background(colorScheme.onBackground.copy(alpha = 0.12f))
+              .padding(horizontal = 18.dp, vertical = 12.dp),
+            contentAlignment = Alignment.CenterStart
+          ) {
+            Text("Hi! This is how your messages will look.", color = colorScheme.onBackground, fontSize = 16.sp)
+          }
+
+          Spacer(modifier = Modifier.height(20.dp))
+
+          Text(
+            "This is a preview of how ChatGiZa text will appear in your conversations.",
+            color = colorScheme.onBackground,
+            fontSize = previewFontSize,
+            lineHeight = 28.sp
+          )
+
+          Spacer(modifier = Modifier.weight(1f))
+
+          Text(
+            "PREVIEW",
+            color = Color(0xFF8A8A8A),
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+          )
+        }
+      }
+    }
+  }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AccountScreen(viewModel: ChatViewModel) {
@@ -1378,7 +1568,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
       }
 
       SettingsSectionHeader("App")
-      SettingsMenuRow("Appearance")
+      SettingsMenuRow("Appearance") { viewModel.openAppearance() }
       SettingsMenuRow("Haptics")
       SettingsMenuRow("Widgets")
       SettingsMenuRow("App Language")
