@@ -569,14 +569,14 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           AsyncImage(
             model = viewModel.userImage,
             contentDescription = "Profile",
-            modifier = Modifier.size(56.dp).clip(CircleShape)
+            modifier = Modifier.size(72.dp).clip(CircleShape)
           )
         } else {
           Icon(
             Icons.Filled.Person,
             contentDescription = "Profile",
             tint = colorScheme.onBackground,
-            modifier = Modifier.size(56.dp)
+            modifier = Modifier.size(72.dp)
           )
         }
         Spacer(modifier = Modifier.size(14.dp))
@@ -614,16 +614,16 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .padding(horizontal = 16.dp, vertical = 6.dp)
-          .clip(RoundedCornerShape(16.dp))
+          .padding(horizontal = 16.dp, vertical = 4.dp)
+          .clip(RoundedCornerShape(14.dp))
           .background(Color(0xFF2563EB))
           .clickable(onClick = { viewModel.openBilling() })
-          .padding(horizontal = 14.dp, vertical = 8.dp),
+          .padding(horizontal = 12.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
         Box(
           modifier = Modifier
-            .size(28.dp)
+            .size(22.dp)
             .clip(CircleShape)
             .background(Color.White.copy(alpha = 0.2f)),
           contentAlignment = Alignment.Center
