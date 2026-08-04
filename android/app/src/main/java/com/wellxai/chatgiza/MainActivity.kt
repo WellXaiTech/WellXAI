@@ -217,8 +217,6 @@ private fun SignedOutScreen(signingIn: Boolean, error: String?, onSignIn: () -> 
   }
 }
 
-private const val GREETING_TEXT = "Karibu sana! Nimefurahi kuwa na wewe leo. Naweza kukusaidia vipi?"
-
 private val TOOL_LABELS = mapOf(
   "web_search" to "Web search",
   "deep_research" to "Deep research",
@@ -338,38 +336,10 @@ private fun AskImagineTabs(current: String, onAsk: () -> Unit, onImagine: () -> 
   }
 }
 
-@Composable
-private fun ComposeIcon(tint: Color, modifier: Modifier = Modifier) {
-  Canvas(modifier = modifier.size(22.dp)) {
-    val w = size.width
-    val h = size.height
-    val strokeW = w * 0.08f
-    val squareSize = w * 0.68f
-    drawRoundRect(
-      color = tint,
-      topLeft = Offset(w * 0.06f, h * 0.32f),
-      size = Size(squareSize, squareSize),
-      cornerRadius = CornerRadius(squareSize * 0.22f, squareSize * 0.22f),
-      style = Stroke(width = strokeW)
-    )
-    val tipStart = Offset(w * 0.5f, h * 0.42f)
-    val tipEnd = Offset(w * 0.92f, h * 0.0f)
-    drawLine(color = tint, start = tipStart, end = tipEnd, strokeWidth = strokeW, cap = StrokeCap.Round)
-    drawLine(
-      color = tint,
-      start = tipEnd,
-      end = Offset(tipEnd.x - w * 0.18f, tipEnd.y + h * 0.02f),
-      strokeWidth = strokeW * 0.7f,
-      cap = StrokeCap.Round
-    )
-  }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChatScreenUi(viewModel: ChatViewModel) {
   val listState = rememberLazyListState()
-  var showGreeting by remember { mutableStateOf(true) }
 
   LaunchedEffect(viewModel.messages.size) {
     if (viewModel.messages.isNotEmpty()) {
@@ -388,7 +358,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
         },
         actions = {
           IconButton(onClick = { viewModel.openAccount() }) {
-            ComposeIcon(tint = colorScheme.onBackground)
+            Icon(Icons.Filled.Edit, contentDescription = "Account", tint = colorScheme.onBackground)
           }
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
@@ -398,28 +368,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
   ) { padding ->
     Column(modifier = Modifier.fillMaxSize().padding(padding)) {
       if (viewModel.messages.isEmpty()) {
-        Column(
-          modifier = Modifier.weight(1f).fillMaxWidth().padding(24.dp),
-          verticalArrangement = Arrangement.Center,
-          horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-          Text(
-            "Ready when you are.",
-            fontSize = 22.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = colorScheme.onBackground.copy(alpha = 0.6f)
-          )
-          if (showGreeting) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Box(
-              modifier = Modifier
-                .background(colorScheme.onBackground.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-            ) {
-              Text(GREETING_TEXT, color = colorScheme.onBackground.copy(alpha = 0.85f), fontSize = 14.sp)
-            }
-          }
-        }
+        Box(modifier = Modifier.weight(1f).fillMaxWidth())
       } else {
         LazyColumn(
           state = listState,
@@ -442,13 +391,13 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
         )
       }
 
-      ChatComposerCard(viewModel) { showGreeting = false }
+      ChatComposerCard(viewModel)
     }
   }
 }
 
 @Composable
-private fun ChatComposerCard(viewModel: ChatViewModel, onSend: () -> Unit) {
+private fun ChatComposerCard(viewModel: ChatViewModel) {
   var toolMenuOpen by remember { mutableStateOf(false) }
   var pendingAutoSend by remember { mutableStateOf(false) }
 
@@ -463,7 +412,6 @@ private fun ChatComposerCard(viewModel: ChatViewModel, onSend: () -> Unit) {
         val combined = if (viewModel.input.isBlank()) transcript else "${viewModel.input} $transcript"
         viewModel.onInputChange(combined)
         if (autoSend) {
-          onSend()
           viewModel.sendMessage()
         }
       }
@@ -509,7 +457,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel, onSend: () -> Unit) {
           modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
         ) {
           IconButton(
-            onClick = { onSend(); viewModel.sendMessage() },
+            onClick = { viewModel.sendMessage() },
             enabled = !viewModel.sending
           ) {
             Icon(Icons.Filled.Send, contentDescription = "Send", tint = colorScheme.onBackground)
@@ -588,7 +536,7 @@ private fun ImagineScreen(viewModel: ChatViewModel) {
         },
         actions = {
           IconButton(onClick = { viewModel.openAccount() }) {
-            ComposeIcon(tint = colorScheme.onBackground)
+            Icon(Icons.Filled.Edit, contentDescription = "Account", tint = colorScheme.onBackground)
           }
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
