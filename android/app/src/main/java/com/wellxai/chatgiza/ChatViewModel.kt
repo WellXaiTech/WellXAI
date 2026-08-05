@@ -18,6 +18,7 @@ sealed class AppScreen {
   object Account : AppScreen()
   object Customize : AppScreen()
   object EditProfile : AppScreen()
+  object AppLanguage : AppScreen()
   object Appearance : AppScreen()
   object Voice : AppScreen()
   object ReportProblem : AppScreen()
@@ -353,6 +354,16 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun setMemoryEnabled(value: Boolean) = persistProfile(profileData.copy(memoryEnabled = value))
+
+  fun setAppLanguage(value: String) = persistProfile(profileData.copy(language = value))
+
+  fun openAppLanguage() {
+    screen = AppScreen.AppLanguage
+  }
+
+  fun closeAppLanguage() {
+    screen = AppScreen.Account
+  }
 
   var personalizeChatGizaEnabled by mutableStateOf(true)
     private set

@@ -17,6 +17,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
@@ -24,6 +25,7 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
+import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.animation.animateColorAsState
@@ -173,6 +175,7 @@ import coil.compose.AsyncImage
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import java.io.ByteArrayOutputStream
+import java.util.Locale
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
@@ -205,6 +208,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Account -> AccountScreen(viewModel)
             is AppScreen.Customize -> CustomizeScreen(viewModel)
             is AppScreen.EditProfile -> EditProfileScreen(viewModel)
+            is AppScreen.AppLanguage -> AppLanguageScreen(viewModel)
             is AppScreen.Appearance -> AppearanceScreen(viewModel)
             is AppScreen.Voice -> VoiceScreen(viewModel)
             is AppScreen.ReportProblem -> ReportProblemScreen(viewModel)
@@ -2439,6 +2443,186 @@ private fun HapticsScreen(viewModel: ChatViewModel) {
   }
 }
 
+private data class LangEntry(
+  val locale: Locale,
+  val nativeName: String,
+  val englishName: String,
+  val iso2: String,
+  val iso3: String
+)
+
+/** Every language Android itself knows about, deduplicated by ISO-639
+ * language code (not full locale/country) — matches the "orodha kamili
+ * ya languages" requirement via Locale.getAvailableLocales() rather than
+ * a hand-picked subset. */
+private fun buildLanguageEntries(): List<LangEntry> {
+  val seen = mutableSetOf<String>()
+  val entries = mutableListOf<LangEntry>()
+  for (locale in Locale.getAvailableLocales()) {
+    val lang = locale.language
+    if (lang.isBlank() || !seen.add(lang)) continue
+    val base = Locale(lang)
+    val native = base.getDisplayName(base).replaceFirstChar { it.uppercase() }
+    val english = base.getDisplayName(Locale.ENGLISH).replaceFirstChar { it.uppercase() }
+    if (native.isBlank() || native == lang) continue
+    val iso3 = runCatching { base.isO3Language }.getOrDefault("")
+    entries.add(LangEntry(base, native, english, lang, iso3))
+  }
+  return entries.sortedBy { it.nativeName }
+}
+
+private val SUGGESTED_LANGUAGE_CODES = listOf("en", "sw", "fr", "ar", "es", "pt", "de", "zh", "hi", "am", "so", "ha", "ig")
+
+@Composable
+private fun LanguageRow(label: String, selected: Boolean, onClick: () -> Unit) {
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .clickable(onClick = onClick)
+      .padding(vertical = 14.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Text(label, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+    if (selected) {
+      Icon(Icons.Filled.Check, contentDescription = "Selected", tint = Color(0xFF2979FF), modifier = Modifier.size(22.dp))
+    }
+  }
+}
+
+@Composable
+private fun AppLanguageScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeAppLanguage() }
+  var query by remember { mutableStateOf("") }
+  var searchOpen by remember { mutableStateOf(false) }
+  val allEntries = remember { buildLanguageEntries() }
+  val suggested = remember(allEntries) {
+    allEntries.filter { it.iso2 in SUGGESTED_LANGUAGE_CODES }.sortedBy { SUGGESTED_LANGUAGE_CODES.indexOf(it.iso2) }
+  }
+  val filtered = remember(query, allEntries) {
+    val q = query.trim()
+    if (q.isEmpty()) null
+    else allEntries.filter { e ->
+      e.nativeName.contains(q, ignoreCase = true) ||
+        e.englishName.contains(q, ignoreCase = true) ||
+        e.iso2.startsWith(q, ignoreCase = true) ||
+        (e.iso3.isNotEmpty() && e.iso3.startsWith(q, ignoreCase = true))
+    }
+  }
+
+  val isAutoDetect = viewModel.profileData.language.isBlank() ||
+    viewModel.profileData.language.equals("Auto-detect", ignoreCase = true)
+  val currentLabel = if (isAutoDetect) "Auto-detect" else viewModel.profileData.language
+
+  fun applyLocale(entry: LangEntry?) {
+    // Applies the OS-level per-app locale (affects the keyboard, share
+    // sheets, date/number formatting) without recreating the Activity —
+    // this app's own screens aren't localized yet, so a forced recreate
+    // would just reset navigation back to Chat for no visible benefit.
+    if (entry == null) {
+      viewModel.setAppLanguage("Auto-detect")
+      AppCompatDelegate.setApplicationLocales(LocaleListCompat.getEmptyLocaleList())
+    } else {
+      viewModel.setAppLanguage(entry.englishName)
+      AppCompatDelegate.setApplicationLocales(LocaleListCompat.create(entry.locale))
+    }
+  }
+
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color(0xFF262626))
+      .padding(horizontal = 20.dp)
+  ) {
+    Row(
+      modifier = Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 16.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      IconButton(onClick = { viewModel.closeAppLanguage() }, modifier = Modifier.size(28.dp)) {
+        Icon(Icons.Filled.ArrowBackIosNew, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
+      }
+      Spacer(modifier = Modifier.width(18.dp))
+      Text("App Language", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+      IconButton(onClick = { searchOpen = !searchOpen }, modifier = Modifier.size(28.dp)) {
+        Icon(Icons.Filled.Search, contentDescription = "Search languages", tint = Color.White, modifier = Modifier.size(28.dp))
+      }
+    }
+
+    if (searchOpen) {
+      OutlinedTextField(
+        value = query,
+        onValueChange = { query = it },
+        modifier = Modifier.fillMaxWidth(),
+        placeholder = { Text("Search languages") },
+        singleLine = true,
+        shape = RoundedCornerShape(16.dp)
+      )
+      Spacer(modifier = Modifier.height(12.dp))
+    }
+
+    if (query.isBlank()) {
+      Card(
+        modifier = Modifier.fillMaxWidth().height(120.dp),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+      ) {
+        Row(modifier = Modifier.fillMaxSize().padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+          Box(
+            modifier = Modifier.size(48.dp).clip(CircleShape).background(Color.White),
+            contentAlignment = Alignment.Center
+          ) {
+            Text("G", color = Color.Black, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+          }
+          Spacer(modifier = Modifier.width(16.dp))
+          Column {
+            Text("Current Language", color = Color(0xFFA8A8A8), fontSize = 13.sp)
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(currentLabel, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+          }
+        }
+      }
+
+      Spacer(modifier = Modifier.height(20.dp))
+      Text("Suggested", color = Color(0xFF2979FF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+      LanguageRow("System Default", selected = isAutoDetect) { applyLocale(null) }
+      suggested.forEach { e ->
+        LanguageRow(e.nativeName, selected = !isAutoDetect && currentLabel.equals(e.englishName, ignoreCase = true)) {
+          applyLocale(e)
+        }
+      }
+
+      Spacer(modifier = Modifier.height(12.dp))
+      Text("All Languages", color = Color(0xFF2979FF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+      LazyColumn(modifier = Modifier.weight(1f)) {
+        items(allEntries, key = { it.iso2 }) { e ->
+          LanguageRow(e.nativeName, selected = !isAutoDetect && currentLabel.equals(e.englishName, ignoreCase = true)) {
+            applyLocale(e)
+          }
+        }
+      }
+    } else {
+      LazyColumn(modifier = Modifier.weight(1f)) {
+        val results = filtered.orEmpty()
+        if (results.isEmpty()) {
+          item {
+            Text(
+              "No matches.",
+              color = Color(0xFFA8A8A8),
+              fontSize = 14.sp,
+              modifier = Modifier.fillMaxWidth().padding(top = 32.dp),
+              textAlign = TextAlign.Center
+            )
+          }
+        }
+        items(results, key = { it.iso2 }) { e ->
+          LanguageRow(e.nativeName, selected = !isAutoDetect && currentLabel.equals(e.englishName, ignoreCase = true)) {
+            applyLocale(e)
+          }
+        }
+      }
+    }
+  }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AccountScreen(viewModel: ChatViewModel) {
@@ -2511,7 +2695,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
       SettingsMenuRow("Appearance") { viewModel.openAppearance() }
       SettingsMenuRow("Haptics") { viewModel.openHaptics() }
       SettingsMenuRow("Widgets") { viewModel.openWidgets() }
-      SettingsMenuRow("App Language")
+      SettingsMenuRow("App Language") { viewModel.openAppLanguage() }
       SettingsMenuRow("Advanced")
 
       SettingsSectionHeader("GiZa")
