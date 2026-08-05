@@ -53,8 +53,9 @@ export default function SignInPromptModal({ onClose }: { onClose: () => void }) 
       >
         <div className="hero-shimmer-bg" />
 
-        <div className="glow-badge relative z-10 mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-border bg-surface text-lg font-extrabold tracking-tight">
-          GZ
+        <div className="glow-badge relative z-10 mx-auto mb-4 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border border-border bg-black">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icons/icon-192.png" alt="" className="h-full w-full object-cover" />
         </div>
 
         <h2 className="relative z-10 mb-1 text-lg font-semibold tracking-tight">Sign up to keep chatting</h2>

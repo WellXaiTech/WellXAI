@@ -40,6 +40,7 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -106,6 +107,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MoreVert
@@ -1770,13 +1772,14 @@ private fun EditProfileScreen(viewModel: ChatViewModel) {
 }
 
 private enum class AppTheme(val label: String, val icon: ImageVector) {
-  LIGHT("Light", Icons.Filled.LightMode),
+  SYSTEM("System", Icons.Filled.SettingsBrightness),
+  FOR_YOU("For You", Icons.Filled.Favorite),
   DARK("Dark", Icons.Filled.DarkMode),
-  SYSTEM("System", Icons.Filled.SettingsBrightness)
+  LIGHT("Light", Icons.Filled.LightMode)
 }
 
 @Composable
-private fun ThemeCard(theme: AppTheme, selected: Boolean, onClick: () -> Unit) {
+private fun ThemeCard(theme: AppTheme, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
   val bg by animateColorAsState(
     targetValue = if (selected) Color.White else Color(0xFF2F2F2F),
     animationSpec = tween(250),
@@ -1787,23 +1790,25 @@ private fun ThemeCard(theme: AppTheme, selected: Boolean, onClick: () -> Unit) {
     animationSpec = tween(250),
     label = "themeCardIcon"
   )
-  Column(horizontalAlignment = Alignment.CenterHorizontally) {
+  Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
     Box(
       modifier = Modifier
-        .size(88.dp)
-        .clip(RoundedCornerShape(22.dp))
+        .fillMaxWidth()
+        .aspectRatio(1f)
+        .clip(RoundedCornerShape(28.dp))
         .background(bg)
         .clickable(onClick = onClick),
       contentAlignment = Alignment.Center
     ) {
-      Icon(theme.icon, contentDescription = theme.label, tint = iconTint, modifier = Modifier.size(30.dp))
+      Icon(theme.icon, contentDescription = theme.label, tint = iconTint, modifier = Modifier.size(28.dp))
     }
     Spacer(modifier = Modifier.height(10.dp))
     Text(
       theme.label,
       color = colorScheme.onBackground,
-      fontSize = 16.sp,
-      fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+      fontSize = 14.sp,
+      fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+      maxLines = 1
     )
   }
 }
@@ -1811,9 +1816,11 @@ private fun ThemeCard(theme: AppTheme, selected: Boolean, onClick: () -> Unit) {
 @Composable
 private fun PreviewSlider(value: Float, onValueChange: (Float) -> Unit, modifier: Modifier = Modifier) {
   val density = LocalDensity.current
-  BoxWithConstraints(modifier = modifier.height(18.dp)) {
+  val thumbSize = 22.dp
+  val trackHeight = 14.dp
+  BoxWithConstraints(modifier = modifier.height(thumbSize)) {
     val trackWidthPx = with(density) { maxWidth.toPx() }
-    val thumbPx = with(density) { 18.dp.toPx() }
+    val thumbPx = with(density) { thumbSize.toPx() }
     val usableWidth = (trackWidthPx - thumbPx).coerceAtLeast(0f)
     val thumbOffsetPx = value.coerceIn(0f, 1f) * usableWidth
 
@@ -1821,7 +1828,7 @@ private fun PreviewSlider(value: Float, onValueChange: (Float) -> Unit, modifier
       modifier = Modifier
         .align(Alignment.CenterStart)
         .fillMaxWidth()
-        .height(6.dp)
+        .height(trackHeight)
         .clip(RoundedCornerShape(999.dp))
         .background(Color.White.copy(alpha = 0.12f))
     ) {
@@ -1838,7 +1845,7 @@ private fun PreviewSlider(value: Float, onValueChange: (Float) -> Unit, modifier
       modifier = Modifier
         .align(Alignment.CenterStart)
         .offset { IntOffset(thumbOffsetPx.roundToInt(), 0) }
-        .size(18.dp)
+        .size(thumbSize)
         .clip(CircleShape)
         .background(Color.White)
         .draggable(
@@ -1882,9 +1889,14 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
       Spacer(modifier = Modifier.height(24.dp))
       Text("Theme", color = colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
       Spacer(modifier = Modifier.height(10.dp))
-      Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         AppTheme.entries.forEach { theme ->
-          ThemeCard(theme = theme, selected = selectedTheme == theme, onClick = { selectedTheme = theme })
+          ThemeCard(
+            theme = theme,
+            selected = selectedTheme == theme,
+            onClick = { selectedTheme = theme },
+            modifier = Modifier.weight(1f)
+          )
         }
       }
 
