@@ -95,7 +95,9 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -235,7 +237,7 @@ class MainActivity : ComponentActivity() {
     viewModel = ChatViewModel(TokenStore(applicationContext))
 
     setContent {
-      ChatGizaTheme {
+      ChatGizaTheme(themeMode = viewModel.themeMode) {
         Surface {
           when (viewModel.screen) {
             is AppScreen.Loading -> LoadingScreen()
@@ -297,24 +299,53 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun ChatGizaTheme(content: @Composable () -> Unit) {
-  val appBackground = Color(0xFF111113)
-  val colors = darkColorScheme(
-    background = appBackground,
-    surface = appBackground,
-    surfaceVariant = appBackground,
-    surfaceContainer = appBackground,
-    surfaceContainerHigh = appBackground,
-    surfaceContainerHighest = appBackground,
-    surfaceContainerLow = appBackground,
-    surfaceContainerLowest = appBackground,
-    surfaceTint = appBackground,
-    onBackground = Color.White,
-    onSurface = Color.White,
-    onSurfaceVariant = Color.White,
-    primary = Color.White,
-    onPrimary = Color.Black
-  )
+private fun ChatGizaTheme(themeMode: String, content: @Composable () -> Unit) {
+  // "for_you" has no distinct design of its own yet, so — like "system" — it
+  // just follows the device's own dark/light setting rather than faking a
+  // real "For You" appearance that doesn't exist.
+  val useDark = when (themeMode) {
+    "light" -> false
+    "dark" -> true
+    else -> isSystemInDarkTheme()
+  }
+
+  val colors = if (useDark) {
+    val appBackground = Color(0xFF111113)
+    darkColorScheme(
+      background = appBackground,
+      surface = appBackground,
+      surfaceVariant = appBackground,
+      surfaceContainer = appBackground,
+      surfaceContainerHigh = appBackground,
+      surfaceContainerHighest = appBackground,
+      surfaceContainerLow = appBackground,
+      surfaceContainerLowest = appBackground,
+      surfaceTint = appBackground,
+      onBackground = Color.White,
+      onSurface = Color.White,
+      onSurfaceVariant = Color.White,
+      primary = Color.White,
+      onPrimary = Color.Black
+    )
+  } else {
+    val appBackground = Color.White
+    lightColorScheme(
+      background = appBackground,
+      surface = appBackground,
+      surfaceVariant = appBackground,
+      surfaceContainer = Color(0xFFF2F2F2),
+      surfaceContainerHigh = Color(0xFFE8E8E8),
+      surfaceContainerHighest = Color(0xFFDFDFDF),
+      surfaceContainerLow = Color(0xFFF7F7F7),
+      surfaceContainerLowest = appBackground,
+      surfaceTint = appBackground,
+      onBackground = Color.Black,
+      onSurface = Color.Black,
+      onSurfaceVariant = Color.Black,
+      primary = Color.Black,
+      onPrimary = Color.White
+    )
+  }
   MaterialTheme(colorScheme = colors, content = content)
 }
 
@@ -1771,11 +1802,15 @@ private fun EditProfileScreen(viewModel: ChatViewModel) {
   }
 }
 
-private enum class AppTheme(val label: String, val icon: ImageVector) {
-  SYSTEM("System", Icons.Filled.SettingsBrightness),
-  FOR_YOU("For You", Icons.Filled.Favorite),
-  DARK("Dark", Icons.Filled.DarkMode),
-  LIGHT("Light", Icons.Filled.LightMode)
+private enum class AppTheme(val key: String, val label: String, val icon: ImageVector) {
+  SYSTEM("system", "System", Icons.Filled.SettingsBrightness),
+  FOR_YOU("for_you", "For You", Icons.Filled.Favorite),
+  DARK("dark", "Dark", Icons.Filled.DarkMode),
+  LIGHT("light", "Light", Icons.Filled.LightMode);
+
+  companion object {
+    fun fromKey(key: String): AppTheme = entries.find { it.key == key } ?: DARK
+  }
 }
 
 @Composable
@@ -1800,7 +1835,7 @@ private fun ThemeCard(theme: AppTheme, selected: Boolean, onClick: () -> Unit, m
         .clickable(onClick = onClick),
       contentAlignment = Alignment.Center
     ) {
-      Icon(theme.icon, contentDescription = theme.label, tint = iconTint, modifier = Modifier.size(28.dp))
+      Icon(theme.icon, contentDescription = theme.label, tint = iconTint, modifier = Modifier.size(22.dp))
     }
     Spacer(modifier = Modifier.height(10.dp))
     Text(
@@ -1865,7 +1900,7 @@ private fun PreviewSlider(value: Float, onValueChange: (Float) -> Unit, modifier
 @Composable
 private fun AppearanceScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeAppearance() }
-  var selectedTheme by remember { mutableStateOf(AppTheme.DARK) }
+  val selectedTheme = AppTheme.fromKey(viewModel.themeMode)
   var textSize by remember { mutableStateOf(0.5f) }
   val previewFontSize = (14f + 8f * textSize).sp
 
@@ -1894,7 +1929,7 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
           ThemeCard(
             theme = theme,
             selected = selectedTheme == theme,
-            onClick = { selectedTheme = theme },
+            onClick = { viewModel.setThemeMode(theme.key) },
             modifier = Modifier.weight(1f)
           )
         }

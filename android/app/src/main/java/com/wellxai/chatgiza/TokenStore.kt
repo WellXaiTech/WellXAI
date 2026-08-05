@@ -59,6 +59,11 @@ class TokenStore(context: Context) {
     prefs.edit().putString(KEY_PASTE_AS_FILE_MODE, value).apply()
   }
 
+  fun getThemeMode(): String = prefs.getString(KEY_THEME_MODE, "dark") ?: "dark"
+  fun setThemeMode(value: String) {
+    prefs.edit().putString(KEY_THEME_MODE, value).apply()
+  }
+
   /** Wipes the session but keeps device-level prefs (haptics) that aren't
    * tied to any particular account. */
   fun clear() {
@@ -66,11 +71,13 @@ class TokenStore(context: Context) {
     val hapticsOnPress = getHapticsOnPress()
     val hapticsOnResponse = getHapticsOnResponse()
     val pasteAsFileMode = getPasteAsFileMode()
+    val themeMode = getThemeMode()
     prefs.edit().clear().apply()
     setHapticsEnabled(hapticsEnabled)
     setHapticsOnPress(hapticsOnPress)
     setHapticsOnResponse(hapticsOnResponse)
     setPasteAsFileMode(pasteAsFileMode)
+    setThemeMode(themeMode)
   }
 
   companion object {
@@ -82,5 +89,6 @@ class TokenStore(context: Context) {
     private const val KEY_HAPTICS_ON_PRESS = "haptics_on_press"
     private const val KEY_HAPTICS_ON_RESPONSE = "haptics_on_response"
     private const val KEY_PASTE_AS_FILE_MODE = "paste_as_file_mode"
+    private const val KEY_THEME_MODE = "theme_mode"
   }
 }
