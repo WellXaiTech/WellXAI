@@ -54,7 +54,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -1967,7 +1966,7 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
         // pulled back left toward min — so the card doesn't feel static.
         Box(
           modifier = Modifier
-            .matchParentSize()
+            .fillMaxSize()
             .graphicsLayer { translationX = (textSize - 0.5f) * 2f * 60.dp.toPx() }
             .background(
               Brush.horizontalGradient(
