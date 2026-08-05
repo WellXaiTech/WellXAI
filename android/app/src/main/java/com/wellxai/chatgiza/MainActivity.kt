@@ -54,6 +54,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -189,6 +190,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -1844,8 +1846,8 @@ private fun ThemeCard(theme: AppTheme, selected: Boolean, onClick: () -> Unit, m
     Box(
       modifier = Modifier
         .fillMaxWidth()
-        .aspectRatio(1f)
-        .clip(RoundedCornerShape(28.dp))
+        .aspectRatio(1.6f)
+        .clip(RoundedCornerShape(24.dp))
         .background(bg)
         .clickable(onClick = onClick),
       contentAlignment = Alignment.Center
@@ -1939,7 +1941,7 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
       Spacer(modifier = Modifier.height(24.dp))
       Text("Theme", color = colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
       Spacer(modifier = Modifier.height(10.dp))
-      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         AppTheme.entries.forEach { theme ->
           ThemeCard(
             theme = theme,
@@ -1953,15 +1955,32 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
       Spacer(modifier = Modifier.height(24.dp))
       Text("Text Size", color = colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
       Spacer(modifier = Modifier.height(10.dp))
+      val atExtreme = textSize <= 0.001f || textSize >= 0.999f
       Box(
         modifier = Modifier
           .fillMaxWidth()
           .height(320.dp)
           .clip(RoundedCornerShape(28.dp))
           .background(Color(0xFF2F2F2F))
-          .padding(24.dp)
       ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        // Drifts with the slider — pulled right as it moves toward max,
+        // pulled back left toward min — so the card doesn't feel static.
+        Box(
+          modifier = Modifier
+            .matchParentSize()
+            .graphicsLayer { translationX = (textSize - 0.5f) * 2f * 60.dp.toPx() }
+            .background(
+              Brush.horizontalGradient(
+                colors = listOf(
+                  Color.Transparent,
+                  colorScheme.onBackground.copy(alpha = 0.06f),
+                  Color.Transparent
+                )
+              )
+            )
+        )
+
+        Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
           PreviewSlider(
             value = textSize,
             onValueChange = { textSize = it },
@@ -1993,11 +2012,13 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
           Spacer(modifier = Modifier.weight(1f))
 
           Text(
-            "PREVIEW",
+            if (atExtreme) "RESET" else "PREVIEW",
             color = Color(0xFF8A8A8A),
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
+            modifier = Modifier
+              .align(Alignment.CenterHorizontally)
+              .let { if (atExtreme) it.clickable { textSize = 0.5f } else it }
           )
         }
       }
