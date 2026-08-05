@@ -644,7 +644,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
   Card(
     modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 10.dp),
     shape = RoundedCornerShape(24.dp),
-    colors = CardDefaults.cardColors(containerColor = colorScheme.onBackground.copy(alpha = 0.06f))
+    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F0F0F))
   ) {
     Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)) {
       TextField(
@@ -722,16 +722,26 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
 
             Spacer(modifier = Modifier.width(10.dp))
 
-            // WAVEFORM BUTTON
-            Box(
+            // SPEAK BUTTON (waveform icon + label)
+            Row(
               modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(24.dp))
+                .height(56.dp)
+                .clip(RoundedCornerShape(28.dp))
                 .background(Color.White)
-                .clickable { viewModel.openLiveVision() },
-              contentAlignment = Alignment.Center
+                .clickable { viewModel.openLiveVision() }
+                .padding(horizontal = 18.dp),
+              verticalAlignment = Alignment.CenterVertically
             ) {
-              WaveformIconCustom(modifier = Modifier.size(24.dp), tint = Color.Black)
+              WaveformIconCustom(modifier = Modifier.size(22.dp), tint = Color.Black)
+              Spacer(modifier = Modifier.width(8.dp))
+              Text(
+                text = "Speak",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black,
+                maxLines = 1,
+                softWrap = false
+              )
             }
           }
           DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
