@@ -190,7 +190,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -1956,8 +1955,7 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
       Spacer(modifier = Modifier.height(24.dp))
       Text("Text Size", color = colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
       Spacer(modifier = Modifier.height(10.dp))
-      val atExtreme = textSize <= 0.001f || textSize >= 0.999f
-      val hiFontSize = (13f + 6f * textSize).sp
+      val showReset = kotlin.math.abs(textSize - 0.5f) > 0.001f
       Box(
         modifier = Modifier
           .fillMaxWidth()
@@ -1965,23 +1963,6 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
           .clip(RoundedCornerShape(28.dp))
           .background(Color(0xFF2F2F2F))
       ) {
-        // Drifts with the slider — pulled right as it moves toward max,
-        // pulled back left toward min — so the card doesn't feel static.
-        Box(
-          modifier = Modifier
-            .fillMaxSize()
-            .graphicsLayer { translationX = (textSize - 0.5f) * 2f * 60.dp.toPx() }
-            .background(
-              Brush.horizontalGradient(
-                colors = listOf(
-                  Color.Transparent,
-                  colorScheme.onBackground.copy(alpha = 0.06f),
-                  Color.Transparent
-                )
-              )
-            )
-        )
-
         Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
           PreviewSlider(
             value = textSize,
@@ -1993,12 +1974,13 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
 
           Box(
             modifier = Modifier
+              .height(48.dp)
               .clip(RoundedCornerShape(24.dp))
               .background(colorScheme.onBackground.copy(alpha = 0.12f))
               .padding(horizontal = 18.dp, vertical = 12.dp),
             contentAlignment = Alignment.CenterStart
           ) {
-            Text("Hi! This is how your messages will look.", color = colorScheme.onBackground, fontSize = hiFontSize)
+            Text("Hi! This is how your messages will look.", color = colorScheme.onBackground, fontSize = 16.sp)
           }
 
           Spacer(modifier = Modifier.height(20.dp))
@@ -2013,14 +1995,18 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
           Spacer(modifier = Modifier.weight(1f))
 
           Text(
-            if (atExtreme) "RESET" else "PREVIEW",
-            color = Color.White.copy(alpha = 0.85f),
+            if (showReset) "Reset" else "PREVIEW",
+            color = if (showReset) Color.White else Color(0xFF8A8A8A),
             fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold,
-            style = TextStyle(shadow = Shadow(color = Color.White.copy(alpha = 0.6f), blurRadius = 16f)),
+            fontWeight = if (showReset) FontWeight.Bold else FontWeight.SemiBold,
+            style = if (showReset) {
+              TextStyle(shadow = Shadow(color = Color.White.copy(alpha = 0.5f), blurRadius = 14f))
+            } else {
+              TextStyle.Default
+            },
             modifier = Modifier
               .align(Alignment.CenterHorizontally)
-              .let { if (atExtreme) it.clickable { textSize = 0.5f } else it }
+              .let { if (showReset) it.clickable { textSize = 0.5f } else it }
           )
         }
       }
