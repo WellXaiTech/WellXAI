@@ -19,6 +19,7 @@ sealed class AppScreen {
   object Customize : AppScreen()
   object EditProfile : AppScreen()
   object AppLanguage : AppScreen()
+  object Advanced : AppScreen()
   object Appearance : AppScreen()
   object Voice : AppScreen()
   object ReportProblem : AppScreen()
@@ -363,6 +364,22 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeAppLanguage() {
     screen = AppScreen.Account
+  }
+
+  fun openAdvanced() {
+    screen = AppScreen.Advanced
+  }
+
+  fun closeAdvanced() {
+    screen = AppScreen.Account
+  }
+
+  var pasteAsFileMode by mutableStateOf(tokenStore.getPasteAsFileMode())
+    private set
+
+  fun updatePasteAsFileMode(value: String) {
+    pasteAsFileMode = value
+    tokenStore.setPasteAsFileMode(value)
   }
 
   var personalizeChatGizaEnabled by mutableStateOf(true)
