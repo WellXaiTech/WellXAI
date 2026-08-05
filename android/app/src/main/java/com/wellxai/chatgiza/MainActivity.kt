@@ -43,6 +43,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -2895,6 +2896,17 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         .padding(horizontal = 20.dp, vertical = 8.dp)
     ) {
       Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        IconButton(onClick = { viewModel.closeAccount() }, modifier = Modifier.size(28.dp)) {
+          Icon(Icons.Outlined.Close, contentDescription = "Close", tint = colorScheme.onBackground, modifier = Modifier.size(28.dp))
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Text("Settings", color = colorScheme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+      }
+
+      Row(
         modifier = Modifier
           .fillMaxWidth()
           .clickable { viewModel.openEditProfile() }
@@ -2949,37 +2961,60 @@ private fun AccountScreen(viewModel: ChatViewModel) {
       }
 
       SettingsSectionHeader("App")
-      SettingsMenuRow("Appearance", icon = Icons.Outlined.DarkMode) { viewModel.openAppearance() }
-      SettingsMenuRow("Haptics", icon = Icons.Outlined.Vibration) { viewModel.openHaptics() }
-      SettingsMenuRow("Widgets", icon = Icons.Outlined.Widgets) { viewModel.openWidgets() }
-      SettingsMenuRow("App Language", icon = Icons.Outlined.Language) { viewModel.openAppLanguage() }
-      SettingsMenuRow("Advanced", icon = Icons.Outlined.AutoAwesome) { viewModel.openAdvanced() }
+      SettingsSection {
+        SettingsMenuRow("Appearance", icon = Icons.Outlined.DarkMode) { viewModel.openAppearance() }
+        SettingsDivider()
+        SettingsMenuRow("Haptics", icon = Icons.Outlined.Vibration) { viewModel.openHaptics() }
+        SettingsDivider()
+        SettingsMenuRow("Widgets", icon = Icons.Outlined.Widgets) { viewModel.openWidgets() }
+        SettingsDivider()
+        SettingsMenuRow("App Language", icon = Icons.Outlined.Language) { viewModel.openAppLanguage() }
+        SettingsDivider()
+        SettingsMenuRow("Advanced", icon = Icons.Outlined.AutoAwesome) { viewModel.openAdvanced() }
+      }
 
       SettingsSectionHeader("GiZa")
-      SettingsMenuRow("Customize GiZa", icon = Icons.Outlined.Tune) { viewModel.openCustomize() }
-      SettingsMenuRow("Connectors", icon = Icons.Outlined.Hub)
-      SettingsMenuRow("Kids Mode", icon = Icons.Outlined.ChildCare)
-      SettingsMenuRow("NSFW Preferences", icon = Icons.Outlined.NoAdultContent)
+      SettingsSection {
+        SettingsMenuRow("Customize GiZa", icon = Icons.Outlined.Tune) { viewModel.openCustomize() }
+        SettingsDivider()
+        SettingsMenuRow("Connectors", icon = Icons.Outlined.Hub)
+        SettingsDivider()
+        SettingsMenuRow("Kids Mode", icon = Icons.Outlined.ChildCare)
+        SettingsDivider()
+        SettingsMenuRow("NSFW Preferences", icon = Icons.Outlined.NoAdultContent)
+      }
 
       SettingsSectionHeader("Voice")
-      SettingsMenuRow("Voice", icon = Icons.Outlined.GraphicEq) { viewModel.openVoice() }
+      SettingsSection {
+        SettingsMenuRow("Voice", icon = Icons.Outlined.GraphicEq) { viewModel.openVoice() }
+      }
 
       SettingsSectionHeader("Data & Information")
-      SettingsMenuRow("Shared Conversations", icon = Icons.Outlined.Link)
-      SettingsMenuRow("Data Controls", icon = Icons.Outlined.Storage) { viewModel.openDataControls() }
-      SettingsMenuRow("Open Source Licenses", icon = Icons.Outlined.Description)
-      SettingsMenuRow("Terms of Use", icon = Icons.AutoMirrored.Outlined.Article)
-      SettingsMenuRow("Privacy Policy", icon = Icons.Outlined.Lock)
+      SettingsSection {
+        SettingsMenuRow("Shared Conversations", icon = Icons.Outlined.Link)
+        SettingsDivider()
+        SettingsMenuRow("Data Controls", icon = Icons.Outlined.Storage) { viewModel.openDataControls() }
+        SettingsDivider()
+        SettingsMenuRow("Open Source Licenses", icon = Icons.Outlined.Description)
+        SettingsDivider()
+        SettingsMenuRow("Terms of Use", icon = Icons.AutoMirrored.Outlined.Article)
+        SettingsDivider()
+        SettingsMenuRow("Privacy Policy", icon = Icons.Outlined.Lock)
+      }
 
       SettingsSectionHeader("Support")
-      SettingsMenuRow("Report a Problem", icon = Icons.Outlined.ReportProblem) { viewModel.openReportProblem() }
+      SettingsSection {
+        SettingsMenuRow("Report a Problem", icon = Icons.Outlined.ReportProblem) { viewModel.openReportProblem() }
+      }
 
       SettingsSectionHeader("Account")
-      SettingsMenuRow(
-        "Sign out",
-        icon = Icons.AutoMirrored.Outlined.Logout,
-        textColor = Color(0xFFFF6B6B)
-      ) { viewModel.signOut() }
+      SettingsSection {
+        SettingsMenuRow(
+          "Sign out",
+          icon = Icons.AutoMirrored.Outlined.Logout,
+          textColor = Color(0xFFFF6B6B)
+        ) { viewModel.signOut() }
+      }
       Spacer(modifier = Modifier.height(24.dp))
     }
   }
@@ -2994,6 +3029,26 @@ private fun SettingsSectionHeader(title: String) {
     fontWeight = FontWeight.SemiBold,
     modifier = Modifier.padding(top = 20.dp, bottom = 6.dp)
   )
+}
+
+/** Groups settings rows into a single rounded, layered card — matches the
+ * grouped-list style (rows on their own background, not floating on the
+ * screen background). */
+@Composable
+private fun SettingsSection(content: @Composable ColumnScope.() -> Unit) {
+  Column(
+    modifier = Modifier
+      .fillMaxWidth()
+      .clip(RoundedCornerShape(18.dp))
+      .background(Color(0xFF1F1F1F))
+      .padding(horizontal = 14.dp),
+    content = content
+  )
+}
+
+@Composable
+private fun SettingsDivider() {
+  HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 1.dp)
 }
 
 /** A settings row — real and clickable when [onClick] is given, otherwise a
