@@ -151,7 +151,6 @@ import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.RadioButtonChecked
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.RecordVoiceOver
-import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.outlined.ReportProblem
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Search
@@ -399,6 +398,63 @@ private fun DeleteIcon(tint: Color, modifier: Modifier = Modifier) {
     )
     drawLine(color = tint, start = Offset(w * 0.40f, h * 0.42f), end = Offset(w * 0.40f, h * 0.80f), strokeWidth = strokeW, cap = StrokeCap.Round)
     drawLine(color = tint, start = Offset(w * 0.60f, h * 0.42f), end = Offset(w * 0.60f, h * 0.80f), strokeWidth = strokeW, cap = StrokeCap.Round)
+  }
+}
+
+/** Matches the exact custom mic glyph the user supplied (24x24 viewBox:
+ * rounded capsule body, bottom semicircle bracket, stand line). */
+@Composable
+private fun MicIconCustom(modifier: Modifier = Modifier, tint: Color = Color.White) {
+  Canvas(modifier = modifier) {
+    val scale = size.width / 24f
+    val strokeW = 2f * scale
+    drawRoundRect(
+      color = tint,
+      topLeft = Offset(9f * scale, 2f * scale),
+      size = Size(6f * scale, 11f * scale),
+      cornerRadius = CornerRadius(3f * scale, 3f * scale),
+      style = Stroke(width = strokeW, cap = StrokeCap.Round)
+    )
+    drawArc(
+      color = tint,
+      startAngle = 0f,
+      sweepAngle = 180f,
+      useCenter = false,
+      topLeft = Offset(5f * scale, 3f * scale),
+      size = Size(14f * scale, 14f * scale),
+      style = Stroke(width = strokeW, cap = StrokeCap.Round)
+    )
+    drawLine(
+      color = tint,
+      start = Offset(12f * scale, 17f * scale),
+      end = Offset(12f * scale, 21f * scale),
+      strokeWidth = strokeW,
+      cap = StrokeCap.Round
+    )
+  }
+}
+
+/** Matches the exact custom waveform glyph the user supplied (24x24
+ * viewBox, 5 filled rounded bars of varying height). */
+@Composable
+private fun WaveformIconCustom(modifier: Modifier = Modifier, tint: Color = Color.Black) {
+  Canvas(modifier = modifier) {
+    val scale = size.width / 24f
+    val bars = listOf(
+      Triple(2f, 9f, 6f),
+      Triple(6.5f, 4f, 16f),
+      Triple(11f, 7f, 10f),
+      Triple(15.5f, 2f, 20f),
+      Triple(20f, 6f, 12f)
+    )
+    for ((x, y, h) in bars) {
+      drawRoundRect(
+        color = tint,
+        topLeft = Offset(x * scale, y * scale),
+        size = Size(2.5f * scale, h * scale),
+        cornerRadius = CornerRadius(1.25f * scale, 1.25f * scale)
+      )
+    }
   }
 }
 
@@ -650,55 +706,32 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
               )
               Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(18.dp))
             }
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.weight(1f))
 
             // MIC BUTTON
             Box(
               modifier = Modifier
-                .size(68.dp)
+                .size(56.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF232323))
+                .background(Color(0xFF333333))
                 .clickable { launchSpeech(autoSend = false) },
               contentAlignment = Alignment.Center
             ) {
-              Icon(
-                imageVector = Icons.Rounded.Mic,
-                contentDescription = "Voice input",
-                tint = Color.White,
-                modifier = Modifier.size(34.dp)
-              )
+              MicIconCustom(modifier = Modifier.size(24.dp), tint = Color.White)
             }
 
             Spacer(modifier = Modifier.width(10.dp))
 
-            // SPEAK BUTTON
-            Row(
+            // WAVEFORM BUTTON
+            Box(
               modifier = Modifier
-                .weight(1f)
-                .height(68.dp)
-                .clip(RoundedCornerShape(40.dp))
+                .size(56.dp)
+                .clip(RoundedCornerShape(24.dp))
                 .background(Color.White)
-                .clickable { viewModel.openLiveVision() }
-                .padding(horizontal = 16.dp),
-              horizontalArrangement = Arrangement.Center,
-              verticalAlignment = Alignment.CenterVertically
+                .clickable { viewModel.openLiveVision() },
+              contentAlignment = Alignment.Center
             ) {
-              Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Box(Modifier.width(4.dp).height(18.dp).background(Color.Black, RoundedCornerShape(3.dp)))
-                Box(Modifier.width(4.dp).height(34.dp).background(Color.Black, RoundedCornerShape(3.dp)))
-                Box(Modifier.width(4.dp).height(26.dp).background(Color.Black, RoundedCornerShape(3.dp)))
-                Box(Modifier.width(4.dp).height(40.dp).background(Color.Black, RoundedCornerShape(3.dp)))
-                Box(Modifier.width(4.dp).height(22.dp).background(Color.Black, RoundedCornerShape(3.dp)))
-              }
-              Spacer(modifier = Modifier.width(14.dp))
-              Text(
-                text = "Speak",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.Black,
-                maxLines = 1,
-                softWrap = false
-              )
+              WaveformIconCustom(modifier = Modifier.size(24.dp), tint = Color.Black)
             }
           }
           DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
