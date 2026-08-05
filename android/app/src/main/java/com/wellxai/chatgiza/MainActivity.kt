@@ -25,6 +25,7 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
@@ -118,12 +119,14 @@ import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.AddBox
 import androidx.compose.material.icons.outlined.AlternateEmail
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Autorenew
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.ChildCare
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Edit
@@ -140,7 +143,9 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MicNone
 import androidx.compose.material.icons.outlined.ModeEdit
+import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.NoAdultContent
+import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.RadioButtonChecked
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
@@ -150,10 +155,14 @@ import androidx.compose.material.icons.outlined.ReportProblem
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.ThumbDown
+import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Vibration
 import androidx.compose.material.icons.outlined.Videocam
+import androidx.compose.material.icons.outlined.VolumeOff
 import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.Widgets
 import androidx.compose.runtime.Composable
@@ -177,9 +186,11 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -425,8 +436,20 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
   val context = LocalContext.current
   val tts = remember { TtsController(context) }
   val haptic = LocalHapticFeedback.current
+  var speakingMessageId by remember { mutableStateOf<String?>(null) }
   DisposableEffect(Unit) {
+    tts.onDone = { speakingMessageId = null }
     onDispose { tts.shutdown() }
+  }
+
+  fun toggleSpeak(message: UiMessage) {
+    if (speakingMessageId == message.id) {
+      tts.stop()
+      speakingMessageId = null
+    } else {
+      tts.speak(message.content)
+      speakingMessageId = message.id
+    }
   }
 
   LaunchedEffect(viewModel.messages.size) {
@@ -440,6 +463,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
       val lastAssistant = viewModel.messages.lastOrNull { it.role == "assistant" }
       if (lastAssistant != null && lastAssistant.content.isNotBlank()) {
         tts.speak(lastAssistant.content)
+        speakingMessageId = lastAssistant.id
       }
       viewModel.clearAutoSpeak()
     }
@@ -490,7 +514,15 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
           verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
           items(viewModel.messages, key = { it.id }) { message ->
-            MessageBubble(message, onSpeak = { tts.speak(message.content) })
+            val isStreamingThis = viewModel.sending && message.id == viewModel.messages.lastOrNull()?.id
+            MessageBubble(
+              message = message,
+              showActions = !isStreamingThis,
+              isSpeaking = speakingMessageId == message.id,
+              onSpeakToggle = { toggleSpeak(message) },
+              onRegenerate = { viewModel.regenerateMessage(message.id) },
+              onDelete = { viewModel.deleteMessage(message.id) }
+            )
           }
         }
       }
@@ -3246,7 +3278,14 @@ private fun formatDate(millis: Long): String {
 }
 
 @Composable
-private fun MessageBubble(message: UiMessage, onSpeak: () -> Unit) {
+private fun MessageBubble(
+  message: UiMessage,
+  showActions: Boolean,
+  isSpeaking: Boolean,
+  onSpeakToggle: () -> Unit,
+  onRegenerate: () -> Unit,
+  onDelete: () -> Unit
+) {
   val isUser = message.role == "user"
   Column(modifier = Modifier.fillMaxWidth()) {
     Row(
@@ -3276,13 +3315,100 @@ private fun MessageBubble(message: UiMessage, onSpeak: () -> Unit) {
         }
       }
     }
-    if (!isUser && message.content.isNotBlank()) {
-      IconButton(onClick = onSpeak, modifier = Modifier.size(32.dp)) {
-        Icon(
-          Icons.Outlined.VolumeUp,
-          contentDescription = "Read aloud",
-          tint = colorScheme.onBackground.copy(alpha = 0.5f),
-          modifier = Modifier.size(18.dp)
+    if (!isUser && message.content.isNotBlank() && showActions) {
+      Spacer(modifier = Modifier.height(4.dp))
+      MessageActionBar(
+        message = message,
+        isSpeaking = isSpeaking,
+        onSpeakToggle = onSpeakToggle,
+        onRegenerate = onRegenerate,
+        onDelete = onDelete
+      )
+    }
+  }
+}
+
+@Composable
+private fun ActionBarItem(icon: ImageVector, label: String, tint: Color = colorScheme.onBackground, onClick: () -> Unit) {
+  Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(60.dp)) {
+    Box(
+      modifier = Modifier
+        .size(48.dp)
+        .clip(RoundedCornerShape(14.dp))
+        .background(colorScheme.onBackground.copy(alpha = 0.06f))
+        .clickable(onClick = onClick),
+      contentAlignment = Alignment.Center
+    ) {
+      Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(20.dp))
+    }
+    Spacer(modifier = Modifier.height(4.dp))
+    Text(label, color = colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 10.sp, maxLines = 1, softWrap = false)
+  }
+}
+
+@Composable
+private fun MessageActionBar(
+  message: UiMessage,
+  isSpeaking: Boolean,
+  onSpeakToggle: () -> Unit,
+  onRegenerate: () -> Unit,
+  onDelete: () -> Unit
+) {
+  val context = LocalContext.current
+  val clipboard = LocalClipboardManager.current
+  var reaction by remember(message.id) { mutableStateOf<String?>(null) }
+  var moreOpen by remember { mutableStateOf(false) }
+  val accent = Color(0xFF2979FF)
+
+  Row(
+    modifier = Modifier.horizontalScroll(rememberScrollState()),
+    horizontalArrangement = Arrangement.spacedBy(8.dp)
+  ) {
+    ActionBarItem(Icons.Outlined.ContentCopy, "Copy") {
+      clipboard.setText(AnnotatedString(message.content))
+    }
+    ActionBarItem(
+      Icons.Outlined.ThumbUp,
+      "Like",
+      tint = if (reaction == "up") accent else colorScheme.onBackground
+    ) { reaction = if (reaction == "up") null else "up" }
+    ActionBarItem(
+      Icons.Outlined.ThumbDown,
+      "Dislike",
+      tint = if (reaction == "down") accent else colorScheme.onBackground
+    ) { reaction = if (reaction == "down") null else "down" }
+    ActionBarItem(Icons.Outlined.Share, "Share") {
+      val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, message.content)
+      }
+      context.startActivity(Intent.createChooser(intent, null))
+    }
+    ActionBarItem(Icons.Outlined.PictureAsPdf, "PDF") {
+      runCatching {
+        val file = generateReplyPdf(context, "ChatGiZa reply", message.content)
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+          type = "application/pdf"
+          putExtra(Intent.EXTRA_STREAM, uri)
+          addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, null))
+      }
+    }
+    ActionBarItem(
+      icon = if (isSpeaking) Icons.Outlined.VolumeOff else Icons.Outlined.VolumeUp,
+      label = if (isSpeaking) "Stop" else "Read Aloud",
+      tint = if (isSpeaking) accent else colorScheme.onBackground,
+      onClick = onSpeakToggle
+    )
+    ActionBarItem(Icons.Outlined.Autorenew, "Regenerate", onClick = onRegenerate)
+    Box {
+      ActionBarItem(Icons.Outlined.MoreHoriz, "More") { moreOpen = true }
+      DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }) {
+        DropdownMenuItem(
+          text = { Text("Delete", color = Color(0xFFFF3B30)) },
+          onClick = { moreOpen = false; onDelete() }
         )
       }
     }

@@ -805,6 +805,70 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
       ChatGizaApi.saveHistory(token, conversations, deletedIds)
     }
   }
+
+  /** Re-runs the request that produced [assistantId]'s reply, replacing its
+   * content with a fresh response. Anything after it in the conversation
+   * (there shouldn't normally be anything, but just in case) is dropped. */
+  fun regenerateMessage(assistantId: String) {
+    val token = tokenStore.getToken() ?: return
+    val conversationId = activeConversationId ?: return
+    if (sending) return
+    val idx = messages.indexOfFirst { it.id == assistantId }
+    if (idx <= 0) return
+
+    val history = messages.take(idx).map { ChatMessage(it.role, it.content) }
+    messages = messages.take(idx) + UiMessage(assistantId, "assistant", "", System.currentTimeMillis())
+    sending = true
+    errorMessage = null
+
+    viewModelScope.launch {
+      val result = ChatGizaApi.streamChat(
+        token = token,
+        messages = history,
+        tool = activeTool,
+        conversationId = conversationId,
+        profile = profileData.profile,
+        memory = if (profileData.memoryEnabled) profileData.memory else emptyList(),
+        language = profileData.language,
+        location = settingsData.location,
+        company = settingsData.company
+      ) { chunk ->
+        messages = messages.map { m -> if (m.id == assistantId) m.copy(content = m.content + chunk) else m }
+      }
+      sending = false
+      if (result is ApiResult.Failure) {
+        errorMessage = result.message
+        messages = messages.map { m ->
+          if (m.id == assistantId && m.content.isEmpty()) m.copy(content = "(failed to respond)") else m
+        }
+      }
+
+      val updated = ApiConversation(
+        id = conversationId,
+        title = conversations.find { it.id == conversationId }?.title ?: "Chat",
+        messages = messages.map { ApiMessage(it.id, it.role, it.content, it.createdAt ?: System.currentTimeMillis()) },
+        pinned = conversations.find { it.id == conversationId }?.pinned ?: false
+      )
+      conversations = conversations.map { if (it.id == conversationId) updated else it }
+      ChatGizaApi.saveHistory(token, conversations, deletedIds)
+    }
+  }
+
+  /** Removes a single message (e.g. an unwanted assistant reply) from the
+   * active conversation and persists the change. */
+  fun deleteMessage(id: String) {
+    val token = tokenStore.getToken() ?: return
+    val conversationId = activeConversationId ?: return
+    messages = messages.filter { it.id != id }
+    val updated = ApiConversation(
+      id = conversationId,
+      title = conversations.find { it.id == conversationId }?.title ?: "Chat",
+      messages = messages.map { ApiMessage(it.id, it.role, it.content, it.createdAt ?: System.currentTimeMillis()) },
+      pinned = conversations.find { it.id == conversationId }?.pinned ?: false
+    )
+    conversations = conversations.map { if (it.id == conversationId) updated else it }
+    viewModelScope.launch { ChatGizaApi.saveHistory(token, conversations, deletedIds) }
+  }
 }
 
 private fun ApiConversation.lastActivity(): Long = messages.maxOfOrNull { it.createdAt ?: 0L } ?: 0L
