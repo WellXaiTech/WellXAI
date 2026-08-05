@@ -425,12 +425,20 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     }
   }
 
+  // Settings (Preferences) is reachable from more than one place — History's
+  // gear icon and Live Vision's in-call gear — so unlike the other
+  // open*/close* pairs it remembers where it was opened from instead of
+  // hardcoding Account. Without this, opening it mid-call and closing it
+  // would strand the user on Account instead of resuming Live Vision.
+  private var settingsReturnScreen: AppScreen = AppScreen.Account
+
   fun openSettings() {
+    settingsReturnScreen = screen
     screen = AppScreen.Settings
   }
 
   fun closeSettings() {
-    screen = AppScreen.Account
+    screen = settingsReturnScreen
   }
 
   private fun persistSettings(updated: SettingsData) {
@@ -630,6 +638,12 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     projects = emptyList()
     scheduledTasks = emptyList()
     billingSummary = null
+    personalizeChatGizaEnabled = true
+    chatLinkSharingEnabled = true
+    selectedVoiceId = "default"
+    firstNameInput = ""
+    lastNameInput = ""
+    birthYearInput = ""
     screen = AppScreen.SignedOut
   }
 
