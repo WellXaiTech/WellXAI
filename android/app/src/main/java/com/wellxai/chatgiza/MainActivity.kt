@@ -763,6 +763,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ImagineScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeImagine() }
   Scaffold(
     topBar = {
       CenterAlignedTopAppBar(
@@ -1496,6 +1497,7 @@ private fun HistoryRow(convo: ApiConversation, onClick: () -> Unit, onMenuClick:
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CustomizeScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeCustomize() }
   Scaffold(
     topBar = {
       TopAppBar(
@@ -2212,6 +2214,7 @@ private fun DataControlsScreen(viewModel: ChatViewModel) {
   var confirmDeleteConversations by remember { mutableStateOf(false) }
   var confirmDeleteMedia by remember { mutableStateOf(false) }
   var confirmDeleteAccount by remember { mutableStateOf(false) }
+  var mediaDeleteNote by remember { mutableStateOf(false) }
 
   Scaffold(containerColor = Color.Transparent) { padding ->
     Column(
@@ -2281,6 +2284,14 @@ private fun DataControlsScreen(viewModel: ChatViewModel) {
       DangerRow("Delete All Conversations") { confirmDeleteConversations = true }
       Spacer(modifier = Modifier.height(32.dp))
       DangerRow("Delete All Images & Media") { confirmDeleteMedia = true }
+      if (mediaDeleteNote) {
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+          "Not available yet — ChatGiZa doesn't have separate media storage to clear.",
+          color = Color(0xFFA8A8A8),
+          fontSize = 13.sp
+        )
+      }
       Spacer(modifier = Modifier.height(32.dp))
       DangerRow("Delete Account") { confirmDeleteAccount = true }
       Spacer(modifier = Modifier.height(24.dp))
@@ -2299,7 +2310,7 @@ private fun DataControlsScreen(viewModel: ChatViewModel) {
     ConfirmDangerDialog(
       title = "Delete all images & media?",
       message = "This can't be undone.",
-      onConfirm = {},
+      onConfirm = { mediaDeleteNote = true },
       onDismiss = { confirmDeleteMedia = false }
     )
   }
@@ -3140,6 +3151,7 @@ private fun SettingsMenuRow(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeSettings() }
   val data = viewModel.settingsData
   Scaffold(
     topBar = {
@@ -3245,6 +3257,7 @@ private fun SettingsSwitchRow(label: String, checked: Boolean, onToggle: () -> U
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProjectsScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeProjects() }
   Scaffold(
     topBar = {
       TopAppBar(
@@ -3302,6 +3315,7 @@ private fun ProjectsScreen(viewModel: ChatViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ScheduledScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeScheduled() }
   Scaffold(
     topBar = {
       TopAppBar(
@@ -3374,6 +3388,7 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BillingScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeBilling() }
   val context = LocalContext.current
   Scaffold(
     topBar = {
