@@ -101,6 +101,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddToHomeScreen
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
@@ -662,70 +663,70 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
           focusedIndicatorColor = Color.Transparent
         )
       )
-      if (viewModel.input.isNotBlank()) {
-        Row(
-          horizontalArrangement = Arrangement.End,
-          modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
-        ) {
-          IconButton(
-            onClick = { tapHaptic(); viewModel.sendMessage() },
-            enabled = !viewModel.sending
+      Box {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+          FilledIconButton(
+            onClick = { toolMenuOpen = true },
+            modifier = Modifier.size(36.dp),
+            colors = IconButtonDefaults.filledIconButtonColors(
+              containerColor = colorScheme.onBackground.copy(alpha = 0.1f),
+              contentColor = colorScheme.onBackground
+            )
           ) {
-            Icon(Icons.Filled.Send, contentDescription = "Send", tint = colorScheme.onBackground)
+            Icon(Icons.Filled.Add, contentDescription = "Tools", modifier = Modifier.size(18.dp))
           }
-        }
-      } else {
-        Box {
-          Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            FilledIconButton(
-              onClick = { toolMenuOpen = true },
-              modifier = Modifier.size(36.dp),
-              colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = colorScheme.onBackground.copy(alpha = 0.1f),
-                contentColor = colorScheme.onBackground
-              )
-            ) {
-              Icon(Icons.Filled.Add, contentDescription = "Tools", modifier = Modifier.size(18.dp))
+          Spacer(modifier = Modifier.size(6.dp))
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+              .height(36.dp)
+              .clip(RoundedCornerShape(18.dp))
+              .background(colorScheme.onBackground.copy(alpha = 0.08f))
+              .clickable(onClick = { toolMenuOpen = true })
+              .padding(horizontal = 10.dp)
+          ) {
+            if (viewModel.activeTool == null) {
+              Icon(Icons.Outlined.Bolt, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp))
+              Spacer(modifier = Modifier.size(4.dp))
             }
-            Spacer(modifier = Modifier.size(6.dp))
-            Row(
-              verticalAlignment = Alignment.CenterVertically,
-              modifier = Modifier
-                .height(36.dp)
-                .clip(RoundedCornerShape(18.dp))
-                .background(colorScheme.onBackground.copy(alpha = 0.08f))
-                .clickable(onClick = { toolMenuOpen = true })
-                .padding(horizontal = 10.dp)
-            ) {
-              if (viewModel.activeTool == null) {
-                Icon(Icons.Outlined.Bolt, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.size(4.dp))
-              }
-              Text(
-                viewModel.activeTool?.let { TOOL_LABELS[it] } ?: "GiZa Pro",
-                color = colorScheme.onBackground,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1
-              )
-              Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(18.dp))
-            }
-            Spacer(modifier = Modifier.weight(1f))
+            Text(
+              viewModel.activeTool?.let { TOOL_LABELS[it] } ?: "GiZa Pro",
+              color = colorScheme.onBackground,
+              fontSize = 13.sp,
+              fontWeight = FontWeight.SemiBold,
+              maxLines = 1
+            )
+            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(18.dp))
+          }
+          Spacer(modifier = Modifier.weight(1f))
 
-            // MIC BUTTON
+          // MIC BUTTON
+          Box(
+            modifier = Modifier
+              .size(36.dp)
+              .clip(CircleShape)
+              .background(Color(0xFF333333))
+              .clickable { launchSpeech(autoSend = false) },
+            contentAlignment = Alignment.Center
+          ) {
+            MicIconCustom(modifier = Modifier.size(18.dp), tint = Color.White)
+          }
+
+          Spacer(modifier = Modifier.width(8.dp))
+
+          if (viewModel.input.isNotBlank()) {
+            // SEND BUTTON
             Box(
               modifier = Modifier
                 .size(36.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF333333))
-                .clickable { launchSpeech(autoSend = false) },
+                .background(if (viewModel.sending) Color(0xFF555555) else Color(0xFFE0E0E0))
+                .clickable(enabled = !viewModel.sending) { tapHaptic(); viewModel.sendMessage() },
               contentAlignment = Alignment.Center
             ) {
-              MicIconCustom(modifier = Modifier.size(18.dp), tint = Color.White)
+              Icon(Icons.Filled.ArrowUpward, contentDescription = "Send", tint = Color.Black, modifier = Modifier.size(18.dp))
             }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
+          } else {
             // SPEAK BUTTON (waveform icon + label)
             Row(
               modifier = Modifier
@@ -748,12 +749,12 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
               )
             }
           }
-          DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
-            DropdownMenuItem(text = { Text("GiZa Pro") }, onClick = { viewModel.selectTool(null); toolMenuOpen = false })
-            DropdownMenuItem(text = { Text("Web search") }, onClick = { viewModel.selectTool("web_search"); toolMenuOpen = false })
-            DropdownMenuItem(text = { Text("Deep research") }, onClick = { viewModel.selectTool("deep_research"); toolMenuOpen = false })
-            DropdownMenuItem(text = { Text("Deep Think") }, onClick = { viewModel.selectTool("deep_think"); toolMenuOpen = false })
-          }
+        }
+        DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
+          DropdownMenuItem(text = { Text("GiZa Pro") }, onClick = { viewModel.selectTool(null); toolMenuOpen = false })
+          DropdownMenuItem(text = { Text("Web search") }, onClick = { viewModel.selectTool("web_search"); toolMenuOpen = false })
+          DropdownMenuItem(text = { Text("Deep research") }, onClick = { viewModel.selectTool("deep_research"); toolMenuOpen = false })
+          DropdownMenuItem(text = { Text("Deep Think") }, onClick = { viewModel.selectTool("deep_think"); toolMenuOpen = false })
         }
       }
     }
