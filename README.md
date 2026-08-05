@@ -68,18 +68,22 @@ src/
 
 ## Android app
 
-`android/` is a real Capacitor-based Android project (not a stub) — it loads the live site (`https://chatgiza.com`, configured in `capacitor.config.ts`) directly in a native WebView, so shipping a change is just deploying the website; the app doesn't need a new Play Store release for ordinary content/UI updates.
+`android/` is a **real native Android app** — Kotlin + Jetpack Compose, not a WebView wrapper. It started as a Capacitor-WebView shell, but that was replaced (see git history starting at `52e5801`, "Replace the WebView with a real native Compose app") with native screens built in phases: Chat + sign-in (Phase 1), History (Phase 2), Account (Phase 3), Settings/Projects/Automations/Billing (Phase 4), followed by many rounds of UI polish to match the web app's design. Capacitor is still used for the Android build tooling/project scaffold, but the UI itself is native Compose.
 
-Requires **Android Studio** (with the Android SDK) installed locally — not available in this dev environment, so the native build/run/APK steps haven't been tested end-to-end yet:
+Source lives at `android/app/src/main/java/com/wellxai/chatgiza/` — notably `MainActivity.kt`, which at ~3,700 lines holds most of the UI; splitting it up is worth doing before adding much more to it. The native app talks to this repo's own backend — see `src/app/api/profile`, `billing`, `projects`, `scheduled`, `settings`, `sessions`, `mobile`, `realtime`, `account`, `support`.
+
+**Sign-in**: uses Android's native **Credential Manager API** (`androidx.credentials.CredentialManager` + `GetGoogleIdOption`) — Google's supported native Sign-In-with-Google mechanism. This is why the old "Google blocks OAuth inside embedded WebViews" concern doesn't apply here; there's no WebView involved in sign-in at all.
+
+**Build & distribution**: `.github/workflows/android-apk.yml` builds a signed release APK on every push to `android/**` and publishes it to GitHub Releases at a stable URL — `https://github.com/WellXaiTech/WellXAI/releases/latest/download/app-release.apk`. `src/components/InstallAppPrompt.tsx` (mounted on `/chatgiza`) shows Android web visitors a "Download APK" banner pointing at that same URL. This is a self-distributed **sideload** APK — the signing key (`android/release.keystore`) is intentionally committed to this public repo, which is fine for sideloading but **must not** be reused for a Play Store submission (a leaked public signing key defeats the point of Play App Signing).
+
+**Local Android Studio workflow** (only needed for local debugging — CI doesn't need this):
 
 ```bash
 npm run android:sync   # re-copy config into the native project after editing capacitor.config.ts
 npm run android:open   # opens android/ in Android Studio
 ```
 
-From Android Studio: let Gradle sync, then Run on an emulator or a device connected via USB debugging. Building a release APK/AAB for the Play Store requires generating a signing key (`Build > Generate Signed Bundle / APK`) — not done yet.
-
-**Known real limitation, not yet solved**: Google sign-in (`signIn("google", ...)`) may be blocked by Google inside a plain embedded WebView (Google actively disallows OAuth sign-in from generic embedded WebViews for security reasons — you'd see "This browser or app may not be secure"). If that happens once this is actually tested on a device, the fix is routing the Google OAuth step through the system browser (Chrome Custom Tabs) instead of the in-app WebView — e.g. Capacitor's `@capacitor/browser` plugin, or a dedicated OAuth plugin — not just the "load the live site" wrapper this is right now. Flagging this now rather than after the fact, since it's a real gap, not a hypothetical one.
+**Remaining gap for a real Play Store submission** (not started): Play Store needs an `.aab` (Android App Bundle), which the current CI doesn't produce (APK only), and a private upload key separate from the public sideload keystore above — plus the usual Play Console store-listing steps (screenshots, privacy policy URL, content rating, etc.).
 
 ## Conventions worth knowing before changing things
 

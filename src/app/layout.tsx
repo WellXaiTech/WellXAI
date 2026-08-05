@@ -57,6 +57,7 @@ export const metadata: Metadata = {
     title: SITE_NAME,
   },
   icons: {
+    icon: "/icon.png",
     apple: "/icons/apple-touch-icon.png",
   },
   alternates: {
