@@ -117,6 +117,7 @@ import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.AddBox
 import androidx.compose.material.icons.outlined.AlternateEmail
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -1989,7 +1990,7 @@ private fun DataControlsAppBar(title: String, onBack: () -> Unit) {
     verticalAlignment = Alignment.CenterVertically
   ) {
     IconButton(onClick = onBack, modifier = Modifier.size(28.dp)) {
-      Icon(Icons.AutoMirrored.Outlined.ArrowBackIosNew, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
+      Icon(Icons.Filled.ArrowBackIosNew, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
     }
     Spacer(modifier = Modifier.width(20.dp))
     Text(title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
@@ -2158,7 +2159,7 @@ private fun ManageCloudStorageScreen(viewModel: ChatViewModel) {
       verticalAlignment = Alignment.CenterVertically
     ) {
       IconButton(onClick = { viewModel.closeManageCloudStorage() }, modifier = Modifier.size(28.dp)) {
-        Icon(Icons.AutoMirrored.Outlined.ArrowBackIosNew, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
+        Icon(Icons.Filled.ArrowBackIosNew, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
       }
       Spacer(modifier = Modifier.width(20.dp))
       Column(modifier = Modifier.weight(1f)) {
@@ -2563,7 +2564,7 @@ private fun AppLanguageScreen(viewModel: ChatViewModel) {
       verticalAlignment = Alignment.CenterVertically
     ) {
       IconButton(onClick = { viewModel.closeAppLanguage() }, modifier = Modifier.size(28.dp)) {
-        Icon(Icons.AutoMirrored.Outlined.ArrowBackIosNew, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
+        Icon(Icons.Filled.ArrowBackIosNew, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
       }
       Spacer(modifier = Modifier.width(18.dp))
       Text("App Language", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
