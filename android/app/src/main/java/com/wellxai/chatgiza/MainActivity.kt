@@ -1929,7 +1929,7 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
           ThemeCard(
             theme = theme,
             selected = selectedTheme == theme,
-            onClick = { viewModel.setThemeMode(theme.key) },
+            onClick = { viewModel.updateThemeMode(theme.key) },
             modifier = Modifier.weight(1f)
           )
         }
