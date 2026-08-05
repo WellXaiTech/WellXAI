@@ -603,7 +603,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
       )
     },
-    containerColor = Color(0xFF0F0F0F),
+    containerColor = colorScheme.background,
     contentWindowInsets = WindowInsets(0, 0, 0, 0)
   ) { padding ->
     Column(
@@ -3170,7 +3170,7 @@ private fun SettingsSection(content: @Composable ColumnScope.() -> Unit) {
     modifier = Modifier
       .fillMaxWidth()
       .clip(RoundedCornerShape(18.dp))
-      .background(Color(0xFF1F1F1F))
+      .background(colorScheme.onBackground.copy(alpha = 0.06f))
       .padding(horizontal = 14.dp),
     content = content
   )
@@ -3178,7 +3178,7 @@ private fun SettingsSection(content: @Composable ColumnScope.() -> Unit) {
 
 @Composable
 private fun SettingsDivider() {
-  HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 1.dp)
+  HorizontalDivider(color = colorScheme.onBackground.copy(alpha = 0.08f), thickness = 1.dp)
 }
 
 /** A settings row — real and clickable when [onClick] is given, otherwise a
