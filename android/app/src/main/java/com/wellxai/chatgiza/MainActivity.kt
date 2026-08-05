@@ -83,7 +83,6 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -97,7 +96,6 @@ import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddToHomeScreen
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -113,27 +111,49 @@ import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.SettingsBrightness
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.automirrored.outlined.Article
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Logout
+import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.AddBox
+import androidx.compose.material.icons.outlined.AlternateEmail
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.ChildCare
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Feedback
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.GraphicEq
+import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MicNone
 import androidx.compose.material.icons.outlined.ModeEdit
+import androidx.compose.material.icons.outlined.NoAdultContent
 import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material.icons.outlined.RadioButtonChecked
+import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.RecordVoiceOver
+import androidx.compose.material.icons.outlined.ReportProblem
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Vibration
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material.icons.outlined.VolumeUp
+import androidx.compose.material.icons.outlined.Widgets
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -799,7 +819,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
         onClick = { viewModel.closeLiveVision() },
         modifier = Modifier.align(Alignment.TopStart).padding(top = 48.dp, start = 12.dp)
       ) {
-        Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(32.dp))
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(32.dp))
       }
 
       Column(
@@ -995,7 +1015,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             .background(colorScheme.onBackground.copy(alpha = 0.08f))
             .padding(horizontal = 16.dp)
         ) {
-          Icon(Icons.Filled.Search, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.size(24.dp))
+          Icon(Icons.Outlined.Search, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.size(24.dp))
           Spacer(modifier = Modifier.size(8.dp))
           TextField(
             value = viewModel.historySearchQuery,
@@ -1020,7 +1040,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             contentColor = colorScheme.onBackground
           )
         ) {
-          Icon(Icons.Filled.Settings, contentDescription = "Settings")
+          Icon(Icons.Outlined.Settings, contentDescription = "Settings")
         }
         Spacer(modifier = Modifier.size(8.dp))
         FilledIconButton(
@@ -1051,7 +1071,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           )
         } else {
           Icon(
-            Icons.Filled.Person,
+            Icons.Outlined.AccountCircle,
             contentDescription = "Profile",
             tint = colorScheme.onBackground,
             modifier = Modifier.size(72.dp)
@@ -1314,7 +1334,7 @@ private fun CustomizeScreen(viewModel: ChatViewModel) {
         title = { Text("Customize ChatGiZa", fontWeight = FontWeight.Bold) },
         navigationIcon = {
           IconButton(onClick = { viewModel.closeCustomize() }) {
-            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
+            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
           }
         }
       )
@@ -1393,7 +1413,7 @@ private fun ProfileAvatar(imageUrl: String?, modifier: Modifier = Modifier) {
       )
     } else {
       Icon(
-        Icons.Filled.Person,
+        Icons.Outlined.AccountCircle,
         contentDescription = "Profile photo",
         tint = Color.White,
         modifier = Modifier.size(72.dp)
@@ -1490,7 +1510,7 @@ private fun EditProfileScreen(viewModel: ChatViewModel) {
       verticalAlignment = Alignment.CenterVertically
     ) {
       IconButton(onClick = { viewModel.closeEditProfile() }) {
-        Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
       }
       Text(
         "Edit Profile",
@@ -1564,7 +1584,7 @@ private fun EditProfileScreen(viewModel: ChatViewModel) {
     )
     Spacer(modifier = Modifier.height(10.dp))
     XAccountCard(
-      icon = Icons.Outlined.Link,
+      icon = Icons.Outlined.AlternateEmail,
       title = "Connect with X",
       onClick = { xNote = true }
     )
@@ -1682,7 +1702,7 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
     ) {
       Row(verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = { viewModel.closeAppearance() }, modifier = Modifier.size(28.dp)) {
-          Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground, modifier = Modifier.size(28.dp))
+          Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground, modifier = Modifier.size(28.dp))
         }
         Spacer(modifier = Modifier.width(20.dp))
         Text("Appearance", color = colorScheme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold)
@@ -1809,7 +1829,7 @@ private fun VoiceScreen(viewModel: ChatViewModel) {
     ) {
       Row(verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = { viewModel.closeVoice() }, modifier = Modifier.size(28.dp)) {
-          Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground, modifier = Modifier.size(28.dp))
+          Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground, modifier = Modifier.size(28.dp))
         }
         Spacer(modifier = Modifier.width(20.dp))
         Text("Voice", color = colorScheme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold)
@@ -1969,7 +1989,7 @@ private fun DataControlsAppBar(title: String, onBack: () -> Unit) {
     verticalAlignment = Alignment.CenterVertically
   ) {
     IconButton(onClick = onBack, modifier = Modifier.size(28.dp)) {
-      Icon(Icons.Filled.ArrowBackIosNew, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
+      Icon(Icons.AutoMirrored.Outlined.ArrowBackIosNew, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
     }
     Spacer(modifier = Modifier.width(20.dp))
     Text(title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
@@ -2041,6 +2061,8 @@ private fun DataControlsScreen(viewModel: ChatViewModel) {
           .clickable { viewModel.openManageCloudStorage() }
       ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+          Icon(Icons.Outlined.Folder, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+          Spacer(modifier = Modifier.width(16.dp))
           Column(modifier = Modifier.weight(1f)) {
             Text("Manage Cloud Storage", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(4.dp))
@@ -2136,7 +2158,7 @@ private fun ManageCloudStorageScreen(viewModel: ChatViewModel) {
       verticalAlignment = Alignment.CenterVertically
     ) {
       IconButton(onClick = { viewModel.closeManageCloudStorage() }, modifier = Modifier.size(28.dp)) {
-        Icon(Icons.Filled.ArrowBackIosNew, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
+        Icon(Icons.AutoMirrored.Outlined.ArrowBackIosNew, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
       }
       Spacer(modifier = Modifier.width(20.dp))
       Column(modifier = Modifier.weight(1f)) {
@@ -2225,7 +2247,7 @@ private fun WidgetsScreen(viewModel: ChatViewModel) {
         title = { Text("Widget") },
         navigationIcon = {
           IconButton(onClick = { viewModel.closeWidgets() }) {
-            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
           }
         },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF262626))
@@ -2270,7 +2292,7 @@ private fun WidgetsScreen(viewModel: ChatViewModel) {
           modifier = Modifier.padding(20.dp),
           verticalAlignment = Alignment.CenterVertically
         ) {
-          Icon(Icons.Filled.AddToHomeScreen, contentDescription = null, tint = Color.White)
+          Icon(Icons.Outlined.AddBox, contentDescription = null, tint = Color.White)
           Spacer(modifier = Modifier.width(16.dp))
           Text("Add Widget", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
@@ -2393,7 +2415,7 @@ private fun HapticsScreen(viewModel: ChatViewModel) {
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
       IconButton(onClick = { viewModel.closeHaptics() }) {
-        Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+        Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
       }
       Spacer(Modifier.width(18.dp))
       Text(text = "Haptics", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
@@ -2541,12 +2563,12 @@ private fun AppLanguageScreen(viewModel: ChatViewModel) {
       verticalAlignment = Alignment.CenterVertically
     ) {
       IconButton(onClick = { viewModel.closeAppLanguage() }, modifier = Modifier.size(28.dp)) {
-        Icon(Icons.Filled.ArrowBackIosNew, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
+        Icon(Icons.AutoMirrored.Outlined.ArrowBackIosNew, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
       }
       Spacer(modifier = Modifier.width(18.dp))
       Text("App Language", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
       IconButton(onClick = { searchOpen = !searchOpen }, modifier = Modifier.size(28.dp)) {
-        Icon(Icons.Filled.Search, contentDescription = "Search languages", tint = Color.White, modifier = Modifier.size(28.dp))
+        Icon(Icons.Outlined.Search, contentDescription = "Search languages", tint = Color.White, modifier = Modifier.size(28.dp))
       }
     }
 
@@ -2633,6 +2655,15 @@ private fun pasteAsFileModeLabel(mode: String): String = when (mode) {
 }
 
 @Composable
+private fun RadioIcon(selected: Boolean) {
+  Icon(
+    if (selected) Icons.Outlined.RadioButtonChecked else Icons.Outlined.RadioButtonUnchecked,
+    contentDescription = null,
+    tint = if (selected) Color.White else Color(0xFFA8A8A8)
+  )
+}
+
+@Composable
 private fun AdvancedScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeAdvanced() }
   var showDialog by remember { mutableStateOf(false) }
@@ -2645,7 +2676,7 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
       IconButton(onClick = { viewModel.closeAdvanced() }, modifier = Modifier.size(28.dp)) {
-        Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
       }
       Spacer(Modifier.width(20.dp))
       Text(text = "Advanced", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
@@ -2696,13 +2727,8 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
                 showDialog = false
               }
           ) {
-            RadioButton(
-              selected = viewModel.pasteAsFileMode == "always_ask",
-              onClick = {
-                viewModel.updatePasteAsFileMode("always_ask")
-                showDialog = false
-              }
-            )
+            RadioIcon(selected = viewModel.pasteAsFileMode == "always_ask")
+            Spacer(Modifier.width(12.dp))
             Text("Always Ask", color = Color.White, fontSize = 19.sp)
           }
 
@@ -2717,13 +2743,8 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
                 showDialog = false
               }
           ) {
-            RadioButton(
-              selected = viewModel.pasteAsFileMode == "always_file",
-              onClick = {
-                viewModel.updatePasteAsFileMode("always_file")
-                showDialog = false
-              }
-            )
+            RadioIcon(selected = viewModel.pasteAsFileMode == "always_file")
+            Spacer(Modifier.width(12.dp))
             Text("Always Attach as File", color = Color.White, fontSize = 19.sp)
           }
 
@@ -2738,13 +2759,8 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
                 showDialog = false
               }
           ) {
-            RadioButton(
-              selected = viewModel.pasteAsFileMode == "always_text",
-              onClick = {
-                viewModel.updatePasteAsFileMode("always_text")
-                showDialog = false
-              }
-            )
+            RadioIcon(selected = viewModel.pasteAsFileMode == "always_text")
+            Spacer(Modifier.width(12.dp))
             Text("Always Paste as Text", color = Color.White, fontSize = 19.sp)
           }
         }
@@ -2782,7 +2798,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
           )
         } else {
           Icon(
-            Icons.Filled.Person,
+            Icons.Outlined.AccountCircle,
             contentDescription = "Profile",
             tint = colorScheme.onBackground,
             modifier = Modifier.size(52.dp)
@@ -2822,32 +2838,37 @@ private fun AccountScreen(viewModel: ChatViewModel) {
       }
 
       SettingsSectionHeader("App")
-      SettingsMenuRow("Appearance") { viewModel.openAppearance() }
-      SettingsMenuRow("Haptics") { viewModel.openHaptics() }
-      SettingsMenuRow("Widgets") { viewModel.openWidgets() }
-      SettingsMenuRow("App Language") { viewModel.openAppLanguage() }
-      SettingsMenuRow("Advanced") { viewModel.openAdvanced() }
+      SettingsMenuRow("Appearance", icon = Icons.Outlined.DarkMode) { viewModel.openAppearance() }
+      SettingsMenuRow("Haptics", icon = Icons.Outlined.Vibration) { viewModel.openHaptics() }
+      SettingsMenuRow("Widgets", icon = Icons.Outlined.Widgets) { viewModel.openWidgets() }
+      SettingsMenuRow("App Language", icon = Icons.Outlined.Language) { viewModel.openAppLanguage() }
+      SettingsMenuRow("Advanced", icon = Icons.Outlined.AutoAwesome) { viewModel.openAdvanced() }
 
       SettingsSectionHeader("GiZa")
-      SettingsMenuRow("Customize GiZa") { viewModel.openCustomize() }
-      SettingsMenuRow("Connectors")
-      SettingsMenuRow("NSFW Preferences")
+      SettingsMenuRow("Customize GiZa", icon = Icons.Outlined.Tune) { viewModel.openCustomize() }
+      SettingsMenuRow("Connectors", icon = Icons.Outlined.Hub)
+      SettingsMenuRow("Kids Mode", icon = Icons.Outlined.ChildCare)
+      SettingsMenuRow("NSFW Preferences", icon = Icons.Outlined.NoAdultContent)
 
       SettingsSectionHeader("Voice")
-      SettingsMenuRow("Voice") { viewModel.openVoice() }
+      SettingsMenuRow("Voice", icon = Icons.Outlined.GraphicEq) { viewModel.openVoice() }
 
       SettingsSectionHeader("Data & Information")
-      SettingsMenuRow("Shared Conversations")
-      SettingsMenuRow("Data Controls") { viewModel.openDataControls() }
-      SettingsMenuRow("Open Source Licenses")
-      SettingsMenuRow("Terms of Use")
-      SettingsMenuRow("Privacy Policy")
+      SettingsMenuRow("Shared Conversations", icon = Icons.Outlined.Link)
+      SettingsMenuRow("Data Controls", icon = Icons.Outlined.Storage) { viewModel.openDataControls() }
+      SettingsMenuRow("Open Source Licenses", icon = Icons.Outlined.Description)
+      SettingsMenuRow("Terms of Use", icon = Icons.AutoMirrored.Outlined.Article)
+      SettingsMenuRow("Privacy Policy", icon = Icons.Outlined.Lock)
 
       SettingsSectionHeader("Support")
-      SettingsMenuRow("Report a Problem") { viewModel.openReportProblem() }
+      SettingsMenuRow("Report a Problem", icon = Icons.Outlined.ReportProblem) { viewModel.openReportProblem() }
 
       SettingsSectionHeader("Account")
-      SettingsMenuRow("Sign out", textColor = Color(0xFFFF6B6B)) { viewModel.signOut() }
+      SettingsMenuRow(
+        "Sign out",
+        icon = Icons.AutoMirrored.Outlined.Logout,
+        textColor = Color(0xFFFF6B6B)
+      ) { viewModel.signOut() }
       Spacer(modifier = Modifier.height(24.dp))
     }
   }
@@ -2869,18 +2890,25 @@ private fun SettingsSectionHeader(title: String) {
 @Composable
 private fun SettingsMenuRow(
   title: String,
+  icon: ImageVector? = null,
   textColor: Color? = null,
   onClick: (() -> Unit)? = null
 ) {
-  Column(
+  val contentColor = textColor ?: colorScheme.onBackground.copy(alpha = if (onClick != null) 1f else 0.4f)
+  Row(
     modifier = Modifier
       .fillMaxWidth()
       .let { if (onClick != null) it.clickable(onClick = onClick) else it }
-      .padding(vertical = 14.dp)
+      .padding(vertical = 14.dp),
+    verticalAlignment = Alignment.CenterVertically
   ) {
+    if (icon != null) {
+      Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(22.dp))
+      Spacer(modifier = Modifier.width(16.dp))
+    }
     Text(
       title,
-      color = textColor ?: colorScheme.onBackground.copy(alpha = if (onClick != null) 1f else 0.4f),
+      color = contentColor,
       fontSize = 16.sp,
       fontWeight = FontWeight.Medium
     )
@@ -2897,7 +2925,7 @@ private fun SettingsScreen(viewModel: ChatViewModel) {
         title = { Text("Settings", fontWeight = FontWeight.Bold) },
         navigationIcon = {
           IconButton(onClick = { viewModel.closeSettings() }) {
-            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
+            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
           }
         }
       )
@@ -3001,7 +3029,7 @@ private fun ProjectsScreen(viewModel: ChatViewModel) {
         title = { Text("Projects", fontWeight = FontWeight.Bold) },
         navigationIcon = {
           IconButton(onClick = { viewModel.closeProjects() }) {
-            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
+            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
           }
         }
       )
@@ -3058,7 +3086,7 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
         title = { Text("Automations", fontWeight = FontWeight.Bold) },
         navigationIcon = {
           IconButton(onClick = { viewModel.closeScheduled() }) {
-            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
+            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
           }
         }
       )
@@ -3131,7 +3159,7 @@ private fun BillingScreen(viewModel: ChatViewModel) {
         title = { Text("Billing", fontWeight = FontWeight.Bold) },
         navigationIcon = {
           IconButton(onClick = { viewModel.closeBilling() }) {
-            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
+            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
           }
         }
       )
