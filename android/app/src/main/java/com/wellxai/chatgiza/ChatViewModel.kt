@@ -308,7 +308,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var themeMode by mutableStateOf(tokenStore.getThemeMode())
     private set
 
-  fun setThemeMode(value: String) {
+  fun updateThemeMode(value: String) {
     themeMode = value
     tokenStore.setThemeMode(value)
   }
