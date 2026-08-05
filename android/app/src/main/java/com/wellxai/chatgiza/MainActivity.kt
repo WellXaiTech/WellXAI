@@ -83,6 +83,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -168,6 +169,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
@@ -209,6 +211,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Customize -> CustomizeScreen(viewModel)
             is AppScreen.EditProfile -> EditProfileScreen(viewModel)
             is AppScreen.AppLanguage -> AppLanguageScreen(viewModel)
+            is AppScreen.Advanced -> AdvancedScreen(viewModel)
             is AppScreen.Appearance -> AppearanceScreen(viewModel)
             is AppScreen.Voice -> VoiceScreen(viewModel)
             is AppScreen.ReportProblem -> ReportProblemScreen(viewModel)
@@ -2623,6 +2626,133 @@ private fun AppLanguageScreen(viewModel: ChatViewModel) {
   }
 }
 
+private fun pasteAsFileModeLabel(mode: String): String = when (mode) {
+  "always_file" -> "Always Attach as File"
+  "always_text" -> "Always Paste as Text"
+  else -> "Always Ask"
+}
+
+@Composable
+private fun AdvancedScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeAdvanced() }
+  var showDialog by remember { mutableStateOf(false) }
+
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color(0xFF262626))
+      .padding(20.dp)
+  ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      IconButton(onClick = { viewModel.closeAdvanced() }, modifier = Modifier.size(28.dp)) {
+        Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
+      }
+      Spacer(Modifier.width(20.dp))
+      Text(text = "Advanced", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+    }
+
+    Spacer(Modifier.height(28.dp))
+
+    Card(
+      modifier = Modifier
+        .fillMaxWidth()
+        .clickable { showDialog = true },
+      shape = RoundedCornerShape(22.dp),
+      colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+    ) {
+      Column(modifier = Modifier.padding(20.dp)) {
+        Text(text = "Paste as File", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+        Spacer(Modifier.height(6.dp))
+        Text(text = pasteAsFileModeLabel(viewModel.pasteAsFileMode), color = Color.Gray, fontSize = 17.sp)
+      }
+    }
+
+    Spacer(Modifier.height(18.dp))
+
+    Text(
+      text = "When pasting large text, choose whether to attach it as a file or paste it directly.",
+      color = Color.Gray,
+      fontSize = 16.sp
+    )
+  }
+
+  if (showDialog) {
+    Dialog(onDismissRequest = { showDialog = false }) {
+      Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+      ) {
+        Column(modifier = Modifier.padding(24.dp)) {
+          Text("Paste as File", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+
+          Spacer(Modifier.height(30.dp))
+
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+              .fillMaxWidth()
+              .clickable {
+                viewModel.updatePasteAsFileMode("always_ask")
+                showDialog = false
+              }
+          ) {
+            RadioButton(
+              selected = viewModel.pasteAsFileMode == "always_ask",
+              onClick = {
+                viewModel.updatePasteAsFileMode("always_ask")
+                showDialog = false
+              }
+            )
+            Text("Always Ask", color = Color.White, fontSize = 19.sp)
+          }
+
+          Spacer(Modifier.height(22.dp))
+
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+              .fillMaxWidth()
+              .clickable {
+                viewModel.updatePasteAsFileMode("always_file")
+                showDialog = false
+              }
+          ) {
+            RadioButton(
+              selected = viewModel.pasteAsFileMode == "always_file",
+              onClick = {
+                viewModel.updatePasteAsFileMode("always_file")
+                showDialog = false
+              }
+            )
+            Text("Always Attach as File", color = Color.White, fontSize = 19.sp)
+          }
+
+          Spacer(Modifier.height(22.dp))
+
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+              .fillMaxWidth()
+              .clickable {
+                viewModel.updatePasteAsFileMode("always_text")
+                showDialog = false
+              }
+          ) {
+            RadioButton(
+              selected = viewModel.pasteAsFileMode == "always_text",
+              onClick = {
+                viewModel.updatePasteAsFileMode("always_text")
+                showDialog = false
+              }
+            )
+            Text("Always Paste as Text", color = Color.White, fontSize = 19.sp)
+          }
+        }
+      }
+    }
+  }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AccountScreen(viewModel: ChatViewModel) {
@@ -2696,7 +2826,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
       SettingsMenuRow("Haptics") { viewModel.openHaptics() }
       SettingsMenuRow("Widgets") { viewModel.openWidgets() }
       SettingsMenuRow("App Language") { viewModel.openAppLanguage() }
-      SettingsMenuRow("Advanced")
+      SettingsMenuRow("Advanced") { viewModel.openAdvanced() }
 
       SettingsSectionHeader("GiZa")
       SettingsMenuRow("Customize GiZa") { viewModel.openCustomize() }

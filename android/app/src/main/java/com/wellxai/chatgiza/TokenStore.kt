@@ -54,16 +54,23 @@ class TokenStore(context: Context) {
     prefs.edit().putBoolean(KEY_HAPTICS_ON_RESPONSE, value).apply()
   }
 
+  fun getPasteAsFileMode(): String = prefs.getString(KEY_PASTE_AS_FILE_MODE, "always_ask") ?: "always_ask"
+  fun setPasteAsFileMode(value: String) {
+    prefs.edit().putString(KEY_PASTE_AS_FILE_MODE, value).apply()
+  }
+
   /** Wipes the session but keeps device-level prefs (haptics) that aren't
    * tied to any particular account. */
   fun clear() {
     val hapticsEnabled = getHapticsEnabled()
     val hapticsOnPress = getHapticsOnPress()
     val hapticsOnResponse = getHapticsOnResponse()
+    val pasteAsFileMode = getPasteAsFileMode()
     prefs.edit().clear().apply()
     setHapticsEnabled(hapticsEnabled)
     setHapticsOnPress(hapticsOnPress)
     setHapticsOnResponse(hapticsOnResponse)
+    setPasteAsFileMode(pasteAsFileMode)
   }
 
   companion object {
@@ -74,5 +81,6 @@ class TokenStore(context: Context) {
     private const val KEY_HAPTICS_ENABLED = "haptics_enabled"
     private const val KEY_HAPTICS_ON_PRESS = "haptics_on_press"
     private const val KEY_HAPTICS_ON_RESPONSE = "haptics_on_response"
+    private const val KEY_PASTE_AS_FILE_MODE = "paste_as_file_mode"
   }
 }
