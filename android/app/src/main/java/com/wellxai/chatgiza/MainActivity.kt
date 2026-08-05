@@ -551,7 +551,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
       )
     },
-    containerColor = Color.Transparent,
+    containerColor = Color(0xFF0F0F0F),
     contentWindowInsets = WindowInsets(0, 0, 0, 0)
   ) { padding ->
     Column(
@@ -644,7 +644,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
   Card(
     modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 10.dp),
     shape = RoundedCornerShape(24.dp),
-    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F0F0F))
+    colors = CardDefaults.cardColors(containerColor = colorScheme.onBackground.copy(alpha = 0.06f))
   ) {
     Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)) {
       TextField(
@@ -688,10 +688,11 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             Row(
               verticalAlignment = Alignment.CenterVertically,
               modifier = Modifier
+                .height(36.dp)
                 .clip(RoundedCornerShape(18.dp))
                 .background(colorScheme.onBackground.copy(alpha = 0.08f))
                 .clickable(onClick = { toolMenuOpen = true })
-                .padding(horizontal = 10.dp, vertical = 6.dp)
+                .padding(horizontal = 10.dp)
             ) {
               if (viewModel.activeTool == null) {
                 Icon(Icons.Outlined.Bolt, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp))
@@ -711,32 +712,32 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             // MIC BUTTON
             Box(
               modifier = Modifier
-                .size(56.dp)
+                .size(36.dp)
                 .clip(CircleShape)
                 .background(Color(0xFF333333))
                 .clickable { launchSpeech(autoSend = false) },
               contentAlignment = Alignment.Center
             ) {
-              MicIconCustom(modifier = Modifier.size(24.dp), tint = Color.White)
+              MicIconCustom(modifier = Modifier.size(18.dp), tint = Color.White)
             }
 
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
             // SPEAK BUTTON (waveform icon + label)
             Row(
               modifier = Modifier
-                .height(56.dp)
-                .clip(RoundedCornerShape(28.dp))
+                .height(36.dp)
+                .clip(RoundedCornerShape(18.dp))
                 .background(Color.White)
                 .clickable { viewModel.openLiveVision() }
-                .padding(horizontal = 18.dp),
+                .padding(horizontal = 12.dp),
               verticalAlignment = Alignment.CenterVertically
             ) {
-              WaveformIconCustom(modifier = Modifier.size(22.dp), tint = Color.Black)
-              Spacer(modifier = Modifier.width(8.dp))
+              WaveformIconCustom(modifier = Modifier.size(16.dp), tint = Color.Black)
+              Spacer(modifier = Modifier.width(6.dp))
               Text(
                 text = "Speak",
-                fontSize = 18.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black,
                 maxLines = 1,
