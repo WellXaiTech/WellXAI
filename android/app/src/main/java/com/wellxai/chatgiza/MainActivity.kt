@@ -145,6 +145,7 @@ import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.RadioButtonChecked
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.RecordVoiceOver
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.outlined.ReportProblem
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Search
@@ -616,23 +617,55 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
               )
               Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(18.dp))
             }
-            Spacer(modifier = Modifier.weight(1f))
-            IconButton(onClick = { launchSpeech(autoSend = false) }, modifier = Modifier.size(36.dp)) {
-              Icon(Icons.Outlined.Mic, contentDescription = "Voice input", tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
-            }
-            Spacer(modifier = Modifier.size(6.dp))
-            Button(
-              onClick = { viewModel.openLiveVision() },
-              shape = RoundedCornerShape(18.dp),
-              colors = ButtonDefaults.buttonColors(
-                containerColor = colorScheme.onBackground,
-                contentColor = colorScheme.background
-              ),
-              contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+            Spacer(modifier = Modifier.width(10.dp))
+
+            // MIC BUTTON
+            Box(
+              modifier = Modifier
+                .size(68.dp)
+                .clip(CircleShape)
+                .background(Color(0xFF232323))
+                .clickable { launchSpeech(autoSend = false) },
+              contentAlignment = Alignment.Center
             ) {
-              Icon(Icons.Filled.GraphicEq, contentDescription = null, modifier = Modifier.size(18.dp))
-              Spacer(modifier = Modifier.size(6.dp))
-              Text("Speak", fontSize = 14.sp, maxLines = 1, softWrap = false)
+              Icon(
+                imageVector = Icons.Rounded.Mic,
+                contentDescription = "Voice input",
+                tint = Color.White,
+                modifier = Modifier.size(34.dp)
+              )
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            // SPEAK BUTTON
+            Row(
+              modifier = Modifier
+                .weight(1f)
+                .height(68.dp)
+                .clip(RoundedCornerShape(40.dp))
+                .background(Color.White)
+                .clickable { viewModel.openLiveVision() }
+                .padding(horizontal = 16.dp),
+              horizontalArrangement = Arrangement.Center,
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Box(Modifier.width(4.dp).height(18.dp).background(Color.Black, RoundedCornerShape(3.dp)))
+                Box(Modifier.width(4.dp).height(34.dp).background(Color.Black, RoundedCornerShape(3.dp)))
+                Box(Modifier.width(4.dp).height(26.dp).background(Color.Black, RoundedCornerShape(3.dp)))
+                Box(Modifier.width(4.dp).height(40.dp).background(Color.Black, RoundedCornerShape(3.dp)))
+                Box(Modifier.width(4.dp).height(22.dp).background(Color.Black, RoundedCornerShape(3.dp)))
+              }
+              Spacer(modifier = Modifier.width(14.dp))
+              Text(
+                text = "Speak",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.Black,
+                maxLines = 1,
+                softWrap = false
+              )
             }
           }
           DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
