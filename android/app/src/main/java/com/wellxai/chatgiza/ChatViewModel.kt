@@ -17,6 +17,7 @@ sealed class AppScreen {
   object History : AppScreen()
   object Account : AppScreen()
   object Customize : AppScreen()
+  object EditProfile : AppScreen()
   object Appearance : AppScreen()
   object Voice : AppScreen()
   object ReportProblem : AppScreen()
@@ -180,6 +181,10 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
           profileData = result.value
           nicknameInput = result.value.profile.nickname
           aboutInput = result.value.profile.about
+          val nameParts = (result.value.profile.fullName ?: "").trim().split(" ", limit = 2)
+          firstNameInput = nameParts.getOrElse(0) { "" }
+          lastNameInput = nameParts.getOrElse(1) { "" }
+          birthYearInput = result.value.profile.birthDate ?: ""
         }
         is ApiResult.Failure -> {} // Account screen just shows blank fields; not worth surfacing.
       }
@@ -200,6 +205,52 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeCustomize() {
     screen = AppScreen.Account
+  }
+
+  var firstNameInput by mutableStateOf("")
+  var lastNameInput by mutableStateOf("")
+  var birthYearInput by mutableStateOf("")
+
+  fun onFirstNameChange(value: String) {
+    firstNameInput = value
+  }
+
+  fun onLastNameChange(value: String) {
+    lastNameInput = value
+  }
+
+  fun onBirthYearChange(value: String) {
+    birthYearInput = value
+  }
+
+  fun openEditProfile() {
+    screen = AppScreen.EditProfile
+  }
+
+  fun closeEditProfile() {
+    screen = AppScreen.Account
+  }
+
+  fun saveEditProfile() {
+    val token = tokenStore.getToken() ?: return
+    savingProfile = true
+    val combinedName = listOf(firstNameInput.trim(), lastNameInput.trim()).filter { it.isNotEmpty() }.joinToString(" ")
+    val updated = profileData.copy(
+      profile = profileData.profile.copy(fullName = combinedName, birthDate = birthYearInput.trim())
+    )
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.saveProfile(token, updated)) {
+        is ApiResult.Success -> {
+          profileData = updated
+          savingProfile = false
+          screen = AppScreen.Account
+        }
+        is ApiResult.Failure -> {
+          errorMessage = result.message
+          savingProfile = false
+        }
+      }
+    }
   }
 
   fun openAppearance() {
