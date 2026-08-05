@@ -112,11 +112,15 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Feedback
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MicNone
 import androidx.compose.material.icons.outlined.ModeEdit
@@ -200,6 +204,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.History -> HistoryScreen(viewModel)
             is AppScreen.Account -> AccountScreen(viewModel)
             is AppScreen.Customize -> CustomizeScreen(viewModel)
+            is AppScreen.EditProfile -> EditProfileScreen(viewModel)
             is AppScreen.Appearance -> AppearanceScreen(viewModel)
             is AppScreen.Voice -> VoiceScreen(viewModel)
             is AppScreen.ReportProblem -> ReportProblemScreen(viewModel)
@@ -1364,6 +1369,208 @@ private fun CustomizeScreen(viewModel: ChatViewModel) {
   }
 }
 
+@Composable
+private fun ProfileAvatar(imageUrl: String?, modifier: Modifier = Modifier) {
+  Box(
+    modifier = modifier
+      .size(160.dp)
+      .clip(CircleShape)
+      .background(Color(0xFF2F2F2F)),
+    contentAlignment = Alignment.Center
+  ) {
+    if (imageUrl != null) {
+      AsyncImage(
+        model = imageUrl,
+        contentDescription = "Profile photo",
+        modifier = Modifier.fillMaxSize().clip(CircleShape)
+      )
+    } else {
+      Icon(
+        Icons.Filled.Person,
+        contentDescription = "Profile photo",
+        tint = Color.White,
+        modifier = Modifier.size(72.dp)
+      )
+    }
+  }
+}
+
+@Composable
+private fun BirthYearCard(icon: ImageVector, value: String, onValueChange: (String) -> Unit) {
+  Card(
+    modifier = Modifier.fillMaxWidth(),
+    shape = RoundedCornerShape(22.dp),
+    colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+  ) {
+    Row(
+      modifier = Modifier.padding(20.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Icon(icon, contentDescription = null, tint = Color.White)
+      Spacer(modifier = Modifier.width(16.dp))
+      TextField(
+        value = value,
+        onValueChange = { new -> if (new.length <= 4 && new.all { it.isDigit() }) onValueChange(new) },
+        placeholder = { Text("YYYY", color = Color(0xFFA8A8A8)) },
+        colors = TextFieldDefaults.colors(
+          unfocusedContainerColor = Color.Transparent,
+          focusedContainerColor = Color.Transparent,
+          unfocusedIndicatorColor = Color.Transparent,
+          focusedIndicatorColor = Color.Transparent,
+          unfocusedTextColor = Color.White,
+          focusedTextColor = Color.White
+        ),
+        modifier = Modifier.fillMaxWidth()
+      )
+    }
+  }
+}
+
+@Composable
+private fun EmailCard(icon: ImageVector, title: String, subtitle: String) {
+  Card(
+    modifier = Modifier.fillMaxWidth(),
+    shape = RoundedCornerShape(22.dp),
+    colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+  ) {
+    Row(
+      modifier = Modifier.padding(20.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Icon(icon, contentDescription = null, tint = Color.White)
+      Spacer(modifier = Modifier.width(16.dp))
+      Column {
+        Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        Text(subtitle, color = Color(0xFFA8A8A8), fontSize = 13.sp)
+      }
+    }
+  }
+}
+
+@Composable
+private fun XAccountCard(icon: ImageVector, title: String, onClick: () -> Unit) {
+  Card(
+    modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+    shape = RoundedCornerShape(22.dp),
+    colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+  ) {
+    Row(
+      modifier = Modifier.padding(20.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Icon(icon, contentDescription = null, tint = Color.White)
+      Spacer(modifier = Modifier.width(16.dp))
+      Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+    }
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EditProfileScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeEditProfile() }
+  var xNote by remember { mutableStateOf(false) }
+
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color(0xFF262626))
+      .verticalScroll(rememberScrollState())
+      .padding(horizontal = 20.dp)
+  ) {
+    Row(
+      modifier = Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 20.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      IconButton(onClick = { viewModel.closeEditProfile() }) {
+        Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+      }
+      Text(
+        "Edit Profile",
+        color = Color.White,
+        fontSize = 20.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.weight(1f)
+      )
+      Button(
+        onClick = { viewModel.saveEditProfile() },
+        enabled = !viewModel.savingProfile,
+        colors = ButtonDefaults.buttonColors(disabledContainerColor = Color(0xFF3A3A3A)),
+        shape = RoundedCornerShape(22.dp)
+      ) {
+        Text(if (viewModel.savingProfile) "Saving…" else "Save")
+      }
+    }
+
+    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+      ProfileAvatar(imageUrl = viewModel.userImage)
+      FilledIconButton(
+        onClick = { xNote = true },
+        modifier = Modifier
+          .size(52.dp)
+          .align(Alignment.BottomEnd)
+          .offset(x = (-8).dp),
+        colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White)
+      ) {
+        Icon(Icons.Outlined.Edit, contentDescription = "Change photo", tint = Color.Black)
+      }
+    }
+
+    Spacer(modifier = Modifier.height(28.dp))
+
+    Text("Name", color = Color(0xFFA8A8A8), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    Spacer(modifier = Modifier.height(10.dp))
+    OutlinedTextField(
+      value = viewModel.firstNameInput,
+      onValueChange = viewModel::onFirstNameChange,
+      modifier = Modifier.fillMaxWidth(),
+      placeholder = { Text("First name") },
+      shape = RoundedCornerShape(22.dp)
+    )
+    Spacer(modifier = Modifier.height(10.dp))
+    OutlinedTextField(
+      value = viewModel.lastNameInput,
+      onValueChange = viewModel::onLastNameChange,
+      modifier = Modifier.fillMaxWidth(),
+      placeholder = { Text("Last name") },
+      shape = RoundedCornerShape(22.dp)
+    )
+
+    Spacer(modifier = Modifier.height(28.dp))
+
+    Text("Birth Year", color = Color(0xFFA8A8A8), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    Spacer(modifier = Modifier.height(10.dp))
+    BirthYearCard(
+      icon = Icons.Outlined.CalendarMonth,
+      value = viewModel.birthYearInput,
+      onValueChange = viewModel::onBirthYearChange
+    )
+
+    Spacer(modifier = Modifier.height(28.dp))
+
+    Text("Account", color = Color(0xFFA8A8A8), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    Spacer(modifier = Modifier.height(10.dp))
+    EmailCard(
+      icon = Icons.Outlined.Email,
+      title = "Email",
+      subtitle = viewModel.userEmail ?: ""
+    )
+    Spacer(modifier = Modifier.height(10.dp))
+    XAccountCard(
+      icon = Icons.Outlined.Link,
+      title = "Connect with X",
+      onClick = { xNote = true }
+    )
+
+    if (xNote) {
+      Spacer(modifier = Modifier.height(10.dp))
+      Text("Coming soon", color = Color(0xFFA8A8A8), fontSize = 13.sp)
+    }
+
+    Spacer(modifier = Modifier.height(24.dp))
+  }
+}
+
 private enum class AppTheme(val label: String, val icon: ImageVector) {
   LIGHT("Light", Icons.Filled.LightMode),
   DARK("Dark", Icons.Filled.DarkMode),
@@ -2247,7 +2454,10 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         .padding(horizontal = 20.dp, vertical = 8.dp)
     ) {
       Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        modifier = Modifier
+          .fillMaxWidth()
+          .clickable { viewModel.openEditProfile() }
+          .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
         if (viewModel.userImage != null) {
