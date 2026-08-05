@@ -1865,6 +1865,51 @@ private fun ThemeCard(theme: AppTheme, selected: Boolean, onClick: () -> Unit, m
   }
 }
 
+/** Soft moving glow behind the text-size preview card — the light sweeps
+ * left-to-right as [progress] goes from 0 to 1, on top of the fixed
+ * #181A26 base. */
+@Composable
+private fun AnimatedPreviewGlow(progress: Float, modifier: Modifier = Modifier) {
+  val animatedProgress by animateFloatAsState(
+    targetValue = progress,
+    animationSpec = tween(durationMillis = 200),
+    label = "previewGlowProgress"
+  )
+  Canvas(modifier = modifier) {
+    val w = size.width
+    val h = size.height
+    val glowCenter = Offset(w * (0.12f + 0.76f * animatedProgress), h * 0.32f)
+
+    drawRect(color = Color(0xFF181A26))
+
+    drawCircle(
+      brush = Brush.radialGradient(
+        colors = listOf(Color(0xFF4F8CFF).copy(alpha = 0.20f), Color.Transparent),
+        center = glowCenter,
+        radius = w * 0.55f
+      ),
+      radius = w * 0.55f,
+      center = glowCenter
+    )
+    drawCircle(
+      brush = Brush.radialGradient(
+        colors = listOf(Color.White.copy(alpha = 0.10f), Color.Transparent),
+        center = glowCenter,
+        radius = w * 0.22f
+      ),
+      radius = w * 0.22f,
+      center = glowCenter
+    )
+    drawRect(
+      brush = Brush.radialGradient(
+        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.35f)),
+        center = Offset(w / 2f, h / 2f),
+        radius = maxOf(w, h) * 0.75f
+      )
+    )
+  }
+}
+
 @Composable
 private fun PreviewSlider(value: Float, onValueChange: (Float) -> Unit, modifier: Modifier = Modifier) {
   val density = LocalDensity.current
@@ -1961,8 +2006,9 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
           .fillMaxWidth()
           .height(280.dp)
           .clip(RoundedCornerShape(28.dp))
-          .background(Color(0xFF2F2F2F))
       ) {
+        AnimatedPreviewGlow(progress = textSize, modifier = Modifier.fillMaxSize())
+
         Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
           PreviewSlider(
             value = textSize,
