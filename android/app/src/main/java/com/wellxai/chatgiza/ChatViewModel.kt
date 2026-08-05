@@ -302,6 +302,17 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     screen = AppScreen.Account
   }
 
+  // "system" | "for_you" | "dark" | "light" — see AppTheme in MainActivity.kt.
+  // "for_you" has no distinct behavior of its own yet, so it follows the
+  // device setting the same as "system" until it's actually designed.
+  var themeMode by mutableStateOf(tokenStore.getThemeMode())
+    private set
+
+  fun setThemeMode(value: String) {
+    themeMode = value
+    tokenStore.setThemeMode(value)
+  }
+
   var hapticsEnabled by mutableStateOf(tokenStore.getHapticsEnabled())
     private set
   var hapticsOnPress by mutableStateOf(tokenStore.getHapticsOnPress())
