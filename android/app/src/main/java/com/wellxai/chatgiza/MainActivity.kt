@@ -183,6 +183,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -199,6 +200,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -1277,7 +1279,11 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           )
         }
       } else {
-        LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(vertical = 8.dp)) {
+        LazyColumn(
+          modifier = Modifier.weight(1f).fillMaxWidth(),
+          contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+          verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
           items(visibleConversations, key = { it.id }) { convo ->
             HistoryRow(
               convo,
@@ -1393,40 +1399,81 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   }
 }
 
+private val AVATAR_GRADIENTS = listOf(
+  listOf(Color(0xFF6D5DF6), Color(0xFF2979FF)),
+  listOf(Color(0xFFFF6B6B), Color(0xFFFF9F43)),
+  listOf(Color(0xFF11998E), Color(0xFF38EF7D)),
+  listOf(Color(0xFFF7971E), Color(0xFFFFD200)),
+  listOf(Color(0xFFEE0979), Color(0xFFFF6A00)),
+  listOf(Color(0xFF00C6FF), Color(0xFF0072FF))
+)
+
+private fun avatarGradient(seed: String): List<Color> =
+  AVATAR_GRADIENTS[Math.floorMod(seed.hashCode(), AVATAR_GRADIENTS.size)]
+
+/** Truncates a conversation title to a sane max length so unusually long
+ * ones don't blow out the row — Compose's ellipsis handles the common
+ * (single-line overflow) case, this is just a hard backstop. */
+private fun truncateTitle(title: String, maxChars: Int = 48): String =
+  if (title.length > maxChars) title.take(maxChars).trimEnd() + "…" else title
+
 @Composable
 private fun HistoryRow(convo: ApiConversation, onClick: () -> Unit, onMenuClick: () -> Unit) {
   val lastMessage = convo.messages.lastOrNull()
   val dateText = lastMessage?.createdAt?.let { formatDate(it) } ?: ""
+  val title = truncateTitle(convo.title.ifBlank { "New chat" })
+
   Row(
     modifier = Modifier
       .fillMaxWidth()
+      .clip(RoundedCornerShape(16.dp))
+      .background(Color.White.copy(alpha = 0.04f))
       .clickable(onClick = onClick)
-      .padding(horizontal = 8.dp, vertical = 4.dp),
+      .padding(horizontal = 12.dp, vertical = 10.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    Column(modifier = Modifier.weight(1f).padding(horizontal = 8.dp, vertical = 8.dp)) {
+    Box(
+      modifier = Modifier
+        .size(40.dp)
+        .clip(CircleShape)
+        .background(Brush.linearGradient(avatarGradient(convo.id))),
+      contentAlignment = Alignment.Center
+    ) {
+      Text(
+        title.trim().take(1).uppercase(),
+        color = Color.White,
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Bold
+      )
+    }
+    Spacer(modifier = Modifier.width(12.dp))
+    Column(modifier = Modifier.weight(1f)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
         if (convo.pinned) {
           Icon(
             Icons.Outlined.PushPin,
             contentDescription = "Pinned",
             tint = colorScheme.onBackground.copy(alpha = 0.6f),
-            modifier = Modifier.size(14.dp)
+            modifier = Modifier.size(13.dp)
           )
-          Spacer(modifier = Modifier.size(6.dp))
+          Spacer(modifier = Modifier.size(5.dp))
         }
         Text(
-          text = convo.title.ifBlank { "New chat" },
+          text = title,
           color = colorScheme.onBackground,
           fontSize = 16.sp,
-          fontWeight = FontWeight.Normal
+          fontWeight = FontWeight.Medium,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis
         )
       }
       if (dateText.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(2.dp))
         Text(dateText, color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 12.sp)
       }
     }
-    IconButton(onClick = onMenuClick) {
+    Spacer(modifier = Modifier.width(4.dp))
+    IconButton(onClick = onMenuClick, modifier = Modifier.size(32.dp)) {
       Icon(
         Icons.Filled.MoreVert,
         contentDescription = "Options",
