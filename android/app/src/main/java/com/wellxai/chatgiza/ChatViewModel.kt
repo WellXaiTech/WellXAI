@@ -256,17 +256,17 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var hapticsOnResponse by mutableStateOf(tokenStore.getHapticsOnResponse())
     private set
 
-  fun setHapticsEnabled(value: Boolean) {
+  fun updateHapticsEnabled(value: Boolean) {
     hapticsEnabled = value
     tokenStore.setHapticsEnabled(value)
   }
 
-  fun setHapticsOnPress(value: Boolean) {
+  fun updateHapticsOnPress(value: Boolean) {
     hapticsOnPress = value
     tokenStore.setHapticsOnPress(value)
   }
 
-  fun setHapticsOnResponse(value: Boolean) {
+  fun updateHapticsOnResponse(value: Boolean) {
     hapticsOnResponse = value
     tokenStore.setHapticsOnResponse(value)
   }

@@ -2192,7 +2192,7 @@ private fun HapticsScreen(viewModel: ChatViewModel) {
       title = "Haptics",
       checked = viewModel.hapticsEnabled,
       onCheckedChange = { value ->
-        viewModel.setHapticsEnabled(value)
+        viewModel.updateHapticsEnabled(value)
         if (value) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
       }
     )
@@ -2213,7 +2213,7 @@ private fun HapticsScreen(viewModel: ChatViewModel) {
       checked = viewModel.hapticsOnPress,
       enabled = viewModel.hapticsEnabled,
       onCheckedChange = { value ->
-        viewModel.setHapticsOnPress(value)
+        viewModel.updateHapticsOnPress(value)
         if (value) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
       }
     )
@@ -2225,7 +2225,7 @@ private fun HapticsScreen(viewModel: ChatViewModel) {
       checked = viewModel.hapticsOnResponse,
       enabled = viewModel.hapticsEnabled,
       onCheckedChange = { value ->
-        viewModel.setHapticsOnResponse(value)
+        viewModel.updateHapticsOnResponse(value)
         if (value) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
       }
     )
