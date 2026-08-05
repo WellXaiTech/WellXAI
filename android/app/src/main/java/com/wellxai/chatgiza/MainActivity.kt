@@ -1281,8 +1281,8 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
       } else {
         LazyColumn(
           modifier = Modifier.weight(1f).fillMaxWidth(),
-          contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-          verticalArrangement = Arrangement.spacedBy(8.dp)
+          contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+          verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
           items(visibleConversations, key = { it.id }) { convo ->
             HistoryRow(
@@ -1411,11 +1411,20 @@ private val AVATAR_GRADIENTS = listOf(
 private fun avatarGradient(seed: String): List<Color> =
   AVATAR_GRADIENTS[Math.floorMod(seed.hashCode(), AVATAR_GRADIENTS.size)]
 
-/** Truncates a conversation title to a sane max length so unusually long
- * ones don't blow out the row — Compose's ellipsis handles the common
- * (single-line overflow) case, this is just a hard backstop. */
-private fun truncateTitle(title: String, maxChars: Int = 48): String =
-  if (title.length > maxChars) title.take(maxChars).trimEnd() + "…" else title
+/** Truncates a conversation title to a sane max length, breaking on a word
+ * boundary when there is one close enough to the cutoff so the preview
+ * reads as a clean phrase instead of a word sliced in half — e.g. a long
+ * question gets cut after a whole word, not mid-word. Compose's ellipsis
+ * still handles the common single-line overflow case; this is the
+ * backstop for when a title is long enough to need it. */
+private fun truncateTitle(title: String, maxChars: Int = 36): String {
+  val trimmed = title.trim()
+  if (trimmed.length <= maxChars) return trimmed
+  val cut = trimmed.take(maxChars)
+  val lastSpace = cut.lastIndexOf(' ')
+  val safeCut = if (lastSpace >= (maxChars * 0.6).toInt()) cut.take(lastSpace) else cut
+  return safeCut.trimEnd() + "…"
+}
 
 @Composable
 private fun HistoryRow(convo: ApiConversation, onClick: () -> Unit, onMenuClick: () -> Unit) {
@@ -1426,15 +1435,15 @@ private fun HistoryRow(convo: ApiConversation, onClick: () -> Unit, onMenuClick:
   Row(
     modifier = Modifier
       .fillMaxWidth()
-      .clip(RoundedCornerShape(16.dp))
+      .clip(RoundedCornerShape(14.dp))
       .background(Color.White.copy(alpha = 0.04f))
       .clickable(onClick = onClick)
-      .padding(horizontal = 12.dp, vertical = 10.dp),
+      .padding(horizontal = 10.dp, vertical = 8.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
     Box(
       modifier = Modifier
-        .size(40.dp)
+        .size(34.dp)
         .clip(CircleShape)
         .background(Brush.linearGradient(avatarGradient(convo.id))),
       contentAlignment = Alignment.Center
@@ -1442,11 +1451,11 @@ private fun HistoryRow(convo: ApiConversation, onClick: () -> Unit, onMenuClick:
       Text(
         title.trim().take(1).uppercase(),
         color = Color.White,
-        fontSize = 16.sp,
+        fontSize = 14.sp,
         fontWeight = FontWeight.Bold
       )
     }
-    Spacer(modifier = Modifier.width(12.dp))
+    Spacer(modifier = Modifier.width(10.dp))
     Column(modifier = Modifier.weight(1f)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
         if (convo.pinned) {
@@ -1454,26 +1463,26 @@ private fun HistoryRow(convo: ApiConversation, onClick: () -> Unit, onMenuClick:
             Icons.Outlined.PushPin,
             contentDescription = "Pinned",
             tint = colorScheme.onBackground.copy(alpha = 0.6f),
-            modifier = Modifier.size(13.dp)
+            modifier = Modifier.size(12.dp)
           )
           Spacer(modifier = Modifier.size(5.dp))
         }
         Text(
           text = title,
           color = colorScheme.onBackground,
-          fontSize = 16.sp,
+          fontSize = 15.sp,
           fontWeight = FontWeight.Medium,
           maxLines = 1,
           overflow = TextOverflow.Ellipsis
         )
       }
       if (dateText.isNotEmpty()) {
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(dateText, color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 12.sp)
+        Spacer(modifier = Modifier.height(1.dp))
+        Text(dateText, color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 11.sp)
       }
     }
-    Spacer(modifier = Modifier.width(4.dp))
-    IconButton(onClick = onMenuClick, modifier = Modifier.size(32.dp)) {
+    Spacer(modifier = Modifier.width(2.dp))
+    IconButton(onClick = onMenuClick, modifier = Modifier.size(28.dp)) {
       Icon(
         Icons.Filled.MoreVert,
         contentDescription = "Options",
