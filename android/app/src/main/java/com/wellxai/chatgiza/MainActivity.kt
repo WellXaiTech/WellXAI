@@ -300,16 +300,31 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun ChatGizaTheme(themeMode: String, content: @Composable () -> Unit) {
-  // "for_you" has no distinct design of its own yet, so — like "system" — it
-  // just follows the device's own dark/light setting rather than faking a
-  // real "For You" appearance that doesn't exist.
   val useDark = when (themeMode) {
     "light" -> false
-    "dark" -> true
+    "dark", "for_you" -> true
     else -> isSystemInDarkTheme()
   }
 
-  val colors = if (useDark) {
+  val colors = if (themeMode == "for_you") {
+    val appBackground = Color(0xFF181A26)
+    darkColorScheme(
+      background = appBackground,
+      surface = appBackground,
+      surfaceVariant = appBackground,
+      surfaceContainer = appBackground,
+      surfaceContainerHigh = appBackground,
+      surfaceContainerHighest = appBackground,
+      surfaceContainerLow = appBackground,
+      surfaceContainerLowest = appBackground,
+      surfaceTint = appBackground,
+      onBackground = Color.White,
+      onSurface = Color.White,
+      onSurfaceVariant = Color.White,
+      primary = Color.White,
+      onPrimary = Color.Black
+    )
+  } else if (useDark) {
     val appBackground = Color(0xFF111113)
     darkColorScheme(
       background = appBackground,
