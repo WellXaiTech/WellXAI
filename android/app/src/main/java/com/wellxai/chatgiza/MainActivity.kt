@@ -189,7 +189,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -199,7 +198,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -1833,12 +1831,12 @@ private enum class AppTheme(val key: String, val label: String, val icon: ImageV
 @Composable
 private fun ThemeCard(theme: AppTheme, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
   val bg by animateColorAsState(
-    targetValue = if (selected) Color.White else Color(0xFF2F2F2F),
+    targetValue = if (selected) colorScheme.onBackground else colorScheme.onBackground.copy(alpha = 0.10f),
     animationSpec = tween(250),
     label = "themeCardBg"
   )
   val iconTint by animateColorAsState(
-    targetValue = if (selected) Color.Black else Color(0xFFA0A0A0),
+    targetValue = if (selected) colorScheme.background else colorScheme.onBackground.copy(alpha = 0.55f),
     animationSpec = tween(250),
     label = "themeCardIcon"
   )
@@ -1865,51 +1863,6 @@ private fun ThemeCard(theme: AppTheme, selected: Boolean, onClick: () -> Unit, m
   }
 }
 
-/** Soft moving glow behind the text-size preview card — the light sweeps
- * left-to-right as [progress] goes from 0 to 1, on top of the fixed
- * #181A26 base. */
-@Composable
-private fun AnimatedPreviewGlow(progress: Float, modifier: Modifier = Modifier) {
-  val animatedProgress by animateFloatAsState(
-    targetValue = progress,
-    animationSpec = tween(durationMillis = 200),
-    label = "previewGlowProgress"
-  )
-  Canvas(modifier = modifier) {
-    val w = size.width
-    val h = size.height
-    val glowCenter = Offset(w * (0.12f + 0.76f * animatedProgress), h * 0.32f)
-
-    drawRect(color = Color(0xFF181A26))
-
-    drawCircle(
-      brush = Brush.radialGradient(
-        colors = listOf(Color(0xFF4F8CFF).copy(alpha = 0.20f), Color.Transparent),
-        center = glowCenter,
-        radius = w * 0.55f
-      ),
-      radius = w * 0.55f,
-      center = glowCenter
-    )
-    drawCircle(
-      brush = Brush.radialGradient(
-        colors = listOf(Color.White.copy(alpha = 0.10f), Color.Transparent),
-        center = glowCenter,
-        radius = w * 0.22f
-      ),
-      radius = w * 0.22f,
-      center = glowCenter
-    )
-    drawRect(
-      brush = Brush.radialGradient(
-        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.35f)),
-        center = Offset(w / 2f, h / 2f),
-        radius = maxOf(w, h) * 0.75f
-      )
-    )
-  }
-}
-
 @Composable
 private fun PreviewSlider(value: Float, onValueChange: (Float) -> Unit, modifier: Modifier = Modifier) {
   val density = LocalDensity.current
@@ -1927,14 +1880,14 @@ private fun PreviewSlider(value: Float, onValueChange: (Float) -> Unit, modifier
         .fillMaxWidth()
         .height(trackHeight)
         .clip(RoundedCornerShape(999.dp))
-        .background(Color.White.copy(alpha = 0.12f))
+        .background(colorScheme.onBackground.copy(alpha = 0.15f))
     ) {
       Box(
         modifier = Modifier
           .fillMaxHeight()
           .width(with(density) { (thumbOffsetPx + thumbPx / 2f).toDp() })
           .clip(RoundedCornerShape(999.dp))
-          .background(Color.White)
+          .background(colorScheme.onBackground)
       )
     }
 
@@ -1944,7 +1897,7 @@ private fun PreviewSlider(value: Float, onValueChange: (Float) -> Unit, modifier
         .offset { IntOffset(thumbOffsetPx.roundToInt(), 0) }
         .size(thumbSize)
         .clip(CircleShape)
-        .background(Color.White)
+        .background(colorScheme.onBackground)
         .draggable(
           orientation = Orientation.Horizontal,
           state = rememberDraggableState { delta ->
@@ -2006,9 +1959,8 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
           .fillMaxWidth()
           .height(280.dp)
           .clip(RoundedCornerShape(28.dp))
+          .background(colorScheme.onBackground.copy(alpha = 0.06f))
       ) {
-        AnimatedPreviewGlow(progress = textSize, modifier = Modifier.fillMaxSize())
-
         Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
           PreviewSlider(
             value = textSize,
@@ -2042,14 +1994,9 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
 
           Text(
             if (showReset) "Reset" else "PREVIEW",
-            color = if (showReset) Color.White else Color(0xFF8A8A8A),
+            color = if (showReset) colorScheme.onBackground else colorScheme.onBackground.copy(alpha = 0.5f),
             fontSize = 15.sp,
             fontWeight = if (showReset) FontWeight.Bold else FontWeight.SemiBold,
-            style = if (showReset) {
-              TextStyle(shadow = Shadow(color = Color.White.copy(alpha = 0.5f), blurRadius = 14f))
-            } else {
-              TextStyle.Default
-            },
             modifier = Modifier
               .align(Alignment.CenterHorizontally)
               .let { if (showReset) it.clickable { textSize = 0.5f } else it }
