@@ -1,5 +1,12 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import Logo from "./Logo";
+
+// These pages represent WellXAI, the company, rather than the ChatGiZa
+// product — the brand shown in the footer should read "WellXAI" there.
+const COMPANY_BRANDED_PATHS = ["/terms", "/privacy"];
 
 const columns: { heading: string; links: { label: string; href: string }[] }[] = [
   {
@@ -46,6 +53,10 @@ const columns: { heading: string; links: { label: string; href: string }[] }[] =
 ];
 
 export default function Footer() {
+  const pathname = usePathname();
+  const isCompanyBranded = COMPANY_BRANDED_PATHS.includes(pathname);
+  const brand = isCompanyBranded ? "WellXAI" : "ChatGiZa";
+
   return (
     <footer className="border-t border-border mt-24">
       <div className="mx-auto max-w-6xl px-6 py-12 grid gap-8 sm:grid-cols-2 md:grid-cols-5 text-sm">
@@ -66,8 +77,8 @@ export default function Footer() {
       </div>
       <div className="border-t border-border">
         <div className="mx-auto max-w-6xl px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted">
-          <Logo className="text-sm" />
-          <span>© 2016–{new Date().getFullYear()} ChatGiZa. All rights reserved.</span>
+          <Logo className="text-sm" brand={brand} />
+          <span>© 2016–{new Date().getFullYear()} {brand}. All rights reserved.</span>
           <div className="flex items-center gap-4">
             <Link href="/privacy" className="hover:text-foreground">
               Privacy Policy
