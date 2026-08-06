@@ -30,7 +30,11 @@ import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -1351,20 +1355,50 @@ private fun PushToTalkPill(onPress: () -> Unit, onRelease: () -> Unit) {
 }
 
 @Composable
-private fun VoiceSettingsChip(label: String, selected: Boolean, onClick: () -> Unit) {
-  Box(
-    modifier = Modifier
-      .clip(RoundedCornerShape(16.dp))
-      .background(if (selected) Color.White else Color.White.copy(alpha = 0.08f))
-      .clickable(onClick = onClick)
-      .padding(horizontal = 16.dp, vertical = 10.dp)
-  ) {
-    Text(
-      label,
-      color = if (selected) Color.Black else Color.White,
-      fontSize = 14.sp,
-      fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+private fun VoiceGradientCard(option: VoiceOption, selected: Boolean, onClick: () -> Unit) {
+  val cardWidth = 140.dp
+  val cardHeight = 96.dp
+  val density = LocalDensity.current
+  val widthPx = with(density) { cardWidth.toPx() }
+  val heightPx = with(density) { cardHeight.toPx() }
+
+  // A slow angle sweep on the gradient so the selected card reads as
+  // "alive" (evoking a waveform) rather than a flat color swatch.
+  val infiniteTransition = rememberInfiniteTransition(label = "voiceGradient")
+  val angle by infiniteTransition.animateFloat(
+    initialValue = 0f,
+    targetValue = 360f,
+    animationSpec = infiniteRepeatable(animation = tween(6000, easing = LinearEasing), repeatMode = RepeatMode.Restart),
+    label = "voiceGradientAngle"
+  )
+  val brush = if (selected) {
+    val radians = Math.toRadians(angle.toDouble())
+    val dx = kotlin.math.cos(radians).toFloat()
+    val dy = kotlin.math.sin(radians).toFloat()
+    val cx = widthPx / 2f
+    val cy = heightPx / 2f
+    val radius = kotlin.math.max(widthPx, heightPx) / 2f
+    Brush.linearGradient(
+      colors = listOf(option.gradientStart, option.gradientEnd),
+      start = Offset(cx - dx * radius, cy - dy * radius),
+      end = Offset(cx + dx * radius, cy + dy * radius)
     )
+  } else {
+    Brush.linearGradient(colors = listOf(Color.White.copy(alpha = 0.08f), Color.White.copy(alpha = 0.08f)))
+  }
+
+  Column(
+    modifier = Modifier
+      .width(cardWidth)
+      .height(cardHeight)
+      .clip(RoundedCornerShape(20.dp))
+      .background(brush)
+      .clickable(onClick = onClick)
+      .padding(16.dp)
+  ) {
+    Text(option.name, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+    Spacer(modifier = Modifier.height(2.dp))
+    Text(option.description, color = Color.White.copy(alpha = if (selected) 0.85f else 0.55f), fontSize = 12.sp)
   }
 }
 
@@ -1407,8 +1441,8 @@ private fun LiveVoiceSettingsSheet(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
       ) {
         VOICE_OPTIONS.forEach { option ->
-          VoiceSettingsChip(
-            label = option.name,
+          VoiceGradientCard(
+            option = option,
             selected = selectedVoiceId == option.id,
             onClick = { onVoiceChange(option.id) }
           )
@@ -2402,17 +2436,25 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
   }
 }
 
-private data class VoiceOption(val id: String, val name: String, val description: String)
+private data class VoiceOption(
+  val id: String,
+  val name: String,
+  val description: String,
+  val gradientStart: Color,
+  val gradientEnd: Color
+)
 
-// Ids are the actual voice names OpenAI's Realtime API accepts — this list
-// is passed straight through to the live session, not just a cosmetic label.
+// id = the actual voice name OpenAI's Realtime API accepts (passed straight
+// through to the live session); name/description are just the friendly
+// label shown in the picker — each gets its own gradient so the selected
+// card reads as "this voice" at a glance, not just a checkmark.
 private val VOICE_OPTIONS = listOf(
-  VoiceOption("marin", "Marin", "Natural and expressive (recommended)"),
-  VoiceOption("cedar", "Cedar", "Warm and steady (recommended)"),
-  VoiceOption("alloy", "Alloy", "Balanced and neutral"),
-  VoiceOption("ballad", "Ballad", "Smooth and calm"),
-  VoiceOption("coral", "Coral", "Bright and energetic"),
-  VoiceOption("sage", "Sage", "Deep and confident")
+  VoiceOption("cedar", "Leo", "Warm & steady", Color(0xFFF59E0B), Color(0xFFEF4444)),
+  VoiceOption("alloy", "Rex", "Calm & balanced", Color(0xFF14B8A6), Color(0xFF06B6D4)),
+  VoiceOption("ballad", "Nova", "Gentle & melodic", Color(0xFF8B5CF6), Color(0xFFEC4899)),
+  VoiceOption("coral", "Zuri", "Bright & energetic", Color(0xFF10B981), Color(0xFF84CC16)),
+  VoiceOption("sage", "Sal", "Smooth & confident", Color(0xFF3B82F6), Color(0xFF14B8A6)),
+  VoiceOption("marin", "GiZa", "The signature ChatGiZa voice", Color(0xFF4F46E5), Color(0xFFEC4899))
 )
 
 @Composable
