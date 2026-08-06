@@ -290,7 +290,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var voiceSpeed by mutableStateOf(tokenStore.getVoiceSpeed())
     private set
 
-  fun setVoiceSpeed(speed: Float) {
+  fun updateVoiceSpeed(speed: Float) {
     voiceSpeed = speed
     tokenStore.setVoiceSpeed(speed)
   }
