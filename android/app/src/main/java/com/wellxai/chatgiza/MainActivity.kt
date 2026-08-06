@@ -2592,7 +2592,7 @@ private fun TermsOfUseScreen(viewModel: ChatViewModel) {
       Spacer(modifier = Modifier.height(16.dp))
 
       LegalSection(
-        "Welcome to ChatGiZa",
+        "Welcome to WellXAI",
         "These Terms of Service (\"Terms\") govern your access to and use of ChatGiZa, including our " +
           "website, mobile app, and any related features (collectively, the \"Service\"), operated by " +
           "WellX AI (\"WellX AI\", \"we\", \"us\", or \"our\"). By creating an account, signing in, or " +
