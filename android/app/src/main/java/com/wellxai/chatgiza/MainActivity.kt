@@ -3079,7 +3079,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         .fillMaxSize()
         .padding(padding)
         .verticalScroll(rememberScrollState())
-        .padding(horizontal = 20.dp, vertical = 8.dp)
+        .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
       Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
@@ -3101,6 +3101,9 @@ private fun AccountScreen(viewModel: ChatViewModel) {
           .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
+        val liveRingBrush = Brush.linearGradient(
+          colors = listOf(Color(0xFF1648DF).copy(alpha = 0.55f), Color(0xFF4FA6FF).copy(alpha = 0.55f))
+        )
         if (viewModel.userImage != null) {
           AsyncImage(
             model = viewModel.userImage,
@@ -3108,7 +3111,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
             modifier = Modifier
               .size(52.dp)
               .clip(CircleShape)
-              .border(width = 2.dp, color = colorScheme.onBackground.copy(alpha = 0.3f), shape = CircleShape)
+              .border(width = 2.dp, brush = liveRingBrush, shape = CircleShape)
           )
         } else {
           Icon(
@@ -3117,7 +3120,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
             tint = colorScheme.onBackground,
             modifier = Modifier
               .size(52.dp)
-              .border(width = 2.dp, color = colorScheme.onBackground.copy(alpha = 0.3f), shape = CircleShape)
+              .border(width = 2.dp, brush = liveRingBrush, shape = CircleShape)
           )
         }
         Spacer(modifier = Modifier.size(12.dp))
