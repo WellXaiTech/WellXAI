@@ -2308,7 +2308,7 @@ private fun DataControlToggleRow(title: String, subtitle: String, checked: Boole
     Column(modifier = Modifier.weight(1f)) {
       Text(title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(4.dp))
-      Text(subtitle, color = Color(0xFFA8A8A8), fontSize = 14.sp, fontWeight = FontWeight.Normal)
+      Text(subtitle, color = Color(0xFFA8A8A8), fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.Normal)
     }
     Spacer(modifier = Modifier.width(12.dp))
     Switch(checked = checked, onCheckedChange = onCheckedChange)
@@ -2374,7 +2374,8 @@ private fun DataControlsScreen(viewModel: ChatViewModel) {
             Text(
               "See all the files and assets you have uploaded to ChatGiZa. You can also delete them here.",
               color = Color(0xFFA8A8A8),
-              fontSize = 14.sp
+              fontSize = 13.sp,
+              lineHeight = 16.sp
             )
           }
           Spacer(modifier = Modifier.width(12.dp))
