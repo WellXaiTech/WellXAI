@@ -1,4 +1,4 @@
-export const metadata = { title: "Privacy Policy — ChatGiZa" };
+export const metadata = { title: { absolute: "Privacy Policy — WellXAI" } };
 
 export default function PrivacyPage() {
   return (
