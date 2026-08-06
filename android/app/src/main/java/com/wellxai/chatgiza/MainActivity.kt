@@ -2269,9 +2269,9 @@ private fun DataControlsAppBar(title: String, onBack: () -> Unit) {
 private fun DataControlToggleRow(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
   Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
     Column(modifier = Modifier.weight(1f)) {
-      Text(title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+      Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(4.dp))
-      Text(subtitle, color = Color(0xFFA8A8A8), fontSize = 16.sp, fontWeight = FontWeight.Normal)
+      Text(subtitle, color = Color(0xFFA8A8A8), fontSize = 13.sp, fontWeight = FontWeight.Normal)
     }
     Spacer(modifier = Modifier.width(12.dp))
     Switch(checked = checked, onCheckedChange = onCheckedChange)
@@ -2283,7 +2283,7 @@ private fun DangerRow(label: String, onClick: () -> Unit) {
   Text(
     label,
     color = Color(0xFFFF3B30),
-    fontSize = 18.sp,
+    fontSize = 16.sp,
     fontWeight = FontWeight.Bold,
     modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
   )
@@ -2334,12 +2334,12 @@ private fun DataControlsScreen(viewModel: ChatViewModel) {
           Icon(Icons.Outlined.Folder, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
           Spacer(modifier = Modifier.width(16.dp))
           Column(modifier = Modifier.weight(1f)) {
-            Text("Manage Cloud Storage", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text("Manage Cloud Storage", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(4.dp))
             Text(
               "See all the files and assets you have uploaded to ChatGiZa. You can also delete them here.",
               color = Color(0xFFA8A8A8),
-              fontSize = 16.sp
+              fontSize = 13.sp
             )
           }
           Spacer(modifier = Modifier.width(12.dp))
@@ -2440,8 +2440,8 @@ private fun ManageCloudStorageScreen(viewModel: ChatViewModel) {
       }
       Spacer(modifier = Modifier.width(20.dp))
       Column(modifier = Modifier.weight(1f)) {
-        Text("0 B", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Text("0% used", color = Color(0xFFA8A8A8), fontSize = 16.sp)
+        Text("0 B", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text("0% used", color = Color(0xFFA8A8A8), fontSize = 13.sp)
       }
       Icon(Icons.Filled.Tune, contentDescription = "Filter", tint = Color.White, modifier = Modifier.size(26.dp))
     }
@@ -2450,12 +2450,12 @@ private fun ManageCloudStorageScreen(viewModel: ChatViewModel) {
       Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(Icons.Outlined.Image, contentDescription = null, tint = Color(0xFFA8A8A8), modifier = Modifier.size(40.dp))
         Spacer(modifier = Modifier.height(12.dp))
-        Text("No files yet", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text("No files yet", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(4.dp))
         Text(
           "Images, videos, and documents you upload to ChatGiZa will show up here.",
           color = Color(0xFFA8A8A8),
-          fontSize = 15.sp,
+          fontSize = 13.sp,
           textAlign = TextAlign.Center,
           modifier = Modifier.padding(horizontal = 32.dp)
         )
