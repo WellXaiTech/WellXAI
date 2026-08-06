@@ -2549,19 +2549,7 @@ private fun ManageCloudStorageScreen(viewModel: ChatViewModel) {
     }
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-      Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(Icons.Outlined.Image, contentDescription = null, tint = Color(0xFFA8A8A8), modifier = Modifier.size(40.dp))
-        Spacer(modifier = Modifier.height(12.dp))
-        Text("No files yet", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-          "Images, videos, and documents you upload to ChatGiZa will show up here.",
-          color = Color(0xFFA8A8A8),
-          fontSize = 13.sp,
-          textAlign = TextAlign.Center,
-          modifier = Modifier.padding(horizontal = 32.dp)
-        )
-      }
+      Text("No files yet", color = Color(0xFFA8A8A8), fontSize = 12.sp, fontWeight = FontWeight.Normal)
     }
   }
 }
