@@ -76,9 +76,13 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -178,6 +182,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -238,6 +243,43 @@ class MainActivity : ComponentActivity() {
     setContent {
       ChatGizaTheme(themeMode = viewModel.themeMode) {
         Surface {
+          val screen = viewModel.screen
+          if (screen is AppScreen.Chat || screen is AppScreen.Imagine || screen is AppScreen.History) {
+            // Lets History be reached by swiping in from the left edge of Chat/
+            // Imagine (and swiped back out), instead of only via the hamburger
+            // tap — drawer open/close state stays a mirror of viewModel.screen
+            // so system back, the hamburger icon, and gesture swipes all agree.
+            val drawerState = rememberDrawerState(
+              initialValue = if (screen is AppScreen.History) DrawerValue.Open else DrawerValue.Closed
+            )
+            LaunchedEffect(screen) {
+              if (screen is AppScreen.History) drawerState.open() else drawerState.close()
+            }
+            LaunchedEffect(drawerState) {
+              snapshotFlow { drawerState.currentValue }.collect { value ->
+                if (value == DrawerValue.Closed && viewModel.screen is AppScreen.History) {
+                  viewModel.closeHistory()
+                }
+              }
+            }
+            ModalNavigationDrawer(
+              drawerState = drawerState,
+              drawerContent = {
+                ModalDrawerSheet(
+                  drawerContainerColor = colorScheme.background,
+                  modifier = Modifier.fillMaxWidth(0.86f)
+                ) {
+                  HistoryScreen(viewModel)
+                }
+              }
+            ) {
+              when (screen) {
+                is AppScreen.Imagine -> ImagineScreen(viewModel)
+                else -> ChatScreenUi(viewModel)
+              }
+            }
+            return@Surface
+          }
           when (viewModel.screen) {
             is AppScreen.Loading -> LoadingScreen()
             is AppScreen.SignedOut -> SignedOutScreen(
@@ -1189,7 +1231,11 @@ private fun imageProxyToJpeg(image: ImageProxy): ByteArray {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HistoryScreen(viewModel: ChatViewModel) {
-  BackHandler { viewModel.closeHistory() }
+  // HistoryScreen is now always kept mounted inside the drawer (so it can be
+  // swiped in/out), so this must only intercept back-press while it's
+  // actually the active screen — otherwise it'd steal back navigation from
+  // Chat/Imagine while the drawer is closed.
+  BackHandler(enabled = viewModel.screen is AppScreen.History) { viewModel.closeHistory() }
 
   val query = viewModel.historySearchQuery.trim()
   val visibleConversations = if (query.isEmpty()) {
