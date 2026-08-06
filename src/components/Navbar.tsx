@@ -1,6 +1,13 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import Logo from "./Logo";
 import NavAuthButton from "./NavAuthButton";
+
+// These pages represent WellXAI, the company, rather than the ChatGiZa
+// product — the logo should read "WellXAI" there instead.
+const COMPANY_BRANDED_PATHS = ["/terms", "/privacy"];
 
 const links = [
   { href: "/research", label: "Research" },
@@ -12,11 +19,14 @@ const links = [
 ];
 
 export default function Navbar() {
+  const pathname = usePathname();
+  const isCompanyBranded = COMPANY_BRANDED_PATHS.includes(pathname);
+
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <Link href="/">
-          <Logo />
+          <Logo brand={isCompanyBranded ? "WellXAI" : "ChatGiZa"} />
         </Link>
         <div className="hidden items-center gap-6 text-sm text-muted lg:flex">
           {links.map((link) => (
