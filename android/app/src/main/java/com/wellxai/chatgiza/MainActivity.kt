@@ -324,7 +324,7 @@ private fun ChatGizaTheme(themeMode: String, content: @Composable () -> Unit) {
       onPrimary = Color.Black
     )
   } else if (useDark) {
-    val appBackground = Color(0xFF111113)
+    val appBackground = Color(0xFF181818)
     darkColorScheme(
       background = appBackground,
       surface = appBackground,
@@ -1791,7 +1791,7 @@ private fun EditProfileScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color(0xFF111113))
+      .background(Color(0xFF181818))
       .verticalScroll(rememberScrollState())
       .padding(horizontal = 20.dp)
   ) {
@@ -2554,7 +2554,7 @@ private fun WidgetsScreen(viewModel: ChatViewModel) {
   var addedMessage by remember { mutableStateOf(false) }
 
   Scaffold(
-    containerColor = Color(0xFF111113),
+    containerColor = Color(0xFF181818),
     topBar = {
       TopAppBar(
         title = { Text("Widget") },
@@ -2563,7 +2563,7 @@ private fun WidgetsScreen(viewModel: ChatViewModel) {
             Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
           }
         },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF111113))
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF181818))
       )
     }
   ) { padding ->
@@ -2723,7 +2723,7 @@ private fun HapticsScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color(0xFF111113))
+      .background(Color(0xFF181818))
       .padding(20.dp)
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -2868,7 +2868,7 @@ private fun AppLanguageScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color(0xFF111113))
+      .background(Color(0xFF181818))
       .padding(horizontal = 20.dp)
   ) {
     Row(
@@ -2984,7 +2984,7 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color(0xFF111113))
+      .background(Color(0xFF181818))
       .padding(20.dp)
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
