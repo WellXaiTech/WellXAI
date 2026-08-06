@@ -39,8 +39,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
@@ -146,6 +150,7 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Feedback
 import androidx.compose.material.icons.outlined.GraphicEq
+import androidx.compose.material.icons.outlined.Headset
 import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
@@ -1029,6 +1034,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
   var speakerEnabled by remember { mutableStateOf(true) }
   var micMuted by remember { mutableStateOf(false) }
   var toolMenuOpen by remember { mutableStateOf(false) }
+  var voiceSettingsOpen by remember { mutableStateOf(false) }
   var cameraProviderRef by remember { mutableStateOf<ProcessCameraProvider?>(null) }
 
   val micPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -1043,10 +1049,21 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
     if (!hasMicPermission) micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
   }
 
-  val controller = remember { RealtimeVisionController(context, TokenStore(context.applicationContext), coroutineScope) }
+  val tokenStore = remember { TokenStore(context.applicationContext) }
+  val controller = remember { RealtimeVisionController(context, tokenStore, coroutineScope) }
+
+  fun startLiveSession() {
+    controller.start(
+      language = viewModel.profileData.language,
+      voice = viewModel.selectedVoiceId,
+      pushToTalk = viewModel.voiceActivationMode == "push_to_talk",
+      outputDevice = viewModel.voiceOutputDevice,
+      speed = viewModel.voiceSpeed
+    )
+  }
 
   DisposableEffect(hasMicPermission) {
-    if (hasMicPermission) controller.start(viewModel.profileData.language)
+    if (hasMicPermission) startLiveSession()
     onDispose {
       controller.stop()
       cameraProviderRef?.unbindAll()
@@ -1162,12 +1179,19 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
             speakerEnabled = !speakerEnabled
             controller.setSpeakerEnabled(speakerEnabled)
           }
-          VoiceControlPill(icon = Icons.Outlined.MicNone, contentDescription = "Microphone", active = !micMuted) {
-            micMuted = !micMuted
-            controller.setMicMuted(micMuted)
+          if (viewModel.voiceActivationMode == "push_to_talk") {
+            PushToTalkPill(
+              onPress = { controller.beginPushToTalk() },
+              onRelease = { controller.endPushToTalk() }
+            )
+          } else {
+            VoiceControlPill(icon = Icons.Outlined.MicNone, contentDescription = "Microphone", active = !micMuted) {
+              micMuted = !micMuted
+              controller.setMicMuted(micMuted)
+            }
           }
           VoiceControlPill(icon = Icons.Outlined.Settings, contentDescription = "Settings") {
-            viewModel.openSettings()
+            voiceSettingsOpen = true
           }
         }
 
@@ -1242,6 +1266,35 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
         }
       }
     }
+
+    if (voiceSettingsOpen) {
+      LiveVoiceSettingsSheet(
+        selectedVoiceId = viewModel.selectedVoiceId,
+        onVoiceChange = { id ->
+          viewModel.selectVoice(id)
+          controller.stop()
+          startLiveSession()
+        },
+        activationMode = viewModel.voiceActivationMode,
+        onActivationModeChange = { mode ->
+          viewModel.selectVoiceActivationMode(mode)
+          micMuted = false
+          controller.stop()
+          startLiveSession()
+        },
+        speed = viewModel.voiceSpeed,
+        onSpeedChange = { speed ->
+          viewModel.setVoiceSpeed(speed)
+          controller.setPlaybackSpeed(speed)
+        },
+        outputDevice = viewModel.voiceOutputDevice,
+        onOutputDeviceChange = { device ->
+          viewModel.selectVoiceOutputDevice(device)
+          controller.setOutputDevice(device)
+        },
+        onDismiss = { voiceSettingsOpen = false }
+      )
+    }
   }
 }
 
@@ -1262,6 +1315,177 @@ private fun VoiceControlPill(icon: ImageVector, contentDescription: String, acti
       tint = Color.White.copy(alpha = if (active) 1f else 0.35f),
       modifier = Modifier.size(24.dp)
     )
+  }
+}
+
+/** Press-and-hold mic control for push-to-talk mode: streams audio only
+ * while the user's finger is down, unlike [VoiceControlPill]'s tap-toggle. */
+@Composable
+private fun PushToTalkPill(onPress: () -> Unit, onRelease: () -> Unit) {
+  var pressed by remember { mutableStateOf(false) }
+  Box(
+    modifier = Modifier
+      .size(width = 78.dp, height = 58.dp)
+      .clip(RoundedCornerShape(18.dp))
+      .background(if (pressed) Color.White else Color(0xFF1F1F1F))
+      .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(18.dp))
+      .pointerInput(Unit) {
+        awaitEachGesture {
+          awaitFirstDown(requireUnconsumed = false)
+          pressed = true
+          onPress()
+          waitForUpOrCancellation()
+          pressed = false
+          onRelease()
+        }
+      },
+    contentAlignment = Alignment.Center
+  ) {
+    Icon(
+      Icons.Outlined.MicNone,
+      contentDescription = "Hold to talk",
+      tint = if (pressed) Color.Black else Color.White,
+      modifier = Modifier.size(24.dp)
+    )
+  }
+}
+
+@Composable
+private fun VoiceSettingsChip(label: String, selected: Boolean, onClick: () -> Unit) {
+  Box(
+    modifier = Modifier
+      .clip(RoundedCornerShape(16.dp))
+      .background(if (selected) Color.White else Color.White.copy(alpha = 0.08f))
+      .clickable(onClick = onClick)
+      .padding(horizontal = 16.dp, vertical = 10.dp)
+  ) {
+    Text(
+      label,
+      color = if (selected) Color.Black else Color.White,
+      fontSize = 14.sp,
+      fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+    )
+  }
+}
+
+/** Voice Settings sheet for Live Vision — Voice, Voice Activation, Voice
+ * Speed, and Output Device, all applied to the live session immediately. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LiveVoiceSettingsSheet(
+  selectedVoiceId: String,
+  onVoiceChange: (String) -> Unit,
+  activationMode: String,
+  onActivationModeChange: (String) -> Unit,
+  speed: Float,
+  onSpeedChange: (Float) -> Unit,
+  outputDevice: String,
+  onOutputDeviceChange: (String) -> Unit,
+  onDismiss: () -> Unit
+) {
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFF161616)) {
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 20.dp)
+        .padding(bottom = 32.dp)
+    ) {
+      Text(
+        "Voice Settings",
+        color = Color.White,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.fillMaxWidth(),
+        textAlign = TextAlign.Center
+      )
+
+      Spacer(modifier = Modifier.height(28.dp))
+      Text("Voice", color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+      Spacer(modifier = Modifier.height(10.dp))
+      Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+      ) {
+        VOICE_OPTIONS.forEach { option ->
+          VoiceSettingsChip(
+            label = option.name,
+            selected = selectedVoiceId == option.id,
+            onClick = { onVoiceChange(option.id) }
+          )
+        }
+      }
+
+      Spacer(modifier = Modifier.height(26.dp))
+      Text("Voice Activation", color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+      Spacer(modifier = Modifier.height(10.dp))
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(24.dp))
+          .background(Color.White.copy(alpha = 0.08f))
+          .padding(4.dp)
+      ) {
+        listOf("default" to "Default", "push_to_talk" to "Push to Talk").forEach { (id, label) ->
+          val selected = activationMode == id
+          Box(
+            modifier = Modifier
+              .weight(1f)
+              .clip(RoundedCornerShape(20.dp))
+              .background(if (selected) Color.White else Color.Transparent)
+              .clickable { onActivationModeChange(id) }
+              .padding(vertical = 10.dp),
+            contentAlignment = Alignment.Center
+          ) {
+            Text(
+              label,
+              color = if (selected) Color.Black else Color.White,
+              fontSize = 14.sp,
+              fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+            )
+          }
+        }
+      }
+
+      Spacer(modifier = Modifier.height(26.dp))
+      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text("Voice Speed", color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text(String.format("%.1fx", speed), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+      }
+      Spacer(modifier = Modifier.height(12.dp))
+      PreviewSlider(
+        value = ((speed - 0.5f) / 1.5f).coerceIn(0f, 1f),
+        onValueChange = { fraction -> onSpeedChange(0.5f + fraction * 1.5f) },
+        modifier = Modifier.fillMaxWidth()
+      )
+
+      Spacer(modifier = Modifier.height(26.dp))
+      Text("Output Device", color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+      Spacer(modifier = Modifier.height(10.dp))
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(16.dp))
+          .background(Color.White.copy(alpha = 0.08f))
+          .clickable { onOutputDeviceChange(if (outputDevice == "speaker") "earpiece" else "speaker") }
+          .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Icon(
+          if (outputDevice == "speaker") Icons.Outlined.VolumeUp else Icons.Outlined.Headset,
+          contentDescription = null,
+          tint = Color.White,
+          modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+          if (outputDevice == "speaker") "Speaker" else "Earpiece",
+          color = Color.White,
+          fontSize = 14.sp,
+          modifier = Modifier.weight(1f)
+        )
+        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
+      }
+    }
   }
 }
 
@@ -2180,12 +2404,15 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
 
 private data class VoiceOption(val id: String, val name: String, val description: String)
 
+// Ids are the actual voice names OpenAI's Realtime API accepts — this list
+// is passed straight through to the live session, not just a cosmetic label.
 private val VOICE_OPTIONS = listOf(
-  VoiceOption("default", "Default", "Balanced and natural"),
-  VoiceOption("warm", "Warm", "Warm and steady"),
-  VoiceOption("calm", "Calm", "Calm and clear"),
-  VoiceOption("bright", "Bright", "Bright and energetic"),
-  VoiceOption("deep", "Deep", "Deep and confident")
+  VoiceOption("marin", "Marin", "Natural and expressive (recommended)"),
+  VoiceOption("cedar", "Cedar", "Warm and steady (recommended)"),
+  VoiceOption("alloy", "Alloy", "Balanced and neutral"),
+  VoiceOption("ballad", "Ballad", "Smooth and calm"),
+  VoiceOption("coral", "Coral", "Bright and energetic"),
+  VoiceOption("sage", "Sage", "Deep and confident")
 )
 
 @Composable

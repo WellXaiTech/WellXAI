@@ -64,20 +64,50 @@ class TokenStore(context: Context) {
     prefs.edit().putString(KEY_THEME_MODE, value).apply()
   }
 
-  /** Wipes the session but keeps device-level prefs (haptics) that aren't
-   * tied to any particular account. */
+  // Live Vision voice preferences — device-level, not account data, so they
+  // survive sign-out the same way haptics/theme do.
+  fun getVoiceName(): String = prefs.getString(KEY_VOICE_NAME, "marin") ?: "marin"
+  fun setVoiceName(value: String) {
+    prefs.edit().putString(KEY_VOICE_NAME, value).apply()
+  }
+
+  fun getVoiceActivationMode(): String = prefs.getString(KEY_VOICE_ACTIVATION_MODE, "default") ?: "default"
+  fun setVoiceActivationMode(value: String) {
+    prefs.edit().putString(KEY_VOICE_ACTIVATION_MODE, value).apply()
+  }
+
+  fun getVoiceSpeed(): Float = prefs.getFloat(KEY_VOICE_SPEED, 1.0f)
+  fun setVoiceSpeed(value: Float) {
+    prefs.edit().putFloat(KEY_VOICE_SPEED, value).apply()
+  }
+
+  fun getVoiceOutputDevice(): String = prefs.getString(KEY_VOICE_OUTPUT_DEVICE, "speaker") ?: "speaker"
+  fun setVoiceOutputDevice(value: String) {
+    prefs.edit().putString(KEY_VOICE_OUTPUT_DEVICE, value).apply()
+  }
+
+  /** Wipes the session but keeps device-level prefs (haptics, voice) that
+   * aren't tied to any particular account. */
   fun clear() {
     val hapticsEnabled = getHapticsEnabled()
     val hapticsOnPress = getHapticsOnPress()
     val hapticsOnResponse = getHapticsOnResponse()
     val pasteAsFileMode = getPasteAsFileMode()
     val themeMode = getThemeMode()
+    val voiceName = getVoiceName()
+    val voiceActivationMode = getVoiceActivationMode()
+    val voiceSpeed = getVoiceSpeed()
+    val voiceOutputDevice = getVoiceOutputDevice()
     prefs.edit().clear().apply()
     setHapticsEnabled(hapticsEnabled)
     setHapticsOnPress(hapticsOnPress)
     setHapticsOnResponse(hapticsOnResponse)
     setPasteAsFileMode(pasteAsFileMode)
     setThemeMode(themeMode)
+    setVoiceName(voiceName)
+    setVoiceActivationMode(voiceActivationMode)
+    setVoiceSpeed(voiceSpeed)
+    setVoiceOutputDevice(voiceOutputDevice)
   }
 
   companion object {
@@ -90,5 +120,9 @@ class TokenStore(context: Context) {
     private const val KEY_HAPTICS_ON_RESPONSE = "haptics_on_response"
     private const val KEY_PASTE_AS_FILE_MODE = "paste_as_file_mode"
     private const val KEY_THEME_MODE = "theme_mode"
+    private const val KEY_VOICE_NAME = "voice_name"
+    private const val KEY_VOICE_ACTIVATION_MODE = "voice_activation_mode"
+    private const val KEY_VOICE_SPEED = "voice_speed"
+    private const val KEY_VOICE_OUTPUT_DEVICE = "voice_output_device"
   }
 }

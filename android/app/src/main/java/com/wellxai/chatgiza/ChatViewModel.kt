@@ -271,11 +271,36 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     screen = AppScreen.Account
   }
 
-  var selectedVoiceId by mutableStateOf("default")
+  var selectedVoiceId by mutableStateOf(tokenStore.getVoiceName())
     private set
 
   fun selectVoice(id: String) {
     selectedVoiceId = id
+    tokenStore.setVoiceName(id)
+  }
+
+  var voiceActivationMode by mutableStateOf(tokenStore.getVoiceActivationMode())
+    private set
+
+  fun selectVoiceActivationMode(mode: String) {
+    voiceActivationMode = mode
+    tokenStore.setVoiceActivationMode(mode)
+  }
+
+  var voiceSpeed by mutableStateOf(tokenStore.getVoiceSpeed())
+    private set
+
+  fun setVoiceSpeed(speed: Float) {
+    voiceSpeed = speed
+    tokenStore.setVoiceSpeed(speed)
+  }
+
+  var voiceOutputDevice by mutableStateOf(tokenStore.getVoiceOutputDevice())
+    private set
+
+  fun selectVoiceOutputDevice(device: String) {
+    voiceOutputDevice = device
+    tokenStore.setVoiceOutputDevice(device)
   }
 
   fun openReportProblem() {
@@ -651,7 +676,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     billingSummary = null
     personalizeChatGizaEnabled = true
     chatLinkSharingEnabled = true
-    selectedVoiceId = "default"
+    selectedVoiceId = tokenStore.getVoiceName()
     firstNameInput = ""
     lastNameInput = ""
     birthYearInput = ""
