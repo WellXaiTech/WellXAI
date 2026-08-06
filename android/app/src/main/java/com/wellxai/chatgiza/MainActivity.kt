@@ -605,6 +605,7 @@ private fun AskImagineTab(label: String, selected: Boolean, onClick: () -> Unit)
   }
 }
 
+// Ask / Extra segmented tabs, shown inside a rounded background pill.
 @Composable
 private fun AskImagineTabs(current: String, onAsk: () -> Unit, onImagine: () -> Unit) {
   Row(
