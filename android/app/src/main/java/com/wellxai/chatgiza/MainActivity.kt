@@ -188,6 +188,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
@@ -2426,12 +2427,16 @@ private fun DataControlsAppBar(title: String, onBack: () -> Unit) {
 private fun DataControlToggleRow(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
   Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
     Column(modifier = Modifier.weight(1f)) {
-      Text(title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-      Spacer(modifier = Modifier.height(4.dp))
-      Text(subtitle, color = Color(0xFFA8A8A8), fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.Normal)
+      Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+      Spacer(modifier = Modifier.height(3.dp))
+      Text(subtitle, color = Color(0xFFA8A8A8), fontSize = 12.sp, lineHeight = 15.sp, fontWeight = FontWeight.Normal)
     }
     Spacer(modifier = Modifier.width(12.dp))
-    Switch(checked = checked, onCheckedChange = onCheckedChange)
+    Switch(
+      checked = checked,
+      onCheckedChange = onCheckedChange,
+      modifier = Modifier.scale(0.75f)
+    )
   }
 }
 
@@ -2440,7 +2445,7 @@ private fun DangerRow(label: String, onClick: () -> Unit) {
   Text(
     label,
     color = Color(0xFFFF3B30),
-    fontSize = 17.sp,
+    fontSize = 14.sp,
     fontWeight = FontWeight.Bold,
     modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
   )
@@ -2489,13 +2494,13 @@ private fun DataControlsScreen(viewModel: ChatViewModel) {
       ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
           Column(modifier = Modifier.weight(1f)) {
-            Text("Manage Cloud Storage", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(4.dp))
+            Text("Manage Cloud Storage", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(3.dp))
             Text(
               "See all the files and assets you have uploaded to ChatGiZa. You can also delete them here.",
               color = Color(0xFFA8A8A8),
-              fontSize = 13.sp,
-              lineHeight = 16.sp
+              fontSize = 12.sp,
+              lineHeight = 15.sp
             )
           }
           Spacer(modifier = Modifier.width(12.dp))
