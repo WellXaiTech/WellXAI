@@ -106,6 +106,7 @@ import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DarkMode
@@ -1266,6 +1267,8 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
         }
       }
 
+      Spacer(modifier = Modifier.height(14.dp))
+
       Row(
         modifier = Modifier
           .fillMaxWidth()
@@ -1286,7 +1289,13 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           Icon(Icons.Outlined.Schedule, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp))
         }
         Spacer(modifier = Modifier.size(12.dp))
-        Text("Automations", color = colorScheme.onBackground, fontSize = 15.sp)
+        Text("Automations", color = colorScheme.onBackground, fontSize = 15.sp, modifier = Modifier.weight(1f))
+        Icon(
+          Icons.Filled.KeyboardDoubleArrowRight,
+          contentDescription = null,
+          tint = colorScheme.onBackground.copy(alpha = 0.6f),
+          modifier = Modifier.size(20.dp)
+        )
       }
 
       Row(
@@ -1294,7 +1303,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           .fillMaxWidth()
           .padding(horizontal = 16.dp, vertical = 4.dp)
           .clip(RoundedCornerShape(14.dp))
-          .background(Color(0xFF2563EB))
+          .background(Color(0xFF1648DF))
           .clickable(onClick = { viewModel.openBilling() })
           .padding(horizontal = 12.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -1320,7 +1329,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             .background(Color.White)
             .padding(horizontal = 12.dp, vertical = 6.dp)
         ) {
-          Text("Claim Offer", color = Color(0xFF2563EB), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+          Text("Claim Offer", color = Color(0xFF1648DF), fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
       }
 
@@ -3089,7 +3098,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
           .fillMaxWidth()
           .padding(vertical = 4.dp)
           .clip(RoundedCornerShape(16.dp))
-          .background(Color(0xFF2563EB))
+          .background(Color(0xFF1648DF))
           .clickable(onClick = { viewModel.openBilling() })
           .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -3104,7 +3113,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
             .background(Color.White)
             .padding(horizontal = 12.dp, vertical = 6.dp)
         ) {
-          Text("Claim Offer", color = Color(0xFF2563EB), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+          Text("Claim Offer", color = Color(0xFF1648DF), fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
       }
 
