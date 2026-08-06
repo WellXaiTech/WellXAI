@@ -118,7 +118,6 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.SettingsBrightness
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -488,6 +487,30 @@ private fun MicIconCustom(modifier: Modifier = Modifier, tint: Color = Color.Whi
 
 /** Matches the exact custom waveform glyph the user supplied (24x24
  * viewBox, 5 filled rounded bars of varying height). */
+@Composable
+private fun FilterIconCustom(modifier: Modifier = Modifier, tint: Color = Color.White) {
+  Canvas(modifier = modifier) {
+    val scale = size.width / 24f
+    val strokeW = 2f * scale
+    drawLine(
+      color = tint,
+      start = Offset(3f * scale, 8f * scale),
+      end = Offset(21f * scale, 8f * scale),
+      strokeWidth = strokeW,
+      cap = StrokeCap.Round
+    )
+    drawLine(
+      color = tint,
+      start = Offset(3f * scale, 16f * scale),
+      end = Offset(21f * scale, 16f * scale),
+      strokeWidth = strokeW,
+      cap = StrokeCap.Round
+    )
+    drawCircle(color = tint, radius = 2.5f * scale, center = Offset(9f * scale, 8f * scale))
+    drawCircle(color = tint, radius = 2.5f * scale, center = Offset(15f * scale, 16f * scale))
+  }
+}
+
 @Composable
 private fun WaveformIconCustom(modifier: Modifier = Modifier, tint: Color = Color.Black) {
   Canvas(modifier = modifier) {
@@ -2429,7 +2452,7 @@ private fun ManageCloudStorageScreen(viewModel: ChatViewModel) {
       .padding(horizontal = 20.dp)
   ) {
     Row(
-      modifier = Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 20.dp),
+      modifier = Modifier.fillMaxWidth().padding(top = 44.dp, bottom = 20.dp),
       verticalAlignment = Alignment.CenterVertically
     ) {
       IconButton(onClick = { viewModel.closeManageCloudStorage() }, modifier = Modifier.size(28.dp)) {
@@ -2440,7 +2463,7 @@ private fun ManageCloudStorageScreen(viewModel: ChatViewModel) {
         Text("0 B", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Text("0% used", color = Color(0xFFA8A8A8), fontSize = 13.sp)
       }
-      Icon(Icons.Filled.Tune, contentDescription = "Filter", tint = Color.White, modifier = Modifier.size(26.dp))
+      FilterIconCustom(tint = Color.White, modifier = Modifier.size(24.dp))
     }
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
