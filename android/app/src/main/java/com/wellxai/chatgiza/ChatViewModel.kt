@@ -303,6 +303,27 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     tokenStore.setVoiceOutputDevice(device)
   }
 
+  var personality by mutableStateOf(tokenStore.getPersonality())
+    private set
+
+  var ageConfirmed18Plus by mutableStateOf(tokenStore.getAgeConfirmed18Plus())
+    private set
+
+  /** "romantic"/"argumentative" require an explicit one-time 18+
+   * attestation first; "neutral" is always allowed. */
+  fun selectPersonality(id: String) {
+    if (id != "neutral" && !ageConfirmed18Plus) return
+    personality = id
+    tokenStore.setPersonality(id)
+  }
+
+  fun confirmAge18PlusAndSelectPersonality(id: String) {
+    ageConfirmed18Plus = true
+    tokenStore.setAgeConfirmed18Plus(true)
+    personality = id
+    tokenStore.setPersonality(id)
+  }
+
   fun openReportProblem() {
     screen = AppScreen.ReportProblem
   }
@@ -677,6 +698,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     personalizeChatGizaEnabled = true
     chatLinkSharingEnabled = true
     selectedVoiceId = tokenStore.getVoiceName()
+    personality = tokenStore.getPersonality()
+    ageConfirmed18Plus = tokenStore.getAgeConfirmed18Plus()
     firstNameInput = ""
     lastNameInput = ""
     birthYearInput = ""

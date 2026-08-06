@@ -40,6 +40,16 @@ export default function TermsPage() {
         access for accounts that violate these Terms.
       </p>
 
+      <h2 className="mt-10 text-lg font-medium">Optional Personality Modes (18+)</h2>
+      <p className="mt-3 text-muted">
+        In Live Vision&apos;s Voice Settings, you may optionally switch ChatGiZa&apos;s conversational tone to
+        &quot;Romantic&quot; or &quot;Argumentative.&quot; These are fictional AI personas — ChatGiZa is not a real
+        person and does not have real feelings for you, and &quot;Argumentative&quot; mode reflects a contrarian
+        conversational style, not ChatGiZa&apos;s genuine opinion. Romantic mode may be flirtatious or affectionate
+        in tone but will not produce explicit or sexual content. These modes are restricted to users who confirm
+        they are 18 or older, and default back to the standard mode until you choose otherwise.
+      </p>
+
       <h2 className="mt-10 text-lg font-medium">User Content</h2>
       <p className="mt-3 text-muted">
         &quot;User Content&quot; means anything you input into the Service (text, images, files, prompts) and

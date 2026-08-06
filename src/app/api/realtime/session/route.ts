@@ -27,6 +27,31 @@ export async function POST(req: NextRequest) {
   const voice = ALLOWED_VOICES.has(requestedVoice) ? requestedVoice : "marin";
   const pushToTalk = body?.pushToTalk === true;
 
+  // "romantic"/"argumentative" change the assistant's actual tone toward
+  // flirtatious or contrarian content meant for adults. The app's own UI
+  // already gates picking these behind a one-time 18+ confirmation — this
+  // is defense-in-depth so a request that skips that UI (or is replayed/
+  // crafted directly) can't get that content without also claiming it.
+  const ALLOWED_PERSONALITIES = new Set(["neutral", "romantic", "argumentative"]);
+  const requestedPersonality = typeof body?.personality === "string" ? body.personality.trim().toLowerCase() : "neutral";
+  const ageConfirmed = body?.ageConfirmed === true;
+  const personality =
+    ALLOWED_PERSONALITIES.has(requestedPersonality) && (requestedPersonality === "neutral" || ageConfirmed)
+      ? requestedPersonality
+      : "neutral";
+
+  const PERSONALITY_INSTRUCTIONS: Record<string, string> = {
+    romantic:
+      " Adopt a warm, flirtatious, affectionate conversational tone, as though speaking with someone you have " +
+      "romantic feelings for — but keep everything tasteful and suggestive at most. Never generate explicit, " +
+      "graphic, or sexual content. This is a fictional persona for an adult user who has opted in; never claim to " +
+      "be a real person or to have real feelings for them.",
+    argumentative:
+      " Adopt a contrarian, debate-club tone: push back on the user's statements, play devil's advocate, and " +
+      "challenge their reasoning. Stay sharp and persistent, but never hostile, abusive, or insulting.",
+  };
+  const personalityInstruction = PERSONALITY_INSTRUCTIONS[personality] ?? "";
+
   const rawLanguage = typeof body?.language === "string" ? body.language.trim() : "";
   // "Auto-detect" is the app's own placeholder for "no language chosen" (see
   // LANGUAGE_KEY's default in page.tsx) — it isn't a real language name, so
@@ -84,7 +109,8 @@ export async function POST(req: NextRequest) {
             "what you see, identify objects/people/animals/vehicles/scenes, read any visible text aloud when asked, " +
             "and answer questions about the live view conversationally and concisely, as if looking over their " +
             "shoulder. If you haven't received any image yet, say so instead of guessing. " +
-            languageInstruction,
+            languageInstruction +
+            personalityInstruction,
           audio: {
             input: {
               transcription: {
