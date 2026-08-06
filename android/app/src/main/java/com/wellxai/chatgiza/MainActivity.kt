@@ -2458,9 +2458,33 @@ private fun DataControlsScreen(viewModel: ChatViewModel) {
   }
 }
 
+private val CLOUD_STORAGE_FILTERS = listOf("All", "Images", "Videos", "Documents", "Audio")
+private val CLOUD_STORAGE_SORTS = listOf("Last used", "Date created", "Name", "Size")
+
+@Composable
+private fun CloudStorageFilterMenuItem(label: String, selected: Boolean, onClick: () -> Unit) {
+  DropdownMenuItem(
+    text = {
+      Text(label, color = Color.White, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal, fontSize = 15.sp)
+    },
+    leadingIcon = {
+      if (selected) {
+        Icon(Icons.Filled.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+      } else {
+        Spacer(modifier = Modifier.size(18.dp))
+      }
+    },
+    onClick = onClick
+  )
+}
+
 @Composable
 private fun ManageCloudStorageScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeManageCloudStorage() }
+  var filterMenuOpen by remember { mutableStateOf(false) }
+  var selectedFilter by remember { mutableStateOf("All") }
+  var selectedSort by remember { mutableStateOf("Last used") }
+
   Column(
     modifier = Modifier
       .fillMaxSize()
@@ -2478,7 +2502,50 @@ private fun ManageCloudStorageScreen(viewModel: ChatViewModel) {
         Text("0 B", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Text("0% used", color = Color(0xFFA8A8A8), fontSize = 13.sp)
       }
-      FilterIconCustom(tint = Color.White, modifier = Modifier.size(24.dp))
+      Box {
+        Box(
+          modifier = Modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .clickable { filterMenuOpen = true },
+          contentAlignment = Alignment.Center
+        ) {
+          FilterIconCustom(tint = Color.White, modifier = Modifier.size(24.dp))
+        }
+        DropdownMenu(
+          expanded = filterMenuOpen,
+          onDismissRequest = { filterMenuOpen = false },
+          modifier = Modifier.background(Color(0xFF1F1F1F))
+        ) {
+          Text(
+            "Filter by",
+            color = Color(0xFFA8A8A8),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+          )
+          CLOUD_STORAGE_FILTERS.forEach { option ->
+            CloudStorageFilterMenuItem(option, selected = option == selectedFilter) {
+              selectedFilter = option
+              filterMenuOpen = false
+            }
+          }
+          HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+          Text(
+            "Sort by",
+            color = Color(0xFFA8A8A8),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+          )
+          CLOUD_STORAGE_SORTS.forEach { option ->
+            CloudStorageFilterMenuItem(option, selected = option == selectedSort) {
+              selectedSort = option
+              filterMenuOpen = false
+            }
+          }
+        }
+      }
     }
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
