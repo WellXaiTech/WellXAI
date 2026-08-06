@@ -1,4 +1,4 @@
-export const metadata = { title: "Terms of Service — ChatGiZa" };
+export const metadata = { title: { absolute: "Terms of Service — WellXAI" } };
 
 export default function TermsPage() {
   return (
