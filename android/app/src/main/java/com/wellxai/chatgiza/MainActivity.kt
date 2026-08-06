@@ -612,7 +612,7 @@ private fun AskImagineTabs(current: String, onAsk: () -> Unit, onImagine: () -> 
     modifier = Modifier
       .clip(RoundedCornerShape(20.dp))
       .background(colorScheme.onBackground.copy(alpha = 0.06f))
-      .padding(horizontal = 16.dp, vertical = 8.dp),
+      .padding(horizontal = 24.dp, vertical = 4.dp),
     horizontalArrangement = Arrangement.spacedBy(24.dp)
   ) {
     AskImagineTab("Ask", current == "Ask", onAsk)
