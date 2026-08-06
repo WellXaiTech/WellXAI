@@ -37,8 +37,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
@@ -200,6 +202,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -255,20 +258,25 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(screen) {
               if (screen is AppScreen.History) drawerState.open() else drawerState.close()
             }
+            // Two-way sync: whichever side changes first (a tap on the
+            // hamburger icon vs. a manual swipe) drives the other, so they
+            // can never end up disagreeing about whether History is open.
             LaunchedEffect(drawerState) {
               snapshotFlow { drawerState.currentValue }.collect { value ->
-                if (value == DrawerValue.Closed && viewModel.screen is AppScreen.History) {
-                  viewModel.closeHistory()
+                when {
+                  value == DrawerValue.Open && viewModel.screen !is AppScreen.History -> viewModel.openHistory()
+                  value == DrawerValue.Closed && viewModel.screen is AppScreen.History -> viewModel.closeHistory()
                 }
               }
             }
             ModalNavigationDrawer(
               drawerState = drawerState,
+              // No custom width here on purpose — Material3's own default
+              // drawer width is what its swipe-gesture math (the distance a
+              // drag needs to cover to fully open) is built around; overriding
+              // it made the swipe stop short of fully open.
               drawerContent = {
-                ModalDrawerSheet(
-                  drawerContainerColor = colorScheme.background,
-                  modifier = Modifier.fillMaxWidth(0.86f)
-                ) {
+                ModalDrawerSheet(drawerContainerColor = colorScheme.background) {
                   HistoryScreen(viewModel)
                 }
               }
@@ -761,9 +769,22 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
 
   val focusRequester = remember { FocusRequester() }
   val keyboardController = LocalSoftwareKeyboardController.current
+  val focusManager = LocalFocusManager.current
+  var keyboardVisible by remember { mutableStateOf(true) }
   LaunchedEffect(Unit) {
     focusRequester.requestFocus()
     keyboardController?.show()
+  }
+  fun toggleKeyboard() {
+    if (keyboardVisible) {
+      keyboardController?.hide()
+      focusManager.clearFocus()
+      keyboardVisible = false
+    } else {
+      focusRequester.requestFocus()
+      keyboardController?.show()
+      keyboardVisible = true
+    }
   }
 
   Card(
@@ -775,7 +796,12 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
       TextField(
         value = viewModel.input,
         onValueChange = viewModel::onInputChange,
-        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+        modifier = Modifier
+          .fillMaxWidth()
+          .focusRequester(focusRequester)
+          .pointerInput(Unit) {
+            detectTapGestures(onDoubleTap = { toggleKeyboard() })
+          },
         placeholder = { Text("Ask anything") },
         colors = TextFieldDefaults.colors(
           unfocusedContainerColor = Color.Transparent,
