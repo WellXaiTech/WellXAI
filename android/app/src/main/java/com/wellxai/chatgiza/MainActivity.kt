@@ -1224,28 +1224,28 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
         modifier = Modifier
           .fillMaxWidth()
           .clickable(onClick = { viewModel.openAccount() })
-          .padding(horizontal = 16.dp, vertical = 10.dp),
+          .padding(horizontal = 16.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
         if (viewModel.userImage != null) {
           AsyncImage(
             model = viewModel.userImage,
             contentDescription = "Profile",
-            modifier = Modifier.size(72.dp).clip(CircleShape)
+            modifier = Modifier.size(48.dp).clip(CircleShape)
           )
         } else {
           Icon(
             Icons.Outlined.AccountCircle,
             contentDescription = "Profile",
             tint = colorScheme.onBackground,
-            modifier = Modifier.size(72.dp)
+            modifier = Modifier.size(48.dp)
           )
         }
-        Spacer(modifier = Modifier.size(14.dp))
+        Spacer(modifier = Modifier.size(12.dp))
         Column {
-          Text(viewModel.userName ?: "", color = colorScheme.onBackground, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+          Text(viewModel.userName ?: "", color = colorScheme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Bold)
           if (viewModel.userEmail != null) {
-            Text(viewModel.userEmail ?: "", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 13.sp)
+            Text(viewModel.userEmail ?: "", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 12.sp)
           }
         }
       }
