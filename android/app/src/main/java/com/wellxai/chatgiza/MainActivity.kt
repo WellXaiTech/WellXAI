@@ -37,9 +37,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
@@ -228,6 +231,7 @@ import java.io.ByteArrayOutputStream
 import java.util.Locale
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 private const val GOOGLE_WEB_CLIENT_ID =
   "302265706031-imsr5i7elinlqkdcjfv3sgicuul1m39g.apps.googleusercontent.com"
@@ -800,7 +804,22 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
           .fillMaxWidth()
           .focusRequester(focusRequester)
           .pointerInput(Unit) {
-            detectTapGestures(onDoubleTap = { toggleKeyboard() })
+            // Runs on the Initial pass (parent-before-child), so this sees
+            // the double-tap before TextField's own internal tap handling
+            // gets a chance to consume it — a plain detectTapGestures()
+            // here never fired, since the field's own gesture detector
+            // (being the child) always wins on the default Main pass.
+            awaitEachGesture {
+              awaitFirstDown(pass = PointerEventPass.Initial)
+              val firstUp = withTimeoutOrNull(200L) { waitForUpOrCancellation(pass = PointerEventPass.Initial) }
+              if (firstUp != null) {
+                val secondDown = withTimeoutOrNull(300L) { awaitFirstDown(pass = PointerEventPass.Initial) }
+                if (secondDown != null) {
+                  secondDown.consume()
+                  toggleKeyboard()
+                }
+              }
+            }
           },
         placeholder = { Text("Ask anything") },
         colors = TextFieldDefaults.colors(
