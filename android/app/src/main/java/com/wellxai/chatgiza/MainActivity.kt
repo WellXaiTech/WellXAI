@@ -121,6 +121,7 @@ import androidx.compose.material.icons.filled.SettingsBrightness
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.AddBox
@@ -130,7 +131,6 @@ import androidx.compose.material.icons.outlined.Autorenew
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.ChildCare
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -2157,7 +2157,7 @@ private fun VoiceScreen(viewModel: ChatViewModel) {
 }
 
 private enum class FeedbackType(val label: String, val icon: ImageVector) {
-  GENERAL("General Feedback", Icons.Outlined.ChatBubbleOutline),
+  GENERAL("General Feedback", Icons.AutoMirrored.Outlined.Chat),
   BUG("Report an issue / bug", Icons.Outlined.BugReport),
   RESPONSE("Response feedback", Icons.Outlined.Feedback)
 }
