@@ -596,8 +596,16 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
           }
         },
         actions = {
-          IconButton(onClick = { viewModel.openAccount() }) {
-            Icon(Icons.Outlined.ModeEdit, contentDescription = "Account", tint = colorScheme.onBackground)
+          Box(
+            modifier = Modifier
+              .padding(end = 12.dp)
+              .size(40.dp)
+              .clip(RoundedCornerShape(12.dp))
+              .background(colorScheme.onBackground.copy(alpha = 0.12f))
+              .clickable(onClick = { viewModel.openAccount() }),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(Icons.Outlined.ModeEdit, contentDescription = "Account", tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
           }
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
@@ -619,7 +627,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
         LazyColumn(
           state = listState,
           modifier = Modifier.weight(1f).fillMaxWidth(),
-          contentPadding = PaddingValues(16.dp),
+          contentPadding = PaddingValues(horizontal = 10.dp, vertical = 16.dp),
           verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
           items(viewModel.messages, key = { it.id }) { message ->
@@ -823,8 +831,16 @@ private fun ImagineScreen(viewModel: ChatViewModel) {
           }
         },
         actions = {
-          IconButton(onClick = { viewModel.openAccount() }) {
-            Icon(Icons.Outlined.ModeEdit, contentDescription = "Account", tint = colorScheme.onBackground)
+          Box(
+            modifier = Modifier
+              .padding(end = 12.dp)
+              .size(40.dp)
+              .clip(RoundedCornerShape(12.dp))
+              .background(colorScheme.onBackground.copy(alpha = 0.12f))
+              .clickable(onClick = { viewModel.openAccount() }),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(Icons.Outlined.ModeEdit, contentDescription = "Account", tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
           }
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
@@ -3534,7 +3550,7 @@ private fun MessageBubble(
             color = if (isUser) colorScheme.onBackground.copy(alpha = 0.12f) else Color.Transparent,
             shape = RoundedCornerShape(16.dp)
           )
-          .padding(horizontal = 14.dp, vertical = 10.dp)
+          .padding(horizontal = 12.dp, vertical = 10.dp)
       ) {
         if (isUser) {
           Text(
