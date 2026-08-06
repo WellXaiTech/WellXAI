@@ -19,6 +19,14 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => null);
+
+  // Only pass through voices OpenAI's Realtime API actually accepts — an
+  // unrecognized value makes the whole client_secrets call fail outright.
+  const ALLOWED_VOICES = new Set(["alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse", "marin", "cedar"]);
+  const requestedVoice = typeof body?.voice === "string" ? body.voice.trim().toLowerCase() : "";
+  const voice = ALLOWED_VOICES.has(requestedVoice) ? requestedVoice : "marin";
+  const pushToTalk = body?.pushToTalk === true;
+
   const rawLanguage = typeof body?.language === "string" ? body.language.trim() : "";
   // "Auto-detect" is the app's own placeholder for "no language chosen" (see
   // LANGUAGE_KEY's default in page.tsx) — it isn't a real language name, so
@@ -84,7 +92,13 @@ export async function POST(req: NextRequest) {
                 ...(transcriptionLanguage ? { language: transcriptionLanguage } : {}),
               },
               noise_reduction: { type: "near_field" },
+              // Push-to-talk mode drives turn-taking explicitly from the
+              // client (commit + response.create on button release), so
+              // the server's own voice-activity detection must be off —
+              // otherwise it would also try to auto-detect turn endings.
+              ...(pushToTalk ? { turn_detection: null } : {}),
             },
+            output: { voice },
           },
         },
       }),

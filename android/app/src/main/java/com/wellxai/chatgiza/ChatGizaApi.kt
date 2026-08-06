@@ -334,9 +334,18 @@ object ChatGizaApi {
     }
   }
 
-  suspend fun getRealtimeToken(token: String, language: String): ApiResult<String> = withContext(Dispatchers.IO) {
+  suspend fun getRealtimeToken(
+    token: String,
+    language: String,
+    voice: String = "marin",
+    pushToTalk: Boolean = false
+  ): ApiResult<String> = withContext(Dispatchers.IO) {
     try {
-      val payload = JSONObject().put("language", language).toString().toRequestBody(JSON)
+      val payload = JSONObject()
+        .put("language", language)
+        .put("voice", voice)
+        .put("pushToTalk", pushToTalk)
+        .toString().toRequestBody(JSON)
       val request = Request.Builder()
         .url("$BASE_URL/api/realtime/session")
         .header("Authorization", "Bearer $token")

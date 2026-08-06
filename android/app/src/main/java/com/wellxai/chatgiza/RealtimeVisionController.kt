@@ -81,6 +81,8 @@ class RealtimeVisionController(
   private val sampleRate = 24000
   private var speakerEnabled = true
   private var micMuted = false
+  private var pushToTalkMode = false
+  private var playbackSpeed = 1.0f
 
   fun setSpeakerEnabled(enabled: Boolean) {
     speakerEnabled = enabled
@@ -90,20 +92,62 @@ class RealtimeVisionController(
     micMuted = muted
   }
 
-  fun start(language: String) {
+  /** Switches the call's audio output between the loudspeaker and the
+   * earpiece, without needing to reconnect the session. */
+  fun setOutputDevice(device: String) {
+    audioManager.isSpeakerphoneOn = device != "earpiece"
+  }
+
+  /** Time-stretches the assistant's spoken reply via the platform's own
+   * resampler — applies live, no reconnect needed. */
+  fun setPlaybackSpeed(speed: Float) {
+    playbackSpeed = speed
+    audioTrack?.let { track ->
+      runCatching { track.playbackParams = track.playbackParams.setSpeed(speed) }
+    }
+  }
+
+  /** Starts actually streaming mic audio to the server. Only meaningful in
+   * push-to-talk mode, where the mic is muted by default and only opens
+   * while the user holds the talk button down. */
+  fun beginPushToTalk() {
+    if (!pushToTalkMode) return
+    micMuted = false
+  }
+
+  /** Releases the talk button in push-to-talk mode: stops streaming and
+   * explicitly asks the server to reply, since server-side voice-activity
+   * detection is turned off for this mode (see [start]). */
+  fun endPushToTalk() {
+    if (!pushToTalkMode) return
+    micMuted = true
+    webSocket?.send(JSONObject().put("type", "input_audio_buffer.commit").toString())
+    webSocket?.send(JSONObject().put("type", "response.create").toString())
+  }
+
+  fun start(
+    language: String,
+    voice: String = "marin",
+    pushToTalk: Boolean = false,
+    outputDevice: String = "speaker",
+    speed: Float = 1.0f
+  ) {
     if (connectionState != ConnectionState.Idle) return
     connectionState = ConnectionState.Connecting
     errorMessage = null
+    pushToTalkMode = pushToTalk
+    playbackSpeed = speed
+    // Push-to-talk relies on the user explicitly telling us when they're
+    // done talking (see endPushToTalk), so the mic must start closed.
+    micMuted = pushToTalk
 
     // MODE_IN_COMMUNICATION pairs with USAGE_VOICE_COMMUNICATION on the
     // playback side (started once the socket is open) so the platform can
     // apply echo cancellation between them — without it, the mic tends to
     // pick up the AI's own voice as if the user said it, garbling turns.
-    // Route to the speaker since the user is holding the phone up to look
-    // through the camera, not holding it to their ear.
     previousAudioMode = audioManager.mode
     audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-    audioManager.isSpeakerphoneOn = true
+    audioManager.isSpeakerphoneOn = outputDevice != "earpiece"
 
     connectJob = scope.launch {
       val token = tokenStore.getToken()
@@ -112,7 +156,7 @@ class RealtimeVisionController(
         connectionState = ConnectionState.Idle
         return@launch
       }
-      when (val result = ChatGizaApi.getRealtimeToken(token, language)) {
+      when (val result = ChatGizaApi.getRealtimeToken(token, language, voice, pushToTalk)) {
         is ApiResult.Success -> openSocket(result.value)
         is ApiResult.Failure -> {
           errorMessage = result.message
@@ -311,6 +355,9 @@ class RealtimeVisionController(
       .setTransferMode(AudioTrack.MODE_STREAM)
       .build()
     audioTrack = track
+    if (playbackSpeed != 1.0f) {
+      runCatching { track.playbackParams = track.playbackParams.setSpeed(playbackSpeed) }
+    }
     track.play()
   }
 
