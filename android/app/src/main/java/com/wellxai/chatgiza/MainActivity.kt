@@ -3095,22 +3095,29 @@ private fun AccountScreen(viewModel: ChatViewModel) {
       Row(
         modifier = Modifier
           .fillMaxWidth()
+          .clip(RoundedCornerShape(20.dp))
+          .background(colorScheme.onBackground.copy(alpha = 0.08f))
           .clickable { viewModel.openEditProfile() }
-          .padding(vertical = 12.dp),
+          .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
         if (viewModel.userImage != null) {
           AsyncImage(
             model = viewModel.userImage,
             contentDescription = "Profile",
-            modifier = Modifier.size(52.dp).clip(CircleShape)
+            modifier = Modifier
+              .size(52.dp)
+              .clip(CircleShape)
+              .border(width = 2.dp, color = colorScheme.onBackground.copy(alpha = 0.3f), shape = CircleShape)
           )
         } else {
           Icon(
             Icons.Outlined.AccountCircle,
             contentDescription = "Profile",
             tint = colorScheme.onBackground,
-            modifier = Modifier.size(52.dp)
+            modifier = Modifier
+              .size(52.dp)
+              .border(width = 2.dp, color = colorScheme.onBackground.copy(alpha = 0.3f), shape = CircleShape)
           )
         }
         Spacer(modifier = Modifier.size(12.dp))
@@ -3129,7 +3136,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
           .clip(RoundedCornerShape(16.dp))
           .background(Color(0xFF1648DF))
           .clickable(onClick = { viewModel.openBilling() })
-          .padding(horizontal = 14.dp, vertical = 12.dp),
+          .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -3140,7 +3147,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
           modifier = Modifier
             .clip(RoundedCornerShape(16.dp))
             .background(Color.White)
-            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .padding(horizontal = 12.dp, vertical = 5.dp)
         ) {
           Text("Claim Offer", color = Color(0xFF1648DF), fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
