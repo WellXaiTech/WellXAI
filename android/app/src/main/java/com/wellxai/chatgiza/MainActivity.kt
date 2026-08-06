@@ -2176,6 +2176,8 @@ private fun ReportProblemScreen(viewModel: ChatViewModel) {
     if (uri != null) attachedImageUri = uri
   }
 
+  val canSubmit = description.isNotBlank() && !submitted
+
   Scaffold(containerColor = Color.Transparent) { padding ->
     Column(
       modifier = Modifier
@@ -2186,36 +2188,58 @@ private fun ReportProblemScreen(viewModel: ChatViewModel) {
     ) {
       Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        verticalAlignment = Alignment.CenterVertically
       ) {
-        Text("Send Feedback", color = colorScheme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        IconButton(onClick = { viewModel.closeReportProblem() }, modifier = Modifier.size(30.dp)) {
-          Icon(Icons.Outlined.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(30.dp))
+        IconButton(onClick = { viewModel.closeReportProblem() }, modifier = Modifier.size(26.dp)) {
+          Icon(Icons.Outlined.Close, contentDescription = "Close", tint = colorScheme.onBackground, modifier = Modifier.size(26.dp))
+        }
+        Text(
+          "Report a Problem",
+          color = colorScheme.onBackground,
+          fontSize = 19.sp,
+          fontWeight = FontWeight.Bold,
+          textAlign = TextAlign.Center,
+          modifier = Modifier.weight(1f)
+        )
+        Box(
+          modifier = Modifier
+            .clip(RoundedCornerShape(percent = 50))
+            .background(
+              if (canSubmit) colorScheme.onBackground else colorScheme.onBackground.copy(alpha = 0.15f)
+            )
+            .clickable(enabled = canSubmit) { submitted = true }
+            .padding(horizontal = 18.dp, vertical = 8.dp)
+        ) {
+          Text(
+            "Submit",
+            color = if (canSubmit) colorScheme.background else colorScheme.onBackground.copy(alpha = 0.4f),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold
+          )
         }
       }
 
-      Spacer(modifier = Modifier.height(24.dp))
+      Spacer(modifier = Modifier.height(20.dp))
 
       Box {
         Row(
           modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp)
+            .height(50.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(Color(0xFF2F2F2F))
+            .background(colorScheme.onBackground.copy(alpha = 0.08f))
             .clickable { typeMenuOpen = true }
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 14.dp),
           verticalAlignment = Alignment.CenterVertically
         ) {
-          Icon(selectedType.icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
-          Spacer(modifier = Modifier.width(16.dp))
-          Text(selectedType.label, color = colorScheme.onBackground, fontSize = 16.sp, modifier = Modifier.weight(1f))
+          Icon(selectedType.icon, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
+          Spacer(modifier = Modifier.width(12.dp))
+          Text(selectedType.label, color = colorScheme.onBackground, fontSize = 15.sp, modifier = Modifier.weight(1f))
           Icon(
             Icons.Outlined.KeyboardArrowDown,
             contentDescription = "Choose feedback type",
-            tint = Color(0xFFBDBDBD),
-            modifier = Modifier.size(24.dp)
+            tint = colorScheme.onBackground.copy(alpha = 0.6f),
+            modifier = Modifier.size(20.dp)
           )
         }
         DropdownMenu(expanded = typeMenuOpen, onDismissRequest = { typeMenuOpen = false }) {
@@ -2227,14 +2251,14 @@ private fun ReportProblemScreen(viewModel: ChatViewModel) {
                   Icon(
                     type.icon,
                     contentDescription = null,
-                    tint = if (isSelected) Color.White else Color(0xFFBDBDBD),
-                    modifier = Modifier.size(30.dp)
+                    tint = if (isSelected) colorScheme.onBackground else colorScheme.onBackground.copy(alpha = 0.6f),
+                    modifier = Modifier.size(20.dp)
                   )
-                  Spacer(modifier = Modifier.width(16.dp))
-                  Text(type.label, modifier = Modifier.weight(1f))
+                  Spacer(modifier = Modifier.width(12.dp))
+                  Text(type.label, fontSize = 15.sp, modifier = Modifier.weight(1f))
                   if (isSelected) {
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Icon(Icons.Filled.Check, contentDescription = "Selected", tint = Color.White, modifier = Modifier.size(28.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Icon(Icons.Filled.Check, contentDescription = "Selected", tint = colorScheme.onBackground, modifier = Modifier.size(18.dp))
                   }
                 }
               },
@@ -2247,42 +2271,47 @@ private fun ReportProblemScreen(viewModel: ChatViewModel) {
         }
       }
 
-      Spacer(modifier = Modifier.height(16.dp))
+      Spacer(modifier = Modifier.height(14.dp))
 
       OutlinedTextField(
         value = description,
         onValueChange = { description = it },
         modifier = Modifier.fillMaxWidth().height(140.dp),
-        placeholder = { Text("Describe the issue…") },
+        placeholder = { Text("Describe what went wrong", fontSize = 15.sp) },
+        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 15.sp, color = colorScheme.onBackground),
         shape = RoundedCornerShape(14.dp)
       )
 
-      Spacer(modifier = Modifier.height(16.dp))
+      Spacer(modifier = Modifier.height(14.dp))
 
       Row(
         modifier = Modifier
-          .fillMaxWidth()
-          .clickable { imagePicker.launch("image/*") },
+          .clip(RoundedCornerShape(percent = 50))
+          .background(colorScheme.onBackground.copy(alpha = 0.08f))
+          .clickable { imagePicker.launch("image/*") }
+          .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Icon(Icons.Outlined.Image, contentDescription = "Attach images", tint = Color.White, modifier = Modifier.size(28.dp))
-        Spacer(modifier = Modifier.width(16.dp))
+        Box(
+          modifier = Modifier
+            .size(24.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(colorScheme.onBackground),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(Icons.Outlined.Image, contentDescription = null, tint = colorScheme.background, modifier = Modifier.size(14.dp))
+        }
+        Spacer(modifier = Modifier.width(10.dp))
         Text(
-          if (attachedImageUri != null) "1 image attached" else "Attach Images",
+          if (attachedImageUri != null) "1 image attached" else "Attach images",
           color = colorScheme.onBackground,
-          fontSize = 16.sp
+          fontSize = 14.sp
         )
       }
 
-      Spacer(modifier = Modifier.height(24.dp))
-
-      Button(
-        onClick = { submitted = true },
-        enabled = description.isNotBlank() && !submitted,
-        shape = RoundedCornerShape(24.dp),
-        modifier = Modifier.fillMaxWidth().height(48.dp)
-      ) {
-        Text(if (submitted) "Sent — thank you!" else "Submit")
+      if (submitted) {
+        Spacer(modifier = Modifier.height(14.dp))
+        Text("Sent — thank you!", color = colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 13.sp)
       }
     }
   }
