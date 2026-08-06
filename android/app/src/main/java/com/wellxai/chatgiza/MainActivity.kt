@@ -33,17 +33,14 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
@@ -231,7 +228,6 @@ import java.io.ByteArrayOutputStream
 import java.util.Locale
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 
 private const val GOOGLE_WEB_CLIENT_ID =
   "302265706031-imsr5i7elinlqkdcjfv3sgicuul1m39g.apps.googleusercontent.com"
@@ -791,6 +787,27 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
     }
   }
 
+  // Watches presses via the field's own interactionSource instead of adding
+  // a competing pointerInput — TextField consumes tap gestures internally
+  // for cursor placement, so anything trying to intercept the raw pointer
+  // events never reliably sees them. Interactions are reported regardless,
+  // so this fires every time without touching TextField's own handling.
+  val composerInteractionSource = remember { MutableInteractionSource() }
+  var lastComposerTapAt by remember { mutableStateOf(0L) }
+  LaunchedEffect(composerInteractionSource) {
+    composerInteractionSource.interactions.collect { interaction ->
+      if (interaction is PressInteraction.Press) {
+        val now = System.currentTimeMillis()
+        if (now - lastComposerTapAt < 300L) {
+          toggleKeyboard()
+          lastComposerTapAt = 0L
+        } else {
+          lastComposerTapAt = now
+        }
+      }
+    }
+  }
+
   Card(
     modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 10.dp),
     shape = RoundedCornerShape(24.dp),
@@ -802,25 +819,8 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
         onValueChange = viewModel::onInputChange,
         modifier = Modifier
           .fillMaxWidth()
-          .focusRequester(focusRequester)
-          .pointerInput(Unit) {
-            // Runs on the Initial pass (parent-before-child), so this sees
-            // the double-tap before TextField's own internal tap handling
-            // gets a chance to consume it — a plain detectTapGestures()
-            // here never fired, since the field's own gesture detector
-            // (being the child) always wins on the default Main pass.
-            awaitEachGesture {
-              awaitFirstDown(pass = PointerEventPass.Initial)
-              val firstUp = withTimeoutOrNull(200L) { waitForUpOrCancellation(pass = PointerEventPass.Initial) }
-              if (firstUp != null) {
-                val secondDown = withTimeoutOrNull(300L) { awaitFirstDown(pass = PointerEventPass.Initial) }
-                if (secondDown != null) {
-                  secondDown.consume()
-                  toggleKeyboard()
-                }
-              }
-            }
-          },
+          .focusRequester(focusRequester),
+        interactionSource = composerInteractionSource,
         placeholder = { Text("Ask anything") },
         colors = TextFieldDefaults.colors(
           unfocusedContainerColor = Color.Transparent,
