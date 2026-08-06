@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import Logo from "./Logo";
 import NavAuthButton from "./NavAuthButton";
+import { CHATGIZA_APK_URL } from "@/lib/useInstallPrompt";
 
 // These pages represent WellXAI, the company, rather than the ChatGiZa
 // product — the logo should read "WellXAI" there instead.
@@ -21,6 +23,14 @@ const links = [
 export default function Navbar() {
   const pathname = usePathname();
   const isCompanyBranded = COMPANY_BRANDED_PATHS.includes(pathname);
+
+  // On an Android phone/tablet, "Try ChatGiZa" should get people into the
+  // real native app (via its APK download) rather than the web chat —
+  // everywhere else (desktop, iOS) it opens the web version as before.
+  const [isAndroid, setIsAndroid] = useState(false);
+  useEffect(() => {
+    setIsAndroid(/Android/i.test(window.navigator.userAgent));
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur">
@@ -48,7 +58,7 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           <NavAuthButton />
           <Link
-            href="/chatgiza"
+            href={isAndroid ? CHATGIZA_APK_URL : "/chatgiza"}
             className="btn-primary rounded-full px-4 py-2 text-sm font-medium transition-opacity hover:opacity-85"
           >
             Try ChatGiZa
