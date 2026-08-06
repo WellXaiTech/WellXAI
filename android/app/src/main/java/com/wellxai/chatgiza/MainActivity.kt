@@ -1284,7 +1284,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
         },
         speed = viewModel.voiceSpeed,
         onSpeedChange = { speed ->
-          viewModel.setVoiceSpeed(speed)
+          viewModel.updateVoiceSpeed(speed)
           controller.setPlaybackSpeed(speed)
         },
         outputDevice = viewModel.voiceOutputDevice,
