@@ -3132,14 +3132,15 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         }
       }
 
+      Spacer(modifier = Modifier.height(16.dp))
+
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .padding(vertical = 4.dp)
-          .clip(RoundedCornerShape(16.dp))
+          .clip(RoundedCornerShape(percent = 50))
           .background(Color(0xFF1648DF))
           .clickable(onClick = { viewModel.openBilling() })
-          .padding(horizontal = 14.dp, vertical = 8.dp),
+          .padding(horizontal = 18.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -3148,11 +3149,12 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         }
         Box(
           modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color.White)
+            .clip(RoundedCornerShape(percent = 50))
+            .background(Color.White.copy(alpha = 0.15f))
+            .border(width = 1.dp, color = Color.White.copy(alpha = 0.4f), shape = RoundedCornerShape(percent = 50))
             .padding(horizontal = 12.dp, vertical = 5.dp)
         ) {
-          Text("Claim Offer", color = Color(0xFF1648DF), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+          Text("Claim Offer", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
       }
 
