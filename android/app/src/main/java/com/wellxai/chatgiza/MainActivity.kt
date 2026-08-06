@@ -127,7 +127,7 @@ import androidx.compose.material.icons.filled.SettingsBrightness
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.Comment
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.AddBox
@@ -157,6 +157,7 @@ import androidx.compose.material.icons.outlined.MicNone
 import androidx.compose.material.icons.outlined.ModeEdit
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.NoAdultContent
+import androidx.compose.material.icons.outlined.Photo
 import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.RadioButtonChecked
@@ -2249,7 +2250,7 @@ private fun VoiceScreen(viewModel: ChatViewModel) {
 }
 
 private enum class FeedbackType(val label: String, val icon: ImageVector) {
-  GENERAL("General Feedback", Icons.Outlined.ChatBubbleOutline),
+  GENERAL("General Feedback", Icons.Outlined.Comment),
   BUG("Report an issue / bug", Icons.Outlined.BugReport),
   RESPONSE("Response feedback", Icons.Outlined.Feedback)
 }
@@ -2391,7 +2392,7 @@ private fun ReportProblemScreen(viewModel: ChatViewModel) {
             .background(colorScheme.onBackground),
           contentAlignment = Alignment.Center
         ) {
-          Icon(Icons.Outlined.Image, contentDescription = null, tint = colorScheme.background, modifier = Modifier.size(14.dp))
+          Icon(Icons.Outlined.Photo, contentDescription = null, tint = colorScheme.background, modifier = Modifier.size(14.dp))
         }
         Spacer(modifier = Modifier.width(10.dp))
         Text(
