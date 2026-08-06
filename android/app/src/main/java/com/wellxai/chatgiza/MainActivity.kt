@@ -607,9 +607,15 @@ private fun AskImagineTab(label: String, selected: Boolean, onClick: () -> Unit)
 
 @Composable
 private fun AskImagineTabs(current: String, onAsk: () -> Unit, onImagine: () -> Unit) {
-  Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+  Row(
+    modifier = Modifier
+      .clip(RoundedCornerShape(20.dp))
+      .background(colorScheme.onBackground.copy(alpha = 0.06f))
+      .padding(horizontal = 16.dp, vertical = 8.dp),
+    horizontalArrangement = Arrangement.spacedBy(24.dp)
+  ) {
     AskImagineTab("Ask", current == "Ask", onAsk)
-    AskImagineTab("Imagine", current == "Imagine", onImagine)
+    AskImagineTab("Extra", current == "Imagine", onImagine)
   }
 }
 
