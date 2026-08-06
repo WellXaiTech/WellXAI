@@ -25,6 +25,7 @@ sealed class AppScreen {
   object ReportProblem : AppScreen()
   object DataControls : AppScreen()
   object ManageCloudStorage : AppScreen()
+  object TermsOfUse : AppScreen()
   object Widgets : AppScreen()
   object Haptics : AppScreen()
   object Settings : AppScreen()
@@ -349,6 +350,14 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeManageCloudStorage() {
     screen = AppScreen.DataControls
+  }
+
+  fun openTermsOfUse() {
+    screen = AppScreen.TermsOfUse
+  }
+
+  fun closeTermsOfUse() {
+    screen = AppScreen.Account
   }
 
   fun onNicknameChange(value: String) {

@@ -259,6 +259,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Haptics -> HapticsScreen(viewModel)
             is AppScreen.DataControls -> DataControlsScreen(viewModel)
             is AppScreen.ManageCloudStorage -> ManageCloudStorageScreen(viewModel)
+            is AppScreen.TermsOfUse -> TermsOfUseScreen(viewModel)
             is AppScreen.Settings -> SettingsScreen(viewModel)
             is AppScreen.Projects -> ProjectsScreen(viewModel)
             is AppScreen.Scheduled -> ScheduledScreen(viewModel)
@@ -2555,6 +2556,175 @@ private fun ManageCloudStorageScreen(viewModel: ChatViewModel) {
   }
 }
 
+@Composable
+private fun LegalSection(title: String, body: String) {
+  Text(title, color = colorScheme.onBackground, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+  Spacer(modifier = Modifier.height(6.dp))
+  Text(body, color = colorScheme.onBackground.copy(alpha = 0.75f), fontSize = 14.sp, lineHeight = 20.sp)
+  Spacer(modifier = Modifier.height(24.dp))
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TermsOfUseScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeTermsOfUse() }
+  Scaffold(containerColor = Color.Transparent) { padding ->
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(padding)
+        .verticalScroll(rememberScrollState())
+        .padding(horizontal = 20.dp)
+    ) {
+      Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 20.dp, bottom = 20.dp)) {
+        IconButton(onClick = { viewModel.closeTermsOfUse() }, modifier = Modifier.size(28.dp)) {
+          Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground, modifier = Modifier.size(28.dp))
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Text("Terms of Use", color = colorScheme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+      }
+
+      Text(
+        "Last updated: August 2026",
+        color = colorScheme.onBackground.copy(alpha = 0.5f),
+        fontSize = 12.sp
+      )
+      Spacer(modifier = Modifier.height(16.dp))
+
+      LegalSection(
+        "Welcome to ChatGiZa",
+        "These Terms of Service (\"Terms\") govern your access to and use of ChatGiZa, including our " +
+          "website, mobile app, and any related features (collectively, the \"Service\"), operated by " +
+          "WellX AI (\"WellX AI\", \"we\", \"us\", or \"our\"). By creating an account, signing in, or " +
+          "otherwise using the Service, you agree to these Terms. If you do not agree, please don't use " +
+          "the Service."
+      )
+      LegalSection(
+        "Who We Are",
+        "WellX AI builds ChatGiZa, a conversational AI assistant for chat, image and video generation, " +
+          "web search, and deep research, alongside supporting tools for developers who want to build on it."
+      )
+      LegalSection(
+        "Registration and Access",
+        "You must be at least 13 years old, or the minimum age required in your country, to use the " +
+          "Service. If you are under 18, you may only use the Service with a parent or legal guardian's " +
+          "permission, and they are responsible for your use of it. You can use ChatGiZa without an " +
+          "account for a limited number of messages; continued or paid use requires signing in with " +
+          "Google (with Apple and Microsoft sign-in planned). You're responsible for keeping your account " +
+          "secure and for all activity under it. Don't share your login, and let us know right away if " +
+          "you suspect unauthorized access."
+      )
+      LegalSection(
+        "Using Our Service",
+        "You may use ChatGiZa to chat, generate images and video, search the web, and use any other " +
+          "features we make available, subject to these Terms. Don't use the Service to break the law, " +
+          "harm others, or attempt to abuse, overload, or circumvent our usage limits — for example, " +
+          "creating repeated accounts or switching networks to bypass free-message limits. We may apply " +
+          "rate limits, mobile-network restrictions, or other safeguards to keep the Service usable and " +
+          "fair for everyone, and we may suspend or terminate access for accounts that violate these Terms."
+      )
+      LegalSection(
+        "User Content",
+        "\"User Content\" means anything you input into the Service (text, images, files, prompts) and " +
+          "anything the Service generates in response. You retain ownership of the input you provide, to " +
+          "the extent you have the rights to it, and you're responsible for making sure it doesn't " +
+          "violate the law or anyone else's rights. We need a license to store, process, and transmit " +
+          "your User Content in order to operate the Service — for example, to send your prompt to our " +
+          "AI providers and return a response to you, or to save your conversation history so you can " +
+          "pick up where you left off. In Settings → Data Controls, you can choose whether your " +
+          "conversations may be used to improve our models, and you can delete your conversations or " +
+          "your account at any time."
+      )
+      LegalSection(
+        "AI-Generated Content & Accuracy",
+        "ChatGiZa uses AI to generate text, images, and video, and its responses can be incomplete, " +
+          "inaccurate, or unsuitable for a given purpose. Use your own judgment, especially for anything " +
+          "important — medical, legal, financial, or safety-related decisions should not be based on " +
+          "ChatGiZa's output alone. You're responsible for how you use what ChatGiZa produces."
+      )
+      LegalSection(
+        "The Service Is Available \"As Is\"",
+        "We're continually adding features, some of which may still be in testing. The Service is " +
+          "provided \"as is\" and may contain errors or interruptions. Your use of the Service, including " +
+          "any new or experimental feature, is at your own risk."
+      )
+      LegalSection(
+        "WellX AI's Intellectual Property Rights",
+        "We and our licensors own all rights, title, and interest in the Service itself, including its " +
+          "software, design, and branding. These Terms don't grant you any rights to our trademarks or " +
+          "branding outside of what's allowed by law or our own published guidelines. If you send us " +
+          "feedback or suggestions about the Service, we may use them without any obligation to you."
+      )
+      LegalSection(
+        "Privacy and Data Security",
+        "Our Privacy Policy explains what data we collect and how we use it — please read it. We take " +
+          "reasonable steps to protect your data, but no service can guarantee absolute security. You " +
+          "use the Service at your own risk in that respect, and you should let us know promptly if you " +
+          "believe your account has been compromised."
+      )
+      LegalSection(
+        "Paid Accounts",
+        "GiZa Pro and other paid plans are billed through Stripe on a recurring basis, using the payment " +
+          "method you provide. You can cancel anytime from the Upgrade Plan screen; cancellation takes " +
+          "effect at the end of your current billing period, and payments already made are non-refundable " +
+          "except where required by law. If we change subscription pricing, we'll give you reasonable " +
+          "notice before it applies to your next renewal."
+      )
+      LegalSection(
+        "Termination, Suspension, Discontinuation",
+        "You're free to stop using ChatGiZa and close your account at any time. We may suspend or " +
+          "terminate your access, without notice, if you violate these Terms, if required by law, or if " +
+          "your use of the Service poses a risk to us, other users, or anyone else. We may also modify, " +
+          "suspend, or discontinue all or part of the Service at any time."
+      )
+      LegalSection(
+        "Disclaimer of Warranties",
+        "To the fullest extent permitted by law, the Service is provided without warranties of any kind, " +
+          "express or implied, including warranties of merchantability, fitness for a particular purpose, " +
+          "and non-infringement."
+      )
+      LegalSection(
+        "Limitation of Liability",
+        "To the fullest extent permitted by law, WellX AI is not liable for any indirect, incidental, " +
+          "special, consequential, or punitive damages, or any loss of data, profits, or goodwill, " +
+          "arising from your use of the Service. Our total liability for any claim relating to the " +
+          "Service is limited to the amount you paid us, if any, in the 12 months before the claim arose."
+      )
+      LegalSection(
+        "Indemnity",
+        "You agree to defend and indemnify WellX AI against claims, losses, and expenses (including " +
+          "reasonable legal fees) arising from your use of the Service, your User Content, or your " +
+          "violation of these Terms, to the extent permitted by law."
+      )
+      LegalSection(
+        "Dispute Resolution",
+        "If a dispute arises, please contact us first — most issues can be resolved directly. Nothing in " +
+          "these Terms limits any rights you have under mandatory consumer protection law in your country " +
+          "of residence."
+      )
+      LegalSection(
+        "Mobile App Specific Terms",
+        "The ChatGiZa Android app is distributed as a direct download and, where available, through app " +
+          "stores. Where you install it via an app store, that store's own terms also apply to your " +
+          "download and use of the app. We may update the app periodically; some updates may be required " +
+          "to keep using the Service."
+      )
+      LegalSection(
+        "General Provisions",
+        "If any part of these Terms is found unenforceable, the rest remains in effect. These Terms, " +
+          "along with our Privacy Policy, make up the entire agreement between you and WellX AI regarding " +
+          "the Service. We may update these Terms from time to time; continued use of the Service after " +
+          "a change means you accept the updated Terms."
+      )
+      LegalSection(
+        "Contact Us",
+        "Questions about these Terms? Use \"Report a Problem\" inside ChatGiZa, or email nicoloustz@gmail.com."
+      )
+      Spacer(modifier = Modifier.height(8.dp))
+    }
+  }
+}
+
 /** Drawn mockup of the ChatGiZa home-screen widget — there's no real
  * AppWidgetProvider yet, so this stands in for the widget_preview /
  * widget_large drawables a real implementation would render. */
@@ -3263,7 +3433,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         SettingsDivider()
         SettingsMenuRow("Open Source Licenses", icon = Icons.Outlined.Description)
         SettingsDivider()
-        SettingsMenuRow("Terms of Use", icon = Icons.AutoMirrored.Outlined.Article)
+        SettingsMenuRow("Terms of Use", icon = Icons.AutoMirrored.Outlined.Article) { viewModel.openTermsOfUse() }
         SettingsDivider()
         SettingsMenuRow("Privacy Policy", icon = Icons.Outlined.Lock)
       }
