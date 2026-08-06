@@ -342,7 +342,7 @@ private fun ChatGizaTheme(themeMode: String, content: @Composable () -> Unit) {
       onPrimary = Color.Black
     )
   } else {
-    val appBackground = Color.White
+    val appBackground = Color(0xFFF2F2F2)
     lightColorScheme(
       background = appBackground,
       surface = appBackground,
@@ -3089,7 +3089,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
           Icon(Icons.Outlined.Close, contentDescription = "Close", tint = colorScheme.onBackground, modifier = Modifier.size(28.dp))
         }
         Spacer(modifier = Modifier.width(12.dp))
-        Text("Settings", color = colorScheme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text("Settings", color = colorScheme.onBackground, fontSize = 19.sp, fontWeight = FontWeight.Bold)
       }
 
       Row(
@@ -3101,17 +3101,14 @@ private fun AccountScreen(viewModel: ChatViewModel) {
           .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        val liveRingBrush = Brush.linearGradient(
-          colors = listOf(Color(0xFF1648DF).copy(alpha = 0.55f), Color(0xFF4FA6FF).copy(alpha = 0.55f))
-        )
         if (viewModel.userImage != null) {
           AsyncImage(
             model = viewModel.userImage,
             contentDescription = "Profile",
             modifier = Modifier
-              .size(52.dp)
+              .size(68.dp)
               .clip(CircleShape)
-              .border(width = 2.dp, brush = liveRingBrush, shape = CircleShape)
+              .border(width = 1.5.dp, color = colorScheme.onBackground.copy(alpha = 0.25f), shape = CircleShape)
           )
         } else {
           Icon(
@@ -3119,8 +3116,8 @@ private fun AccountScreen(viewModel: ChatViewModel) {
             contentDescription = "Profile",
             tint = colorScheme.onBackground,
             modifier = Modifier
-              .size(52.dp)
-              .border(width = 2.dp, brush = liveRingBrush, shape = CircleShape)
+              .size(68.dp)
+              .border(width = 1.5.dp, color = colorScheme.onBackground.copy(alpha = 0.25f), shape = CircleShape)
           )
         }
         Spacer(modifier = Modifier.size(12.dp))
