@@ -587,33 +587,33 @@ private fun WaveformIconCustom(modifier: Modifier = Modifier, tint: Color = Colo
 
 @Composable
 private fun AskImagineTab(label: String, selected: Boolean, onClick: () -> Unit) {
-  Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(onClick = onClick)) {
+  Box(
+    modifier = Modifier
+      .clip(RoundedCornerShape(16.dp))
+      .background(if (selected) colorScheme.background else Color.Transparent)
+      .clickable(onClick = onClick)
+      .padding(horizontal = 14.dp, vertical = 6.dp),
+    contentAlignment = Alignment.Center
+  ) {
     Text(
       label,
-      fontSize = 20.sp,
-      fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+      fontSize = 14.sp,
+      fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
       color = colorScheme.onBackground.copy(alpha = if (selected) 1f else 0.5f)
-    )
-    Spacer(modifier = Modifier.height(6.dp))
-    Box(
-      modifier = Modifier
-        .width(20.dp)
-        .height(3.dp)
-        .clip(RoundedCornerShape(2.dp))
-        .background(if (selected) colorScheme.onBackground.copy(alpha = 0.5f) else Color.Transparent)
     )
   }
 }
 
-// Ask / Extra segmented tabs, shown inside a rounded background pill.
+// Ask / Extra segmented tabs: a narrow pill container, with the selected
+// word getting its own tight background pill (not just an underline).
 @Composable
-private fun AskImagineTabs(current: String, onAsk: () -> Unit, onImagine: () -> Unit) { // retrigger
+private fun AskImagineTabs(current: String, onAsk: () -> Unit, onImagine: () -> Unit) {
   Row(
     modifier = Modifier
       .clip(RoundedCornerShape(20.dp))
       .background(colorScheme.onBackground.copy(alpha = 0.06f))
-      .padding(horizontal = 24.dp, vertical = 4.dp),
-    horizontalArrangement = Arrangement.spacedBy(24.dp)
+      .padding(4.dp),
+    horizontalArrangement = Arrangement.spacedBy(2.dp)
   ) {
     AskImagineTab("Ask", current == "Ask", onAsk)
     AskImagineTab("Extra", current == "Imagine", onImagine)
