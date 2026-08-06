@@ -1259,6 +1259,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
     }
   ) { padding ->
     Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+      Spacer(modifier = Modifier.height(6.dp))
       Row(
         modifier = Modifier
           .fillMaxWidth()
@@ -1282,14 +1283,27 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
         }
         Spacer(modifier = Modifier.size(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-          Text(viewModel.userName ?: "", color = colorScheme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+          Text(
+            viewModel.userName ?: "",
+            color = colorScheme.onBackground,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+          )
           if (viewModel.userEmail != null) {
-            Text(viewModel.userEmail ?: "", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 12.sp)
+            Text(
+              viewModel.userEmail ?: "",
+              color = colorScheme.onBackground.copy(alpha = 0.5f),
+              fontSize = 12.sp,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis
+            )
           }
         }
         Box(
           modifier = Modifier
-            .size(44.dp)
+            .size(48.dp)
             .clip(CircleShape)
             .background(colorScheme.onBackground.copy(alpha = 0.1f))
             .clickable(onClick = { viewModel.openAccount() }),
@@ -1299,7 +1313,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             Icons.Filled.KeyboardDoubleArrowRight,
             contentDescription = null,
             tint = colorScheme.onBackground.copy(alpha = 0.7f),
-            modifier = Modifier.size(22.dp)
+            modifier = Modifier.size(26.dp)
           )
         }
       }
