@@ -1282,16 +1282,17 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           )
         }
         Spacer(modifier = Modifier.size(12.dp))
+        val sidebarNameIsLong = (viewModel.userName?.length ?: 0) > 20
         Column(modifier = Modifier.weight(1f)) {
           Text(
             viewModel.userName ?: "",
             color = colorScheme.onBackground,
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
-            maxLines = 1,
+            maxLines = if (sidebarNameIsLong) 2 else 1,
             overflow = TextOverflow.Ellipsis
           )
-          if (viewModel.userEmail != null) {
+          if (viewModel.userEmail != null && !sidebarNameIsLong) {
             Text(
               viewModel.userEmail ?: "",
               color = colorScheme.onBackground.copy(alpha = 0.5f),
