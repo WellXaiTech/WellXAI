@@ -1259,11 +1259,26 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           )
         }
         Spacer(modifier = Modifier.size(12.dp))
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
           Text(viewModel.userName ?: "", color = colorScheme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Bold)
           if (viewModel.userEmail != null) {
             Text(viewModel.userEmail ?: "", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 12.sp)
           }
+        }
+        Box(
+          modifier = Modifier
+            .size(44.dp)
+            .clip(CircleShape)
+            .background(colorScheme.onBackground.copy(alpha = 0.1f))
+            .clickable(onClick = { viewModel.openAccount() }),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(
+            Icons.Filled.KeyboardDoubleArrowRight,
+            contentDescription = null,
+            tint = colorScheme.onBackground.copy(alpha = 0.7f),
+            modifier = Modifier.size(22.dp)
+          )
         }
       }
 
@@ -1289,13 +1304,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           Icon(Icons.Outlined.Schedule, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp))
         }
         Spacer(modifier = Modifier.size(12.dp))
-        Text("Automations", color = colorScheme.onBackground, fontSize = 15.sp, modifier = Modifier.weight(1f))
-        Icon(
-          Icons.Filled.KeyboardDoubleArrowRight,
-          contentDescription = null,
-          tint = colorScheme.onBackground.copy(alpha = 0.6f),
-          modifier = Modifier.size(20.dp)
-        )
+        Text("Automations", color = colorScheme.onBackground, fontSize = 15.sp)
       }
 
       Row(
