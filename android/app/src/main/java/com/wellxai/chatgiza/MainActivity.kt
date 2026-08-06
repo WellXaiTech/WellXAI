@@ -2412,14 +2412,20 @@ private fun ReportProblemScreen(viewModel: ChatViewModel) {
 @Composable
 private fun DataControlsAppBar(title: String, onBack: () -> Unit) {
   Row(
-    modifier = Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 20.dp),
+    modifier = Modifier.fillMaxWidth().padding(top = 26.dp, bottom = 20.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    IconButton(onClick = onBack, modifier = Modifier.size(28.dp)) {
-      Icon(Icons.Filled.ArrowBackIosNew, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
+    IconButton(onClick = onBack, modifier = Modifier.size(24.dp)) {
+      Icon(Icons.Filled.ArrowBackIosNew, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(24.dp))
     }
     Spacer(modifier = Modifier.width(20.dp))
-    Text(title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+    Text(
+      title,
+      color = Color.White,
+      fontSize = 22.sp,
+      fontWeight = FontWeight.Bold,
+      modifier = Modifier.padding(top = 2.dp)
+    )
   }
 }
 
