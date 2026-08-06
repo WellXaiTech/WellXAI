@@ -86,8 +86,27 @@ class TokenStore(context: Context) {
     prefs.edit().putString(KEY_VOICE_OUTPUT_DEVICE, value).apply()
   }
 
+  // "neutral" | "romantic" | "argumentative" — changes the live session's
+  // actual conversational tone server-side, not just a UI label.
+  fun getPersonality(): String = prefs.getString(KEY_PERSONALITY, "neutral") ?: "neutral"
+  fun setPersonality(value: String) {
+    prefs.edit().putString(KEY_PERSONALITY, value).apply()
+  }
+
+  /** One-time self-attestation gate before romantic/argumentative
+   * personas can be selected — required since those change the AI's tone
+   * to flirtatious/contrarian content meant for adult users. */
+  fun getAgeConfirmed18Plus(): Boolean = prefs.getBoolean(KEY_AGE_CONFIRMED_18PLUS, false)
+  fun setAgeConfirmed18Plus(value: Boolean) {
+    prefs.edit().putBoolean(KEY_AGE_CONFIRMED_18PLUS, value).apply()
+  }
+
   /** Wipes the session but keeps device-level prefs (haptics, voice) that
-   * aren't tied to any particular account. */
+   * aren't tied to any particular account. Deliberately does NOT preserve
+   * the active personality — a new sign-in on a shared device should land
+   * back on "neutral", not silently inherit the previous user's romantic/
+   * argumentative choice. The 18+ attestation itself is a device-level fact
+   * (not a persona choice), so it's kept to avoid re-prompting adults. */
   fun clear() {
     val hapticsEnabled = getHapticsEnabled()
     val hapticsOnPress = getHapticsOnPress()
@@ -98,6 +117,7 @@ class TokenStore(context: Context) {
     val voiceActivationMode = getVoiceActivationMode()
     val voiceSpeed = getVoiceSpeed()
     val voiceOutputDevice = getVoiceOutputDevice()
+    val ageConfirmed18Plus = getAgeConfirmed18Plus()
     prefs.edit().clear().apply()
     setHapticsEnabled(hapticsEnabled)
     setHapticsOnPress(hapticsOnPress)
@@ -108,6 +128,7 @@ class TokenStore(context: Context) {
     setVoiceActivationMode(voiceActivationMode)
     setVoiceSpeed(voiceSpeed)
     setVoiceOutputDevice(voiceOutputDevice)
+    setAgeConfirmed18Plus(ageConfirmed18Plus)
   }
 
   companion object {
@@ -124,5 +145,7 @@ class TokenStore(context: Context) {
     private const val KEY_VOICE_ACTIVATION_MODE = "voice_activation_mode"
     private const val KEY_VOICE_SPEED = "voice_speed"
     private const val KEY_VOICE_OUTPUT_DEVICE = "voice_output_device"
+    private const val KEY_PERSONALITY = "personality"
+    private const val KEY_AGE_CONFIRMED_18PLUS = "age_confirmed_18plus"
   }
 }

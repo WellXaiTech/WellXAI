@@ -1040,6 +1040,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
   var micMuted by remember { mutableStateOf(false) }
   var toolMenuOpen by remember { mutableStateOf(false) }
   var voiceSettingsOpen by remember { mutableStateOf(false) }
+  var pendingPersonalityId by remember { mutableStateOf<String?>(null) }
   var cameraProviderRef by remember { mutableStateOf<ProcessCameraProvider?>(null) }
 
   val micPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -1063,7 +1064,9 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
       voice = viewModel.selectedVoiceId,
       pushToTalk = viewModel.voiceActivationMode == "push_to_talk",
       outputDevice = viewModel.voiceOutputDevice,
-      speed = viewModel.voiceSpeed
+      speed = viewModel.voiceSpeed,
+      personality = viewModel.personality,
+      ageConfirmed = viewModel.ageConfirmed18Plus
     )
   }
 
@@ -1280,6 +1283,16 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           controller.stop()
           startLiveSession()
         },
+        personality = viewModel.personality,
+        onPersonalityRequest = { id ->
+          if (id != "neutral" && !viewModel.ageConfirmed18Plus) {
+            pendingPersonalityId = id
+          } else {
+            viewModel.selectPersonality(id)
+            controller.stop()
+            startLiveSession()
+          }
+        },
         activationMode = viewModel.voiceActivationMode,
         onActivationModeChange = { mode ->
           viewModel.selectVoiceActivationMode(mode)
@@ -1298,6 +1311,36 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           controller.setOutputDevice(device)
         },
         onDismiss = { voiceSettingsOpen = false }
+      )
+    }
+
+    val requestedPersonality = pendingPersonalityId
+    if (requestedPersonality != null) {
+      AlertDialog(
+        onDismissRequest = { pendingPersonalityId = null },
+        title = { Text("Confirm your age") },
+        text = {
+          Text(
+            "This personality mode includes flirtatious or contrarian AI roleplay conversation intended for " +
+              "adults — it's a fictional AI persona, not a real relationship or a real person's opinion. " +
+              "Confirm you are 18 years or older to continue."
+          )
+        },
+        confirmButton = {
+          TextButton(onClick = {
+            viewModel.confirmAge18PlusAndSelectPersonality(requestedPersonality)
+            controller.stop()
+            startLiveSession()
+            pendingPersonalityId = null
+          }) {
+            Text("I'm 18+, Continue")
+          }
+        },
+        dismissButton = {
+          TextButton(onClick = { pendingPersonalityId = null }) {
+            Text("Cancel")
+          }
+        }
       )
     }
   }
@@ -1403,13 +1446,38 @@ private fun VoiceGradientCard(option: VoiceOption, selected: Boolean, onClick: (
   }
 }
 
-/** Voice Settings sheet for Live Vision — Voice, Voice Activation, Voice
- * Speed, and Output Device, all applied to the live session immediately. */
+@Composable
+private fun PersonalityPill(icon: ImageVector?, label: String, adultOnly: Boolean, selected: Boolean, onClick: () -> Unit) {
+  Row(
+    verticalAlignment = Alignment.CenterVertically,
+    modifier = Modifier
+      .clip(RoundedCornerShape(28.dp))
+      .background(if (selected) Color.White else Color.White.copy(alpha = 0.08f))
+      .clickable(onClick = onClick)
+      .padding(horizontal = 18.dp, vertical = 14.dp)
+  ) {
+    if (icon != null) {
+      Icon(icon, contentDescription = null, tint = if (selected) Color.Black else Color.White, modifier = Modifier.size(18.dp))
+      Spacer(modifier = Modifier.width(10.dp))
+    }
+    Text(label, color = if (selected) Color.Black else Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+    if (adultOnly) {
+      Spacer(modifier = Modifier.width(6.dp))
+      Text("18+", color = if (selected) Color.Black.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+    }
+  }
+}
+
+/** Voice Settings sheet for Live Vision — Voice, Personality, Voice
+ * Activation, Voice Speed, and Output Device, all applied to the live
+ * session immediately. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LiveVoiceSettingsSheet(
   selectedVoiceId: String,
   onVoiceChange: (String) -> Unit,
+  personality: String,
+  onPersonalityRequest: (String) -> Unit,
   activationMode: String,
   onActivationModeChange: (String) -> Unit,
   speed: Float,
@@ -1447,6 +1515,24 @@ private fun LiveVoiceSettingsSheet(
             selected = selectedVoiceId == option.id,
             onClick = { onVoiceChange(option.id) }
           )
+        }
+      }
+
+      Spacer(modifier = Modifier.height(26.dp))
+      Text("Personality", color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+      Spacer(modifier = Modifier.height(10.dp))
+      Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+      ) {
+        PersonalityPill(icon = null, label = "Default", adultOnly = false, selected = personality == "neutral") {
+          onPersonalityRequest("neutral")
+        }
+        PersonalityPill(icon = Icons.Filled.Favorite, label = "Romantic", adultOnly = true, selected = personality == "romantic") {
+          onPersonalityRequest("romantic")
+        }
+        PersonalityPill(icon = Icons.Outlined.Bolt, label = "Argumentative", adultOnly = true, selected = personality == "argumentative") {
+          onPersonalityRequest("argumentative")
         }
       }
 
