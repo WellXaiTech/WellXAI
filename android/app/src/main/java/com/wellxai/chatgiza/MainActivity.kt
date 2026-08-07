@@ -1952,11 +1952,11 @@ private fun imageProxyToJpeg(image: ImageProxy): ByteArray {
 private fun HistoryNavTab(icon: ImageVector, label: String, onClick: () -> Unit) {
   Column(
     horizontalAlignment = Alignment.CenterHorizontally,
-    modifier = Modifier.clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 4.dp)
+    modifier = Modifier.clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 2.dp)
   ) {
-    Icon(icon, contentDescription = label, tint = colorScheme.onBackground.copy(alpha = 0.85f), modifier = Modifier.size(28.dp))
-    Spacer(modifier = Modifier.height(4.dp))
-    Text(label, color = colorScheme.onBackground.copy(alpha = 0.85f), fontSize = 11.sp)
+    Icon(icon, contentDescription = label, tint = colorScheme.onBackground.copy(alpha = 0.85f), modifier = Modifier.size(24.dp))
+    Spacer(modifier = Modifier.height(2.dp))
+    Text(label, color = colorScheme.onBackground.copy(alpha = 0.85f), fontSize = 10.sp)
   }
 }
 
@@ -2079,23 +2079,28 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
               showChatGizaMedia = true
               mediaScope.launch { mediaProgress.snapTo(1f) }
             })
-            .padding(top = 12.dp, bottom = 10.dp),
+            .padding(top = 10.dp, bottom = 8.dp),
           contentAlignment = Alignment.Center
         ) {
-          Box(
-            modifier = Modifier
-              .width(36.dp)
-              .height(4.dp)
-              .clip(RoundedCornerShape(2.dp))
-              .background(colorScheme.onBackground.copy(alpha = 0.35f))
-          )
+          // Only draw this pill while the panel is closed — once it's open,
+          // the panel has its own handle at its top edge, and showing both
+          // at once read as two disconnected controls rather than one.
+          if (!showChatGizaMedia) {
+            Box(
+              modifier = Modifier
+                .width(36.dp)
+                .height(4.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(colorScheme.onBackground.copy(alpha = 0.35f))
+            )
+          }
         }
         // Five-tab bottom nav, same slot layout as the reference's
         // Home/Markets/Trade/Earn/Assets bar, re-purposed for ChatGiZa.
         Row(
           modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 4.dp, bottom = 8.dp),
+            .padding(top = 2.dp, bottom = 4.dp),
           horizontalArrangement = Arrangement.SpaceEvenly
         ) {
           HistoryNavTab(Icons.Outlined.Settings, "Settings", onClick = { viewModel.openSettings() })
