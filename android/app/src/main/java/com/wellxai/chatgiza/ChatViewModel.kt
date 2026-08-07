@@ -20,7 +20,9 @@ data class MediaPost(
   val text: String,
   val imageUri: String?,
   val sentiment: String?,
-  val createdAt: Long
+  val createdAt: Long,
+  val liked: Boolean = false,
+  val likeCount: Int = 0
 )
 
 sealed class AppScreen {
@@ -779,6 +781,16 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
       createdAt = System.currentTimeMillis()
     )
     mediaPosts = listOf(post) + mediaPosts
+  }
+
+  fun toggleMediaPostLike(id: String) {
+    mediaPosts = mediaPosts.map {
+      if (it.id == id) it.copy(liked = !it.liked, likeCount = it.likeCount + if (it.liked) -1 else 1) else it
+    }
+  }
+
+  fun removeMediaPost(id: String) {
+    mediaPosts = mediaPosts.filter { it.id != id }
   }
 
   fun closeHistory() {
