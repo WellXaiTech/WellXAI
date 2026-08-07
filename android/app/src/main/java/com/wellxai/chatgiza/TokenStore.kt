@@ -86,11 +86,17 @@ class TokenStore(context: Context) {
     prefs.edit().putString(KEY_VOICE_OUTPUT_DEVICE, value).apply()
   }
 
-  // "neutral" | "romantic" | "argumentative" — changes the live session's
-  // actual conversational tone server-side, not just a UI label.
-  fun getPersonality(): String = prefs.getString(KEY_PERSONALITY, "neutral") ?: "neutral"
+  // One of PERSONALITY_OPTIONS' ids (assistant, therapist, romantic, ...) —
+  // changes the live session's actual conversational tone server-side, not
+  // just a UI label.
+  fun getPersonality(): String = prefs.getString(KEY_PERSONALITY, "assistant") ?: "assistant"
   fun setPersonality(value: String) {
     prefs.edit().putString(KEY_PERSONALITY, value).apply()
+  }
+
+  fun getCustomPersonalityText(): String = prefs.getString(KEY_CUSTOM_PERSONALITY_TEXT, "") ?: ""
+  fun setCustomPersonalityText(value: String) {
+    prefs.edit().putString(KEY_CUSTOM_PERSONALITY_TEXT, value).apply()
   }
 
   /** One-time self-attestation gate before romantic/argumentative
@@ -146,6 +152,7 @@ class TokenStore(context: Context) {
     private const val KEY_VOICE_SPEED = "voice_speed"
     private const val KEY_VOICE_OUTPUT_DEVICE = "voice_output_device"
     private const val KEY_PERSONALITY = "personality"
+    private const val KEY_CUSTOM_PERSONALITY_TEXT = "custom_personality_text"
     private const val KEY_AGE_CONFIRMED_18PLUS = "age_confirmed_18plus"
   }
 }

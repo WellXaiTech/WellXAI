@@ -339,8 +339,9 @@ object ChatGizaApi {
     language: String,
     voice: String = "marin",
     pushToTalk: Boolean = false,
-    personality: String = "neutral",
-    ageConfirmed: Boolean = false
+    personality: String = "assistant",
+    ageConfirmed: Boolean = false,
+    customPersonalityText: String = ""
   ): ApiResult<String> = withContext(Dispatchers.IO) {
     try {
       val payload = JSONObject()
@@ -349,6 +350,7 @@ object ChatGizaApi {
         .put("pushToTalk", pushToTalk)
         .put("personality", personality)
         .put("ageConfirmed", ageConfirmed)
+        .put("customPersonalityText", customPersonalityText)
         .toString().toRequestBody(JSON)
       val request = Request.Builder()
         .url("$BASE_URL/api/realtime/session")

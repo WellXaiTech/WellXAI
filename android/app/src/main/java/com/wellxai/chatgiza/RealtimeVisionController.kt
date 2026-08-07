@@ -131,8 +131,9 @@ class RealtimeVisionController(
     pushToTalk: Boolean = false,
     outputDevice: String = "speaker",
     speed: Float = 1.0f,
-    personality: String = "neutral",
-    ageConfirmed: Boolean = false
+    personality: String = "assistant",
+    ageConfirmed: Boolean = false,
+    customPersonalityText: String = ""
   ) {
     if (connectionState != ConnectionState.Idle) return
     connectionState = ConnectionState.Connecting
@@ -158,7 +159,7 @@ class RealtimeVisionController(
         connectionState = ConnectionState.Idle
         return@launch
       }
-      when (val result = ChatGizaApi.getRealtimeToken(token, language, voice, pushToTalk, personality, ageConfirmed)) {
+      when (val result = ChatGizaApi.getRealtimeToken(token, language, voice, pushToTalk, personality, ageConfirmed, customPersonalityText)) {
         is ApiResult.Success -> openSocket(result.value)
         is ApiResult.Failure -> {
           errorMessage = result.message
