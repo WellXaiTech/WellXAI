@@ -1973,7 +1973,17 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   // continuously, not jump straight to a target the moment a threshold is
   // crossed, and if released partway it springs back rather than freezing.
   val mediaProgress = remember { Animatable(0f) }
-  LaunchedEffect(showChatGizaMedia) { if (showChatGizaMedia) mediaProgress.snapTo(0f) }
+  // Opening used to just snapTo(0f) — the panel would pop in at its 35%
+  // peek height with no motion, and stay there until the user found and
+  // dragged the handle themselves. Now it snaps to peek then springs the
+  // rest of the way open on its own, so a tap alone reaches full height
+  // with a real animated transition instead of an abrupt jump.
+  LaunchedEffect(showChatGizaMedia) {
+    if (showChatGizaMedia) {
+      mediaProgress.snapTo(0f)
+      mediaProgress.animateTo(1f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
+    }
+  }
   // Max is 1f (full available height) now — this is where photos, videos,
   // comments etc. actually get read, so it needs the whole screen, not a
   // capped 85%.
