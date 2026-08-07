@@ -1966,47 +1966,53 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
         }
 
         Spacer(modifier = Modifier.height(10.dp))
-
-        // Single "History" label — solid, high-contrast pill (inverted fill,
-        // like a selected tab) rather than a faint tint that blends into
-        // the background, matching the reference's clearly-distinct tab.
-        Box(
-          modifier = Modifier
-            .padding(horizontal = 16.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(colorScheme.onBackground)
-            .padding(horizontal = 14.dp, vertical = 8.dp)
-        ) {
-          Text("History", color = colorScheme.background, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
       }
 
-      if (viewModel.loadingHistory) {
-        item {
-          Box(modifier = Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = colorScheme.onBackground)
+      // History tab + the whole conversation list share ONE background —
+      // a single rounded card, not a per-row layer or a floating tab —
+      // matching the reference's tabs+list grouped inside one container.
+      item {
+        Column(
+          modifier = Modifier
+            .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(colorScheme.onBackground.copy(alpha = 0.06f))
+            .padding(vertical = 10.dp)
+        ) {
+          Box(
+            modifier = Modifier
+              .padding(horizontal = 14.dp)
+              .clip(RoundedCornerShape(10.dp))
+              .background(colorScheme.onBackground)
+              .padding(horizontal = 14.dp, vertical = 8.dp)
+          ) {
+            Text("History", color = colorScheme.background, fontSize = 14.sp, fontWeight = FontWeight.Bold)
           }
-        }
-      } else if (visibleConversations.isEmpty()) {
-        item {
-          Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-            Text(
-              if (query.isEmpty()) "No conversations yet." else "No matches.",
-              color = colorScheme.onBackground.copy(alpha = 0.6f),
-              fontSize = 16.sp
-            )
-          }
-        }
-      } else {
-        items(visibleConversations, key = { it.id }) { convo ->
-          Box(modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)) {
-            HistoryRow(
-              convo,
-              onClick = { viewModel.selectConversation(convo.id) },
-              onMenuClick = { menuConvo = convo }
-            )
+
+          Spacer(modifier = Modifier.height(10.dp))
+
+          if (viewModel.loadingHistory) {
+            Box(modifier = Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
+              CircularProgressIndicator(color = colorScheme.onBackground)
+            }
+          } else if (visibleConversations.isEmpty()) {
+            Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+              Text(
+                if (query.isEmpty()) "No conversations yet." else "No matches.",
+                color = colorScheme.onBackground.copy(alpha = 0.6f),
+                fontSize = 16.sp
+              )
+            }
+          } else {
+            visibleConversations.forEach { convo ->
+              Box(modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)) {
+                HistoryRow(
+                  convo,
+                  onClick = { viewModel.selectConversation(convo.id) },
+                  onMenuClick = { menuConvo = convo }
+                )
+              }
+            }
           }
         }
       }
