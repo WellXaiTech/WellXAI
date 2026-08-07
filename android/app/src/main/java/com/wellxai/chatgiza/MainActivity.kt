@@ -1860,16 +1860,6 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
         verticalAlignment = Alignment.CenterVertically
       ) {
         FilledIconButton(
-          onClick = { viewModel.openSettings() },
-          colors = IconButtonDefaults.filledIconButtonColors(
-            containerColor = colorScheme.onBackground.copy(alpha = 0.12f),
-            contentColor = colorScheme.onBackground
-          )
-        ) {
-          Icon(Icons.Outlined.Settings, contentDescription = "Settings")
-        }
-        Spacer(modifier = Modifier.size(8.dp))
-        FilledIconButton(
           onClick = { viewModel.newChat() },
           colors = IconButtonDefaults.filledIconButtonColors(
             containerColor = colorScheme.onBackground.copy(alpha = 0.12f),
@@ -1940,10 +1930,12 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        // Big empty gap between Search and Events, matching the reference's
+        // large open space above its promo card.
+        Spacer(modifier = Modifier.height(120.dp))
 
-        // "Events"-card-style row for Automations — image-style icon box,
-        // small label + bold title, chevron affordance on the right.
+        // "Events" card — image-style icon box, single label, chevron
+        // affordance on the right. Background/layer kept as-is by design.
         Row(
           modifier = Modifier
             .fillMaxWidth()
@@ -1964,10 +1956,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             Icon(Icons.Outlined.Schedule, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
           }
           Spacer(modifier = Modifier.size(12.dp))
-          Column(modifier = Modifier.weight(1f)) {
-            Text("Events", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 11.sp)
-            Text("Automations", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-          }
+          Text("Events", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
           Icon(
             Icons.Filled.ChevronRight,
             contentDescription = null,
