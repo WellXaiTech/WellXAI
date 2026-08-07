@@ -2353,7 +2353,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
     }
   }
   if (showChatGizaMediaCreate) {
-    ChatGizaMediaCreateSheet(onDismiss = { showChatGizaMediaCreate = false })
+    ChatGizaMediaCreateSheet(viewModel, onDismiss = { showChatGizaMediaCreate = false })
   }
   }
 }
@@ -2471,7 +2471,7 @@ private fun ChatGizaMediaPanel(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ChatGizaMediaCreateSheet(onDismiss: () -> Unit) {
+private fun ChatGizaMediaCreateSheet(viewModel: ChatViewModel, onDismiss: () -> Unit) {
   ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFF161616)) {
     Column(
       modifier = Modifier
@@ -2479,22 +2479,26 @@ private fun ChatGizaMediaCreateSheet(onDismiss: () -> Unit) {
         .padding(horizontal = 20.dp)
         .padding(bottom = 32.dp)
     ) {
+      // "My Profile" + the signed-in user's own avatar, matching the
+      // reference — this sheet is about posting as yourself, not a
+      // ChatGiZa-branded header.
       Row(verticalAlignment = Alignment.CenterVertically) {
-        // A plain drawn badge instead of loading the launcher mipmap --
-        // ic_launcher_round is an adaptive-icon XML, and painterResource()
-        // crashing on that resource type was what was taking the app down
-        // the instant this menu opened.
-        Box(
-          modifier = Modifier
-            .size(32.dp)
-            .clip(CircleShape)
-            .background(Color(0xFF23252B)),
-          contentAlignment = Alignment.Center
-        ) {
-          Icon(Icons.Outlined.Whatshot, contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.size(18.dp))
+        if (viewModel.userImage != null) {
+          AsyncImage(
+            model = viewModel.userImage,
+            contentDescription = "Profile",
+            modifier = Modifier.size(32.dp).clip(CircleShape)
+          )
+        } else {
+          Icon(
+            Icons.Outlined.AccountCircle,
+            contentDescription = "Profile",
+            tint = Color.White,
+            modifier = Modifier.size(32.dp)
+          )
         }
         Spacer(modifier = Modifier.width(10.dp))
-        Text("ChatGiZa Media", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text("My Profile", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.weight(1f))
         Icon(Icons.Outlined.Notifications, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
       }
