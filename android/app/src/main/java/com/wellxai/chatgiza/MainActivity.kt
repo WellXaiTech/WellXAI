@@ -1965,39 +1965,41 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
 
   var showChatGizaMedia by remember { mutableStateOf(false) }
   var showChatGizaMediaCreate by remember { mutableStateOf(false) }
-  // Media panel opens at a short "peek" height and can be dragged up to
-  // full height on its own handle. 0f = peek, 1f = fully expanded. An
-  // Animatable (not animateFloatAsState) so the drag handler can drive it
-  // 1:1 with the finger via snapTo() while dragging, and only animate
-  // (spring) when the finger actually lets go -- it must track the hand
-  // continuously, not jump straight to a target the moment a threshold is
-  // crossed, and if released partway it springs back rather than freezing.
+  // Fully finger-driven, no auto-animation and no resting "peek" floor —
+  // 0 = closed (no height at all), 1 = fully open. The panel's height
+  // tracks the drag 1:1 the entire time (snapTo, no easing lag); the only
+  // animation is the spring on release, and only in one of two directions:
+  // if the drag crossed the "committed" threshold it finishes opening to
+  // 1, otherwise it always springs all the way back to 0 (fully dismissed)
+  // — it never freezes at a random midpoint the way a plain nearest-end
+  // snap would.
   val mediaProgress = remember { Animatable(0f) }
-  // Opening used to just snapTo(0f) — the panel would pop in at its 35%
-  // peek height with no motion, and stay there until the user found and
-  // dragged the handle themselves. Now it snaps to peek then springs the
-  // rest of the way open on its own, so a tap alone reaches full height
-  // with a real animated transition instead of an abrupt jump.
-  LaunchedEffect(showChatGizaMedia) {
-    if (showChatGizaMedia) {
-      mediaProgress.snapTo(0f)
-      mediaProgress.animateTo(1f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
+  val mediaHeightFraction = mediaProgress.value
+  // Measured from a container that's always present (not gated behind
+  // showChatGizaMedia), so the very first drag of the session already has
+  // an accurate range instead of a stale/zero value on the first frame.
+  var bottomBarHeight by remember { mutableStateOf(0.dp) }
+  var totalContentHeightPx by remember { mutableStateOf(0) }
+  val density = LocalDensity.current
+  val mediaScope = rememberCoroutineScope()
+  val mediaAvailableHeightPx = (totalContentHeightPx - with(density) { bottomBarHeight.toPx() }).toInt().coerceAtLeast(1)
+
+  fun settleMediaDrag() {
+    mediaScope.launch {
+      if (mediaProgress.value >= 0.92f) {
+        mediaProgress.animateTo(1f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium))
+      } else {
+        mediaProgress.animateTo(0f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium))
+        showChatGizaMedia = false
+      }
     }
   }
-  // Max is 1f (full available height) now — this is where photos, videos,
-  // comments etc. actually get read, so it needs the whole screen, not a
-  // capped 85%.
-  val mediaHeightFraction = 0.35f + (1f - 0.35f) * mediaProgress.value
-  // Measured so the ChatGiZa Media panel below can stop exactly above the
-  // nav row instead of covering it (a plain fraction guess drifted once
-  // navigationBarsPadding() changed the row's real height per device), and
-  // so the drag handler can convert the finger's pixel movement into a
-  // matching fraction of the panel's actual on-screen travel distance.
-  var bottomBarHeight by remember { mutableStateOf(0.dp) }
-  var mediaAvailableHeightPx by remember { mutableStateOf(0) }
-  val density = LocalDensity.current
 
-  Box(modifier = Modifier.fillMaxSize()) {
+  Box(
+    modifier = Modifier
+      .fillMaxSize()
+      .onGloballyPositioned { coords -> totalContentHeightPx = coords.size.height }
+  ) {
   Scaffold(
     containerColor = Color.Transparent,
     bottomBar = {
@@ -2011,31 +2013,34 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           .background(Color(0xFF23252B))
           .navigationBarsPadding()
       ) {
-        // ChatGiZa Media drag handle — sits above the tab row, pulls up
-        // the Media sheet on either a tap or an upward swipe. A plain
-        // clickable() alone doesn't fire once a real drag exceeds touch
-        // slop (the press gets cancelled), so an explicit vertical-drag
-        // detector is layered on top to catch the swipe-up gesture too.
-        // Accumulates the drag rather than reacting to every single
-        // pointer-move delta, so ordinary hand tremor (or a stray touch
-        // passing through here) can't pop the sheet open on a 2px jitter.
+        // ChatGiZa Media drag handle — sits above the tab row. The panel
+        // height now follows this same continuous gesture 1:1 from the
+        // very first pixel of movement (like a real bottom sheet / an
+        // Instagram-style swipe-up), rather than just flipping a boolean
+        // after a small threshold and leaving the rest of the motion to a
+        // separate, disconnected detector inside the panel itself.
         Box(
           modifier = Modifier
             .fillMaxWidth()
-            .pointerInput(Unit) {
-              var accumulated = 0f
+            .pointerInput(mediaAvailableHeightPx) {
               detectVerticalDragGestures(
-                onDragStart = { accumulated = 0f },
-                onVerticalDrag = { _, dragAmount ->
-                  accumulated += dragAmount
-                  if (accumulated < -24f) {
-                    showChatGizaMedia = true
-                    accumulated = 0f
-                  }
-                }
+                onDragStart = {
+                  if (!showChatGizaMedia) showChatGizaMedia = true
+                },
+                onVerticalDrag = { change, dragAmount ->
+                  change.consume()
+                  if (!showChatGizaMedia) showChatGizaMedia = true
+                  val newValue = (mediaProgress.value - dragAmount / mediaAvailableHeightPx).coerceIn(0f, 1f)
+                  mediaScope.launch { mediaProgress.snapTo(newValue) }
+                },
+                onDragEnd = { settleMediaDrag() },
+                onDragCancel = { settleMediaDrag() }
               )
             }
-            .clickable(onClick = { showChatGizaMedia = true })
+            .clickable(onClick = {
+              showChatGizaMedia = true
+              mediaScope.launch { mediaProgress.snapTo(1f) }
+            })
             .padding(top = 12.dp, bottom = 10.dp),
           contentAlignment = Alignment.Center
         ) {
@@ -2400,28 +2405,30 @@ private fun ChatGizaMediaPanel(
   ) {
     Column(modifier = Modifier.fillMaxSize()) {
       val scope = rememberCoroutineScope()
-      // Tracks the finger 1:1 while dragging (snapTo, not animateTo — no
-      // easing lag) and only springs to the nearer end (or back to where
-      // it started, if let go without crossing the midpoint) once the
-      // finger actually lifts. A plain tap dismisses.
+      // Tracks the finger 1:1 while dragging (snapTo, no easing lag). On
+      // release: springs the rest of the way open only if the drag was
+      // still mostly open (>50%) — otherwise it always springs all the way
+      // closed and actually dismisses (onDismiss), matching the same
+      // commit-or-cancel model as the handle that opens this panel, not a
+      // silent "freeze at whatever height you let go at."
       Box(
         modifier = Modifier
           .fillMaxWidth()
           .pointerInput(availableHeightPx) {
-            val dragRangePx = (availableHeightPx * (1f - 0.35f)).coerceAtLeast(1f)
+            val dragRangePx = availableHeightPx.toFloat().coerceAtLeast(1f)
+            fun settle() {
+              scope.launch {
+                if (progress.value > 0.5f) {
+                  progress.animateTo(1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
+                } else {
+                  progress.animateTo(0f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
+                  onDismiss()
+                }
+              }
+            }
             detectVerticalDragGestures(
-              onDragEnd = {
-                scope.launch {
-                  val target = if (progress.value > 0.5f) 1f else 0f
-                  progress.animateTo(target, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
-                }
-              },
-              onDragCancel = {
-                scope.launch {
-                  val target = if (progress.value > 0.5f) 1f else 0f
-                  progress.animateTo(target, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
-                }
-              },
+              onDragEnd = { settle() },
+              onDragCancel = { settle() },
               onVerticalDrag = { change, dragAmount ->
                 change.consume()
                 val newValue = (progress.value - dragAmount / dragRangePx).coerceIn(0f, 1f)
@@ -2449,24 +2456,8 @@ private fun ChatGizaMediaPanel(
         modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
         textAlign = TextAlign.Center
       )
-      Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-          Icon(
-            Icons.Outlined.Whatshot,
-            contentDescription = null,
-            tint = Color.White.copy(alpha = 0.3f),
-            modifier = Modifier.size(48.dp)
-          )
-          Spacer(modifier = Modifier.height(12.dp))
-          Text("Bado hakuna machapisho", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
-          Spacer(modifier = Modifier.height(4.dp))
-          Text(
-            "ChatGiZa Media inakuja hivi karibuni",
-            color = Color.White.copy(alpha = 0.4f),
-            fontSize = 12.sp
-          )
-        }
-      }
+      // Left empty on purpose — no placeholder icon/text here anymore.
+      Box(modifier = Modifier.weight(1f).fillMaxWidth())
     }
     Box(
       modifier = Modifier
