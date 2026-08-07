@@ -132,6 +132,7 @@ import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.GraphicEq
@@ -1973,7 +1974,10 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   // crossed, and if released partway it springs back rather than freezing.
   val mediaProgress = remember { Animatable(0f) }
   LaunchedEffect(showChatGizaMedia) { if (showChatGizaMedia) mediaProgress.snapTo(0f) }
-  val mediaHeightFraction = 0.35f + (0.85f - 0.35f) * mediaProgress.value
+  // Max is 1f (full available height) now — this is where photos, videos,
+  // comments etc. actually get read, so it needs the whole screen, not a
+  // capped 85%.
+  val mediaHeightFraction = 0.35f + (1f - 0.35f) * mediaProgress.value
   // Measured so the ChatGiZa Media panel below can stop exactly above the
   // nav row instead of covering it (a plain fraction guess drifted once
   // navigationBarsPadding() changed the row's real height per device), and
@@ -2394,7 +2398,7 @@ private fun ChatGizaMediaPanel(
         modifier = Modifier
           .fillMaxWidth()
           .pointerInput(availableHeightPx) {
-            val dragRangePx = (availableHeightPx * (0.85f - 0.35f)).coerceAtLeast(1f)
+            val dragRangePx = (availableHeightPx * (1f - 0.35f)).coerceAtLeast(1f)
             detectVerticalDragGestures(
               onDragEnd = {
                 scope.launch {
@@ -2500,12 +2504,12 @@ private fun ChatGizaMediaCreateSheet(viewModel: ChatViewModel, onDismiss: () -> 
         Spacer(modifier = Modifier.width(10.dp))
         Text("My Profile", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.weight(1f))
-        Icon(Icons.Outlined.Notifications, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+        Icon(Icons.Outlined.Notifications, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
       }
       Spacer(modifier = Modifier.height(20.dp))
       Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         MediaCreateOption("Post", Modifier.weight(1f), onDismiss) {
-          Icon(Icons.Outlined.Edit, contentDescription = "Post", tint = Color(0xFFFFC94A), modifier = Modifier.size(24.dp))
+          Icon(Icons.Filled.Edit, contentDescription = "Post", tint = Color(0xFFFFC94A), modifier = Modifier.size(26.dp))
         }
         MediaCreateOption("Article", Modifier.weight(1f), onDismiss) {
           Icon(Icons.Outlined.Description, contentDescription = "Article", tint = Color(0xFFFFC94A), modifier = Modifier.size(24.dp))
@@ -2553,12 +2557,20 @@ private fun MediaCreateWideRow(label: String, modifier: Modifier = Modifier, onC
       .clip(RoundedCornerShape(14.dp))
       .background(Color.White.copy(alpha = 0.06f))
       .clickable(onClick = onClick)
-      .padding(horizontal = 16.dp, vertical = 14.dp),
+      .padding(horizontal = 12.dp, vertical = 14.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
     icon()
-    Spacer(modifier = Modifier.width(12.dp))
-    Text(label, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+    Spacer(modifier = Modifier.width(10.dp))
+    Text(
+      label,
+      color = Color.White,
+      fontSize = 13.sp,
+      fontWeight = FontWeight.Medium,
+      maxLines = 1,
+      softWrap = false,
+      overflow = TextOverflow.Clip
+    )
   }
 }
 
