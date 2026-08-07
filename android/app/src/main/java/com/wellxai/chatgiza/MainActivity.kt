@@ -155,6 +155,7 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Feedback
@@ -724,7 +725,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
               modifier = Modifier.size(40.dp).clickable(onClick = { viewModel.newChat() }),
               contentAlignment = Alignment.Center
             ) {
-              Icon(Icons.Outlined.ModeEdit, contentDescription = "New chat", tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
+              Icon(Icons.Outlined.EditNote, contentDescription = "New chat", tint = colorScheme.onBackground, modifier = Modifier.size(22.dp))
             }
             Box(
               modifier = Modifier.size(40.dp).clickable(onClick = { viewModel.openAccount() }),
@@ -1009,7 +1010,7 @@ private fun ImagineScreen(viewModel: ChatViewModel) {
               modifier = Modifier.size(40.dp).clickable(onClick = { viewModel.newChat() }),
               contentAlignment = Alignment.Center
             ) {
-              Icon(Icons.Outlined.ModeEdit, contentDescription = "New chat", tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
+              Icon(Icons.Outlined.EditNote, contentDescription = "New chat", tint = colorScheme.onBackground, modifier = Modifier.size(22.dp))
             }
             Box(
               modifier = Modifier.size(40.dp).clickable(onClick = { viewModel.openAccount() }),
