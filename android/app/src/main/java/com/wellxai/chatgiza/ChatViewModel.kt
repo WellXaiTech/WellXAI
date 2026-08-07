@@ -306,13 +306,16 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var personality by mutableStateOf(tokenStore.getPersonality())
     private set
 
+  var customPersonalityText by mutableStateOf(tokenStore.getCustomPersonalityText())
+    private set
+
   var ageConfirmed18Plus by mutableStateOf(tokenStore.getAgeConfirmed18Plus())
     private set
 
-  /** "romantic"/"argumentative" require an explicit one-time 18+
-   * attestation first; "neutral" is always allowed. */
+  // Whether a persona requires the 18+ gate is a UI-list concern (see
+  // PERSONALITY_OPTIONS in MainActivity.kt), so the caller is responsible
+  // for checking that before calling this — this is a plain setter.
   fun selectPersonality(id: String) {
-    if (id != "neutral" && !ageConfirmed18Plus) return
     personality = id
     tokenStore.setPersonality(id)
   }
@@ -322,6 +325,14 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     tokenStore.setAgeConfirmed18Plus(true)
     personality = id
     tokenStore.setPersonality(id)
+  }
+
+  fun setCustomPersonality(text: String) {
+    val trimmed = text.trim().take(300)
+    customPersonalityText = trimmed
+    tokenStore.setCustomPersonalityText(trimmed)
+    personality = "custom"
+    tokenStore.setPersonality("custom")
   }
 
   fun openReportProblem() {
@@ -699,6 +710,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     chatLinkSharingEnabled = true
     selectedVoiceId = tokenStore.getVoiceName()
     personality = tokenStore.getPersonality()
+    customPersonalityText = tokenStore.getCustomPersonalityText()
     ageConfirmed18Plus = tokenStore.getAgeConfirmed18Plus()
     firstNameInput = ""
     lastNameInput = ""

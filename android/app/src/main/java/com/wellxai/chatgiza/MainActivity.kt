@@ -136,6 +136,7 @@ import androidx.compose.material.icons.filled.SettingsBrightness
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Comment
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.AccountCircle
@@ -162,10 +163,15 @@ import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.AutoStories
+import androidx.compose.material.icons.outlined.EmojiEvents
+import androidx.compose.material.icons.outlined.MedicalServices
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MicNone
 import androidx.compose.material.icons.outlined.ModeEdit
 import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material.icons.outlined.Psychology
+import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material.icons.outlined.NoAdultContent
 import androidx.compose.material.icons.outlined.Photo
 import androidx.compose.material.icons.outlined.PictureAsPdf
@@ -179,13 +185,16 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.SupportAgent
 import androidx.compose.material.icons.outlined.ThumbDown
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Vibration
 import androidx.compose.material.icons.outlined.Videocam
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VolumeOff
 import androidx.compose.material.icons.outlined.VolumeUp
+import androidx.compose.material.icons.outlined.Whatshot
 import androidx.compose.material.icons.outlined.Widgets
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -1041,6 +1050,8 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
   var toolMenuOpen by remember { mutableStateOf(false) }
   var voiceSettingsOpen by remember { mutableStateOf(false) }
   var pendingPersonalityId by remember { mutableStateOf<String?>(null) }
+  var customPersonalityDialogOpen by remember { mutableStateOf(false) }
+  var customPersonalityDraft by remember { mutableStateOf(viewModel.customPersonalityText) }
   var cameraProviderRef by remember { mutableStateOf<ProcessCameraProvider?>(null) }
 
   val micPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -1066,7 +1077,8 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
       outputDevice = viewModel.voiceOutputDevice,
       speed = viewModel.voiceSpeed,
       personality = viewModel.personality,
-      ageConfirmed = viewModel.ageConfirmed18Plus
+      ageConfirmed = viewModel.ageConfirmed18Plus,
+      customPersonalityText = viewModel.customPersonalityText
     )
   }
 
@@ -1284,13 +1296,20 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           startLiveSession()
         },
         personality = viewModel.personality,
-        onPersonalityRequest = { id ->
-          if (id != "neutral" && !viewModel.ageConfirmed18Plus) {
-            pendingPersonalityId = id
-          } else {
-            viewModel.selectPersonality(id)
-            controller.stop()
-            startLiveSession()
+        onPersonalityRequest = { option ->
+          when {
+            option.id == "custom" -> {
+              customPersonalityDraft = viewModel.customPersonalityText
+              customPersonalityDialogOpen = true
+            }
+            option.adultOnly && !viewModel.ageConfirmed18Plus -> {
+              pendingPersonalityId = option.id
+            }
+            else -> {
+              viewModel.selectPersonality(option.id)
+              controller.stop()
+              startLiveSession()
+            }
           }
         },
         activationMode = viewModel.voiceActivationMode,
@@ -1338,6 +1357,48 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
         },
         dismissButton = {
           TextButton(onClick = { pendingPersonalityId = null }) {
+            Text("Cancel")
+          }
+        }
+      )
+    }
+
+    if (customPersonalityDialogOpen) {
+      AlertDialog(
+        onDismissRequest = { customPersonalityDialogOpen = false },
+        title = { Text("Custom personality") },
+        text = {
+          Column {
+            Text(
+              "Describe the tone or persona you'd like ChatGiZa to use — for example \"a cheerful sports coach\" " +
+                "or \"a dry, deadpan detective.\" This adds flavor on top of ChatGiZa's normal behavior; it can't " +
+                "remove its safety guidelines.",
+              fontSize = 13.sp
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+              value = customPersonalityDraft,
+              onValueChange = { if (it.length <= 300) customPersonalityDraft = it },
+              modifier = Modifier.fillMaxWidth(),
+              placeholder = { Text("e.g. a cheerful sports coach") }
+            )
+          }
+        },
+        confirmButton = {
+          TextButton(
+            enabled = customPersonalityDraft.isNotBlank(),
+            onClick = {
+              viewModel.setCustomPersonality(customPersonalityDraft)
+              controller.stop()
+              startLiveSession()
+              customPersonalityDialogOpen = false
+            }
+          ) {
+            Text("Save")
+          }
+        },
+        dismissButton = {
+          TextButton(onClick = { customPersonalityDialogOpen = false }) {
             Text("Cancel")
           }
         }
@@ -1446,8 +1507,37 @@ private fun VoiceGradientCard(option: VoiceOption, selected: Boolean, onClick: (
   }
 }
 
+private data class PersonalityOption(
+  val id: String,
+  val label: String,
+  val icon: ImageVector?,
+  val tag: String? = null,
+  val adultOnly: Boolean = false
+)
+
+// "sexy"/explicit personas are intentionally not offered — this app has no
+// real content-rating or age-verification infrastructure beyond a device-
+// level self-attestation, and generating explicit sexual content risks
+// violating OpenAI's usage policies outright. "unhinged"/"conspiracy" are
+// present but scoped to blunt humor / clearly-labeled speculation rather
+// than dropping safety guardrails or asserting misinformation as fact.
+private val PERSONALITY_OPTIONS = listOf(
+  PersonalityOption("custom", "Custom", null),
+  PersonalityOption("assistant", "Assistant", Icons.Outlined.SupportAgent),
+  PersonalityOption("therapist", "Therapist", Icons.Outlined.Psychology),
+  PersonalityOption("storyteller", "Storyteller", Icons.AutoMirrored.Outlined.MenuBook),
+  PersonalityOption("story_time", "Story Time", Icons.Outlined.AutoStories, tag = "Kids"),
+  PersonalityOption("trivia_game", "Trivia Game", Icons.Outlined.Quiz, tag = "Kids"),
+  PersonalityOption("giza_doc", "GiZa Doc", Icons.Outlined.MedicalServices),
+  PersonalityOption("unhinged", "Unhinged", Icons.Outlined.Whatshot, tag = "18+", adultOnly = true),
+  PersonalityOption("motivation", "Motivation", Icons.Outlined.EmojiEvents),
+  PersonalityOption("conspiracy", "Conspiracy", Icons.Outlined.Visibility, tag = "18+", adultOnly = true),
+  PersonalityOption("romantic", "Romantic", Icons.Filled.Favorite, tag = "18+", adultOnly = true),
+  PersonalityOption("argumentative", "Argumentative", Icons.Outlined.Bolt, tag = "18+", adultOnly = true)
+)
+
 @Composable
-private fun PersonalityPill(icon: ImageVector?, label: String, adultOnly: Boolean, selected: Boolean, onClick: () -> Unit) {
+private fun PersonalityPill(option: PersonalityOption, selected: Boolean, onClick: () -> Unit) {
   Row(
     verticalAlignment = Alignment.CenterVertically,
     modifier = Modifier
@@ -1456,14 +1546,17 @@ private fun PersonalityPill(icon: ImageVector?, label: String, adultOnly: Boolea
       .clickable(onClick = onClick)
       .padding(horizontal = 18.dp, vertical = 14.dp)
   ) {
-    if (icon != null) {
-      Icon(icon, contentDescription = null, tint = if (selected) Color.Black else Color.White, modifier = Modifier.size(18.dp))
+    if (option.icon != null) {
+      Icon(option.icon, contentDescription = null, tint = if (selected) Color.Black else Color.White, modifier = Modifier.size(18.dp))
+      Spacer(modifier = Modifier.width(10.dp))
+    } else {
+      Icon(Icons.Filled.Add, contentDescription = null, tint = if (selected) Color.Black else Color.White, modifier = Modifier.size(18.dp))
       Spacer(modifier = Modifier.width(10.dp))
     }
-    Text(label, color = if (selected) Color.Black else Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-    if (adultOnly) {
+    Text(option.label, color = if (selected) Color.Black else Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+    if (option.tag != null) {
       Spacer(modifier = Modifier.width(6.dp))
-      Text("18+", color = if (selected) Color.Black.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+      Text(option.tag, color = if (selected) Color.Black.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
     }
   }
 }
@@ -1477,7 +1570,7 @@ private fun LiveVoiceSettingsSheet(
   selectedVoiceId: String,
   onVoiceChange: (String) -> Unit,
   personality: String,
-  onPersonalityRequest: (String) -> Unit,
+  onPersonalityRequest: (PersonalityOption) -> Unit,
   activationMode: String,
   onActivationModeChange: (String) -> Unit,
   speed: Float,
@@ -1525,14 +1618,12 @@ private fun LiveVoiceSettingsSheet(
         modifier = Modifier.horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
       ) {
-        PersonalityPill(icon = null, label = "Default", adultOnly = false, selected = personality == "neutral") {
-          onPersonalityRequest("neutral")
-        }
-        PersonalityPill(icon = Icons.Filled.Favorite, label = "Romantic", adultOnly = true, selected = personality == "romantic") {
-          onPersonalityRequest("romantic")
-        }
-        PersonalityPill(icon = Icons.Outlined.Bolt, label = "Argumentative", adultOnly = true, selected = personality == "argumentative") {
-          onPersonalityRequest("argumentative")
+        PERSONALITY_OPTIONS.forEach { option ->
+          PersonalityPill(
+            option = option,
+            selected = personality == option.id,
+            onClick = { onPersonalityRequest(option) }
+          )
         }
       }
 
