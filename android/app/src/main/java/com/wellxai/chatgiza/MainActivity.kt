@@ -71,11 +71,13 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
@@ -149,16 +151,20 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Comment
 import androidx.compose.material.icons.automirrored.outlined.Logout
+import androidx.compose.material.icons.automirrored.outlined.TrendingFlat
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.AddBox
 import androidx.compose.material.icons.outlined.AlternateEmail
+import androidx.compose.material.icons.outlined.AttachMoney
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Autorenew
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.CardGiftcard
 import androidx.compose.material.icons.outlined.ChildCare
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.EmojiEmotions
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Description
@@ -192,6 +198,7 @@ import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material.icons.outlined.NoAdultContent
 import androidx.compose.material.icons.outlined.Photo
 import androidx.compose.material.icons.outlined.PictureAsPdf
+import androidx.compose.material.icons.outlined.Poll
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.RadioButtonChecked
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
@@ -206,6 +213,9 @@ import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.SupportAgent
 import androidx.compose.material.icons.outlined.ThumbDown
 import androidx.compose.material.icons.outlined.ThumbUp
+import androidx.compose.material.icons.outlined.Tag
+import androidx.compose.material.icons.outlined.TrendingDown
+import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Vibration
 import androidx.compose.material.icons.outlined.Videocam
@@ -241,6 +251,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -2014,6 +2025,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
 
   var showChatGizaMedia by remember { mutableStateOf(false) }
   var showChatGizaMediaCreate by remember { mutableStateOf(false) }
+  var showChatGizaMediaPostComposer by remember { mutableStateOf(false) }
   // Fully finger-driven, no auto-animation and no resting "peek" floor —
   // 0 = closed (no height at all), 1 = fully open. The panel's height
   // tracks the drag 1:1 the entire time (snapTo, no easing lag); the only
@@ -2426,6 +2438,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           )
       )
       ChatGizaMediaPanel(
+        viewModel = viewModel,
         modifier = Modifier
           .align(Alignment.BottomCenter)
           .fillMaxWidth()
@@ -2438,7 +2451,17 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
     }
   }
   if (showChatGizaMediaCreate) {
-    ChatGizaMediaCreateSheet(viewModel, onDismiss = { showChatGizaMediaCreate = false })
+    ChatGizaMediaCreateSheet(
+      viewModel,
+      onDismiss = { showChatGizaMediaCreate = false },
+      onPostClick = {
+        showChatGizaMediaCreate = false
+        showChatGizaMediaPostComposer = true
+      }
+    )
+  }
+  if (showChatGizaMediaPostComposer) {
+    ChatGizaMediaPostComposerScreen(viewModel, onDismiss = { showChatGizaMediaPostComposer = false })
   }
   }
 }
@@ -2452,6 +2475,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
 
 @Composable
 private fun ChatGizaMediaPanel(
+  viewModel: ChatViewModel,
   modifier: Modifier = Modifier,
   progress: Animatable<Float, AnimationVector1D>,
   availableHeightPx: Int,
@@ -2531,8 +2555,20 @@ private fun ChatGizaMediaPanel(
         modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
         textAlign = TextAlign.Center
       )
-      // Left empty on purpose — no placeholder icon/text here anymore.
-      Box(modifier = Modifier.weight(1f).fillMaxWidth())
+      if (viewModel.mediaPosts.isEmpty()) {
+        // Left empty on purpose — no placeholder icon/text here anymore.
+        Box(modifier = Modifier.weight(1f).fillMaxWidth())
+      } else {
+        LazyColumn(
+          modifier = Modifier.weight(1f).fillMaxWidth(),
+          contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+          verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+          items(viewModel.mediaPosts, key = { it.id }) { post ->
+            MediaPostRow(post, userImage = viewModel.userImage, userName = viewModel.userName)
+          }
+        }
+      }
     }
     Box(
       modifier = Modifier
@@ -2549,9 +2585,64 @@ private fun ChatGizaMediaPanel(
   }
 }
 
+@Composable
+private fun MediaPostRow(post: MediaPost, userImage: String?, userName: String?) {
+  Column(modifier = Modifier.fillMaxWidth()) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+      if (userImage != null) {
+        AsyncImage(
+          model = userImage,
+          contentDescription = "Profile",
+          modifier = Modifier.size(36.dp).clip(CircleShape)
+        )
+      } else {
+        Icon(
+          Icons.Outlined.AccountCircle,
+          contentDescription = "Profile",
+          tint = Color.White,
+          modifier = Modifier.size(36.dp)
+        )
+      }
+      Spacer(modifier = Modifier.width(10.dp))
+      Column(modifier = Modifier.weight(1f)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Text(userName ?: "You", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+          if (post.sentiment != null) {
+            Spacer(modifier = Modifier.width(8.dp))
+            val (tint, label) = when (post.sentiment) {
+              "bullish" -> Color(0xFF16C784) to "Bullish"
+              "bearish" -> Color(0xFFEA3943) to "Bearish"
+              else -> Color(0xFFA8A8A8) to "Neutral"
+            }
+            Text(label, color = tint, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+          }
+        }
+        if (post.text.isNotEmpty()) {
+          Spacer(modifier = Modifier.height(4.dp))
+          Text(post.text, color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp)
+        }
+        if (post.imageUri != null) {
+          Spacer(modifier = Modifier.height(8.dp))
+          AsyncImage(
+            model = post.imageUri,
+            contentDescription = "Post photo",
+            modifier = Modifier
+              .fillMaxWidth()
+              .heightIn(max = 220.dp)
+              .clip(RoundedCornerShape(14.dp)),
+            contentScale = ContentScale.Crop
+          )
+        }
+      }
+    }
+    Spacer(modifier = Modifier.height(14.dp))
+    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.08f)))
+  }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ChatGizaMediaCreateSheet(viewModel: ChatViewModel, onDismiss: () -> Unit) {
+private fun ChatGizaMediaCreateSheet(viewModel: ChatViewModel, onDismiss: () -> Unit, onPostClick: () -> Unit) {
   ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFF161616)) {
     Column(
       modifier = Modifier
@@ -2584,7 +2675,7 @@ private fun ChatGizaMediaCreateSheet(viewModel: ChatViewModel, onDismiss: () -> 
       }
       Spacer(modifier = Modifier.height(20.dp))
       Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        MediaCreateOption("Post", Modifier.weight(1f), onDismiss) {
+        MediaCreateOption("Post", Modifier.weight(1f), onPostClick) {
           Icon(Icons.Filled.Edit, contentDescription = "Post", tint = Color(0xFFFFC94A), modifier = Modifier.size(26.dp))
         }
         MediaCreateOption("Article", Modifier.weight(1f), onDismiss) {
@@ -2607,6 +2698,198 @@ private fun ChatGizaMediaCreateSheet(viewModel: ChatViewModel, onDismiss: () -> 
         }
       }
     }
+  }
+}
+
+// Reached via ChatGiZa Media's "+" -> Post. Local-only for now (see
+// MediaPost) -- text, an optional photo, and a bullish/neutral/bearish
+// sentiment tag, all wired to actually work rather than just closing the
+// sheet, since there's no backend feed to post to yet.
+@Composable
+private fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss: () -> Unit) {
+  BackHandler { onDismiss() }
+  var text by remember { mutableStateOf("") }
+  var imageUri by remember { mutableStateOf<Uri?>(null) }
+  var sentiment by remember { mutableStateOf<String?>(null) }
+
+  val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    if (uri != null) imageUri = uri
+  }
+
+  val canPost = text.isNotBlank() || imageUri != null
+
+  Box(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color(0xFF161616))
+      .statusBarsPadding()
+  ) {
+    Column(modifier = Modifier.fillMaxSize()) {
+      Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        IconButton(onClick = onDismiss, modifier = Modifier.size(26.dp)) {
+          Icon(Icons.Outlined.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(26.dp))
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        Button(
+          onClick = {
+            viewModel.addMediaPost(text.trim(), imageUri?.toString(), sentiment)
+            onDismiss()
+          },
+          enabled = canPost,
+          colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFFFFC94A),
+            disabledContainerColor = Color(0xFFFFC94A).copy(alpha = 0.35f)
+          ),
+          shape = RoundedCornerShape(20.dp),
+          contentPadding = PaddingValues(horizontal = 22.dp, vertical = 8.dp)
+        ) {
+          Text("Post", color = Color.Black, fontWeight = FontWeight.SemiBold)
+        }
+      }
+
+      Column(
+        modifier = Modifier
+          .weight(1f)
+          .fillMaxWidth()
+          .verticalScroll(rememberScrollState())
+          .padding(horizontal = 16.dp)
+      ) {
+        Row(modifier = Modifier.fillMaxWidth()) {
+          if (viewModel.userImage != null) {
+            AsyncImage(
+              model = viewModel.userImage,
+              contentDescription = "Profile",
+              modifier = Modifier.size(36.dp).clip(CircleShape)
+            )
+          } else {
+            Icon(
+              Icons.Outlined.AccountCircle,
+              contentDescription = "Profile",
+              tint = Color.White,
+              modifier = Modifier.size(36.dp)
+            )
+          }
+          Spacer(modifier = Modifier.width(12.dp))
+          Box(modifier = Modifier.weight(1f).padding(top = 6.dp)) {
+            if (text.isEmpty()) {
+              Text("Share your thoughts!", color = Color(0xFF7A7A7A), fontSize = 17.sp)
+            }
+            BasicTextField(
+              value = text,
+              onValueChange = { text = it },
+              textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 17.sp),
+              cursorBrush = SolidColor(Color(0xFFFFC94A)),
+              modifier = Modifier.fillMaxWidth()
+            )
+          }
+        }
+
+        if (imageUri != null) {
+          Spacer(modifier = Modifier.height(16.dp))
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .heightIn(max = 260.dp)
+              .clip(RoundedCornerShape(16.dp))
+          ) {
+            AsyncImage(
+              model = imageUri,
+              contentDescription = "Attached photo",
+              modifier = Modifier.fillMaxWidth(),
+              contentScale = ContentScale.Crop
+            )
+            IconButton(
+              onClick = { imageUri = null },
+              modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(8.dp)
+                .size(30.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.55f))
+            ) {
+              Icon(Icons.Outlined.Close, contentDescription = "Remove photo", tint = Color.White, modifier = Modifier.size(18.dp))
+            }
+          }
+        }
+      }
+
+      // Left cluster is content-insert affordances; the right cluster is a
+      // bullish/neutral/bearish sentiment tag for the post -- common in
+      // crypto-social composers, and matches the reference screenshot.
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .imePadding()
+          .navigationBarsPadding()
+          .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        IconButton(onClick = { text += "😀" }, modifier = Modifier.size(30.dp)) {
+          Icon(Icons.Outlined.EmojiEmotions, contentDescription = "Emoji", tint = Color(0xFFA8A8A8), modifier = Modifier.size(22.dp))
+        }
+        IconButton(onClick = { imagePicker.launch("image/*") }, modifier = Modifier.size(30.dp)) {
+          Icon(Icons.Outlined.Image, contentDescription = "Add photo", tint = Color(0xFFA8A8A8), modifier = Modifier.size(22.dp))
+        }
+        IconButton(onClick = { text += "#" }, modifier = Modifier.size(30.dp)) {
+          Icon(Icons.Outlined.Tag, contentDescription = "Hashtag", tint = Color(0xFFA8A8A8), modifier = Modifier.size(22.dp))
+        }
+        IconButton(onClick = { text += "$" }, modifier = Modifier.size(30.dp)) {
+          Icon(Icons.Outlined.AttachMoney, contentDescription = "Cashtag", tint = Color(0xFFA8A8A8), modifier = Modifier.size(22.dp))
+        }
+        IconButton(onClick = {}, modifier = Modifier.size(30.dp)) {
+          Icon(Icons.Outlined.Poll, contentDescription = "Poll", tint = Color(0xFFA8A8A8), modifier = Modifier.size(22.dp))
+        }
+        IconButton(onClick = {}, modifier = Modifier.size(30.dp)) {
+          Icon(Icons.Outlined.CardGiftcard, contentDescription = "Gift", tint = Color(0xFFA8A8A8), modifier = Modifier.size(22.dp))
+        }
+        IconButton(onClick = {}, modifier = Modifier.size(30.dp)) {
+          Icon(Icons.Outlined.MoreHoriz, contentDescription = "More", tint = Color(0xFFA8A8A8), modifier = Modifier.size(22.dp))
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        SentimentToggle(selected = sentiment, onSelect = { sentiment = if (sentiment == it) null else it })
+      }
+    }
+  }
+}
+
+@Composable
+private fun SentimentToggle(selected: String?, onSelect: (String) -> Unit) {
+  Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+    SentimentToggleIcon(
+      icon = Icons.Outlined.TrendingUp,
+      tint = Color(0xFF16C784),
+      active = selected == "bullish",
+      onClick = { onSelect("bullish") }
+    )
+    SentimentToggleIcon(
+      icon = Icons.AutoMirrored.Outlined.TrendingFlat,
+      tint = Color.White,
+      active = selected == "neutral",
+      onClick = { onSelect("neutral") }
+    )
+    SentimentToggleIcon(
+      icon = Icons.Outlined.TrendingDown,
+      tint = Color(0xFFEA3943),
+      active = selected == "bearish",
+      onClick = { onSelect("bearish") }
+    )
+  }
+}
+
+@Composable
+private fun SentimentToggleIcon(icon: ImageVector, tint: Color, active: Boolean, onClick: () -> Unit) {
+  Box(
+    modifier = Modifier
+      .size(30.dp)
+      .clip(RoundedCornerShape(8.dp))
+      .background(tint.copy(alpha = if (active) 0.28f else 0.12f))
+      .clickable(onClick = onClick),
+    contentAlignment = Alignment.Center
+  ) {
+    Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
   }
 }
 
