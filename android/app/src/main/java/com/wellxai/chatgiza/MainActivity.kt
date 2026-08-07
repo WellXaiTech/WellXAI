@@ -1489,10 +1489,10 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
 private fun VoiceControlPill(icon: ImageVector, contentDescription: String, active: Boolean = true, onClick: () -> Unit) {
   Box(
     modifier = Modifier
-      .size(72.dp)
-      .clip(CircleShape)
+      .size(width = 78.dp, height = 58.dp)
+      .clip(RoundedCornerShape(18.dp))
       .background(Color(0xFF1F1F1F))
-      .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = CircleShape)
+      .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(18.dp))
       .clickable(onClick = onClick),
     contentAlignment = Alignment.Center
   ) {
@@ -1500,7 +1500,7 @@ private fun VoiceControlPill(icon: ImageVector, contentDescription: String, acti
       icon,
       contentDescription = contentDescription,
       tint = Color.White.copy(alpha = if (active) 1f else 0.35f),
-      modifier = Modifier.size(26.dp)
+      modifier = Modifier.size(24.dp)
     )
   }
 }
