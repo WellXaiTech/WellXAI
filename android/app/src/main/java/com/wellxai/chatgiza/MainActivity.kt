@@ -709,16 +709,29 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
           }
         },
         actions = {
-          Box(
+          // Pill with two separate icons — new chat and account/more —
+          // instead of one icon that was labeled "Account" but drew a
+          // pencil and actually opened Account (New Chat had no icon here).
+          Row(
             modifier = Modifier
               .padding(end = 12.dp)
-              .size(40.dp)
-              .clip(RoundedCornerShape(12.dp))
-              .background(colorScheme.onBackground.copy(alpha = 0.12f))
-              .clickable(onClick = { viewModel.openAccount() }),
-            contentAlignment = Alignment.Center
+              .height(40.dp)
+              .clip(RoundedCornerShape(percent = 50))
+              .background(colorScheme.onBackground.copy(alpha = 0.12f)),
+            verticalAlignment = Alignment.CenterVertically
           ) {
-            Icon(Icons.Outlined.ModeEdit, contentDescription = "Account", tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
+            Box(
+              modifier = Modifier.size(40.dp).clickable(onClick = { viewModel.newChat() }),
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(Icons.Outlined.ModeEdit, contentDescription = "New chat", tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
+            }
+            Box(
+              modifier = Modifier.size(40.dp).clickable(onClick = { viewModel.openAccount() }),
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(Icons.Filled.MoreVert, contentDescription = "Account", tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
+            }
           }
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
@@ -981,16 +994,29 @@ private fun ImagineScreen(viewModel: ChatViewModel) {
           }
         },
         actions = {
-          Box(
+          // Pill with two separate icons — new chat and account/more —
+          // instead of one icon that was labeled "Account" but drew a
+          // pencil and actually opened Account (New Chat had no icon here).
+          Row(
             modifier = Modifier
               .padding(end = 12.dp)
-              .size(40.dp)
-              .clip(RoundedCornerShape(12.dp))
-              .background(colorScheme.onBackground.copy(alpha = 0.12f))
-              .clickable(onClick = { viewModel.openAccount() }),
-            contentAlignment = Alignment.Center
+              .height(40.dp)
+              .clip(RoundedCornerShape(percent = 50))
+              .background(colorScheme.onBackground.copy(alpha = 0.12f)),
+            verticalAlignment = Alignment.CenterVertically
           ) {
-            Icon(Icons.Outlined.ModeEdit, contentDescription = "Account", tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
+            Box(
+              modifier = Modifier.size(40.dp).clickable(onClick = { viewModel.newChat() }),
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(Icons.Outlined.ModeEdit, contentDescription = "New chat", tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
+            }
+            Box(
+              modifier = Modifier.size(40.dp).clickable(onClick = { viewModel.openAccount() }),
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(Icons.Filled.MoreVert, contentDescription = "Account", tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
+            }
           }
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
