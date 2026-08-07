@@ -128,6 +128,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MoreVert
@@ -170,7 +171,6 @@ import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Cameraswitch
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.FlashOff
 import androidx.compose.material.icons.outlined.FlashOn
 import androidx.compose.material.icons.outlined.MedicalServices
@@ -1891,7 +1891,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
         HistoryNavTab(Icons.Outlined.Folder, "Projects", onClick = { viewModel.openProjects() })
         HistoryNavTab(Icons.Outlined.Schedule, "Scheduled", onClick = { viewModel.openScheduled() })
         HistoryNavTab(Icons.Outlined.GraphicEq, "Speak", onClick = { viewModel.openLiveVision() })
-        HistoryNavTab(Icons.Outlined.Home, "Home", onClick = { viewModel.closeHistory() })
+        HistoryNavTab(Icons.Filled.Home, "Home", onClick = { viewModel.closeHistory() })
       }
     }
   ) { padding ->
@@ -1991,9 +1991,9 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           }
         }
 
-        // Bigger gap pushing the whole History card further down the
-        // screen, same idea as the gap above Events.
-        Spacer(modifier = Modifier.height(40.dp))
+        // Small gap — Events and History should sit close together, not
+        // far apart like before.
+        Spacer(modifier = Modifier.height(10.dp))
       }
 
       // History tab + the whole conversation list share ONE background —
