@@ -1842,7 +1842,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   // Chat/Imagine while the drawer is closed.
   BackHandler(enabled = viewModel.screen is AppScreen.History) { viewModel.closeHistory() }
 
-  var historyFilter by remember { mutableStateOf("All") }
+  var historyFilter by remember { mutableStateOf("History") }
   val query = viewModel.historySearchQuery.trim()
   val visibleConversations = viewModel.conversations
     .filter { query.isEmpty() || it.title.contains(query, ignoreCase = true) }
@@ -2024,7 +2024,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(20.dp)
       ) {
-        listOf("All", "Pinned").forEach { label ->
+        listOf("History", "Pinned").forEach { label ->
           val selected = historyFilter == label
           Text(
             label,
