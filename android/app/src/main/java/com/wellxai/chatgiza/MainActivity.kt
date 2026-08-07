@@ -47,6 +47,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -1948,12 +1949,20 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           .navigationBarsPadding()
       ) {
         // ChatGiZa Media drag handle — sits above the tab row, pulls up
-        // the Media sheet when tapped/dragged.
+        // the Media sheet on either a tap or an upward swipe. A plain
+        // clickable() alone doesn't fire once a real drag exceeds touch
+        // slop (the press gets cancelled), so an explicit vertical-drag
+        // detector is layered on top to catch the swipe-up gesture too.
         Box(
           modifier = Modifier
             .fillMaxWidth()
+            .pointerInput(Unit) {
+              detectVerticalDragGestures { _, dragAmount ->
+                if (dragAmount < -2f) showChatGizaMedia = true
+              }
+            }
             .clickable(onClick = { showChatGizaMedia = true })
-            .padding(top = 8.dp, bottom = 4.dp),
+            .padding(top = 12.dp, bottom = 10.dp),
           contentAlignment = Alignment.Center
         ) {
           Box(
