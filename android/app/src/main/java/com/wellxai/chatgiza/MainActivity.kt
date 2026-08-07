@@ -31,12 +31,16 @@ import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -1961,16 +1965,22 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   var showChatGizaMedia by remember { mutableStateOf(false) }
   var showChatGizaMediaCreate by remember { mutableStateOf(false) }
   // Media panel opens at a short "peek" height and can be dragged up to
-  // full height on its own handle -- the "+" button stays anchored to the
-  // panel's bottom-end the whole time, so it naturally sits near the
-  // title while peeked and slides down near the bottom once expanded.
-  var mediaExpanded by remember { mutableStateOf(false) }
-  LaunchedEffect(showChatGizaMedia) { if (showChatGizaMedia) mediaExpanded = false }
-  val mediaHeightFraction by animateFloatAsState(if (mediaExpanded) 0.85f else 0.35f, label = "chatGizaMediaHeight")
+  // full height on its own handle. 0f = peek, 1f = fully expanded. An
+  // Animatable (not animateFloatAsState) so the drag handler can drive it
+  // 1:1 with the finger via snapTo() while dragging, and only animate
+  // (spring) when the finger actually lets go -- it must track the hand
+  // continuously, not jump straight to a target the moment a threshold is
+  // crossed, and if released partway it springs back rather than freezing.
+  val mediaProgress = remember { Animatable(0f) }
+  LaunchedEffect(showChatGizaMedia) { if (showChatGizaMedia) mediaProgress.snapTo(0f) }
+  val mediaHeightFraction = 0.35f + (0.85f - 0.35f) * mediaProgress.value
   // Measured so the ChatGiZa Media panel below can stop exactly above the
   // nav row instead of covering it (a plain fraction guess drifted once
-  // navigationBarsPadding() changed the row's real height per device).
+  // navigationBarsPadding() changed the row's real height per device), and
+  // so the drag handler can convert the finger's pixel movement into a
+  // matching fraction of the panel's actual on-screen travel distance.
   var bottomBarHeight by remember { mutableStateOf(0.dp) }
+  var mediaAvailableHeightPx by remember { mutableStateOf(0) }
   val density = LocalDensity.current
 
   Box(modifier = Modifier.fillMaxSize()) {
@@ -2318,6 +2328,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
       modifier = Modifier
         .fillMaxSize()
         .padding(bottom = bottomBarHeight)
+        .onGloballyPositioned { coords -> mediaAvailableHeightPx = coords.size.height }
     ) {
       Box(
         modifier = Modifier
@@ -2334,9 +2345,8 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           .align(Alignment.BottomCenter)
           .fillMaxWidth()
           .fillMaxHeight(mediaHeightFraction),
-        expanded = mediaExpanded,
-        onExpand = { mediaExpanded = true },
-        onCollapse = { mediaExpanded = false },
+        progress = mediaProgress,
+        availableHeightPx = mediaAvailableHeightPx,
         onDismiss = { showChatGizaMedia = false },
         onCreateClick = { showChatGizaMediaCreate = true }
       )
@@ -2358,9 +2368,8 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
 @Composable
 private fun ChatGizaMediaPanel(
   modifier: Modifier = Modifier,
-  expanded: Boolean,
-  onExpand: () -> Unit,
-  onCollapse: () -> Unit,
+  progress: Animatable<Float, AnimationVector1D>,
+  availableHeightPx: Int,
   onDismiss: () -> Unit,
   onCreateClick: () -> Unit
 ) {
@@ -2376,33 +2385,33 @@ private fun ChatGizaMediaPanel(
       .background(Color(0xFF161616))
   ) {
     Column(modifier = Modifier.fillMaxSize()) {
-      // Drag up to expand to full height, drag down to collapse back to
-      // the peek height (or dismiss if already peeked); a plain tap
-      // dismisses, matching the handle above the bottom nav. Accumulates
-      // the drag instead of reacting to every single pointer-move delta --
-      // reacting per-delta meant ordinary hand tremor threw a stream of
-      // alternating +/- deltas, flip-flopping the expand target every
-      // frame so the animation never finished (the panel looked stuck
-      // halfway open no matter how far you actually dragged).
+      val scope = rememberCoroutineScope()
+      // Tracks the finger 1:1 while dragging (snapTo, not animateTo — no
+      // easing lag) and only springs to the nearer end (or back to where
+      // it started, if let go without crossing the midpoint) once the
+      // finger actually lifts. A plain tap dismisses.
       Box(
         modifier = Modifier
           .fillMaxWidth()
-          .pointerInput(expanded) {
-            var accumulated = 0f
+          .pointerInput(availableHeightPx) {
+            val dragRangePx = (availableHeightPx * (0.85f - 0.35f)).coerceAtLeast(1f)
             detectVerticalDragGestures(
-              onDragStart = { accumulated = 0f },
-              onVerticalDrag = { _, dragAmount ->
-                accumulated += dragAmount
-                when {
-                  accumulated < -24f -> {
-                    onExpand()
-                    accumulated = 0f
-                  }
-                  accumulated > 24f -> {
-                    if (expanded) onCollapse() else onDismiss()
-                    accumulated = 0f
-                  }
+              onDragEnd = {
+                scope.launch {
+                  val target = if (progress.value > 0.5f) 1f else 0f
+                  progress.animateTo(target, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
                 }
+              },
+              onDragCancel = {
+                scope.launch {
+                  val target = if (progress.value > 0.5f) 1f else 0f
+                  progress.animateTo(target, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
+                }
+              },
+              onVerticalDrag = { change, dragAmount ->
+                change.consume()
+                val newValue = (progress.value - dragAmount / dragRangePx).coerceIn(0f, 1f)
+                scope.launch { progress.snapTo(newValue) }
               }
             )
           }
@@ -2502,12 +2511,16 @@ private fun ChatGizaMediaCreateSheet(onDismiss: () -> Unit) {
         }
       }
       Spacer(modifier = Modifier.height(10.dp))
-      MediaCreateWideRow("Creator Center", onDismiss) {
-        Icon(Icons.Outlined.Widgets, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-      }
-      Spacer(modifier = Modifier.height(10.dp))
-      MediaCreateWideRow("CreatorPad", onDismiss) {
-        MediaCreatorPadIcon(modifier = Modifier.size(20.dp), tint = Color.White)
+      // Side by side under Post/Video (not stacked full-width rows) --
+      // matches the sketch: Creator Center sits under Post, CreatorPad
+      // sits under Video.
+      Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        MediaCreateWideRow("Creator Center", Modifier.weight(1f), onDismiss) {
+          Icon(Icons.Outlined.Widgets, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+        }
+        MediaCreateWideRow("CreatorPad", Modifier.weight(1f), onDismiss) {
+          MediaCreatorPadIcon(modifier = Modifier.size(20.dp), tint = Color.White)
+        }
       }
     }
   }
@@ -2530,10 +2543,9 @@ private fun MediaCreateOption(label: String, modifier: Modifier = Modifier, onCl
 }
 
 @Composable
-private fun MediaCreateWideRow(label: String, onClick: () -> Unit, icon: @Composable () -> Unit) {
+private fun MediaCreateWideRow(label: String, modifier: Modifier = Modifier, onClick: () -> Unit, icon: @Composable () -> Unit) {
   Row(
-    modifier = Modifier
-      .fillMaxWidth()
+    modifier = modifier
       .clip(RoundedCornerShape(14.dp))
       .background(Color.White.copy(alpha = 0.06f))
       .clickable(onClick = onClick)
