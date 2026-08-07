@@ -256,6 +256,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -2892,10 +2893,10 @@ private fun CustomizeScreen(viewModel: ChatViewModel) {
 }
 
 @Composable
-private fun ProfileAvatar(imageUrl: String?, modifier: Modifier = Modifier) {
+private fun ProfileAvatar(imageUrl: String?, modifier: Modifier = Modifier, size: Dp = 160.dp) {
   Box(
     modifier = modifier
-      .size(160.dp)
+      .size(size)
       .clip(CircleShape)
       .background(Color(0xFF2F2F2F)),
     contentAlignment = Alignment.Center
@@ -2911,7 +2912,7 @@ private fun ProfileAvatar(imageUrl: String?, modifier: Modifier = Modifier) {
         Icons.Outlined.AccountCircle,
         contentDescription = "Profile photo",
         tint = Color.White,
-        modifier = Modifier.size(72.dp)
+        modifier = Modifier.size(size * 0.45f)
       )
     }
   }
@@ -3001,14 +3002,13 @@ private fun EditProfileScreen(viewModel: ChatViewModel) {
       .padding(horizontal = 20.dp)
   ) {
     Row(
-      modifier = Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 20.dp),
+      modifier = Modifier.fillMaxWidth().padding(top = 32.dp, bottom = 20.dp),
       verticalAlignment = Alignment.CenterVertically
     ) {
-      IconButton(onClick = { viewModel.closeEditProfile() }) {
-        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
-      }
+      // No back arrow — closing happens via the system back gesture
+      // (BackHandler above), same as the other settings sub-screens.
       Text(
-        "Edit Profile",
+        "Profile",
         color = Color.White,
         fontSize = 20.sp,
         fontWeight = FontWeight.Bold,
@@ -3025,16 +3025,17 @@ private fun EditProfileScreen(viewModel: ChatViewModel) {
     }
 
     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-      ProfileAvatar(imageUrl = viewModel.userImage)
+      ProfileAvatar(imageUrl = viewModel.userImage, size = 120.dp)
       FilledIconButton(
         onClick = { xNote = true },
         modifier = Modifier
-          .size(52.dp)
+          .size(40.dp)
           .align(Alignment.BottomEnd)
-          .offset(x = (-8).dp),
+          .offset(x = (-4).dp)
+          .border(2.dp, Color(0xFF181818), CircleShape),
         colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White)
       ) {
-        Icon(Icons.Outlined.Edit, contentDescription = "Change photo", tint = Color.Black)
+        Icon(Icons.Outlined.Edit, contentDescription = "Change photo", tint = Color.Black, modifier = Modifier.size(18.dp))
       }
     }
 
