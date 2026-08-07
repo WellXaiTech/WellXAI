@@ -39,7 +39,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.background
@@ -240,7 +239,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.AnnotatedString
@@ -2347,18 +2345,33 @@ private fun ChatGizaMediaPanel(
     Column(modifier = Modifier.fillMaxSize()) {
       // Drag up to expand to full height, drag down to collapse back to
       // the peek height (or dismiss if already peeked); a plain tap
-      // dismisses, matching the handle above the bottom nav.
+      // dismisses, matching the handle above the bottom nav. Accumulates
+      // the drag instead of reacting to every single pointer-move delta --
+      // reacting per-delta meant ordinary hand tremor threw a stream of
+      // alternating +/- deltas, flip-flopping the expand target every
+      // frame so the animation never finished (the panel looked stuck
+      // halfway open no matter how far you actually dragged).
       Box(
         modifier = Modifier
           .fillMaxWidth()
           .pointerInput(expanded) {
-            detectVerticalDragGestures { _, dragAmount ->
-              when {
-                dragAmount < -2f -> onExpand()
-                dragAmount > 2f && expanded -> onCollapse()
-                dragAmount > 2f -> onDismiss()
+            var accumulated = 0f
+            detectVerticalDragGestures(
+              onDragStart = { accumulated = 0f },
+              onVerticalDrag = { _, dragAmount ->
+                accumulated += dragAmount
+                when {
+                  accumulated < -24f -> {
+                    onExpand()
+                    accumulated = 0f
+                  }
+                  accumulated > 24f -> {
+                    if (expanded) onCollapse() else onDismiss()
+                    accumulated = 0f
+                  }
+                }
               }
-            }
+            )
           }
           .clickable(onClick = onDismiss)
           .padding(vertical = 10.dp),
@@ -2425,11 +2438,19 @@ private fun ChatGizaMediaCreateSheet(onDismiss: () -> Unit) {
         .padding(bottom = 32.dp)
     ) {
       Row(verticalAlignment = Alignment.CenterVertically) {
-        Image(
-          painter = painterResource(R.mipmap.ic_launcher_round),
-          contentDescription = null,
-          modifier = Modifier.size(32.dp).clip(CircleShape)
-        )
+        // A plain drawn badge instead of loading the launcher mipmap --
+        // ic_launcher_round is an adaptive-icon XML, and painterResource()
+        // crashing on that resource type was what was taking the app down
+        // the instant this menu opened.
+        Box(
+          modifier = Modifier
+            .size(32.dp)
+            .clip(CircleShape)
+            .background(Color(0xFF23252B)),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(Icons.Outlined.Whatshot, contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.size(18.dp))
+        }
         Spacer(modifier = Modifier.width(10.dp))
         Text("ChatGiZa Media", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.weight(1f))
