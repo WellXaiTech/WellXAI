@@ -1837,16 +1837,15 @@ private fun imageProxyToJpeg(image: ImageProxy): ByteArray {
   return out.toByteArray()
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HistoryNavTab(icon: ImageVector, label: String, onClick: () -> Unit) {
   Column(
     horizontalAlignment = Alignment.CenterHorizontally,
     modifier = Modifier.clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 4.dp)
   ) {
-    Icon(icon, contentDescription = label, tint = colorScheme.onBackground.copy(alpha = 0.7f), modifier = Modifier.size(22.dp))
-    Spacer(modifier = Modifier.height(3.dp))
-    Text(label, color = colorScheme.onBackground.copy(alpha = 0.7f), fontSize = 11.sp)
+    Icon(icon, contentDescription = label, tint = colorScheme.onBackground.copy(alpha = 0.85f), modifier = Modifier.size(28.dp))
+    Spacer(modifier = Modifier.height(4.dp))
+    Text(label, color = colorScheme.onBackground.copy(alpha = 0.85f), fontSize = 11.sp)
   }
 }
 
@@ -1877,8 +1876,15 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
     bottomBar = {
       // Five-tab bottom nav, same slot layout as the reference's
       // Home/Markets/Trade/Earn/Assets bar, re-purposed for ChatGiZa.
+      // Rounded top corners on its own background — "carved" into the
+      // screen rather than a flat full-width bar — matching the reference.
       Row(
-        modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 8.dp),
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
+          .background(Color(0xFF23252B))
+          .navigationBarsPadding()
+          .padding(top = 10.dp, bottom = 8.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
       ) {
         HistoryNavTab(Icons.Outlined.Settings, "Settings", onClick = { viewModel.openSettings() })
