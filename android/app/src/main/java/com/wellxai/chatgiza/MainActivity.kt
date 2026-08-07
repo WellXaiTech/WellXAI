@@ -291,7 +291,20 @@ class MainActivity : ComponentActivity() {
       ChatGizaTheme(themeMode = viewModel.themeMode) {
         Surface {
           val screen = viewModel.screen
-          if (screen is AppScreen.Chat || screen is AppScreen.Imagine || screen is AppScreen.History) {
+          // Settings/Projects/Scheduled/LiveVision are reachable by tapping a
+          // tab under History, and must stay INSIDE this same drawer wrapper
+          // rather than tearing it down and rebuilding it fresh — tearing it
+          // down raced the drawer's own close animation (drawerState still
+          // briefly read "Open" a frame after the screen changed) against the
+          // sync effect below, which kept reading that stale Open value as
+          // "the user must have swiped History open" and snapped straight
+          // back to History before the tap's destination ever became visible.
+          // Keeping the drawer mounted continuously across all of these
+          // avoids that race entirely instead of just narrowing it.
+          val screensInsideHistoryDrawer = screen is AppScreen.Chat || screen is AppScreen.Imagine ||
+            screen is AppScreen.History || screen is AppScreen.Settings || screen is AppScreen.Projects ||
+            screen is AppScreen.Scheduled || screen is AppScreen.LiveVision
+          if (screensInsideHistoryDrawer) {
             // Lets History be reached by swiping in from the left edge of Chat/
             // Imagine (and swiped back out), instead of only via the hamburger
             // tap — drawer open/close state stays a mirror of viewModel.screen
@@ -305,13 +318,9 @@ class MainActivity : ComponentActivity() {
             // Two-way sync: whichever side changes first (a tap on the
             // hamburger icon vs. a manual swipe) drives the other, so they
             // can never end up disagreeing about whether History is open.
-            // The "reopen" branch is deliberately narrowed to Chat/Imagine
-            // (the only screens a manual edge-swipe can happen from) rather
-            // than "any non-History screen" — otherwise tapping Settings/
-            // Projects/Scheduled/Speak while the drawer was still open (its
-            // close animation hadn't finished yet, so currentValue briefly
-            // still read Open) got misread as "user swiped History open
-            // from here" and snapped straight back to History.
+            // Narrowed to Chat/Imagine — the only screens a manual edge-swipe
+            // can happen from — so it can't fight a tap that just navigated
+            // to one of the other screens above.
             LaunchedEffect(drawerState) {
               snapshotFlow { drawerState.currentValue }.collect { value ->
                 when {
@@ -354,6 +363,10 @@ class MainActivity : ComponentActivity() {
             ) {
               when (screen) {
                 is AppScreen.Imagine -> ImagineScreen(viewModel)
+                is AppScreen.Settings -> SettingsScreen(viewModel)
+                is AppScreen.Projects -> ProjectsScreen(viewModel)
+                is AppScreen.Scheduled -> ScheduledScreen(viewModel)
+                is AppScreen.LiveVision -> LiveVisionScreen(viewModel)
                 else -> ChatScreenUi(viewModel)
               }
             }
