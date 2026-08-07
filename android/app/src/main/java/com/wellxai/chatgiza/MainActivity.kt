@@ -32,7 +32,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
@@ -2029,15 +2028,24 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   var showChatGizaMediaCreate by remember { mutableStateOf(false) }
   var showChatGizaMediaPostComposer by remember { mutableStateOf(false) }
   // Fully finger-driven, no auto-animation and no resting "peek" floor —
-  // 0 = closed (no height at all), 1 = fully open. The panel's height
-  // tracks the drag 1:1 the entire time (snapTo, no easing lag); the only
-  // animation is the spring on release, and only in one of two directions:
-  // if the drag crossed the "committed" threshold it finishes opening to
-  // 1, otherwise it always springs all the way back to 0 (fully dismissed)
-  // — it never freezes at a random midpoint the way a plain nearest-end
-  // snap would.
+  // 0 = closed (no height at all), 1 = fully open. The only animation is
+  // the spring on release, and only in one of two directions: if the drag
+  // crossed the "committed" threshold it finishes opening to 1, otherwise
+  // it always springs all the way back to 0 (fully dismissed).
   val mediaProgress = remember { Animatable(0f) }
-  val mediaHeightFraction = mediaProgress.value
+  // The live value WHILE a finger is down is tracked here, as a plain
+  // synchronous var — not by calling Animatable.snapTo from a freshly
+  // launched coroutine on every single pointer-move callback. That
+  // per-event "launch a coroutine, read .value, write .value" pattern is
+  // exactly what was causing the drag to stutter, stick halfway, or stop
+  // responding entirely: bursts of drag events during a fast swipe would
+  // spawn overlapping coroutines that each read a stale mediaProgress.value
+  // (because an earlier launched snapTo hadn't actually applied yet), so
+  // most of a fast drag's motion got silently discarded out of order.
+  // Reading/writing a plain Compose state var has no such race.
+  var mediaDragValue by remember { mutableStateOf(0f) }
+  var isDraggingMedia by remember { mutableStateOf(false) }
+  val mediaHeightFraction = if (isDraggingMedia) mediaDragValue else mediaProgress.value
   // Measured from a container that's always present (not gated behind
   // showChatGizaMedia), so the very first drag of the session already has
   // an accurate range instead of a stale/zero value on the first frame.
@@ -2047,13 +2055,26 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   val mediaScope = rememberCoroutineScope()
   val mediaAvailableHeightPx = (totalContentHeightPx - with(density) { bottomBarHeight.toPx() }).toInt().coerceAtLeast(1)
 
+  fun startMediaDrag() {
+    if (!showChatGizaMedia) showChatGizaMedia = true
+    mediaDragValue = mediaHeightFraction
+    isDraggingMedia = true
+  }
+
+  fun updateMediaDrag(dragAmount: Float) {
+    mediaDragValue = (mediaDragValue - dragAmount / mediaAvailableHeightPx).coerceIn(0f, 1f)
+  }
+
   // Two ways to commit, not one — the position rule (halfway) is untouched
   // from before; a fast fling now OVERRIDES it in either direction, so a
   // quick flick up commits to fully open even from low progress, and a
   // quick flick down commits closed even from high progress. A slow/no-
   // velocity release still falls through to the original halfway check.
   fun settleMediaDrag(flingVelocityY: Float = 0f) {
+    val dragValueAtRelease = mediaDragValue
+    isDraggingMedia = false
     mediaScope.launch {
+      mediaProgress.snapTo(dragValueAtRelease)
       val shouldOpen = when {
         flingVelocityY <= -MEDIA_FLING_VELOCITY_THRESHOLD -> true
         flingVelocityY >= MEDIA_FLING_VELOCITY_THRESHOLD -> false
@@ -2099,15 +2120,13 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
               var velocityTracker = VelocityTracker()
               detectVerticalDragGestures(
                 onDragStart = {
-                  if (!showChatGizaMedia) showChatGizaMedia = true
+                  startMediaDrag()
                   velocityTracker = VelocityTracker()
                 },
                 onVerticalDrag = { change, dragAmount ->
                   change.consume()
-                  if (!showChatGizaMedia) showChatGizaMedia = true
                   velocityTracker.addPosition(change.uptimeMillis, change.position)
-                  val newValue = (mediaProgress.value - dragAmount / mediaAvailableHeightPx).coerceIn(0f, 1f)
-                  mediaScope.launch { mediaProgress.snapTo(newValue) }
+                  updateMediaDrag(dragAmount)
                 },
                 onDragEnd = { settleMediaDrag(velocityTracker.calculateVelocity().y) },
                 onDragCancel = { settleMediaDrag() }
@@ -2445,10 +2464,12 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           .align(Alignment.BottomCenter)
           .fillMaxWidth()
           .fillMaxHeight(mediaHeightFraction),
-        progress = mediaProgress,
-        availableHeightPx = mediaAvailableHeightPx,
         onDismiss = { showChatGizaMedia = false },
-        onCreateClick = { showChatGizaMediaCreate = true }
+        onCreateClick = { showChatGizaMediaCreate = true },
+        onDragStart = ::startMediaDrag,
+        onDrag = ::updateMediaDrag,
+        onDragEnd = { settleMediaDrag(it) },
+        onDragCancel = { settleMediaDrag() }
       )
     }
   }
@@ -2479,10 +2500,12 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
 private fun ChatGizaMediaPanel(
   viewModel: ChatViewModel,
   modifier: Modifier = Modifier,
-  progress: Animatable<Float, AnimationVector1D>,
-  availableHeightPx: Int,
   onDismiss: () -> Unit,
-  onCreateClick: () -> Unit
+  onCreateClick: () -> Unit,
+  onDragStart: () -> Unit,
+  onDrag: (Float) -> Unit,
+  onDragEnd: (Float) -> Unit,
+  onDragCancel: () -> Unit
 ) {
   // A plain in-layout panel rather than a system ModalBottomSheet — a
   // modal sheet is a separate window that always covers the full screen
@@ -2496,44 +2519,28 @@ private fun ChatGizaMediaPanel(
       .background(Color(0xFF161616))
   ) {
     Column(modifier = Modifier.fillMaxSize()) {
-      val scope = rememberCoroutineScope()
-      // Tracks the finger 1:1 while dragging (snapTo, no easing lag). On
-      // release: springs the rest of the way open only if the drag was
-      // still mostly open (>50%) — otherwise it always springs all the way
-      // closed and actually dismisses (onDismiss), matching the same
-      // commit-or-cancel model as the handle that opens this panel, not a
-      // silent "freeze at whatever height you let go at." A fast fling in
-      // either direction overrides that position check, same as the handle.
+      // Live drag tracking and settle-on-release both live in the parent
+      // (HistoryScreen) now, shared with the outer handle below the nav bar
+      // — this handle just forwards raw gesture events up via callbacks
+      // instead of keeping its own separate Animatable/settle logic, which
+      // used to race the outer handle's (see the comment on mediaDragValue
+      // in HistoryScreen for what that race actually broke).
       Box(
         modifier = Modifier
           .fillMaxWidth()
-          .pointerInput(availableHeightPx) {
-            val dragRangePx = availableHeightPx.toFloat().coerceAtLeast(1f)
+          .pointerInput(Unit) {
             var velocityTracker = VelocityTracker()
-            fun settle(flingVelocityY: Float = 0f) {
-              scope.launch {
-                val shouldOpen = when {
-                  flingVelocityY <= -MEDIA_FLING_VELOCITY_THRESHOLD -> true
-                  flingVelocityY >= MEDIA_FLING_VELOCITY_THRESHOLD -> false
-                  else -> progress.value > 0.5f
-                }
-                if (shouldOpen) {
-                  progress.animateTo(1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
-                } else {
-                  progress.animateTo(0f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
-                  onDismiss()
-                }
-              }
-            }
             detectVerticalDragGestures(
-              onDragStart = { velocityTracker = VelocityTracker() },
-              onDragEnd = { settle(velocityTracker.calculateVelocity().y) },
-              onDragCancel = { settle() },
+              onDragStart = {
+                onDragStart()
+                velocityTracker = VelocityTracker()
+              },
+              onDragEnd = { onDragEnd(velocityTracker.calculateVelocity().y) },
+              onDragCancel = { onDragCancel() },
               onVerticalDrag = { change, dragAmount ->
                 change.consume()
                 velocityTracker.addPosition(change.uptimeMillis, change.position)
-                val newValue = (progress.value - dragAmount / dragRangePx).coerceIn(0f, 1f)
-                scope.launch { progress.snapTo(newValue) }
+                onDrag(dragAmount)
               }
             )
           }
