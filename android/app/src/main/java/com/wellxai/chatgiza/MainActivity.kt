@@ -1174,25 +1174,6 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
 
       // No back arrow here by design — exiting Live Vision happens via the
       // system back gesture (BackHandler above) or the Stop button below.
-      LiveCornerButton(
-        icon = if (torchOn) Icons.Outlined.FlashOn else Icons.Outlined.FlashOff,
-        contentDescription = "Flash",
-        enabled = cameraEnabled && !useFrontCamera,
-        modifier = Modifier.align(Alignment.TopStart).padding(top = 48.dp, start = 12.dp)
-      ) {
-        val next = !torchOn
-        runCatching { boundCamera?.cameraControl?.enableTorch(next) }
-        torchOn = next
-      }
-      LiveCornerButton(
-        icon = Icons.Outlined.Cameraswitch,
-        contentDescription = "Flip camera",
-        enabled = cameraEnabled,
-        modifier = Modifier.align(Alignment.TopEnd).padding(top = 48.dp, end = 12.dp)
-      ) {
-        useFrontCamera = !useFrontCamera
-      }
-
       Column(
         modifier = Modifier
           .align(Alignment.BottomCenter)
@@ -1202,18 +1183,40 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           .padding(bottom = 22.dp, start = 16.dp, end = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
       ) {
-        if (statusText.isNotEmpty()) {
+        // Flash and flip-camera sit level with the status pill (not pinned
+        // to the very top of the screen) — one on each side of it.
+        Box(modifier = Modifier.fillMaxWidth()) {
+          LiveCornerButton(
+            icon = if (torchOn) Icons.Outlined.FlashOn else Icons.Outlined.FlashOff,
+            contentDescription = "Flash",
+            enabled = cameraEnabled && !useFrontCamera,
+            modifier = Modifier.align(Alignment.CenterStart)
+          ) {
+            val next = !torchOn
+            runCatching { boundCamera?.cameraControl?.enableTorch(next) }
+            torchOn = next
+          }
           Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier
-              .size(width = 150.dp, height = 50.dp)
-              .clip(RoundedCornerShape(25.dp))
+              .align(Alignment.Center)
+              .height(36.dp)
+              .clip(RoundedCornerShape(percent = 50))
               .background(Color.White.copy(alpha = 0.12f))
+              .padding(horizontal = 14.dp)
           ) {
-            Icon(Icons.Outlined.RecordVoiceOver, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.size(8.dp))
-            Text(statusText, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Icon(Icons.Outlined.RecordVoiceOver, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+            Spacer(modifier = Modifier.size(6.dp))
+            Text(statusText, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+          }
+          LiveCornerButton(
+            icon = Icons.Outlined.Cameraswitch,
+            contentDescription = "Flip camera",
+            enabled = cameraEnabled,
+            modifier = Modifier.align(Alignment.CenterEnd)
+          ) {
+            useFrontCamera = !useFrontCamera
           }
         }
 
@@ -1292,47 +1295,51 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           modifier = Modifier.fillMaxWidth(),
           verticalAlignment = Alignment.CenterVertically
         ) {
-          Box {
-            Box(
-              modifier = Modifier
-                .size(64.dp)
-                .clip(CircleShape)
-                .background(Color(0xFF1A1A1A))
-                .clickable(onClick = { toolMenuOpen = true }),
-              contentAlignment = Alignment.Center
-            ) {
-              Icon(Icons.Filled.Add, contentDescription = "Tools", tint = Color.White, modifier = Modifier.size(22.dp))
-            }
-            DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
-              DropdownMenuItem(text = { Text("GiZa Pro") }, onClick = { viewModel.selectTool(null); toolMenuOpen = false })
-              DropdownMenuItem(text = { Text("Web search") }, onClick = { viewModel.selectTool("web_search"); toolMenuOpen = false })
-              DropdownMenuItem(text = { Text("Deep research") }, onClick = { viewModel.selectTool("deep_research"); toolMenuOpen = false })
-              DropdownMenuItem(text = { Text("Deep Think") }, onClick = { viewModel.selectTool("deep_think"); toolMenuOpen = false })
-            }
-          }
-          Spacer(modifier = Modifier.size(8.dp))
+          // "+" and the text field share one outer pill — "+" still reads
+          // as its own control via a wide inner plate, not a fully separate
+          // button, matching the merged composer bar in the reference.
           Box(
             modifier = Modifier
               .weight(1f)
               .height(64.dp)
               .clip(RoundedCornerShape(percent = 50))
-              .background(Color(0xFF1A1A1A)),
-            contentAlignment = Alignment.CenterStart
+              .background(Color(0xFF1A1A1A))
           ) {
-            TextField(
-              value = viewModel.input,
-              onValueChange = viewModel::onInputChange,
-              modifier = Modifier.fillMaxWidth(),
-              placeholder = { Text("Ask anything", color = Color.White.copy(alpha = 0.38f)) },
-              colors = TextFieldDefaults.colors(
-                unfocusedContainerColor = Color.Transparent,
-                focusedContainerColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedTextColor = Color.White,
-                focusedTextColor = Color.White
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxHeight()) {
+              Box {
+                Box(
+                  modifier = Modifier
+                    .padding(start = 6.dp)
+                    .size(width = 60.dp, height = 52.dp)
+                    .clip(RoundedCornerShape(percent = 50))
+                    .background(Color.White.copy(alpha = 0.10f))
+                    .clickable(onClick = { toolMenuOpen = true }),
+                  contentAlignment = Alignment.Center
+                ) {
+                  Icon(Icons.Filled.Add, contentDescription = "Tools", tint = Color.White, modifier = Modifier.size(26.dp))
+                }
+                DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
+                  DropdownMenuItem(text = { Text("GiZa Pro") }, onClick = { viewModel.selectTool(null); toolMenuOpen = false })
+                  DropdownMenuItem(text = { Text("Web search") }, onClick = { viewModel.selectTool("web_search"); toolMenuOpen = false })
+                  DropdownMenuItem(text = { Text("Deep research") }, onClick = { viewModel.selectTool("deep_research"); toolMenuOpen = false })
+                  DropdownMenuItem(text = { Text("Deep Think") }, onClick = { viewModel.selectTool("deep_think"); toolMenuOpen = false })
+                }
+              }
+              TextField(
+                value = viewModel.input,
+                onValueChange = viewModel::onInputChange,
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Ask anything", color = Color.White.copy(alpha = 0.38f)) },
+                colors = TextFieldDefaults.colors(
+                  unfocusedContainerColor = Color.Transparent,
+                  focusedContainerColor = Color.Transparent,
+                  unfocusedIndicatorColor = Color.Transparent,
+                  focusedIndicatorColor = Color.Transparent,
+                  unfocusedTextColor = Color.White,
+                  focusedTextColor = Color.White
+                )
               )
-            )
+            }
           }
           Spacer(modifier = Modifier.size(8.dp))
           Box(
@@ -1482,7 +1489,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
 private fun VoiceControlPill(icon: ImageVector, contentDescription: String, active: Boolean = true, onClick: () -> Unit) {
   Box(
     modifier = Modifier
-      .size(width = 64.dp, height = 52.dp)
+      .size(width = 68.dp, height = 60.dp)
       .clip(RoundedCornerShape(percent = 50))
       .background(Color(0xFF1F1F1F))
       .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(percent = 50))
@@ -1533,7 +1540,7 @@ private fun PushToTalkPill(onPress: () -> Unit, onRelease: () -> Unit) {
   var pressed by remember { mutableStateOf(false) }
   Box(
     modifier = Modifier
-      .size(width = 64.dp, height = 52.dp)
+      .size(width = 68.dp, height = 60.dp)
       .clip(RoundedCornerShape(percent = 50))
       .background(if (pressed) Color.White else Color(0xFF1F1F1F))
       .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(percent = 50))
