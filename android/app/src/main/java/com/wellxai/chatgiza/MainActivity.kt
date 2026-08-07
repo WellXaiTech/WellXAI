@@ -157,6 +157,7 @@ import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Feedback
 import androidx.compose.material.icons.outlined.GraphicEq
 import androidx.compose.material.icons.outlined.Headset
+import androidx.compose.material.icons.outlined.Hearing
 import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
@@ -1676,26 +1677,35 @@ private fun LiveVoiceSettingsSheet(
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .clip(RoundedCornerShape(16.dp))
+          .clip(RoundedCornerShape(24.dp))
           .background(Color.White.copy(alpha = 0.08f))
-          .clickable { onOutputDeviceChange(if (outputDevice == "speaker") "earpiece" else "speaker") }
-          .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
+          .padding(4.dp)
       ) {
-        Icon(
-          if (outputDevice == "speaker") Icons.Outlined.VolumeUp else Icons.Outlined.Headset,
-          contentDescription = null,
-          tint = Color.White,
-          modifier = Modifier.size(18.dp)
-        )
-        Spacer(modifier = Modifier.width(10.dp))
-        Text(
-          if (outputDevice == "speaker") "Speaker" else "Earpiece",
-          color = Color.White,
-          fontSize = 14.sp,
-          modifier = Modifier.weight(1f)
-        )
-        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
+        listOf(
+          Triple("headset", "Headset", Icons.Outlined.Headset),
+          Triple("speaker", "Speaker", Icons.Outlined.VolumeUp),
+          Triple("earpiece", "Earpiece", Icons.Outlined.Hearing)
+        ).forEach { (id, label, icon) ->
+          val selected = outputDevice == id
+          Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+              .weight(1f)
+              .clip(RoundedCornerShape(20.dp))
+              .background(if (selected) Color.White else Color.Transparent)
+              .clickable { onOutputDeviceChange(id) }
+              .padding(vertical = 10.dp)
+          ) {
+            Icon(icon, contentDescription = null, tint = if (selected) Color.Black else Color.White, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+              label,
+              color = if (selected) Color.Black else Color.White,
+              fontSize = 12.sp,
+              fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+            )
+          }
+        }
       }
     }
   }
