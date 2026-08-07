@@ -169,6 +169,8 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Cameraswitch
 import androidx.compose.material.icons.outlined.EmojiEvents
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.FlashOff
 import androidx.compose.material.icons.outlined.FlashOn
 import androidx.compose.material.icons.outlined.MedicalServices
@@ -1837,6 +1839,18 @@ private fun imageProxyToJpeg(image: ImageProxy): ByteArray {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+private fun HistoryNavTab(icon: ImageVector, label: String, onClick: () -> Unit) {
+  Column(
+    horizontalAlignment = Alignment.CenterHorizontally,
+    modifier = Modifier.clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 4.dp)
+  ) {
+    Icon(icon, contentDescription = label, tint = colorScheme.onBackground.copy(alpha = 0.7f), modifier = Modifier.size(22.dp))
+    Spacer(modifier = Modifier.height(3.dp))
+    Text(label, color = colorScheme.onBackground.copy(alpha = 0.7f), fontSize = 11.sp)
+  }
+}
+
+@Composable
 private fun HistoryScreen(viewModel: ChatViewModel) {
   // HistoryScreen is now always kept mounted inside the drawer (so it can be
   // swiped in/out), so this must only intercept back-press while it's
@@ -1860,20 +1874,17 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   Scaffold(
     containerColor = Color.Transparent,
     bottomBar = {
+      // Five-tab bottom nav, same slot layout as the reference's
+      // Home/Markets/Trade/Earn/Assets bar, re-purposed for ChatGiZa.
       Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.End,
-        verticalAlignment = Alignment.CenterVertically
+        modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly
       ) {
-        FilledIconButton(
-          onClick = { viewModel.newChat() },
-          colors = IconButtonDefaults.filledIconButtonColors(
-            containerColor = colorScheme.onBackground.copy(alpha = 0.12f),
-            contentColor = colorScheme.onBackground
-          )
-        ) {
-          Icon(Icons.Outlined.ModeEdit, contentDescription = "New chat")
-        }
+        HistoryNavTab(Icons.Outlined.Settings, "Settings", onClick = { viewModel.openSettings() })
+        HistoryNavTab(Icons.Outlined.Folder, "Projects", onClick = { viewModel.openProjects() })
+        HistoryNavTab(Icons.Outlined.Schedule, "Scheduled", onClick = { viewModel.openScheduled() })
+        HistoryNavTab(Icons.Outlined.GraphicEq, "Speak", onClick = { viewModel.openLiveVision() })
+        HistoryNavTab(Icons.Outlined.Home, "Home", onClick = { viewModel.closeHistory() })
       }
     }
   ) { padding ->
