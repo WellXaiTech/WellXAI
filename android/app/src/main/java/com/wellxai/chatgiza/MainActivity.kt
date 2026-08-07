@@ -1967,16 +1967,17 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Single "History" label, inset background — not full width,
-        // matching the reference's tab pill rather than a full-bleed bar.
+        // Single "History" label — solid, high-contrast pill (inverted fill,
+        // like a selected tab) rather than a faint tint that blends into
+        // the background, matching the reference's clearly-distinct tab.
         Box(
           modifier = Modifier
             .padding(horizontal = 16.dp)
             .clip(RoundedCornerShape(10.dp))
-            .background(colorScheme.onBackground.copy(alpha = 0.08f))
+            .background(colorScheme.onBackground)
             .padding(horizontal = 14.dp, vertical = 8.dp)
         ) {
-          Text("History", color = colorScheme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+          Text("History", color = colorScheme.background, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(10.dp))
