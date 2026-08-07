@@ -1943,30 +1943,34 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
         // large open space above its promo card.
         Spacer(modifier = Modifier.height(120.dp))
 
-        // "Events" card — image-style icon box, single label, no chevron.
-        // Background/layer kept as-is by design; taller now (more vertical
-        // padding) than the original compact row.
+        // "Events" card — bigger now, same charcoal as the History card
+        // below for a consistent palette across the screen. "Events" is
+        // just the small label; the bold line is what it actually is.
         Row(
           modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(colorScheme.onBackground.copy(alpha = 0.06f))
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color(0xFF23252B))
             .clickable(onClick = { viewModel.openScheduled() })
-            .padding(horizontal = 14.dp, vertical = 22.dp),
+            .padding(horizontal = 16.dp, vertical = 26.dp),
           verticalAlignment = Alignment.CenterVertically
         ) {
           Box(
             modifier = Modifier
-              .size(40.dp)
-              .clip(RoundedCornerShape(10.dp))
+              .size(52.dp)
+              .clip(RoundedCornerShape(14.dp))
               .background(colorScheme.onBackground.copy(alpha = 0.1f)),
             contentAlignment = Alignment.Center
           ) {
-            Icon(Icons.Outlined.Schedule, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
+            Icon(Icons.Outlined.Schedule, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(24.dp))
           }
-          Spacer(modifier = Modifier.size(12.dp))
-          Text("Events", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+          Spacer(modifier = Modifier.size(14.dp))
+          Column(modifier = Modifier.weight(1f)) {
+            Text("Events", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 11.sp)
+            Spacer(modifier = Modifier.height(2.dp))
+            Text("Automations & scheduled tasks", color = colorScheme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+          }
         }
 
         // Bigger gap pushing the whole History card further down the
