@@ -94,12 +94,12 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DismissibleDrawerSheet
+import androidx.compose.material3.DismissibleNavigationDrawer
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
@@ -312,14 +312,32 @@ class MainActivity : ComponentActivity() {
                 }
               }
             }
-            ModalNavigationDrawer(
+            // The keyboard used to stay open (sitting uselessly behind the
+            // drawer) if the user swiped History open mid-typing — watch
+            // targetValue (not currentValue) so it dismisses the instant the
+            // swipe commits to opening, not only once the animation finishes.
+            val keyboardController = LocalSoftwareKeyboardController.current
+            val focusManager = LocalFocusManager.current
+            LaunchedEffect(drawerState) {
+              snapshotFlow { drawerState.targetValue }.collect { target ->
+                if (target == DrawerValue.Open) {
+                  focusManager.clearFocus()
+                  keyboardController?.hide()
+                }
+              }
+            }
+            // Dismissible (not Modal) — the reference behavior is the chat
+            // content, composer included, physically sliding aside as
+            // History opens, not a scrim-covered overlay sitting on top of
+            // a frozen composer underneath.
+            DismissibleNavigationDrawer(
               drawerState = drawerState,
               // No custom width here on purpose — Material3's own default
               // drawer width is what its swipe-gesture math (the distance a
               // drag needs to cover to fully open) is built around; overriding
               // it made the swipe stop short of fully open.
               drawerContent = {
-                ModalDrawerSheet(drawerContainerColor = colorScheme.background) {
+                DismissibleDrawerSheet(drawerContainerColor = colorScheme.background) {
                   HistoryScreen(viewModel)
                 }
               }
