@@ -66,6 +66,7 @@ class RealtimeVisionController(
   private var webSocket: WebSocket? = null
   private var audioRecord: AudioRecord? = null
   private var audioTrack: AudioTrack? = null
+  @Volatile private var capturing = false
   private var captureJob: Job? = null
   private var connectJob: Job? = null
   private var echoCanceler: AcousticEchoCanceler? = null
@@ -228,7 +229,10 @@ class RealtimeVisionController(
         if (delta.isNotEmpty()) {
           val bytes = Base64.decode(delta, Base64.NO_WRAP)
           playedAudioBytes += bytes.size
-          if (speakerEnabled) audioTrack?.write(bytes, 0, bytes.size)
+          // write() races against stopInternal() releasing the track from
+          // another thread (e.g. the user hanging up mid-reply) -- caught
+          // rather than left to crash the process.
+          if (speakerEnabled) runCatching { audioTrack?.write(bytes, 0, bytes.size) }
         }
       }
       "response.output_audio.done", "response.done" -> {
@@ -343,16 +347,23 @@ class RealtimeVisionController(
     }
 
     record.startRecording()
+    capturing = true
 
     captureJob = scope.launch(Dispatchers.IO) {
       val buffer = ByteArray(bufferSize)
-      while (audioRecord != null) {
-        val read = record.read(buffer, 0, buffer.size)
+      // record.read() is a blocking native call — captureJob.cancel() alone
+      // doesn't interrupt it, so the loop instead watches this flag (which
+      // stopInternal() clears *before* stopping/releasing the record) and
+      // every read is caught in case a stop/release lands mid-call anyway.
+      while (capturing) {
+        val read = runCatching { record.read(buffer, 0, buffer.size) }.getOrDefault(-1)
         if (read > 0 && !micMuted) {
           val chunk = buffer.copyOf(read)
           val b64 = Base64.encodeToString(chunk, Base64.NO_WRAP)
           val event = JSONObject().put("type", "input_audio_buffer.append").put("audio", b64)
           webSocket?.send(event.toString())
+        } else if (read < 0) {
+          break
         }
       }
     }
@@ -391,22 +402,28 @@ class RealtimeVisionController(
   }
 
   private fun stopInternal() {
+    // Flip this before touching the record at all -- it's what actually
+    // gets the capture loop off of record.read() (cancel() alone can't
+    // interrupt that blocking native call), so by the time stop()/release()
+    // run below the loop has a chance to have already backed off instead
+    // of calling into a record that's mid-release on another thread.
+    capturing = false
     captureJob?.cancel()
     captureJob = null
-    echoCanceler?.release()
+    runCatching { echoCanceler?.release() }
     echoCanceler = null
-    noiseSuppressor?.release()
+    runCatching { noiseSuppressor?.release() }
     noiseSuppressor = null
-    gainControl?.release()
+    runCatching { gainControl?.release() }
     gainControl = null
     audioRecord?.let {
       runCatching { it.stop() }
-      it.release()
+      runCatching { it.release() }
     }
     audioRecord = null
     audioTrack?.let {
       runCatching { it.stop() }
-      it.release()
+      runCatching { it.release() }
     }
     audioTrack = null
     webSocket = null
