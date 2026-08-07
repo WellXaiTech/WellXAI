@@ -39,6 +39,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.background
@@ -180,6 +181,7 @@ import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MicNone
 import androidx.compose.material.icons.outlined.ModeEdit
 import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material.icons.outlined.NoAdultContent
@@ -227,6 +229,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
@@ -236,6 +239,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.AnnotatedString
@@ -2340,23 +2344,43 @@ private fun ChatGizaMediaCreateSheet(onDismiss: () -> Unit) {
         .padding(horizontal = 20.dp)
         .padding(bottom = 32.dp)
     ) {
-      Text("Unda", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-      Spacer(modifier = Modifier.height(16.dp))
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Image(
+          painter = painterResource(R.mipmap.ic_launcher_round),
+          contentDescription = null,
+          modifier = Modifier.size(32.dp).clip(CircleShape)
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Text("ChatGiZa Media", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.weight(1f))
+        Icon(Icons.Outlined.Notifications, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+      }
+      Spacer(modifier = Modifier.height(20.dp))
       Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        MediaCreateOption(Icons.Outlined.EditNote, "Post", Modifier.weight(1f), onDismiss)
-        MediaCreateOption(Icons.Outlined.Description, "Article", Modifier.weight(1f), onDismiss)
-        MediaCreateOption(Icons.Outlined.Videocam, "Video", Modifier.weight(1f), onDismiss)
+        MediaCreateOption("Post", Modifier.weight(1f), onDismiss) {
+          Icon(Icons.Outlined.Edit, contentDescription = "Post", tint = Color(0xFFFFC94A), modifier = Modifier.size(24.dp))
+        }
+        MediaCreateOption("Article", Modifier.weight(1f), onDismiss) {
+          Icon(Icons.Outlined.Description, contentDescription = "Article", tint = Color(0xFFFFC94A), modifier = Modifier.size(24.dp))
+        }
+        MediaCreateOption("Video", Modifier.weight(1f), onDismiss) {
+          MediaVideoIcon(modifier = Modifier.size(24.dp), tint = Color(0xFFFFC94A))
+        }
       }
       Spacer(modifier = Modifier.height(10.dp))
-      MediaCreateWideRow(Icons.Outlined.Widgets, "Creator Center", onDismiss)
+      MediaCreateWideRow("Creator Center", onDismiss) {
+        Icon(Icons.Outlined.Widgets, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+      }
       Spacer(modifier = Modifier.height(10.dp))
-      MediaCreateWideRow(Icons.Outlined.Hub, "CreatorPad", onDismiss)
+      MediaCreateWideRow("CreatorPad", onDismiss) {
+        MediaCreatorPadIcon(modifier = Modifier.size(20.dp), tint = Color.White)
+      }
     }
   }
 }
 
 @Composable
-private fun MediaCreateOption(icon: ImageVector, label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun MediaCreateOption(label: String, modifier: Modifier = Modifier, onClick: () -> Unit, icon: @Composable () -> Unit) {
   Column(
     modifier = modifier
       .clip(RoundedCornerShape(14.dp))
@@ -2365,14 +2389,14 @@ private fun MediaCreateOption(icon: ImageVector, label: String, modifier: Modifi
       .padding(vertical = 16.dp),
     horizontalAlignment = Alignment.CenterHorizontally
   ) {
-    Icon(icon, contentDescription = label, tint = Color(0xFFFFC94A), modifier = Modifier.size(24.dp))
+    icon()
     Spacer(modifier = Modifier.height(8.dp))
     Text(label, color = Color.White, fontSize = 13.sp)
   }
 }
 
 @Composable
-private fun MediaCreateWideRow(icon: ImageVector, label: String, onClick: () -> Unit) {
+private fun MediaCreateWideRow(label: String, onClick: () -> Unit, icon: @Composable () -> Unit) {
   Row(
     modifier = Modifier
       .fillMaxWidth()
@@ -2382,9 +2406,84 @@ private fun MediaCreateWideRow(icon: ImageVector, label: String, onClick: () -> 
       .padding(horizontal = 16.dp, vertical = 14.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+    icon()
     Spacer(modifier = Modifier.width(12.dp))
     Text(label, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+  }
+}
+
+// Hand-drawn to match the reference's clapperboard-with-play-triangle
+// glyph — no Material Icons entry has that exact silhouette.
+@Composable
+private fun MediaVideoIcon(modifier: Modifier = Modifier, tint: Color = Color.White) {
+  Canvas(modifier = modifier) {
+    val scale = size.width / 24f
+    val strokeW = 1.6f * scale
+    drawRoundRect(
+      color = tint,
+      topLeft = Offset(3f * scale, 5f * scale),
+      size = Size(18f * scale, 15f * scale),
+      cornerRadius = CornerRadius(3f * scale, 3f * scale),
+      style = Stroke(width = strokeW, cap = StrokeCap.Round)
+    )
+    drawLine(
+      color = tint,
+      start = Offset(3f * scale, 9.5f * scale),
+      end = Offset(21f * scale, 9.5f * scale),
+      strokeWidth = strokeW,
+      cap = StrokeCap.Round
+    )
+    listOf(6.5f, 10.5f, 14.5f, 18f).forEach { x ->
+      drawLine(
+        color = tint,
+        start = Offset(x * scale, 5f * scale),
+        end = Offset((x - 2f) * scale, 9.5f * scale),
+        strokeWidth = strokeW * 0.85f,
+        cap = StrokeCap.Round
+      )
+    }
+    val playTriangle = Path().apply {
+      moveTo(10f * scale, 12.2f * scale)
+      lineTo(16f * scale, 15.3f * scale)
+      lineTo(10f * scale, 18.4f * scale)
+      close()
+    }
+    drawPath(playTriangle, color = tint)
+  }
+}
+
+// Hand-drawn to match the reference's ascending-steps + diamond glyph —
+// no Material Icons entry has that exact silhouette.
+@Composable
+private fun MediaCreatorPadIcon(modifier: Modifier = Modifier, tint: Color = Color.White) {
+  Canvas(modifier = modifier) {
+    val scale = size.width / 24f
+    val strokeW = 1.6f * scale
+    drawRoundRect(
+      color = tint,
+      topLeft = Offset(3f * scale, 15f * scale),
+      size = Size(6.5f * scale, 6f * scale),
+      cornerRadius = CornerRadius(1.4f * scale, 1.4f * scale),
+      style = Stroke(width = strokeW, cap = StrokeCap.Round)
+    )
+    drawRoundRect(
+      color = tint,
+      topLeft = Offset(11f * scale, 8f * scale),
+      size = Size(6.5f * scale, 13f * scale),
+      cornerRadius = CornerRadius(1.4f * scale, 1.4f * scale),
+      style = Stroke(width = strokeW, cap = StrokeCap.Round)
+    )
+    val cx = 14.25f * scale
+    val cy = 4.4f * scale
+    val r = 2.3f * scale
+    val diamond = Path().apply {
+      moveTo(cx, cy - r)
+      lineTo(cx + r, cy)
+      lineTo(cx, cy + r)
+      lineTo(cx - r, cy)
+      close()
+    }
+    drawPath(diamond, color = tint, style = Stroke(width = strokeW))
   }
 }
 
