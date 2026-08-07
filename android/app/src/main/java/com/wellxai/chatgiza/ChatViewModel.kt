@@ -11,6 +11,18 @@ import java.util.UUID
 
 data class UiMessage(val id: String, val role: String, val content: String, val createdAt: Long? = null)
 
+// ChatGiZa Media posts are local-only for now (no backend feed exists yet) --
+// composed in ChatGizaMediaPostComposerScreen and shown in the panel's own
+// feed so posting actually produces visible, persisted-for-the-session
+// results instead of just closing a sheet with nothing to show for it.
+data class MediaPost(
+  val id: String,
+  val text: String,
+  val imageUri: String?,
+  val sentiment: String?,
+  val createdAt: Long
+)
+
 sealed class AppScreen {
   object Loading : AppScreen()
   object SignedOut : AppScreen()
@@ -753,6 +765,20 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun openHistory() {
     screen = AppScreen.History
+  }
+
+  var mediaPosts by mutableStateOf<List<MediaPost>>(emptyList())
+    private set
+
+  fun addMediaPost(text: String, imageUri: String?, sentiment: String?) {
+    val post = MediaPost(
+      id = UUID.randomUUID().toString(),
+      text = text,
+      imageUri = imageUri,
+      sentiment = sentiment,
+      createdAt = System.currentTimeMillis()
+    )
+    mediaPosts = listOf(post) + mediaPosts
   }
 
   fun closeHistory() {
