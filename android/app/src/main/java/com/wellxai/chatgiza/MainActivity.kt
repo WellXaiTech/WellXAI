@@ -1238,7 +1238,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           Spacer(modifier = Modifier.height(10.dp))
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
           Box {
             VoiceControlPill(icon = Icons.Outlined.Videocam, contentDescription = "Camera", active = cameraEnabled) {
               cameraMenuOpen = true
@@ -1301,7 +1301,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           Box(
             modifier = Modifier
               .weight(1f)
-              .height(76.dp)
+              .height(58.dp)
               .clip(RoundedCornerShape(percent = 50))
               .background(Color(0xFF1A1A1A))
           ) {
@@ -1309,14 +1309,14 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               Box {
                 Box(
                   modifier = Modifier
-                    .padding(start = 6.dp)
-                    .size(width = 68.dp, height = 62.dp)
+                    .padding(start = 5.dp)
+                    .size(width = 50.dp, height = 48.dp)
                     .clip(RoundedCornerShape(percent = 50))
                     .background(Color.White.copy(alpha = 0.10f))
                     .clickable(onClick = { toolMenuOpen = true }),
                   contentAlignment = Alignment.Center
                 ) {
-                  Icon(Icons.Filled.Add, contentDescription = "Tools", tint = Color.White, modifier = Modifier.size(28.dp))
+                  Icon(Icons.Filled.Add, contentDescription = "Tools", tint = Color.White, modifier = Modifier.size(22.dp))
                 }
                 DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
                   DropdownMenuItem(text = { Text("GiZa Pro") }, onClick = { viewModel.selectTool(null); toolMenuOpen = false })
@@ -1344,7 +1344,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           Spacer(modifier = Modifier.size(8.dp))
           Box(
             modifier = Modifier
-              .size(width = 112.dp, height = 76.dp)
+              .size(width = 100.dp, height = 58.dp)
               .clip(RoundedCornerShape(percent = 50))
               .background(Color.White)
               .clickable(onClick = {
