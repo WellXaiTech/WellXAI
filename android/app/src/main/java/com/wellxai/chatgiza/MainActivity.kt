@@ -105,6 +105,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -2284,12 +2286,17 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChatGizaMediaSheet(onDismiss: () -> Unit, onCreateClick: () -> Unit) {
+  // skipPartiallyExpanded = false so the sheet has a mid-drag "peek" stop
+  // on its way to fully open -- the "+" is only shown during that peek,
+  // per the reference: appears on a small pull, tucks away once you pull
+  // it all the way open.
+  val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
   ModalBottomSheet(
     onDismissRequest = onDismiss,
-    containerColor = Color(0xFF161616),
-    modifier = Modifier.fillMaxHeight(0.92f)
+    sheetState = sheetState,
+    containerColor = Color(0xFF161616)
   ) {
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.92f)) {
       Column(modifier = Modifier.fillMaxSize()) {
         Text(
           "ChatGiZa Media",
@@ -2318,17 +2325,19 @@ private fun ChatGizaMediaSheet(onDismiss: () -> Unit, onCreateClick: () -> Unit)
           }
         }
       }
-      Box(
-        modifier = Modifier
-          .align(Alignment.BottomEnd)
-          .padding(20.dp)
-          .size(56.dp)
-          .clip(CircleShape)
-          .background(Color(0xFFFFC94A))
-          .clickable(onClick = onCreateClick),
-        contentAlignment = Alignment.Center
-      ) {
-        Icon(Icons.Filled.Add, contentDescription = "Unda", tint = Color.Black, modifier = Modifier.size(26.dp))
+      if (sheetState.targetValue != SheetValue.Expanded) {
+        Box(
+          modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .padding(20.dp)
+            .size(56.dp)
+            .clip(CircleShape)
+            .background(Color(0xFFFFC94A))
+            .clickable(onClick = onCreateClick),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(Icons.Filled.Add, contentDescription = "Unda", tint = Color.Black, modifier = Modifier.size(26.dp))
+        }
       }
     }
   }
