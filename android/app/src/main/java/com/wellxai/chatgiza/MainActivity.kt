@@ -1842,11 +1842,9 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   // Chat/Imagine while the drawer is closed.
   BackHandler(enabled = viewModel.screen is AppScreen.History) { viewModel.closeHistory() }
 
-  var historyFilter by remember { mutableStateOf("History") }
   val query = viewModel.historySearchQuery.trim()
   val visibleConversations = viewModel.conversations
     .filter { query.isEmpty() || it.title.contains(query, ignoreCase = true) }
-    .filter { historyFilter != "Pinned" || it.pinned }
 
   var menuConvo by remember { mutableStateOf<ApiConversation?>(null) }
   var deleteConfirmConvo by remember { mutableStateOf<ApiConversation?>(null) }
@@ -1883,180 +1881,137 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
       }
     }
   ) { padding ->
-    Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-      Spacer(modifier = Modifier.height(6.dp))
+    // Everything — search, Events, the History label, and the conversation
+    // list — is one scrollable column now, so the top section scrolls away
+    // with the list and comes back when you scroll back up, instead of
+    // being pinned above a separately-scrolling list.
+    LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
+      item {
+        Spacer(modifier = Modifier.height(6.dp))
 
-      // Avatar + search share the top row, matching the reference layout —
-      // the avatar is now just a tap target into Account rather than also
-      // carrying the name/email inline.
-      Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Box(
-          modifier = Modifier.clickable(onClick = { viewModel.openAccount() })
+        Row(
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+          verticalAlignment = Alignment.CenterVertically
         ) {
-          if (viewModel.userImage != null) {
-            AsyncImage(
-              model = viewModel.userImage,
-              contentDescription = "Profile",
-              modifier = Modifier.size(40.dp).clip(CircleShape)
-            )
-          } else {
-            Icon(
-              Icons.Outlined.AccountCircle,
-              contentDescription = "Profile",
-              tint = colorScheme.onBackground,
-              modifier = Modifier.size(40.dp)
+          Box(
+            modifier = Modifier.clickable(onClick = { viewModel.openAccount() })
+          ) {
+            if (viewModel.userImage != null) {
+              AsyncImage(
+                model = viewModel.userImage,
+                contentDescription = "Profile",
+                modifier = Modifier.size(40.dp).clip(CircleShape)
+              )
+            } else {
+              Icon(
+                Icons.Outlined.AccountCircle,
+                contentDescription = "Profile",
+                tint = colorScheme.onBackground,
+                modifier = Modifier.size(40.dp)
+              )
+            }
+          }
+          Spacer(modifier = Modifier.size(12.dp))
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+              .weight(1f)
+              .height(44.dp)
+              .clip(RoundedCornerShape(22.dp))
+              .background(colorScheme.onBackground.copy(alpha = 0.08f))
+              .padding(horizontal = 14.dp)
+          ) {
+            Icon(Icons.Outlined.Search, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.size(8.dp))
+            TextField(
+              value = viewModel.historySearchQuery,
+              onValueChange = viewModel::onHistorySearchQueryChange,
+              modifier = Modifier.weight(1f),
+              placeholder = { Text("Search", color = colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 15.sp) },
+              textStyle = androidx.compose.ui.text.TextStyle(fontSize = 15.sp, color = colorScheme.onBackground),
+              singleLine = true,
+              colors = TextFieldDefaults.colors(
+                unfocusedContainerColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent
+              )
             )
           }
         }
-        Spacer(modifier = Modifier.size(12.dp))
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // "Events"-card-style row for Automations — image-style icon box,
+        // small label + bold title, chevron affordance on the right.
         Row(
-          verticalAlignment = Alignment.CenterVertically,
           modifier = Modifier
-            .weight(1f)
-            .height(44.dp)
-            .clip(RoundedCornerShape(22.dp))
-            .background(colorScheme.onBackground.copy(alpha = 0.08f))
-            .padding(horizontal = 14.dp)
-        ) {
-          Icon(Icons.Outlined.Search, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
-          Spacer(modifier = Modifier.size(8.dp))
-          TextField(
-            value = viewModel.historySearchQuery,
-            onValueChange = viewModel::onHistorySearchQueryChange,
-            modifier = Modifier.weight(1f),
-            placeholder = { Text("Search", color = colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 15.sp) },
-            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 15.sp, color = colorScheme.onBackground),
-            singleLine = true,
-            colors = TextFieldDefaults.colors(
-              unfocusedContainerColor = Color.Transparent,
-              focusedContainerColor = Color.Transparent,
-              unfocusedIndicatorColor = Color.Transparent,
-              focusedIndicatorColor = Color.Transparent
-            )
-          )
-        }
-      }
-
-      Spacer(modifier = Modifier.height(10.dp))
-
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(horizontal = 16.dp, vertical = 4.dp)
-          .clip(RoundedCornerShape(14.dp))
-          .background(Color(0xFF1648DF))
-          .clickable(onClick = { viewModel.openBilling() })
-          .padding(horizontal = 12.dp, vertical = 5.dp),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Box(
-          modifier = Modifier
-            .size(22.dp)
-            .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.2f)),
-          contentAlignment = Alignment.Center
-        ) {
-          Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
-        }
-        Spacer(modifier = Modifier.size(10.dp))
-        Column(modifier = Modifier.weight(1f)) {
-          Text("Save 66% on GiZa Pro", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-          Text("Early access to new features", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
-        }
-        Spacer(modifier = Modifier.size(8.dp))
-        Box(
-          modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(Color.White)
-            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .background(colorScheme.onBackground.copy(alpha = 0.06f))
+            .clickable(onClick = { viewModel.openScheduled() })
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+          verticalAlignment = Alignment.CenterVertically
         ) {
-          Text("Claim Offer", color = Color(0xFF1648DF), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        }
-      }
-
-      Spacer(modifier = Modifier.height(8.dp))
-
-      // "Events"-card-style row for Automations — image-style icon box,
-      // small label + bold title, chevron affordance on the right.
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(horizontal = 16.dp, vertical = 4.dp)
-          .clip(RoundedCornerShape(16.dp))
-          .background(colorScheme.onBackground.copy(alpha = 0.06f))
-          .clickable(onClick = { viewModel.openScheduled() })
-          .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Box(
-          modifier = Modifier
-            .size(40.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(colorScheme.onBackground.copy(alpha = 0.1f)),
-          contentAlignment = Alignment.Center
-        ) {
-          Icon(Icons.Outlined.Schedule, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
-        }
-        Spacer(modifier = Modifier.size(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-          Text("Events", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 11.sp)
-          Text("Automations", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-        }
-        Icon(
-          Icons.Filled.ChevronRight,
-          contentDescription = null,
-          tint = colorScheme.onBackground.copy(alpha = 0.4f),
-          modifier = Modifier.size(20.dp)
-        )
-      }
-
-      Spacer(modifier = Modifier.height(10.dp))
-
-      // Filter tabs above the list, matching the reference's
-      // Favorites/Hot/New row — mapped to what History can actually filter.
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .horizontalScroll(rememberScrollState())
-          .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(20.dp)
-      ) {
-        listOf("History", "Pinned").forEach { label ->
-          val selected = historyFilter == label
-          Text(
-            label,
-            color = colorScheme.onBackground.copy(alpha = if (selected) 1f else 0.5f),
-            fontSize = 14.sp,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+          Box(
             modifier = Modifier
-              .clickable { historyFilter = label }
-              .padding(vertical = 8.dp)
+              .size(40.dp)
+              .clip(RoundedCornerShape(10.dp))
+              .background(colorScheme.onBackground.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(Icons.Outlined.Schedule, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
+          }
+          Spacer(modifier = Modifier.size(12.dp))
+          Column(modifier = Modifier.weight(1f)) {
+            Text("Events", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 11.sp)
+            Text("Automations", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+          }
+          Icon(
+            Icons.Filled.ChevronRight,
+            contentDescription = null,
+            tint = colorScheme.onBackground.copy(alpha = 0.4f),
+            modifier = Modifier.size(20.dp)
           )
         }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Single "History" label, inset background — not full width,
+        // matching the reference's tab pill rather than a full-bleed bar.
+        Box(
+          modifier = Modifier
+            .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(colorScheme.onBackground.copy(alpha = 0.08f))
+            .padding(horizontal = 14.dp, vertical = 8.dp)
+        ) {
+          Text("History", color = colorScheme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
       }
 
       if (viewModel.loadingHistory) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-          CircularProgressIndicator(color = colorScheme.onBackground)
+        item {
+          Box(modifier = Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = colorScheme.onBackground)
+          }
         }
       } else if (visibleConversations.isEmpty()) {
-        Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-          Text(
-            if (query.isEmpty()) "No conversations yet." else "No matches.",
-            color = colorScheme.onBackground.copy(alpha = 0.6f),
-            fontSize = 16.sp
-          )
+        item {
+          Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+            Text(
+              if (query.isEmpty()) "No conversations yet." else "No matches.",
+              color = colorScheme.onBackground.copy(alpha = 0.6f),
+              fontSize = 16.sp
+            )
+          }
         }
       } else {
-        LazyColumn(
-          modifier = Modifier.weight(1f).fillMaxWidth(),
-          contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-          verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-          items(visibleConversations, key = { it.id }) { convo ->
+        items(visibleConversations, key = { it.id }) { convo ->
+          Box(modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)) {
             HistoryRow(
               convo,
               onClick = { viewModel.selectConversation(convo.id) },
