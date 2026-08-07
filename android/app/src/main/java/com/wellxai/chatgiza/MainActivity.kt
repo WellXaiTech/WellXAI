@@ -1908,7 +1908,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           verticalAlignment = Alignment.CenterVertically
         ) {
           Box(
-            modifier = Modifier.clickable(onClick = { viewModel.openAccount() })
+            modifier = Modifier.clickable(onClick = { viewModel.openEditProfile() })
           ) {
             if (viewModel.userImage != null) {
               AsyncImage(
@@ -3864,45 +3864,8 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         Text("Settings", color = colorScheme.onBackground, fontSize = 19.sp, fontWeight = FontWeight.Bold)
       }
 
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(20.dp))
-          .background(colorScheme.onBackground.copy(alpha = 0.08f))
-          .clickable { viewModel.openEditProfile() }
-          .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        if (viewModel.userImage != null) {
-          AsyncImage(
-            model = viewModel.userImage,
-            contentDescription = "Profile",
-            modifier = Modifier
-              .size(68.dp)
-              .clip(CircleShape)
-              .border(width = 1.5.dp, color = colorScheme.onBackground.copy(alpha = 0.25f), shape = CircleShape)
-          )
-        } else {
-          Icon(
-            Icons.Outlined.AccountCircle,
-            contentDescription = "Profile",
-            tint = colorScheme.onBackground,
-            modifier = Modifier
-              .size(68.dp)
-              .border(width = 1.5.dp, color = colorScheme.onBackground.copy(alpha = 0.25f), shape = CircleShape)
-          )
-        }
-        Spacer(modifier = Modifier.size(12.dp))
-        Column {
-          Text(viewModel.userName ?: "", color = colorScheme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-          if (viewModel.userEmail != null) {
-            Text(viewModel.userEmail ?: "", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 13.sp)
-          }
-        }
-      }
-
-      Spacer(modifier = Modifier.height(16.dp))
-
+      // No profile card here anymore — the avatar in History now opens
+      // Edit Profile directly, so this screen is settings-only.
       Row(
         modifier = Modifier
           .fillMaxWidth()
