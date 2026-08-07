@@ -18,6 +18,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
@@ -165,7 +166,10 @@ import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.AutoStories
+import androidx.compose.material.icons.outlined.Cameraswitch
 import androidx.compose.material.icons.outlined.EmojiEvents
+import androidx.compose.material.icons.outlined.FlashOff
+import androidx.compose.material.icons.outlined.FlashOn
 import androidx.compose.material.icons.outlined.MedicalServices
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MicNone
@@ -182,6 +186,7 @@ import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.RecordVoiceOver
 import androidx.compose.material.icons.outlined.ReportProblem
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.ScreenShare
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Share
@@ -201,6 +206,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -249,6 +255,7 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import java.io.ByteArrayOutputStream
 import java.util.Locale
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val GOOGLE_WEB_CLIENT_ID =
@@ -1046,14 +1053,19 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
     mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
   }
   var cameraEnabled by remember { mutableStateOf(false) }
+  var useFrontCamera by remember { mutableStateOf(false) }
+  var torchOn by remember { mutableStateOf(false) }
   var speakerEnabled by remember { mutableStateOf(true) }
   var micMuted by remember { mutableStateOf(false) }
   var toolMenuOpen by remember { mutableStateOf(false) }
+  var cameraMenuOpen by remember { mutableStateOf(false) }
+  var shareScreenComingSoon by remember { mutableStateOf(false) }
   var voiceSettingsOpen by remember { mutableStateOf(false) }
   var pendingPersonalityId by remember { mutableStateOf<String?>(null) }
   var customPersonalityDialogOpen by remember { mutableStateOf(false) }
   var customPersonalityDraft by remember { mutableStateOf(viewModel.customPersonalityText) }
   var cameraProviderRef by remember { mutableStateOf<ProcessCameraProvider?>(null) }
+  var boundCamera by remember { mutableStateOf<Camera?>(null) }
 
   val micPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
     hasMicPermission = granted
@@ -1093,6 +1105,11 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
 
   Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
     if (cameraEnabled && hasCameraPermission) {
+      // Keyed on useFrontCamera so flipping the camera fully disposes and
+      // recreates this AndroidView — factory() below already unbinds the
+      // provider before rebinding, so a fresh factory run cleanly swaps to
+      // the other CameraSelector rather than needing manual rebind logic.
+      key(useFrontCamera) {
       AndroidView(
         modifier = Modifier.fillMaxSize(),
         factory = { ctx ->
@@ -1118,7 +1135,9 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
             }
             try {
               cameraProvider.unbindAll()
-              cameraProvider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
+              val selector = if (useFrontCamera) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
+              boundCamera = cameraProvider.bindToLifecycle(lifecycleOwner, selector, preview, analysis)
+              torchOn = false
             } catch (e: Exception) {
               controller.reportCameraError(e.message ?: "Camera failed to start")
             }
@@ -1126,6 +1145,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           previewView
         }
       )
+      }
     }
 
     if (!hasMicPermission) {
@@ -1152,11 +1172,25 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
         else -> "Go ahead"
       }
 
-      IconButton(
-        onClick = { viewModel.closeLiveVision() },
+      // No back arrow here by design — exiting Live Vision happens via the
+      // system back gesture (BackHandler above) or the Stop button below.
+      LiveCornerButton(
+        icon = if (torchOn) Icons.Outlined.FlashOn else Icons.Outlined.FlashOff,
+        contentDescription = "Flash",
+        enabled = cameraEnabled && !useFrontCamera,
         modifier = Modifier.align(Alignment.TopStart).padding(top = 48.dp, start = 12.dp)
       ) {
-        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(32.dp))
+        val next = !torchOn
+        runCatching { boundCamera?.cameraControl?.enableTorch(next) }
+        torchOn = next
+      }
+      LiveCornerButton(
+        icon = Icons.Outlined.Cameraswitch,
+        contentDescription = "Flip camera",
+        enabled = cameraEnabled,
+        modifier = Modifier.align(Alignment.TopEnd).padding(top = 48.dp, end = 12.dp)
+      ) {
+        useFrontCamera = !useFrontCamera
       }
 
       Column(
@@ -1185,15 +1219,51 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
 
         Spacer(modifier = Modifier.height(18.dp))
 
+        if (shareScreenComingSoon) {
+          LaunchedEffect(Unit) {
+            delay(2000)
+            shareScreenComingSoon = false
+          }
+          Box(
+            modifier = Modifier
+              .clip(RoundedCornerShape(percent = 50))
+              .background(Color.White.copy(alpha = 0.15f))
+              .padding(horizontal = 16.dp, vertical = 8.dp)
+          ) {
+            Text("Share Screen — coming soon", color = Color.White, fontSize = 12.sp)
+          }
+          Spacer(modifier = Modifier.height(10.dp))
+        }
+
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-          VoiceControlPill(icon = Icons.Outlined.Videocam, contentDescription = "Camera", active = cameraEnabled) {
-            if (cameraEnabled) {
-              cameraProviderRef?.unbindAll()
-              cameraEnabled = false
-            } else if (hasCameraPermission) {
-              cameraEnabled = true
-            } else {
-              cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+          Box {
+            VoiceControlPill(icon = Icons.Outlined.Videocam, contentDescription = "Camera", active = cameraEnabled) {
+              cameraMenuOpen = true
+            }
+            DropdownMenu(expanded = cameraMenuOpen, onDismissRequest = { cameraMenuOpen = false }) {
+              DropdownMenuItem(
+                text = { Text("Camera") },
+                leadingIcon = { Icon(Icons.Outlined.Videocam, contentDescription = null) },
+                onClick = {
+                  cameraMenuOpen = false
+                  if (cameraEnabled) {
+                    cameraProviderRef?.unbindAll()
+                    cameraEnabled = false
+                  } else if (hasCameraPermission) {
+                    cameraEnabled = true
+                  } else {
+                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                  }
+                }
+              )
+              DropdownMenuItem(
+                text = { Text("Share Screen") },
+                leadingIcon = { Icon(Icons.Outlined.ScreenShare, contentDescription = null) },
+                onClick = {
+                  cameraMenuOpen = false
+                  shareScreenComingSoon = true
+                }
+              )
             }
           }
           VoiceControlPill(icon = Icons.Outlined.VolumeUp, contentDescription = "Speaker", active = speakerEnabled) {
@@ -1225,8 +1295,8 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           Box {
             Box(
               modifier = Modifier
-                .size(44.dp)
-                .clip(RoundedCornerShape(22.dp))
+                .size(64.dp)
+                .clip(CircleShape)
                 .background(Color(0xFF1A1A1A))
                 .clickable(onClick = { toolMenuOpen = true }),
               contentAlignment = Alignment.Center
@@ -1244,8 +1314,8 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           Box(
             modifier = Modifier
               .weight(1f)
-              .height(62.dp)
-              .clip(RoundedCornerShape(31.dp))
+              .height(64.dp)
+              .clip(RoundedCornerShape(percent = 50))
               .background(Color(0xFF1A1A1A)),
             contentAlignment = Alignment.CenterStart
           ) {
@@ -1267,8 +1337,8 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           Spacer(modifier = Modifier.size(8.dp))
           Box(
             modifier = Modifier
-              .size(width = 112.dp, height = 62.dp)
-              .clip(RoundedCornerShape(31.dp))
+              .size(width = 112.dp, height = 64.dp)
+              .clip(RoundedCornerShape(percent = 50))
               .background(Color.White)
               .clickable(onClick = {
                 if (viewModel.input.isNotBlank()) {
@@ -1412,10 +1482,10 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
 private fun VoiceControlPill(icon: ImageVector, contentDescription: String, active: Boolean = true, onClick: () -> Unit) {
   Box(
     modifier = Modifier
-      .size(width = 78.dp, height = 58.dp)
-      .clip(RoundedCornerShape(18.dp))
+      .size(width = 64.dp, height = 52.dp)
+      .clip(RoundedCornerShape(percent = 50))
       .background(Color(0xFF1F1F1F))
-      .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(18.dp))
+      .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(percent = 50))
       .clickable(onClick = onClick),
     contentAlignment = Alignment.Center
   ) {
@@ -1423,7 +1493,35 @@ private fun VoiceControlPill(icon: ImageVector, contentDescription: String, acti
       icon,
       contentDescription = contentDescription,
       tint = Color.White.copy(alpha = if (active) 1f else 0.35f),
-      modifier = Modifier.size(24.dp)
+      modifier = Modifier.size(20.dp)
+    )
+  }
+}
+
+/** Circular, semi-transparent icon button used for the two Live Vision
+ * top-corner controls (flash, flip camera) — sits directly over the camera
+ * preview rather than in the bottom control row. */
+@Composable
+private fun LiveCornerButton(
+  icon: ImageVector,
+  contentDescription: String,
+  enabled: Boolean = true,
+  modifier: Modifier = Modifier,
+  onClick: () -> Unit
+) {
+  Box(
+    modifier = modifier
+      .size(44.dp)
+      .clip(CircleShape)
+      .background(Color.Black.copy(alpha = 0.35f))
+      .clickable(enabled = enabled, onClick = onClick),
+    contentAlignment = Alignment.Center
+  ) {
+    Icon(
+      icon,
+      contentDescription = contentDescription,
+      tint = Color.White.copy(alpha = if (enabled) 1f else 0.35f),
+      modifier = Modifier.size(20.dp)
     )
   }
 }
@@ -1435,10 +1533,10 @@ private fun PushToTalkPill(onPress: () -> Unit, onRelease: () -> Unit) {
   var pressed by remember { mutableStateOf(false) }
   Box(
     modifier = Modifier
-      .size(width = 78.dp, height = 58.dp)
-      .clip(RoundedCornerShape(18.dp))
+      .size(width = 64.dp, height = 52.dp)
+      .clip(RoundedCornerShape(percent = 50))
       .background(if (pressed) Color.White else Color(0xFF1F1F1F))
-      .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(18.dp))
+      .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(percent = 50))
       .pointerInput(Unit) {
         awaitEachGesture {
           awaitFirstDown(requireUnconsumed = false)
@@ -1455,7 +1553,7 @@ private fun PushToTalkPill(onPress: () -> Unit, onRelease: () -> Unit) {
       Icons.Outlined.MicNone,
       contentDescription = "Hold to talk",
       tint = if (pressed) Color.Black else Color.White,
-      modifier = Modifier.size(24.dp)
+      modifier = Modifier.size(20.dp)
     )
   }
 }
