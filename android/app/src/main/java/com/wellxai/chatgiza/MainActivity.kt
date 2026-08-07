@@ -2530,6 +2530,22 @@ private fun EditProfileScreen(viewModel: ChatViewModel) {
       Text("Coming soon", color = Color(0xFFA8A8A8), fontSize = 13.sp)
     }
 
+    Spacer(modifier = Modifier.height(10.dp))
+    Card(
+      modifier = Modifier.fillMaxWidth().clickable(onClick = { viewModel.signOut() }),
+      shape = RoundedCornerShape(22.dp),
+      colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+    ) {
+      Row(
+        modifier = Modifier.padding(20.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = null, tint = Color(0xFFFF6B6B))
+        Spacer(modifier = Modifier.width(16.dp))
+        Text("Sign out", color = Color(0xFFFF6B6B), fontSize = 16.sp, fontWeight = FontWeight.Medium)
+      }
+    }
+
     Spacer(modifier = Modifier.height(24.dp))
   }
 }
@@ -3857,39 +3873,13 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        IconButton(onClick = { viewModel.closeAccount() }, modifier = Modifier.size(28.dp)) {
-          Icon(Icons.Outlined.Close, contentDescription = "Close", tint = colorScheme.onBackground, modifier = Modifier.size(28.dp))
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Text("Settings", color = colorScheme.onBackground, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+        Text("Settings", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
       }
 
-      // No profile card here anymore — the avatar in History now opens
-      // Edit Profile directly, so this screen is settings-only.
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(percent = 50))
-          .background(Color(0xFF1648DF))
-          .clickable(onClick = { viewModel.openBilling() })
-          .padding(horizontal = 18.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Column(modifier = Modifier.weight(1f)) {
-          Text("Save 66% on GiZa Pro", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-          Text("Upgrade for higher limits", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
-        }
-        Box(
-          modifier = Modifier
-            .clip(RoundedCornerShape(percent = 50))
-            .background(Color.White.copy(alpha = 0.15f))
-            .border(width = 1.dp, color = Color.White.copy(alpha = 0.4f), shape = RoundedCornerShape(percent = 50))
-            .padding(horizontal = 12.dp, vertical = 5.dp)
-        ) {
-          Text("Claim Offer", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        }
-      }
-
+      // No profile card and no GiZa Pro banner here anymore — the avatar in
+      // History now opens Edit Profile directly, so this screen is a plain
+      // settings list. Closing happens via the system back gesture
+      // (BackHandler above), not a dedicated close button.
       SettingsSectionHeader("App")
       SettingsSection {
         SettingsMenuRow("Appearance", icon = Icons.Outlined.DarkMode) { viewModel.openAppearance() }
@@ -3941,14 +3931,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         SettingsMenuRow("Report a Problem", icon = Icons.Outlined.ReportProblem) { viewModel.openReportProblem() }
       }
 
-      SettingsSectionHeader("Account")
-      SettingsSection {
-        SettingsMenuRow(
-          "Sign out",
-          icon = Icons.AutoMirrored.Outlined.Logout,
-          textColor = Color(0xFFFF6B6B)
-        ) { viewModel.signOut() }
-      }
+      // Sign out moved to the Edit Profile screen, below "Connect with X".
       Spacer(modifier = Modifier.height(24.dp))
     }
   }
