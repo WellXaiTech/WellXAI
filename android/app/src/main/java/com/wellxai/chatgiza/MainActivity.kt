@@ -2149,11 +2149,12 @@ private fun HistoryRow(convo: ApiConversation, onClick: () -> Unit, onMenuClick:
   val dateText = lastMessage?.createdAt?.let { formatDate(it) } ?: ""
   val title = truncateTitle(convo.title.ifBlank { "New chat" })
 
+  // No card background here by design — rows sit directly on the plain
+  // background, matching the reference's BTC/CORE/MNT rows (no per-row
+  // layer, just the content itself).
   Row(
     modifier = Modifier
       .fillMaxWidth()
-      .clip(RoundedCornerShape(14.dp))
-      .background(Color.White.copy(alpha = 0.04f))
       .clickable(onClick = onClick)
       .padding(horizontal = 10.dp, vertical = 8.dp),
     verticalAlignment = Alignment.CenterVertically
