@@ -1842,12 +1842,11 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   // Chat/Imagine while the drawer is closed.
   BackHandler(enabled = viewModel.screen is AppScreen.History) { viewModel.closeHistory() }
 
+  var historyFilter by remember { mutableStateOf("All") }
   val query = viewModel.historySearchQuery.trim()
-  val visibleConversations = if (query.isEmpty()) {
-    viewModel.conversations
-  } else {
-    viewModel.conversations.filter { it.title.contains(query, ignoreCase = true) }
-  }
+  val visibleConversations = viewModel.conversations
+    .filter { query.isEmpty() || it.title.contains(query, ignoreCase = true) }
+    .filter { historyFilter != "Pinned" || it.pinned }
 
   var menuConvo by remember { mutableStateOf<ApiConversation?>(null) }
   var deleteConfirmConvo by remember { mutableStateOf<ApiConversation?>(null) }
@@ -1859,34 +1858,9 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
     bottomBar = {
       Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          modifier = Modifier
-            .weight(1f)
-            .clip(RoundedCornerShape(24.dp))
-            .background(colorScheme.onBackground.copy(alpha = 0.08f))
-            .padding(horizontal = 16.dp)
-        ) {
-          Icon(Icons.Outlined.Search, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.size(24.dp))
-          Spacer(modifier = Modifier.size(8.dp))
-          TextField(
-            value = viewModel.historySearchQuery,
-            onValueChange = viewModel::onHistorySearchQueryChange,
-            modifier = Modifier.weight(1f),
-            placeholder = { Text("Search", color = colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 17.sp) },
-            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 17.sp, color = colorScheme.onBackground),
-            singleLine = true,
-            colors = TextFieldDefaults.colors(
-              unfocusedContainerColor = Color.Transparent,
-              focusedContainerColor = Color.Transparent,
-              unfocusedIndicatorColor = Color.Transparent,
-              focusedIndicatorColor = Color.Transparent
-            )
-          )
-        }
-        Spacer(modifier = Modifier.size(12.dp))
         FilledIconButton(
           onClick = { viewModel.openSettings() },
           colors = IconButtonDefaults.filledIconButtonColors(
@@ -1911,89 +1885,62 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   ) { padding ->
     Column(modifier = Modifier.fillMaxSize().padding(padding)) {
       Spacer(modifier = Modifier.height(6.dp))
+
+      // Avatar + search share the top row, matching the reference layout —
+      // the avatar is now just a tap target into Account rather than also
+      // carrying the name/email inline.
       Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .clickable(onClick = { viewModel.openAccount() })
-          .padding(horizontal = 16.dp, vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        if (viewModel.userImage != null) {
-          AsyncImage(
-            model = viewModel.userImage,
-            contentDescription = "Profile",
-            modifier = Modifier.size(48.dp).clip(CircleShape)
-          )
-        } else {
-          Icon(
-            Icons.Outlined.AccountCircle,
-            contentDescription = "Profile",
-            tint = colorScheme.onBackground,
-            modifier = Modifier.size(48.dp)
-          )
-        }
-        Spacer(modifier = Modifier.size(12.dp))
-        val sidebarNameIsLong = (viewModel.userName?.length ?: 0) > 20
-        Column(modifier = Modifier.weight(1f)) {
-          Text(
-            viewModel.userName ?: "",
-            color = colorScheme.onBackground,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = if (sidebarNameIsLong) 2 else 1,
-            overflow = TextOverflow.Ellipsis
-          )
-          if (viewModel.userEmail != null && !sidebarNameIsLong) {
-            Text(
-              viewModel.userEmail ?: "",
-              color = colorScheme.onBackground.copy(alpha = 0.5f),
-              fontSize = 12.sp,
-              maxLines = 1,
-              overflow = TextOverflow.Ellipsis
+        Box(
+          modifier = Modifier.clickable(onClick = { viewModel.openAccount() })
+        ) {
+          if (viewModel.userImage != null) {
+            AsyncImage(
+              model = viewModel.userImage,
+              contentDescription = "Profile",
+              modifier = Modifier.size(40.dp).clip(CircleShape)
+            )
+          } else {
+            Icon(
+              Icons.Outlined.AccountCircle,
+              contentDescription = "Profile",
+              tint = colorScheme.onBackground,
+              modifier = Modifier.size(40.dp)
             )
           }
         }
-        Box(
+        Spacer(modifier = Modifier.size(12.dp))
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
           modifier = Modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .background(colorScheme.onBackground.copy(alpha = 0.1f))
-            .clickable(onClick = { viewModel.openAccount() }),
-          contentAlignment = Alignment.Center
+            .weight(1f)
+            .height(44.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(colorScheme.onBackground.copy(alpha = 0.08f))
+            .padding(horizontal = 14.dp)
         ) {
-          Icon(
-            Icons.Filled.KeyboardDoubleArrowRight,
-            contentDescription = null,
-            tint = colorScheme.onBackground.copy(alpha = 0.7f),
-            modifier = Modifier.size(26.dp)
+          Icon(Icons.Outlined.Search, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+          Spacer(modifier = Modifier.size(8.dp))
+          TextField(
+            value = viewModel.historySearchQuery,
+            onValueChange = viewModel::onHistorySearchQueryChange,
+            modifier = Modifier.weight(1f),
+            placeholder = { Text("Search", color = colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 15.sp) },
+            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 15.sp, color = colorScheme.onBackground),
+            singleLine = true,
+            colors = TextFieldDefaults.colors(
+              unfocusedContainerColor = Color.Transparent,
+              focusedContainerColor = Color.Transparent,
+              unfocusedIndicatorColor = Color.Transparent,
+              focusedIndicatorColor = Color.Transparent
+            )
           )
         }
       }
 
-      Spacer(modifier = Modifier.height(14.dp))
-
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(horizontal = 16.dp, vertical = 6.dp)
-          .clip(RoundedCornerShape(16.dp))
-          .background(colorScheme.onBackground.copy(alpha = 0.08f))
-          .clickable(onClick = { viewModel.openScheduled() })
-          .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Box(
-          modifier = Modifier
-            .size(28.dp)
-            .clip(CircleShape)
-            .background(colorScheme.onBackground.copy(alpha = 0.1f)),
-          contentAlignment = Alignment.Center
-        ) {
-          Icon(Icons.Outlined.Schedule, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp))
-        }
-        Spacer(modifier = Modifier.size(12.dp))
-        Text("Automations", color = colorScheme.onBackground, fontSize = 15.sp)
-      }
+      Spacer(modifier = Modifier.height(10.dp))
 
       Row(
         modifier = Modifier
@@ -2030,13 +1977,66 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
         }
       }
 
-      Text(
-        "Conversations",
-        color = colorScheme.onBackground.copy(alpha = 0.5f),
-        fontSize = 12.sp,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-      )
+      Spacer(modifier = Modifier.height(8.dp))
+
+      // "Events"-card-style row for Automations — image-style icon box,
+      // small label + bold title, chevron affordance on the right.
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(horizontal = 16.dp, vertical = 4.dp)
+          .clip(RoundedCornerShape(16.dp))
+          .background(colorScheme.onBackground.copy(alpha = 0.06f))
+          .clickable(onClick = { viewModel.openScheduled() })
+          .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Box(
+          modifier = Modifier
+            .size(40.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(colorScheme.onBackground.copy(alpha = 0.1f)),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(Icons.Outlined.Schedule, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
+        }
+        Spacer(modifier = Modifier.size(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+          Text("Events", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 11.sp)
+          Text("Automations", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        }
+        Icon(
+          Icons.Filled.ChevronRight,
+          contentDescription = null,
+          tint = colorScheme.onBackground.copy(alpha = 0.4f),
+          modifier = Modifier.size(20.dp)
+        )
+      }
+
+      Spacer(modifier = Modifier.height(10.dp))
+
+      // Filter tabs above the list, matching the reference's
+      // Favorites/Hot/New row — mapped to what History can actually filter.
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .horizontalScroll(rememberScrollState())
+          .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(20.dp)
+      ) {
+        listOf("All", "Pinned").forEach { label ->
+          val selected = historyFilter == label
+          Text(
+            label,
+            color = colorScheme.onBackground.copy(alpha = if (selected) 1f else 0.5f),
+            fontSize = 14.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            modifier = Modifier
+              .clickable { historyFilter = label }
+              .padding(vertical = 8.dp)
+          )
+        }
+      }
 
       if (viewModel.loadingHistory) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
