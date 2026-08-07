@@ -1984,9 +1984,14 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   val mediaScope = rememberCoroutineScope()
   val mediaAvailableHeightPx = (totalContentHeightPx - with(density) { bottomBarHeight.toPx() }).toInt().coerceAtLeast(1)
 
+  // Halfway is the commit line, not "basically all the way there" — past
+  // it and released, the sheet finishes opening on its own; short of it,
+  // it springs all the way back closed. Forcing a drag to ~92% before it
+  // would commit was the actual complaint: it made the gesture feel like
+  // it never "took."
   fun settleMediaDrag() {
     mediaScope.launch {
-      if (mediaProgress.value >= 0.92f) {
+      if (mediaProgress.value >= 0.5f) {
         mediaProgress.animateTo(1f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium))
       } else {
         mediaProgress.animateTo(0f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium))
