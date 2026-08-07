@@ -2627,12 +2627,16 @@ private data class VoiceOption(
 // label shown in the picker — each gets its own gradient so the selected
 // card reads as "this voice" at a glance, not just a checkmark.
 private val VOICE_OPTIONS = listOf(
-  VoiceOption("cedar", "Leo", "Warm & steady", Color(0xFFF59E0B), Color(0xFFEF4444)),
-  VoiceOption("alloy", "Rex", "Calm & balanced", Color(0xFF14B8A6), Color(0xFF06B6D4)),
-  VoiceOption("ballad", "Nova", "Gentle & melodic", Color(0xFF8B5CF6), Color(0xFFEC4899)),
-  VoiceOption("coral", "Zuri", "Bright & energetic", Color(0xFF10B981), Color(0xFF84CC16)),
-  VoiceOption("sage", "Sal", "Smooth & confident", Color(0xFF3B82F6), Color(0xFF14B8A6)),
-  VoiceOption("marin", "GiZa", "The signature ChatGiZa voice", Color(0xFF4F46E5), Color(0xFFEC4899))
+  VoiceOption("cedar", "Orin", "Wise Male", Color(0xFFF59E0B), Color(0xFFEF4444)),
+  VoiceOption("alloy", "Lyra", "Calm Female", Color(0xFF14B8A6), Color(0xFF06B6D4)),
+  VoiceOption("ballad", "Kael", "Bold Male", Color(0xFF8B5CF6), Color(0xFFEC4899)),
+  VoiceOption("coral", "Elia", "Warm Female", Color(0xFF10B981), Color(0xFF84CC16)),
+  VoiceOption("sage", "Leo", "Smart Male", Color(0xFF3B82F6), Color(0xFF14B8A6)),
+  // The signature/default ChatGiZa voice — no "18+" tag here: unlike
+  // Personality, voice choice has no real content-gating behind it, and
+  // this is also the app's default, so tagging it adult-only would be
+  // both meaningless and contradict it being what new users hear by default.
+  VoiceOption("marin", "GiZa", "Playful", Color(0xFF4F46E5), Color(0xFFEC4899))
 )
 
 @Composable
