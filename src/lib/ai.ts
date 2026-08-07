@@ -246,11 +246,12 @@ async function streamMock(messages: ChatMessage[], controller: ReadableStreamDef
 function describeStreamError(error: unknown): string {
   const status = (error as { status?: number })?.status;
   const code = (error as { code?: string })?.code;
-  if (status === 429 || code === "insufficient_quota") {
-    return "ChatGiZa can't reply right now — the AI provider account has run out of quota/credits. Please check the API billing and try again.";
-  }
-  if (status === 401 || status === 403) {
-    return "ChatGiZa can't reply right now — the AI provider API key looks invalid or unauthorized.";
+  // The real cause (quota exhausted, bad/unauthorized key, etc.) is already
+  // logged server-side via console.error before this runs — this string is
+  // what the end user sees, so it deliberately stays generic rather than
+  // exposing billing/API-key internals they can't do anything about anyway.
+  if (status === 429 || code === "insufficient_quota" || status === 401 || status === 403) {
+    return "ChatGiZa is temporarily unavailable while we make some improvements — please check back shortly. Thanks for your patience!";
   }
   return "Sorry, something went wrong generating a reply. Please try again.";
 }
