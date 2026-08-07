@@ -181,6 +181,8 @@ import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Menu
+import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Cameraswitch
 import androidx.compose.material.icons.outlined.EmojiEvents
@@ -2547,14 +2549,32 @@ private fun ChatGizaMediaPanel(
             .background(Color.White.copy(alpha = 0.35f))
         )
       }
-      Text(
-        "ChatGiZa Media",
-        color = Color.White,
-        fontSize = 18.sp,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-        textAlign = TextAlign.Center
-      )
+      // Reference feed's own tab row (Discover/Following/Campaign/Smart) in
+      // place of a plain "ChatGiZa Media" title — these tabs are visual-only
+      // for now since there's still just one local post list behind them,
+      // same as History's own tab row before it had real per-tab data.
+      var selectedFeedTab by remember { mutableStateOf("Discover") }
+      Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Row(
+          modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+          horizontalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+          listOf("Discover", "Following", "Campaign", "Smart").forEach { tab ->
+            Text(
+              tab,
+              color = if (tab == selectedFeedTab) Color.White else Color.White.copy(alpha = 0.45f),
+              fontSize = 15.sp,
+              fontWeight = if (tab == selectedFeedTab) FontWeight.Bold else FontWeight.Medium,
+              modifier = Modifier.clickable { selectedFeedTab = tab }
+            )
+          }
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Icon(Icons.Outlined.Menu, contentDescription = "Menu", tint = Color.White, modifier = Modifier.size(22.dp))
+      }
       if (viewModel.mediaPosts.isEmpty()) {
         // Left empty on purpose — no placeholder icon/text here anymore.
         Box(modifier = Modifier.weight(1f).fillMaxWidth())
@@ -2565,7 +2585,13 @@ private fun ChatGizaMediaPanel(
           verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
           items(viewModel.mediaPosts, key = { it.id }) { post ->
-            MediaPostRow(post, userImage = viewModel.userImage, userName = viewModel.userName)
+            MediaPostRow(
+              post,
+              userImage = viewModel.userImage,
+              userName = viewModel.userName,
+              onLikeClick = { viewModel.toggleMediaPostLike(post.id) },
+              onDismissClick = { viewModel.removeMediaPost(post.id) }
+            )
           }
         }
       }
@@ -2585,8 +2611,31 @@ private fun ChatGizaMediaPanel(
   }
 }
 
+private fun formatMediaPostTimeAgo(createdAt: Long): String {
+  val minutes = (System.currentTimeMillis() - createdAt).coerceAtLeast(0) / 60000
+  return when {
+    minutes < 1 -> "now"
+    minutes < 60 -> "${minutes}m"
+    minutes < 24 * 60 -> "${minutes / 60}h"
+    else -> "${minutes / (24 * 60)}d"
+  }
+}
+
 @Composable
-private fun MediaPostRow(post: MediaPost, userImage: String?, userName: String?) {
+private fun MediaPostRow(
+  post: MediaPost,
+  userImage: String?,
+  userName: String?,
+  onLikeClick: () -> Unit,
+  onDismissClick: () -> Unit
+) {
+  val context = LocalContext.current
+  // Starts collapsed to a short strip and expands on tap -- a full-size
+  // image immediately for every post made the feed mostly scrolling past
+  // pictures rather than reading posts, same complaint as a feed that's
+  // all thumbnails would draw the opposite way.
+  var imageExpanded by remember(post.id) { mutableStateOf(false) }
+
   Column(modifier = Modifier.fillMaxWidth()) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
       if (userImage != null) {
@@ -2607,6 +2656,8 @@ private fun MediaPostRow(post: MediaPost, userImage: String?, userName: String?)
       Column(modifier = Modifier.weight(1f)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
           Text(userName ?: "You", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+          Spacer(modifier = Modifier.width(6.dp))
+          Text("• ${formatMediaPostTimeAgo(post.createdAt)}", color = Color(0xFF8A8A8A), fontSize = 12.sp)
           if (post.sentiment != null) {
             Spacer(modifier = Modifier.width(8.dp))
             val (tint, label) = when (post.sentiment) {
@@ -2628,15 +2679,56 @@ private fun MediaPostRow(post: MediaPost, userImage: String?, userName: String?)
             contentDescription = "Post photo",
             modifier = Modifier
               .fillMaxWidth()
-              .heightIn(max = 220.dp)
-              .clip(RoundedCornerShape(14.dp)),
+              .heightIn(max = if (imageExpanded) 260.dp else 90.dp)
+              .clip(RoundedCornerShape(14.dp))
+              .clickable { imageExpanded = !imageExpanded },
             contentScale = ContentScale.Crop
           )
         }
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          MediaPostActionButton(icon = Icons.Outlined.Comment, count = 0, tint = Color(0xFF8A8A8A), onClick = {})
+          Spacer(modifier = Modifier.width(18.dp))
+          MediaPostActionButton(icon = Icons.Outlined.Repeat, count = 0, tint = Color(0xFF8A8A8A), onClick = {})
+          Spacer(modifier = Modifier.width(18.dp))
+          MediaPostActionButton(
+            icon = Icons.Outlined.ThumbUp,
+            count = post.likeCount,
+            tint = if (post.liked) Color(0xFFFFC94A) else Color(0xFF8A8A8A),
+            onClick = onLikeClick
+          )
+          Spacer(modifier = Modifier.width(18.dp))
+          MediaPostActionButton(
+            icon = Icons.Outlined.Share,
+            count = null,
+            tint = Color(0xFF8A8A8A),
+            onClick = {
+              val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, post.text)
+              }
+              context.startActivity(Intent.createChooser(sendIntent, "Share post"))
+            }
+          )
+        }
+      }
+      IconButton(onClick = onDismissClick, modifier = Modifier.size(22.dp)) {
+        Icon(Icons.Outlined.Close, contentDescription = "Dismiss", tint = Color(0xFF6E6E6E), modifier = Modifier.size(16.dp))
       }
     }
     Spacer(modifier = Modifier.height(14.dp))
     Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.08f)))
+  }
+}
+
+@Composable
+private fun MediaPostActionButton(icon: ImageVector, count: Int?, tint: Color, onClick: () -> Unit) {
+  Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable(onClick = onClick)) {
+    Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(16.dp))
+    if (count != null) {
+      Spacer(modifier = Modifier.width(4.dp))
+      Text("$count", color = tint, fontSize = 12.sp)
+    }
   }
 }
 
