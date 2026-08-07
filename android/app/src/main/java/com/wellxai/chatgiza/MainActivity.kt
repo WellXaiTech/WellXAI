@@ -305,10 +305,19 @@ class MainActivity : ComponentActivity() {
             // Two-way sync: whichever side changes first (a tap on the
             // hamburger icon vs. a manual swipe) drives the other, so they
             // can never end up disagreeing about whether History is open.
+            // The "reopen" branch is deliberately narrowed to Chat/Imagine
+            // (the only screens a manual edge-swipe can happen from) rather
+            // than "any non-History screen" — otherwise tapping Settings/
+            // Projects/Scheduled/Speak while the drawer was still open (its
+            // close animation hadn't finished yet, so currentValue briefly
+            // still read Open) got misread as "user swiped History open
+            // from here" and snapped straight back to History.
             LaunchedEffect(drawerState) {
               snapshotFlow { drawerState.currentValue }.collect { value ->
                 when {
-                  value == DrawerValue.Open && viewModel.screen !is AppScreen.History -> viewModel.openHistory()
+                  value == DrawerValue.Open &&
+                    (viewModel.screen is AppScreen.Chat || viewModel.screen is AppScreen.Imagine) ->
+                    viewModel.openHistory()
                   value == DrawerValue.Closed && viewModel.screen is AppScreen.History -> viewModel.closeHistory()
                 }
               }
