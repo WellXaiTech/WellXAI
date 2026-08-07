@@ -1850,6 +1850,10 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   var deleteConfirmConvo by remember { mutableStateOf<ApiConversation?>(null) }
   var renameConvo by remember { mutableStateOf<ApiConversation?>(null) }
   var renameText by remember { mutableStateOf("") }
+  // Only "History" has real data behind it — the others are visual-only
+  // for now (see the "Coming soon" state below), matching the reference's
+  // tab row without pretending there are three more distinct datasets.
+  var selectedHistoryTab by remember { mutableStateOf("History") }
 
   Scaffold(
     containerColor = Color.Transparent,
@@ -1890,35 +1894,35 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
               AsyncImage(
                 model = viewModel.userImage,
                 contentDescription = "Profile",
-                modifier = Modifier.size(40.dp).clip(CircleShape)
+                modifier = Modifier.size(36.dp).clip(CircleShape)
               )
             } else {
               Icon(
                 Icons.Outlined.AccountCircle,
                 contentDescription = "Profile",
                 tint = colorScheme.onBackground,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(36.dp)
               )
             }
           }
-          Spacer(modifier = Modifier.size(12.dp))
+          Spacer(modifier = Modifier.size(10.dp))
           Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
               .weight(1f)
-              .height(44.dp)
-              .clip(RoundedCornerShape(22.dp))
+              .height(38.dp)
+              .clip(RoundedCornerShape(19.dp))
               .background(colorScheme.onBackground.copy(alpha = 0.08f))
-              .padding(horizontal = 14.dp)
+              .padding(horizontal = 12.dp)
           ) {
-            Icon(Icons.Outlined.Search, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
-            Spacer(modifier = Modifier.size(8.dp))
+            Icon(Icons.Outlined.Search, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.size(6.dp))
             TextField(
               value = viewModel.historySearchQuery,
               onValueChange = viewModel::onHistorySearchQueryChange,
               modifier = Modifier.weight(1f),
-              placeholder = { Text("Search", color = colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 15.sp) },
-              textStyle = androidx.compose.ui.text.TextStyle(fontSize = 15.sp, color = colorScheme.onBackground),
+              placeholder = { Text("Search", color = colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 13.sp) },
+              textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp, color = colorScheme.onBackground),
               singleLine = true,
               colors = TextFieldDefaults.colors(
                 unfocusedContainerColor = Color.Transparent,
@@ -1965,7 +1969,9 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           )
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        // Bigger gap pushing the whole History card further down the
+        // screen, same idea as the gap above Events.
+        Spacer(modifier = Modifier.height(40.dp))
       }
 
       // History tab + the whole conversation list share ONE background —
@@ -1979,7 +1985,34 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             .background(Color(0xFF23252B))
             .padding(vertical = 10.dp)
         ) {
-          if (viewModel.loadingHistory) {
+          // Tab row — only "History" has a real dataset behind it; the
+          // other three are visual-only until there's an actual GiZa/
+          // Private/V2 concept to filter into.
+          Row(
+            horizontalArrangement = Arrangement.spacedBy(18.dp),
+            modifier = Modifier
+              .horizontalScroll(rememberScrollState())
+              .padding(horizontal = 14.dp)
+          ) {
+            listOf("History", "GiZa", "Private", "V2").forEach { tab ->
+              val selected = selectedHistoryTab == tab
+              Text(
+                tab,
+                color = if (selected) colorScheme.onBackground else colorScheme.onBackground.copy(alpha = 0.4f),
+                fontSize = 15.sp,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                modifier = Modifier.clickable { selectedHistoryTab = tab }
+              )
+            }
+          }
+
+          Spacer(modifier = Modifier.height(10.dp))
+
+          if (selectedHistoryTab != "History") {
+            Box(modifier = Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
+              Text("Coming soon", color = colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 16.sp)
+            }
+          } else if (viewModel.loadingHistory) {
             Box(modifier = Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
               CircularProgressIndicator(color = colorScheme.onBackground)
             }
@@ -2002,18 +2035,6 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
               }
             }
           }
-
-          Spacer(modifier = Modifier.height(10.dp))
-
-          // Plain label at the bottom of the card — no pill background,
-          // no chevron, just the text.
-          Text(
-            "History GiZa",
-            color = colorScheme.onBackground,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 14.dp)
-          )
         }
       }
     }
