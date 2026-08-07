@@ -2347,7 +2347,6 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
       modifier = Modifier
         .fillMaxSize()
         .padding(bottom = bottomBarHeight)
-        .onGloballyPositioned { coords -> mediaAvailableHeightPx = coords.size.height }
     ) {
       Box(
         modifier = Modifier
