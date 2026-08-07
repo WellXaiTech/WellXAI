@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -690,6 +691,14 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun signOut() {
+    // viewModelScope lives for the whole app process (this ViewModel is a
+    // single instance, not re-created per session), so an in-flight
+    // send/regenerate would otherwise keep running after sign-out and land
+    // its result -- plus save it to history under whatever token happens
+    // to be stored -- once a *different* account has since signed in.
+    activeChatJob?.cancel()
+    activeChatJob = null
+    sending = false
     tokenStore.clear()
     conversations = emptyList()
     messages = emptyList()
@@ -719,6 +728,10 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   private var deletedIds: Map<String, Long> = emptyMap()
+  // Tracked so signOut() can cancel a still-streaming send/regenerate
+  // instead of letting it finish and write into whatever account is
+  // signed in by the time it completes.
+  private var activeChatJob: Job? = null
 
   private fun sortConversations(list: List<ApiConversation>): List<ApiConversation> =
     list.sortedWith(compareByDescending<ApiConversation> { it.pinned }.thenByDescending { it.lastActivity() })
@@ -850,7 +863,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     val isNewConversation = activeConversationId == null
     activeConversationId = conversationId
 
-    viewModelScope.launch {
+    activeChatJob = viewModelScope.launch {
       val history = messages.dropLast(1).map { ChatMessage(it.role, it.content) }
       val result = ChatGizaApi.streamChat(
         token = token,
@@ -906,7 +919,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     sending = true
     errorMessage = null
 
-    viewModelScope.launch {
+    activeChatJob = viewModelScope.launch {
       val result = ChatGizaApi.streamChat(
         token = token,
         messages = history,

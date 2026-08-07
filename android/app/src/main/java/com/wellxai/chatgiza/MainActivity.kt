@@ -1886,19 +1886,41 @@ private fun LiveVoiceSettingsSheet(
 }
 
 private fun imageProxyToJpeg(image: ImageProxy): ByteArray {
-  val yBuffer = image.planes[0].buffer
-  val uBuffer = image.planes[1].buffer
-  val vBuffer = image.planes[2].buffer
-  val ySize = yBuffer.remaining()
-  val uSize = uBuffer.remaining()
-  val vSize = vBuffer.remaining()
-  val nv21 = ByteArray(ySize + uSize + vSize)
-  yBuffer.get(nv21, 0, ySize)
-  vBuffer.get(nv21, ySize, vSize)
-  uBuffer.get(nv21, ySize + vSize, uSize)
-  val yuvImage = YuvImage(nv21, ImageFormat.NV21, image.width, image.height, null)
+  // A straight sequential copy of the plane buffers only produces a
+  // correct NV21 image when the U/V planes happen to be tightly packed
+  // (pixelStride == 1); on most real devices YUV_420_888's chroma planes
+  // are interleaved (pixelStride == 2, plus row padding), so that copy
+  // silently scrambled every frame sent to the model during a Live Vision
+  // call. This walks each plane by its actual pixelStride/rowStride.
+  val width = image.width
+  val height = image.height
+  val nv21 = ByteArray(width * height * 3 / 2)
+
+  val yPlane = image.planes[0]
+  var pos = 0
+  for (row in 0 until height) {
+    val rowStart = row * yPlane.rowStride
+    for (col in 0 until width) {
+      nv21[pos++] = yPlane.buffer.get(rowStart + col * yPlane.pixelStride)
+    }
+  }
+
+  val uPlane = image.planes[1]
+  val vPlane = image.planes[2]
+  val uvHeight = height / 2
+  val uvWidth = width / 2
+  for (row in 0 until uvHeight) {
+    val vRowStart = row * vPlane.rowStride
+    val uRowStart = row * uPlane.rowStride
+    for (col in 0 until uvWidth) {
+      nv21[pos++] = vPlane.buffer.get(vRowStart + col * vPlane.pixelStride)
+      nv21[pos++] = uPlane.buffer.get(uRowStart + col * uPlane.pixelStride)
+    }
+  }
+
+  val yuvImage = YuvImage(nv21, ImageFormat.NV21, width, height, null)
   val out = ByteArrayOutputStream()
-  yuvImage.compressToJpeg(Rect(0, 0, image.width, image.height), 70, out)
+  yuvImage.compressToJpeg(Rect(0, 0, width, height), 70, out)
   return out.toByteArray()
 }
 
@@ -1970,13 +1992,24 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
         // clickable() alone doesn't fire once a real drag exceeds touch
         // slop (the press gets cancelled), so an explicit vertical-drag
         // detector is layered on top to catch the swipe-up gesture too.
+        // Accumulates the drag rather than reacting to every single
+        // pointer-move delta, so ordinary hand tremor (or a stray touch
+        // passing through here) can't pop the sheet open on a 2px jitter.
         Box(
           modifier = Modifier
             .fillMaxWidth()
             .pointerInput(Unit) {
-              detectVerticalDragGestures { _, dragAmount ->
-                if (dragAmount < -2f) showChatGizaMedia = true
-              }
+              var accumulated = 0f
+              detectVerticalDragGestures(
+                onDragStart = { accumulated = 0f },
+                onVerticalDrag = { _, dragAmount ->
+                  accumulated += dragAmount
+                  if (accumulated < -24f) {
+                    showChatGizaMedia = true
+                    accumulated = 0f
+                  }
+                }
+              )
             }
             .clickable(onClick = { showChatGizaMedia = true })
             .padding(top = 12.dp, bottom = 10.dp),
