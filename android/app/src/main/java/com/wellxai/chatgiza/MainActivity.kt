@@ -291,8 +291,8 @@ class MainActivity : ComponentActivity() {
       ChatGizaTheme(themeMode = viewModel.themeMode) {
         Surface {
           val screen = viewModel.screen
-          // Settings/Projects/Scheduled/LiveVision are reachable by tapping a
-          // tab under History, and must stay INSIDE this same drawer wrapper
+          // Account/Settings/Projects/Scheduled/LiveVision are reachable by
+          // tapping a tab under History, and must stay INSIDE this same drawer wrapper
           // rather than tearing it down and rebuilding it fresh — tearing it
           // down raced the drawer's own close animation (drawerState still
           // briefly read "Open" a frame after the screen changed) against the
@@ -302,8 +302,8 @@ class MainActivity : ComponentActivity() {
           // Keeping the drawer mounted continuously across all of these
           // avoids that race entirely instead of just narrowing it.
           val screensInsideHistoryDrawer = screen is AppScreen.Chat || screen is AppScreen.Imagine ||
-            screen is AppScreen.History || screen is AppScreen.Settings || screen is AppScreen.Projects ||
-            screen is AppScreen.Scheduled || screen is AppScreen.LiveVision
+            screen is AppScreen.History || screen is AppScreen.Account || screen is AppScreen.Settings ||
+            screen is AppScreen.Projects || screen is AppScreen.Scheduled || screen is AppScreen.LiveVision
           if (screensInsideHistoryDrawer) {
             // Lets History be reached by swiping in from the left edge of Chat/
             // Imagine (and swiped back out), instead of only via the hamburger
@@ -363,6 +363,7 @@ class MainActivity : ComponentActivity() {
             ) {
               when (screen) {
                 is AppScreen.Imagine -> ImagineScreen(viewModel)
+                is AppScreen.Account -> AccountScreen(viewModel)
                 is AppScreen.Settings -> SettingsScreen(viewModel)
                 is AppScreen.Projects -> ProjectsScreen(viewModel)
                 is AppScreen.Scheduled -> ScheduledScreen(viewModel)
@@ -2125,7 +2126,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             .padding(top = 2.dp, bottom = 4.dp),
           horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-          HistoryNavTab(Icons.Outlined.Settings, "Settings", onClick = { viewModel.openSettings() })
+          HistoryNavTab(Icons.Outlined.Settings, "Settings", onClick = { viewModel.openAccount() })
           HistoryNavTab(Icons.Outlined.Folder, "Projects", onClick = { viewModel.openProjects() })
           HistoryNavTab(Icons.Outlined.Schedule, "Scheduled", onClick = { viewModel.openScheduled() })
           HistoryNavTab(Icons.Outlined.GraphicEq, "Speak", onClick = { viewModel.openLiveVision() })
