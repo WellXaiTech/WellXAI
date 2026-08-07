@@ -1940,6 +1940,13 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
 
   var showChatGizaMedia by remember { mutableStateOf(false) }
   var showChatGizaMediaCreate by remember { mutableStateOf(false) }
+  // Media panel opens at a short "peek" height and can be dragged up to
+  // full height on its own handle -- the "+" button stays anchored to the
+  // panel's bottom-end the whole time, so it naturally sits near the
+  // title while peeked and slides down near the bottom once expanded.
+  var mediaExpanded by remember { mutableStateOf(false) }
+  LaunchedEffect(showChatGizaMedia) { if (showChatGizaMedia) mediaExpanded = false }
+  val mediaHeightFraction by animateFloatAsState(if (mediaExpanded) 0.85f else 0.35f, label = "chatGizaMediaHeight")
   // Measured so the ChatGiZa Media panel below can stop exactly above the
   // nav row instead of covering it (a plain fraction guess drifted once
   // navigationBarsPadding() changed the row's real height per device).
@@ -2295,7 +2302,10 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
         modifier = Modifier
           .align(Alignment.BottomCenter)
           .fillMaxWidth()
-          .fillMaxHeight(0.85f),
+          .fillMaxHeight(mediaHeightFraction),
+        expanded = mediaExpanded,
+        onExpand = { mediaExpanded = true },
+        onCollapse = { mediaExpanded = false },
         onDismiss = { showChatGizaMedia = false },
         onCreateClick = { showChatGizaMediaCreate = true }
       )
@@ -2315,7 +2325,14 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
 // in a later pass.
 
 @Composable
-private fun ChatGizaMediaPanel(modifier: Modifier = Modifier, onDismiss: () -> Unit, onCreateClick: () -> Unit) {
+private fun ChatGizaMediaPanel(
+  modifier: Modifier = Modifier,
+  expanded: Boolean,
+  onExpand: () -> Unit,
+  onCollapse: () -> Unit,
+  onDismiss: () -> Unit,
+  onCreateClick: () -> Unit
+) {
   // A plain in-layout panel rather than a system ModalBottomSheet — a
   // modal sheet is a separate window that always covers the full screen
   // height (including whatever sits behind it), which was hiding the
@@ -2328,9 +2345,21 @@ private fun ChatGizaMediaPanel(modifier: Modifier = Modifier, onDismiss: () -> U
       .background(Color(0xFF161616))
   ) {
     Column(modifier = Modifier.fillMaxSize()) {
+      // Drag up to expand to full height, drag down to collapse back to
+      // the peek height (or dismiss if already peeked); a plain tap
+      // dismisses, matching the handle above the bottom nav.
       Box(
         modifier = Modifier
           .fillMaxWidth()
+          .pointerInput(expanded) {
+            detectVerticalDragGestures { _, dragAmount ->
+              when {
+                dragAmount < -2f -> onExpand()
+                dragAmount > 2f && expanded -> onCollapse()
+                dragAmount > 2f -> onDismiss()
+              }
+            }
+          }
           .clickable(onClick = onDismiss)
           .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center
