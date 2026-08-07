@@ -105,8 +105,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SheetValue
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -238,6 +236,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -1941,7 +1940,13 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
 
   var showChatGizaMedia by remember { mutableStateOf(false) }
   var showChatGizaMediaCreate by remember { mutableStateOf(false) }
+  // Measured so the ChatGiZa Media panel below can stop exactly above the
+  // nav row instead of covering it (a plain fraction guess drifted once
+  // navigationBarsPadding() changed the row's real height per device).
+  var bottomBarHeight by remember { mutableStateOf(0.dp) }
+  val density = LocalDensity.current
 
+  Box(modifier = Modifier.fillMaxSize()) {
   Scaffold(
     containerColor = Color.Transparent,
     bottomBar = {
@@ -1950,6 +1955,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
       Column(
         modifier = Modifier
           .fillMaxWidth()
+          .onGloballyPositioned { coords -> bottomBarHeight = with(density) { coords.size.height.toDp() } }
           .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
           .background(Color(0xFF23252B))
           .navigationBarsPadding()
@@ -2265,14 +2271,39 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
     )
   }
 
+  // ChatGiZa Media panel — an in-layout panel (not a system
+  // ModalBottomSheet), so it stops right above the bottom nav instead of
+  // covering the whole screen: the nav row stays visible and tappable
+  // the entire time the panel is open.
   if (showChatGizaMedia) {
-    ChatGizaMediaSheet(
-      onDismiss = { showChatGizaMedia = false },
-      onCreateClick = { showChatGizaMediaCreate = true }
-    )
+    Box(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(bottom = bottomBarHeight)
+    ) {
+      Box(
+        modifier = Modifier
+          .fillMaxSize()
+          .background(Color.Black.copy(alpha = 0.55f))
+          .clickable(
+            indication = null,
+            interactionSource = remember { MutableInteractionSource() },
+            onClick = { showChatGizaMedia = false }
+          )
+      )
+      ChatGizaMediaPanel(
+        modifier = Modifier
+          .align(Alignment.BottomCenter)
+          .fillMaxWidth()
+          .fillMaxHeight(0.85f),
+        onDismiss = { showChatGizaMedia = false },
+        onCreateClick = { showChatGizaMediaCreate = true }
+      )
+    }
   }
   if (showChatGizaMediaCreate) {
     ChatGizaMediaCreateSheet(onDismiss = { showChatGizaMediaCreate = false })
+  }
   }
 }
 
@@ -2283,62 +2314,73 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
 // the user provided. No real posting/feed functionality yet — that comes
 // in a later pass.
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ChatGizaMediaSheet(onDismiss: () -> Unit, onCreateClick: () -> Unit) {
-  // skipPartiallyExpanded = false so the sheet has a mid-drag "peek" stop
-  // on its way to fully open -- the "+" is only shown during that peek,
-  // per the reference: appears on a small pull, tucks away once you pull
-  // it all the way open.
-  val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-  ModalBottomSheet(
-    onDismissRequest = onDismiss,
-    sheetState = sheetState,
-    containerColor = Color(0xFF161616)
+private fun ChatGizaMediaPanel(modifier: Modifier = Modifier, onDismiss: () -> Unit, onCreateClick: () -> Unit) {
+  // A plain in-layout panel rather than a system ModalBottomSheet — a
+  // modal sheet is a separate window that always covers the full screen
+  // height (including whatever sits behind it), which was hiding the
+  // Settings/Projects/... nav row underneath. This panel's height is
+  // capped by the caller (fillMaxHeight fraction, positioned above the
+  // measured bottom-bar height), so that row stays visible and tappable.
+  Box(
+    modifier = modifier
+      .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+      .background(Color(0xFF161616))
   ) {
-    Box(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.92f)) {
-      Column(modifier = Modifier.fillMaxSize()) {
-        Text(
-          "ChatGiZa Media",
-          color = Color.White,
-          fontSize = 18.sp,
-          fontWeight = FontWeight.Bold,
-          modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-          textAlign = TextAlign.Center
-        )
-        Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-          Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-              Icons.Outlined.Whatshot,
-              contentDescription = null,
-              tint = Color.White.copy(alpha = 0.3f),
-              modifier = Modifier.size(48.dp)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text("Bado hakuna machapisho", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-              "ChatGiZa Media inakuja hivi karibuni",
-              color = Color.White.copy(alpha = 0.4f),
-              fontSize = 12.sp
-            )
-          }
-        }
-      }
-      if (sheetState.targetValue != SheetValue.Expanded) {
+    Column(modifier = Modifier.fillMaxSize()) {
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clickable(onClick = onDismiss)
+          .padding(vertical = 10.dp),
+        contentAlignment = Alignment.Center
+      ) {
         Box(
           modifier = Modifier
-            .align(Alignment.BottomEnd)
-            .padding(20.dp)
-            .size(56.dp)
-            .clip(CircleShape)
-            .background(Color(0xFFFFC94A))
-            .clickable(onClick = onCreateClick),
-          contentAlignment = Alignment.Center
-        ) {
-          Icon(Icons.Filled.Add, contentDescription = "Unda", tint = Color.Black, modifier = Modifier.size(26.dp))
+            .width(36.dp)
+            .height(4.dp)
+            .clip(RoundedCornerShape(2.dp))
+            .background(Color.White.copy(alpha = 0.35f))
+        )
+      }
+      Text(
+        "ChatGiZa Media",
+        color = Color.White,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        textAlign = TextAlign.Center
+      )
+      Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+          Icon(
+            Icons.Outlined.Whatshot,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.3f),
+            modifier = Modifier.size(48.dp)
+          )
+          Spacer(modifier = Modifier.height(12.dp))
+          Text("Bado hakuna machapisho", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
+          Spacer(modifier = Modifier.height(4.dp))
+          Text(
+            "ChatGiZa Media inakuja hivi karibuni",
+            color = Color.White.copy(alpha = 0.4f),
+            fontSize = 12.sp
+          )
         }
       }
+    }
+    Box(
+      modifier = Modifier
+        .align(Alignment.BottomEnd)
+        .padding(20.dp)
+        .size(56.dp)
+        .clip(CircleShape)
+        .background(Color(0xFFFFC94A))
+        .clickable(onClick = onCreateClick),
+      contentAlignment = Alignment.Center
+    ) {
+      Icon(Icons.Filled.Add, contentDescription = "Unda", tint = Color.Black, modifier = Modifier.size(26.dp))
     }
   }
 }
