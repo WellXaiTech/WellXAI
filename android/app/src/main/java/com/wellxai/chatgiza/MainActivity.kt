@@ -1976,21 +1976,9 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           modifier = Modifier
             .padding(horizontal = 16.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(colorScheme.onBackground.copy(alpha = 0.06f))
+            .background(Color(0xFF23252B))
             .padding(vertical = 10.dp)
         ) {
-          Box(
-            modifier = Modifier
-              .padding(horizontal = 14.dp)
-              .clip(RoundedCornerShape(10.dp))
-              .background(colorScheme.onBackground)
-              .padding(horizontal = 14.dp, vertical = 8.dp)
-          ) {
-            Text("History", color = colorScheme.background, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-          }
-
-          Spacer(modifier = Modifier.height(10.dp))
-
           if (viewModel.loadingHistory) {
             Box(modifier = Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
               CircularProgressIndicator(color = colorScheme.onBackground)
@@ -2014,6 +2002,18 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
               }
             }
           }
+
+          Spacer(modifier = Modifier.height(10.dp))
+
+          // Plain label at the bottom of the card — no pill background,
+          // no chevron, just the text.
+          Text(
+            "History GiZa",
+            color = colorScheme.onBackground,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 14.dp)
+          )
         }
       }
     }
