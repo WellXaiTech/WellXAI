@@ -1932,27 +1932,52 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   // tab row without pretending there are three more distinct datasets.
   var selectedHistoryTab by remember { mutableStateOf("History") }
 
+  var showChatGizaMedia by remember { mutableStateOf(false) }
+  var showChatGizaMediaCreate by remember { mutableStateOf(false) }
+
   Scaffold(
     containerColor = Color.Transparent,
     bottomBar = {
-      // Five-tab bottom nav, same slot layout as the reference's
-      // Home/Markets/Trade/Earn/Assets bar, re-purposed for ChatGiZa.
       // Rounded top corners on its own background — "carved" into the
       // screen rather than a flat full-width bar — matching the reference.
-      Row(
+      Column(
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
           .background(Color(0xFF23252B))
           .navigationBarsPadding()
-          .padding(top = 10.dp, bottom = 8.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly
       ) {
-        HistoryNavTab(Icons.Outlined.Settings, "Settings", onClick = { viewModel.openSettings() })
-        HistoryNavTab(Icons.Outlined.Folder, "Projects", onClick = { viewModel.openProjects() })
-        HistoryNavTab(Icons.Outlined.Schedule, "Scheduled", onClick = { viewModel.openScheduled() })
-        HistoryNavTab(Icons.Outlined.GraphicEq, "Speak", onClick = { viewModel.openLiveVision() })
-        HistoryNavTab(Icons.Filled.Home, "Home", onClick = { viewModel.closeHistory() })
+        // ChatGiZa Media drag handle — sits above the tab row, pulls up
+        // the Media sheet when tapped/dragged.
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = { showChatGizaMedia = true })
+            .padding(top = 8.dp, bottom = 4.dp),
+          contentAlignment = Alignment.Center
+        ) {
+          Box(
+            modifier = Modifier
+              .width(36.dp)
+              .height(4.dp)
+              .clip(RoundedCornerShape(2.dp))
+              .background(colorScheme.onBackground.copy(alpha = 0.35f))
+          )
+        }
+        // Five-tab bottom nav, same slot layout as the reference's
+        // Home/Markets/Trade/Earn/Assets bar, re-purposed for ChatGiZa.
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp, bottom = 8.dp),
+          horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+          HistoryNavTab(Icons.Outlined.Settings, "Settings", onClick = { viewModel.openSettings() })
+          HistoryNavTab(Icons.Outlined.Folder, "Projects", onClick = { viewModel.openProjects() })
+          HistoryNavTab(Icons.Outlined.Schedule, "Scheduled", onClick = { viewModel.openScheduled() })
+          HistoryNavTab(Icons.Outlined.GraphicEq, "Speak", onClick = { viewModel.openLiveVision() })
+          HistoryNavTab(Icons.Filled.Home, "Home", onClick = { viewModel.closeHistory() })
+        }
       }
     }
   ) { padding ->
@@ -2223,6 +2248,134 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
         }
       }
     )
+  }
+
+  if (showChatGizaMedia) {
+    ChatGizaMediaSheet(
+      onDismiss = { showChatGizaMedia = false },
+      onCreateClick = { showChatGizaMediaCreate = true }
+    )
+  }
+  if (showChatGizaMediaCreate) {
+    ChatGizaMediaCreateSheet(onDismiss = { showChatGizaMediaCreate = false })
+  }
+}
+
+// --- ChatGiZa Media (foundation only) -------------------------------------
+// Reached by dragging/tapping the small handle above the History screen's
+// bottom nav. This is intentionally a skeleton: an empty feed placeholder
+// plus a "+" that opens a create-type menu, matching the reference layout
+// the user provided. No real posting/feed functionality yet — that comes
+// in a later pass.
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChatGizaMediaSheet(onDismiss: () -> Unit, onCreateClick: () -> Unit) {
+  ModalBottomSheet(
+    onDismissRequest = onDismiss,
+    containerColor = Color(0xFF161616),
+    modifier = Modifier.fillMaxHeight(0.92f)
+  ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+      Column(modifier = Modifier.fillMaxSize()) {
+        Text(
+          "ChatGiZa Media",
+          color = Color.White,
+          fontSize = 18.sp,
+          fontWeight = FontWeight.Bold,
+          modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+          textAlign = TextAlign.Center
+        )
+        Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+          Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+              Icons.Outlined.Whatshot,
+              contentDescription = null,
+              tint = Color.White.copy(alpha = 0.3f),
+              modifier = Modifier.size(48.dp)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text("Bado hakuna machapisho", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+              "ChatGiZa Media inakuja hivi karibuni",
+              color = Color.White.copy(alpha = 0.4f),
+              fontSize = 12.sp
+            )
+          }
+        }
+      }
+      Box(
+        modifier = Modifier
+          .align(Alignment.BottomEnd)
+          .padding(20.dp)
+          .size(56.dp)
+          .clip(CircleShape)
+          .background(Color(0xFFFFC94A))
+          .clickable(onClick = onCreateClick),
+        contentAlignment = Alignment.Center
+      ) {
+        Icon(Icons.Filled.Add, contentDescription = "Unda", tint = Color.Black, modifier = Modifier.size(26.dp))
+      }
+    }
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChatGizaMediaCreateSheet(onDismiss: () -> Unit) {
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFF161616)) {
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 20.dp)
+        .padding(bottom = 32.dp)
+    ) {
+      Text("Unda", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+      Spacer(modifier = Modifier.height(16.dp))
+      Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        MediaCreateOption(Icons.Outlined.EditNote, "Post", Modifier.weight(1f), onDismiss)
+        MediaCreateOption(Icons.Outlined.Description, "Article", Modifier.weight(1f), onDismiss)
+        MediaCreateOption(Icons.Outlined.Videocam, "Video", Modifier.weight(1f), onDismiss)
+      }
+      Spacer(modifier = Modifier.height(10.dp))
+      MediaCreateWideRow(Icons.Outlined.Widgets, "Creator Center", onDismiss)
+      Spacer(modifier = Modifier.height(10.dp))
+      MediaCreateWideRow(Icons.Outlined.Hub, "CreatorPad", onDismiss)
+    }
+  }
+}
+
+@Composable
+private fun MediaCreateOption(icon: ImageVector, label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+  Column(
+    modifier = modifier
+      .clip(RoundedCornerShape(14.dp))
+      .background(Color.White.copy(alpha = 0.06f))
+      .clickable(onClick = onClick)
+      .padding(vertical = 16.dp),
+    horizontalAlignment = Alignment.CenterHorizontally
+  ) {
+    Icon(icon, contentDescription = label, tint = Color(0xFFFFC94A), modifier = Modifier.size(24.dp))
+    Spacer(modifier = Modifier.height(8.dp))
+    Text(label, color = Color.White, fontSize = 13.sp)
+  }
+}
+
+@Composable
+private fun MediaCreateWideRow(icon: ImageVector, label: String, onClick: () -> Unit) {
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .clip(RoundedCornerShape(14.dp))
+      .background(Color.White.copy(alpha = 0.06f))
+      .clickable(onClick = onClick)
+      .padding(horizontal = 16.dp, vertical = 14.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+    Spacer(modifier = Modifier.width(12.dp))
+    Text(label, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
   }
 }
 
