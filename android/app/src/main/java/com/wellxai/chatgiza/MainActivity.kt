@@ -77,6 +77,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -222,6 +223,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -1917,20 +1919,23 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           ) {
             Icon(Icons.Outlined.Search, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.size(6.dp))
-            TextField(
-              value = viewModel.historySearchQuery,
-              onValueChange = viewModel::onHistorySearchQueryChange,
-              modifier = Modifier.weight(1f),
-              placeholder = { Text("Search", color = colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 13.sp) },
-              textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp, color = colorScheme.onBackground),
-              singleLine = true,
-              colors = TextFieldDefaults.colors(
-                unfocusedContainerColor = Color.Transparent,
-                focusedContainerColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                focusedIndicatorColor = Color.Transparent
+            // BasicTextField instead of Material3's TextField — the latter
+            // carries a built-in minimum content height taller than this
+            // 38dp pill, so it was clipping the tops/bottoms of typed
+            // characters. BasicTextField has no such minimum.
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+              if (viewModel.historySearchQuery.isEmpty()) {
+                Text("Search", color = colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 13.sp)
+              }
+              BasicTextField(
+                value = viewModel.historySearchQuery,
+                onValueChange = viewModel::onHistorySearchQueryChange,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp, color = colorScheme.onBackground),
+                cursorBrush = SolidColor(colorScheme.onBackground)
               )
-            )
+            }
           }
         }
 
@@ -1938,8 +1943,9 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
         // large open space above its promo card.
         Spacer(modifier = Modifier.height(120.dp))
 
-        // "Events" card — image-style icon box, single label, chevron
-        // affordance on the right. Background/layer kept as-is by design.
+        // "Events" card — image-style icon box, single label, no chevron.
+        // Background/layer kept as-is by design; taller now (more vertical
+        // padding) than the original compact row.
         Row(
           modifier = Modifier
             .fillMaxWidth()
@@ -1947,7 +1953,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             .clip(RoundedCornerShape(16.dp))
             .background(colorScheme.onBackground.copy(alpha = 0.06f))
             .clickable(onClick = { viewModel.openScheduled() })
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = 22.dp),
           verticalAlignment = Alignment.CenterVertically
         ) {
           Box(
@@ -1961,12 +1967,6 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           }
           Spacer(modifier = Modifier.size(12.dp))
           Text("Events", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-          Icon(
-            Icons.Filled.ChevronRight,
-            contentDescription = null,
-            tint = colorScheme.onBackground.copy(alpha = 0.4f),
-            modifier = Modifier.size(20.dp)
-          )
         }
 
         // Bigger gap pushing the whole History card further down the
