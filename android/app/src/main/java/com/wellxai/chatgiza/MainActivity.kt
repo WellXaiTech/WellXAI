@@ -741,20 +741,28 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
     containerColor = colorScheme.background,
     contentWindowInsets = WindowInsets(0, 0, 0, 0)
   ) { padding ->
+    // No top padding here on purpose — the LazyColumn below spans the full
+    // screen (behind the transparent-background top bar) and gets its top
+    // inset via contentPadding instead, so scrolling carries the last
+    // message up underneath the bar instead of hard-clipping at its edge.
     Column(
       modifier = Modifier
         .fillMaxSize()
-        .padding(padding)
         .navigationBarsPadding()
         .imePadding()
     ) {
       if (viewModel.messages.isEmpty()) {
-        Box(modifier = Modifier.weight(1f).fillMaxWidth())
+        Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(top = padding.calculateTopPadding()))
       } else {
         LazyColumn(
           state = listState,
           modifier = Modifier.weight(1f).fillMaxWidth(),
-          contentPadding = PaddingValues(horizontal = 10.dp, vertical = 16.dp),
+          contentPadding = PaddingValues(
+            start = 10.dp,
+            end = 10.dp,
+            top = padding.calculateTopPadding() + 16.dp,
+            bottom = 16.dp
+          ),
           verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
           items(viewModel.messages, key = { it.id }) { message ->
