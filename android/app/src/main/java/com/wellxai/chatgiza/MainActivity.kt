@@ -1850,6 +1850,7 @@ private fun HistoryNavTab(icon: ImageVector, label: String, onClick: () -> Unit)
   }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HistoryScreen(viewModel: ChatViewModel) {
   // HistoryScreen is now always kept mounted inside the drawer (so it can be
