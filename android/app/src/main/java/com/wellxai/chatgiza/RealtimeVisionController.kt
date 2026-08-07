@@ -92,10 +92,30 @@ class RealtimeVisionController(
     micMuted = muted
   }
 
-  /** Switches the call's audio output between the loudspeaker and the
-   * earpiece, without needing to reconnect the session. */
+  /** Switches the call's audio output between the loudspeaker, the
+   * earpiece, and a connected Bluetooth/wired headset, without needing to
+   * reconnect the session. */
   fun setOutputDevice(device: String) {
-    audioManager.isSpeakerphoneOn = device != "earpiece"
+    when (device) {
+      "headset" -> {
+        audioManager.isSpeakerphoneOn = false
+        // Best-effort: routes to a connected Bluetooth headset's SCO link if
+        // one is available; if none is connected this is a harmless no-op
+        // and audio just stays on the earpiece/wired-headset route.
+        runCatching { audioManager.startBluetoothSco() }
+        audioManager.isBluetoothScoOn = true
+      }
+      "speaker" -> {
+        runCatching { audioManager.stopBluetoothSco() }
+        audioManager.isBluetoothScoOn = false
+        audioManager.isSpeakerphoneOn = true
+      }
+      else -> {
+        runCatching { audioManager.stopBluetoothSco() }
+        audioManager.isBluetoothScoOn = false
+        audioManager.isSpeakerphoneOn = false
+      }
+    }
   }
 
   /** Time-stretches the assistant's spoken reply via the platform's own
@@ -150,7 +170,7 @@ class RealtimeVisionController(
     // pick up the AI's own voice as if the user said it, garbling turns.
     previousAudioMode = audioManager.mode
     audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-    audioManager.isSpeakerphoneOn = outputDevice != "earpiece"
+    setOutputDevice(outputDevice)
 
     connectJob = scope.launch {
       val token = tokenStore.getToken()
@@ -394,6 +414,8 @@ class RealtimeVisionController(
     currentAssistantItemId = null
     playedAudioBytes = 0
     connectionState = ConnectionState.Idle
+    runCatching { audioManager.stopBluetoothSco() }
+    audioManager.isBluetoothScoOn = false
     audioManager.isSpeakerphoneOn = false
     audioManager.mode = previousAudioMode
   }
