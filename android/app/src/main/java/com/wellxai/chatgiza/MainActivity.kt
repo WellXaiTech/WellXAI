@@ -56,6 +56,7 @@ import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
@@ -1959,6 +1960,12 @@ private fun HistoryNavTab(icon: ImageVector, label: String, onClick: () -> Unit)
   }
 }
 
+// A fast enough flick commits the ChatGiZa Media panel open/closed on its
+// own, regardless of how far it had actually been dragged — px/s, not
+// dp/s, since this is compared directly against raw pointer deltas summed
+// over time rather than a density-converted value.
+private const val MEDIA_FLING_VELOCITY_THRESHOLD = 1000f
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HistoryScreen(viewModel: ChatViewModel) {
@@ -2002,14 +2009,19 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   val mediaScope = rememberCoroutineScope()
   val mediaAvailableHeightPx = (totalContentHeightPx - with(density) { bottomBarHeight.toPx() }).toInt().coerceAtLeast(1)
 
-  // Halfway is the commit line, not "basically all the way there" — past
-  // it and released, the sheet finishes opening on its own; short of it,
-  // it springs all the way back closed. Forcing a drag to ~92% before it
-  // would commit was the actual complaint: it made the gesture feel like
-  // it never "took."
-  fun settleMediaDrag() {
+  // Two ways to commit, not one — the position rule (halfway) is untouched
+  // from before; a fast fling now OVERRIDES it in either direction, so a
+  // quick flick up commits to fully open even from low progress, and a
+  // quick flick down commits closed even from high progress. A slow/no-
+  // velocity release still falls through to the original halfway check.
+  fun settleMediaDrag(flingVelocityY: Float = 0f) {
     mediaScope.launch {
-      if (mediaProgress.value >= 0.5f) {
+      val shouldOpen = when {
+        flingVelocityY <= -MEDIA_FLING_VELOCITY_THRESHOLD -> true
+        flingVelocityY >= MEDIA_FLING_VELOCITY_THRESHOLD -> false
+        else -> mediaProgress.value >= 0.5f
+      }
+      if (shouldOpen) {
         mediaProgress.animateTo(1f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium))
       } else {
         mediaProgress.animateTo(0f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium))
@@ -2046,17 +2058,20 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           modifier = Modifier
             .fillMaxWidth()
             .pointerInput(mediaAvailableHeightPx) {
+              var velocityTracker = VelocityTracker()
               detectVerticalDragGestures(
                 onDragStart = {
                   if (!showChatGizaMedia) showChatGizaMedia = true
+                  velocityTracker = VelocityTracker()
                 },
                 onVerticalDrag = { change, dragAmount ->
                   change.consume()
                   if (!showChatGizaMedia) showChatGizaMedia = true
+                  velocityTracker.addPosition(change.uptimeMillis, change.position)
                   val newValue = (mediaProgress.value - dragAmount / mediaAvailableHeightPx).coerceIn(0f, 1f)
                   mediaScope.launch { mediaProgress.snapTo(newValue) }
                 },
-                onDragEnd = { settleMediaDrag() },
+                onDragEnd = { settleMediaDrag(velocityTracker.calculateVelocity().y) },
                 onDragCancel = { settleMediaDrag() }
               )
             }
@@ -2432,15 +2447,22 @@ private fun ChatGizaMediaPanel(
       // still mostly open (>50%) — otherwise it always springs all the way
       // closed and actually dismisses (onDismiss), matching the same
       // commit-or-cancel model as the handle that opens this panel, not a
-      // silent "freeze at whatever height you let go at."
+      // silent "freeze at whatever height you let go at." A fast fling in
+      // either direction overrides that position check, same as the handle.
       Box(
         modifier = Modifier
           .fillMaxWidth()
           .pointerInput(availableHeightPx) {
             val dragRangePx = availableHeightPx.toFloat().coerceAtLeast(1f)
-            fun settle() {
+            var velocityTracker = VelocityTracker()
+            fun settle(flingVelocityY: Float = 0f) {
               scope.launch {
-                if (progress.value > 0.5f) {
+                val shouldOpen = when {
+                  flingVelocityY <= -MEDIA_FLING_VELOCITY_THRESHOLD -> true
+                  flingVelocityY >= MEDIA_FLING_VELOCITY_THRESHOLD -> false
+                  else -> progress.value > 0.5f
+                }
+                if (shouldOpen) {
                   progress.animateTo(1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
                 } else {
                   progress.animateTo(0f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
@@ -2449,10 +2471,12 @@ private fun ChatGizaMediaPanel(
               }
             }
             detectVerticalDragGestures(
-              onDragEnd = { settle() },
+              onDragStart = { velocityTracker = VelocityTracker() },
+              onDragEnd = { settle(velocityTracker.calculateVelocity().y) },
               onDragCancel = { settle() },
               onVerticalDrag = { change, dragAmount ->
                 change.consume()
+                velocityTracker.addPosition(change.uptimeMillis, change.position)
                 val newValue = (progress.value - dragAmount / dragRangePx).coerceIn(0f, 1f)
                 scope.launch { progress.snapTo(newValue) }
               }
