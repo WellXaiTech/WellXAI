@@ -1301,7 +1301,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           Box(
             modifier = Modifier
               .weight(1f)
-              .height(64.dp)
+              .height(76.dp)
               .clip(RoundedCornerShape(percent = 50))
               .background(Color(0xFF1A1A1A))
           ) {
@@ -1310,13 +1310,13 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
                 Box(
                   modifier = Modifier
                     .padding(start = 6.dp)
-                    .size(width = 60.dp, height = 52.dp)
+                    .size(width = 68.dp, height = 62.dp)
                     .clip(RoundedCornerShape(percent = 50))
                     .background(Color.White.copy(alpha = 0.10f))
                     .clickable(onClick = { toolMenuOpen = true }),
                   contentAlignment = Alignment.Center
                 ) {
-                  Icon(Icons.Filled.Add, contentDescription = "Tools", tint = Color.White, modifier = Modifier.size(26.dp))
+                  Icon(Icons.Filled.Add, contentDescription = "Tools", tint = Color.White, modifier = Modifier.size(28.dp))
                 }
                 DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
                   DropdownMenuItem(text = { Text("GiZa Pro") }, onClick = { viewModel.selectTool(null); toolMenuOpen = false })
@@ -1344,7 +1344,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           Spacer(modifier = Modifier.size(8.dp))
           Box(
             modifier = Modifier
-              .size(width = 112.dp, height = 64.dp)
+              .size(width = 112.dp, height = 76.dp)
               .clip(RoundedCornerShape(percent = 50))
               .background(Color.White)
               .clickable(onClick = {
@@ -1489,10 +1489,10 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
 private fun VoiceControlPill(icon: ImageVector, contentDescription: String, active: Boolean = true, onClick: () -> Unit) {
   Box(
     modifier = Modifier
-      .size(width = 68.dp, height = 60.dp)
-      .clip(RoundedCornerShape(percent = 50))
+      .size(72.dp)
+      .clip(CircleShape)
       .background(Color(0xFF1F1F1F))
-      .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(percent = 50))
+      .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = CircleShape)
       .clickable(onClick = onClick),
     contentAlignment = Alignment.Center
   ) {
@@ -1500,7 +1500,7 @@ private fun VoiceControlPill(icon: ImageVector, contentDescription: String, acti
       icon,
       contentDescription = contentDescription,
       tint = Color.White.copy(alpha = if (active) 1f else 0.35f),
-      modifier = Modifier.size(20.dp)
+      modifier = Modifier.size(26.dp)
     )
   }
 }
@@ -1540,10 +1540,10 @@ private fun PushToTalkPill(onPress: () -> Unit, onRelease: () -> Unit) {
   var pressed by remember { mutableStateOf(false) }
   Box(
     modifier = Modifier
-      .size(width = 68.dp, height = 60.dp)
-      .clip(RoundedCornerShape(percent = 50))
+      .size(72.dp)
+      .clip(CircleShape)
       .background(if (pressed) Color.White else Color(0xFF1F1F1F))
-      .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(percent = 50))
+      .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = CircleShape)
       .pointerInput(Unit) {
         awaitEachGesture {
           awaitFirstDown(requireUnconsumed = false)
@@ -1560,7 +1560,7 @@ private fun PushToTalkPill(onPress: () -> Unit, onRelease: () -> Unit) {
       Icons.Outlined.MicNone,
       contentDescription = "Hold to talk",
       tint = if (pressed) Color.Black else Color.White,
-      modifier = Modifier.size(20.dp)
+      modifier = Modifier.size(26.dp)
     )
   }
 }
