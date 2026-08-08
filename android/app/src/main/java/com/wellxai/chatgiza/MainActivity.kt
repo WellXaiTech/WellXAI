@@ -572,9 +572,19 @@ private val TOOL_LABELS = mapOf(
 
 @Composable
 private fun TwoLineMenuIcon(tint: Color) {
-  Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-    Box(modifier = Modifier.width(20.dp).height(2.dp).background(tint))
-    Box(modifier = Modifier.width(20.dp).height(2.dp).background(tint))
+  // Small circular backdrop so the icon reads as a proper tappable button
+  // rather than two bare lines floating on the top bar.
+  Box(
+    modifier = Modifier
+      .size(34.dp)
+      .clip(CircleShape)
+      .background(tint.copy(alpha = 0.08f)),
+    contentAlignment = Alignment.Center
+  ) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+      Box(modifier = Modifier.width(20.dp).height(2.dp).background(tint))
+      Box(modifier = Modifier.width(20.dp).height(2.dp).background(tint))
+    }
   }
 }
 
@@ -2245,7 +2255,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
 
         // Big empty gap between Search and Events, matching the reference's
         // large open space above its promo card.
-        Spacer(modifier = Modifier.height(170.dp))
+        Spacer(modifier = Modifier.height(190.dp))
 
         // "Events" card — bigger now, same charcoal as the History card
         // below for a consistent palette across the screen. "Events" is
@@ -2253,7 +2263,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
         Row(
           modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .padding(horizontal = 10.dp, vertical = 4.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(Color(0xFF23252B))
             .clickable(onClick = { viewModel.openScheduled() })
@@ -2286,7 +2296,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
       item {
         Column(
           modifier = Modifier
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 10.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(Color(0xFF23252B))
             .padding(vertical = 10.dp)
