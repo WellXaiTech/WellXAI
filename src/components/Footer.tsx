@@ -6,7 +6,7 @@ import Logo from "./Logo";
 
 // These pages represent WellXAI, the company, rather than the ChatGiZa
 // product — the brand shown in the footer should read "WellXAI" there.
-const COMPANY_BRANDED_PATHS = ["/terms", "/privacy"];
+const COMPANY_BRANDED_PATHS = ["/terms", "/privacy", "/admin"];
 
 const columns: { heading: string; links: { label: string; href: string }[] }[] = [
   {
