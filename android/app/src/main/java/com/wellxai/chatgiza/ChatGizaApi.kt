@@ -188,13 +188,31 @@ object ChatGizaApi {
     language: String,
     location: String,
     company: CompanyProfile,
+    // Only ever attached to the newest user message (the one this
+    // request is actually sending) -- the backend's ChatContentPart
+    // union already supports an image_url part alongside text, this
+    // just needed a client that could produce it.
+    imageDataUrl: String? = null,
     onChunk: (String) -> Unit
   ): ApiResult<Unit> =
     withContext(Dispatchers.IO) {
       try {
         val messagesJson = JSONArray()
-        for (m in messages) {
-          messagesJson.put(JSONObject().put("role", m.role).put("content", m.content))
+        messages.forEachIndexed { index, m ->
+          val messageObj = JSONObject().put("role", m.role)
+          if (imageDataUrl != null && index == messages.lastIndex && m.role == "user") {
+            val parts = JSONArray()
+            if (m.content.isNotEmpty()) {
+              parts.put(JSONObject().put("type", "text").put("text", m.content))
+            }
+            parts.put(
+              JSONObject().put("type", "image_url").put("image_url", JSONObject().put("url", imageDataUrl))
+            )
+            messageObj.put("content", parts)
+          } else {
+            messageObj.put("content", m.content)
+          }
+          messagesJson.put(messageObj)
         }
         val profileJson = JSONObject()
           .put("nickname", profile.nickname)

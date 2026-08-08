@@ -420,6 +420,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Billing -> BillingScreen(viewModel)
             is AppScreen.Media -> ChatGizaMediaScreen(viewModel)
             is AppScreen.LiveVision -> LiveVisionScreen(viewModel)
+            is AppScreen.OpenSourceLicenses -> OpenSourceLicensesScreen(viewModel)
           }
         }
       }
@@ -945,6 +946,26 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
     }
   }
 
+  // Reuses the same URI->data-URL helper ChatGiZa Media's post composer
+  // already relies on (bounds-first decode + downscale, see
+  // uriToPostImageDataUrl) rather than a second copy of that logic.
+  val context = LocalContext.current
+  val composerScope = rememberCoroutineScope()
+  var attachError by remember { mutableStateOf(false) }
+  val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    if (uri != null) {
+      attachError = false
+      composerScope.launch {
+        val dataUrl = withContext(Dispatchers.IO) { uriToPostImageDataUrl(context, uri) }
+        if (dataUrl != null) {
+          viewModel.setAttachedImage(uri, dataUrl)
+        } else {
+          attachError = true
+        }
+      }
+    }
+  }
+
   val speechLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
     val autoSend = pendingAutoSend
     pendingAutoSend = false
@@ -1017,6 +1038,40 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
     colors = CardDefaults.cardColors(containerColor = colorScheme.onBackground.copy(alpha = 0.06f))
   ) {
     Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)) {
+      if (viewModel.attachedImageUri != null) {
+        Box(
+          modifier = Modifier.padding(top = 10.dp),
+          contentAlignment = Alignment.TopEnd
+        ) {
+          AsyncImage(
+            model = viewModel.attachedImageUri,
+            contentDescription = "Attached photo",
+            modifier = Modifier
+              .size(64.dp)
+              .clip(RoundedCornerShape(12.dp)),
+            contentScale = ContentScale.Crop
+          )
+          Box(
+            modifier = Modifier
+              .padding(3.dp)
+              .size(18.dp)
+              .clip(CircleShape)
+              .background(Color.Black.copy(alpha = 0.6f))
+              .clickable(onClick = { viewModel.clearAttachedImage() }),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(Icons.Outlined.Close, contentDescription = "Remove photo", tint = Color.White, modifier = Modifier.size(12.dp))
+          }
+        }
+      }
+      if (attachError) {
+        Text(
+          "Couldn't attach that photo — try a different one",
+          color = Color(0xFFFF6B6B),
+          fontSize = 12.sp,
+          modifier = Modifier.padding(top = 6.dp)
+        )
+      }
       TextField(
         value = viewModel.input,
         onValueChange = viewModel::onInputChange,
@@ -1120,6 +1175,15 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
           }
         }
         DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
+          DropdownMenuItem(
+            text = { Text("Photos") },
+            leadingIcon = { Icon(Icons.Outlined.Photo, contentDescription = null) },
+            onClick = {
+              toolMenuOpen = false
+              imagePicker.launch("image/*")
+            }
+          )
+          HorizontalDivider()
           DropdownMenuItem(text = { Text("GiZa Pro") }, onClick = { viewModel.selectTool(null); toolMenuOpen = false })
           DropdownMenuItem(text = { Text("Web search") }, onClick = { viewModel.selectTool("web_search"); toolMenuOpen = false })
           DropdownMenuItem(text = { Text("Deep research") }, onClick = { viewModel.selectTool("deep_research"); toolMenuOpen = false })
@@ -4653,6 +4717,74 @@ private fun WidgetsScreen(viewModel: ChatViewModel) {
   }
 }
 
+// Every third-party library this build actually links against, taken
+// straight from android/app/build.gradle -- kept as a plain hand list
+// rather than a build-time license-scanning plugin (Google's
+// oss-licenses-plugin) so this doesn't introduce a new Gradle plugin and
+// its own failure mode into CI.
+private data class OssLicenseEntry(val name: String, val license: String, val licenseUrl: String)
+
+private val OSS_LICENSES = listOf(
+  OssLicenseEntry("AndroidX (AppCompat, Compose, Lifecycle, Security, Credentials, CameraX, …)", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
+  OssLicenseEntry("Kotlin & Kotlin Coroutines", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
+  OssLicenseEntry("OkHttp", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
+  OssLicenseEntry("Coil", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
+  OssLicenseEntry("Google Identity Services (Credential Manager, Google Sign-In)", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
+  OssLicenseEntry("Capacitor", "MIT License", "https://opensource.org/licenses/MIT"),
+  OssLicenseEntry("Google Play Services", "Google APIs Terms of Service", "https://developers.google.com/terms")
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun OpenSourceLicensesScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeOpenSourceLicenses() }
+  val context = LocalContext.current
+  Scaffold(
+    containerColor = Color(0xFF181818),
+    topBar = {
+      TopAppBar(
+        title = { Text("Open Source Licenses") },
+        navigationIcon = {
+          IconButton(onClick = { viewModel.closeOpenSourceLicenses() }) {
+            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+          }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF181818))
+      )
+    }
+  ) { padding ->
+    LazyColumn(
+      modifier = Modifier.fillMaxSize().padding(padding),
+      contentPadding = PaddingValues(20.dp),
+      verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+      item {
+        Text(
+          "ChatGiZa is built with the following open source software.",
+          color = Color(0xFFA8A8A8),
+          fontSize = 13.sp,
+          modifier = Modifier.padding(bottom = 6.dp)
+        )
+      }
+      items(OSS_LICENSES) { entry ->
+        Card(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clickable { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(entry.licenseUrl))) },
+          shape = RoundedCornerShape(16.dp),
+          colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+        ) {
+          Column(modifier = Modifier.padding(16.dp)) {
+            Text(entry.name, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(entry.license, color = Color(0xFFA8A8A8), fontSize = 13.sp)
+          }
+        }
+      }
+    }
+  }
+}
+
 @Composable
 private fun HapticCard(icon: ImageVector, title: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
   Card(
@@ -5124,7 +5256,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         SettingsDivider()
         SettingsMenuRow("Data Controls", icon = Icons.Outlined.Storage) { viewModel.openDataControls() }
         SettingsDivider()
-        SettingsMenuRow("Open Source Licenses", icon = Icons.Outlined.Description)
+        SettingsMenuRow("Open Source Licenses", icon = Icons.Outlined.Description) { viewModel.openOpenSourceLicenses() }
         SettingsDivider()
         SettingsMenuRow("Terms of Use", icon = Icons.AutoMirrored.Outlined.Article) {
           context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/terms")))
