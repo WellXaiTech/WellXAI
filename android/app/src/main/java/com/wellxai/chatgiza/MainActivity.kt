@@ -4,12 +4,15 @@ import android.Manifest
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
 import android.graphics.Rect
 import android.graphics.YuvImage
 import android.net.Uri
 import android.os.Bundle
 import android.speech.RecognizerIntent
+import android.util.Base64
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
@@ -283,8 +286,10 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import java.io.ByteArrayOutputStream
 import java.util.Locale
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val GOOGLE_WEB_CLIENT_ID =
   "302265706031-imsr5i7elinlqkdcjfv3sgicuul1m39g.apps.googleusercontent.com"
@@ -2489,12 +2494,11 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   }
 }
 
-// --- ChatGiZa Media (foundation only) -------------------------------------
+// --- ChatGiZa Media --------------------------------------------------------
 // Reached by dragging/tapping the small handle above the History screen's
-// bottom nav. This is intentionally a skeleton: an empty feed placeholder
-// plus a "+" that opens a create-type menu, matching the reference layout
-// the user provided. No real posting/feed functionality yet — that comes
-// in a later pass.
+// bottom nav. A real shared feed backed by /api/media/posts: posting,
+// liking, and commenting all round-trip to the backend, so any signed-in
+// user sees any other user's posts here.
 
 @Composable
 private fun ChatGizaMediaPanel(
@@ -2582,9 +2586,18 @@ private fun ChatGizaMediaPanel(
         Spacer(modifier = Modifier.width(12.dp))
         Icon(Icons.Outlined.Menu, contentDescription = "Menu", tint = Color.White, modifier = Modifier.size(22.dp))
       }
+      // Public feed now (see ChatViewModel.loadMediaPosts) -- fetch fresh
+      // every time the panel is opened so a post from another account shows
+      // up without needing to kill and reopen the app.
+      LaunchedEffect(Unit) { viewModel.loadMediaPosts() }
+      var expandedCommentsPostId by remember { mutableStateOf<String?>(null) }
       if (viewModel.mediaPosts.isEmpty()) {
-        // Left empty on purpose — no placeholder icon/text here anymore.
-        Box(modifier = Modifier.weight(1f).fillMaxWidth())
+        Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+          if (viewModel.loadingMediaPosts) {
+            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(28.dp))
+          }
+          // Otherwise left empty on purpose — no placeholder icon/text.
+        }
       } else {
         LazyColumn(
           modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -2594,10 +2607,20 @@ private fun ChatGizaMediaPanel(
           items(viewModel.mediaPosts, key = { it.id }) { post ->
             MediaPostRow(
               post,
-              userImage = viewModel.userImage,
-              userName = viewModel.userName,
+              isOwnPost = post.authorId == viewModel.userId,
+              comments = viewModel.mediaComments[post.id],
+              commentsExpanded = expandedCommentsPostId == post.id,
               onLikeClick = { viewModel.toggleMediaPostLike(post.id) },
-              onDismissClick = { viewModel.removeMediaPost(post.id) }
+              onDismissClick = { viewModel.removeMediaPost(post.id) },
+              onToggleComments = {
+                if (expandedCommentsPostId == post.id) {
+                  expandedCommentsPostId = null
+                } else {
+                  expandedCommentsPostId = post.id
+                  viewModel.loadMediaComments(post.id)
+                }
+              },
+              onAddComment = { text -> viewModel.addMediaComment(post.id, text) }
             )
           }
         }
@@ -2628,13 +2651,21 @@ private fun formatMediaPostTimeAgo(createdAt: Long): String {
   }
 }
 
+// Long posts show only the first stretch of text with a tappable "... more"
+// tail instead of dumping the whole message into the feed -- matches how
+// every real social feed handles long text, and keeps the feed scannable.
+private const val MEDIA_POST_TEXT_PREVIEW_LENGTH = 180
+
 @Composable
 private fun MediaPostRow(
-  post: MediaPost,
-  userImage: String?,
-  userName: String?,
+  post: ApiMediaPost,
+  isOwnPost: Boolean,
+  comments: List<ApiMediaComment>?,
+  commentsExpanded: Boolean,
   onLikeClick: () -> Unit,
-  onDismissClick: () -> Unit
+  onDismissClick: () -> Unit,
+  onToggleComments: () -> Unit,
+  onAddComment: (String) -> Unit
 ) {
   val context = LocalContext.current
   // Starts collapsed to a short strip and expands on tap -- a full-size
@@ -2642,12 +2673,14 @@ private fun MediaPostRow(
   // pictures rather than reading posts, same complaint as a feed that's
   // all thumbnails would draw the opposite way.
   var imageExpanded by remember(post.id) { mutableStateOf(false) }
+  var textExpanded by remember(post.id) { mutableStateOf(false) }
+  val isLongText = post.text.length > MEDIA_POST_TEXT_PREVIEW_LENGTH
 
   Column(modifier = Modifier.fillMaxWidth()) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-      if (userImage != null) {
+      if (post.authorImage != null) {
         AsyncImage(
-          model = userImage,
+          model = post.authorImage,
           contentDescription = "Profile",
           modifier = Modifier.size(36.dp).clip(CircleShape)
         )
@@ -2662,7 +2695,7 @@ private fun MediaPostRow(
       Spacer(modifier = Modifier.width(10.dp))
       Column(modifier = Modifier.weight(1f)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-          Text(userName ?: "You", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+          Text(post.authorName, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
           Spacer(modifier = Modifier.width(6.dp))
           Text("• ${formatMediaPostTimeAgo(post.createdAt)}", color = Color(0xFF8A8A8A), fontSize = 12.sp)
           if (post.sentiment != null) {
@@ -2677,12 +2710,26 @@ private fun MediaPostRow(
         }
         if (post.text.isNotEmpty()) {
           Spacer(modifier = Modifier.height(4.dp))
-          Text(post.text, color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp)
+          val shownText = if (isLongText && !textExpanded) post.text.take(MEDIA_POST_TEXT_PREVIEW_LENGTH) else post.text
+          Text(
+            buildAnnotatedString {
+              append(shownText)
+              if (isLongText && !textExpanded) {
+                withStyle(SpanStyle(color = Color(0xFFFFC94A), fontWeight = FontWeight.SemiBold)) {
+                  append(" ... more")
+                }
+              }
+            },
+            color = Color.White.copy(alpha = 0.92f),
+            fontSize = 15.sp,
+            lineHeight = 20.sp,
+            modifier = if (isLongText) Modifier.clickable { textExpanded = !textExpanded } else Modifier
+          )
         }
-        if (post.imageUri != null) {
+        if (post.imageDataUrl != null) {
           Spacer(modifier = Modifier.height(8.dp))
           AsyncImage(
-            model = post.imageUri,
+            model = post.imageDataUrl,
             contentDescription = "Post photo",
             modifier = Modifier
               .fillMaxWidth()
@@ -2694,14 +2741,19 @@ private fun MediaPostRow(
         }
         Spacer(modifier = Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-          MediaPostActionButton(icon = Icons.Outlined.Comment, count = 0, tint = Color(0xFF8A8A8A), onClick = {})
+          MediaPostActionButton(
+            icon = Icons.Outlined.Comment,
+            count = post.commentCount,
+            tint = if (commentsExpanded) Color.White else Color(0xFF8A8A8A),
+            onClick = onToggleComments
+          )
           Spacer(modifier = Modifier.width(18.dp))
           MediaPostActionButton(icon = Icons.Outlined.Repeat, count = 0, tint = Color(0xFF8A8A8A), onClick = {})
           Spacer(modifier = Modifier.width(18.dp))
           MediaPostActionButton(
             icon = Icons.Outlined.ThumbUp,
             count = post.likeCount,
-            tint = if (post.liked) Color(0xFFFFC94A) else Color(0xFF8A8A8A),
+            tint = if (post.likedByMe) Color(0xFFFFC94A) else Color(0xFF8A8A8A),
             onClick = onLikeClick
           )
           Spacer(modifier = Modifier.width(18.dp))
@@ -2718,13 +2770,93 @@ private fun MediaPostRow(
             }
           )
         }
+        if (commentsExpanded) {
+          MediaPostComments(comments = comments, onAddComment = onAddComment)
+        }
       }
-      IconButton(onClick = onDismissClick, modifier = Modifier.size(22.dp)) {
-        Icon(Icons.Outlined.Close, contentDescription = "Dismiss", tint = Color(0xFF6E6E6E), modifier = Modifier.size(16.dp))
+      if (isOwnPost) {
+        IconButton(onClick = onDismissClick, modifier = Modifier.size(22.dp)) {
+          Icon(Icons.Outlined.Close, contentDescription = "Dismiss", tint = Color(0xFF6E6E6E), modifier = Modifier.size(16.dp))
+        }
       }
     }
     Spacer(modifier = Modifier.height(14.dp))
     Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.08f)))
+  }
+}
+
+@Composable
+private fun MediaPostComments(comments: List<ApiMediaComment>?, onAddComment: (String) -> Unit) {
+  var commentInput by remember { mutableStateOf("") }
+  Column(
+    modifier = Modifier
+      .fillMaxWidth()
+      .padding(top = 10.dp)
+      .clip(RoundedCornerShape(12.dp))
+      .background(Color.White.copy(alpha = 0.04f))
+      .padding(10.dp)
+  ) {
+    when {
+      comments == null -> Text("Loading comments…", color = Color(0xFF8A8A8A), fontSize = 12.sp)
+      comments.isEmpty() -> Text("No comments yet — say something!", color = Color(0xFF8A8A8A), fontSize = 12.sp)
+      else -> {
+        comments.forEach { comment ->
+          Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.Top) {
+            if (comment.authorImage != null) {
+              AsyncImage(
+                model = comment.authorImage,
+                contentDescription = "Profile",
+                modifier = Modifier.size(22.dp).clip(CircleShape)
+              )
+            } else {
+              Icon(
+                Icons.Outlined.AccountCircle,
+                contentDescription = "Profile",
+                tint = Color.White,
+                modifier = Modifier.size(22.dp)
+              )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Column {
+              Text(comment.authorName, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+              Text(comment.text, color = Color.White.copy(alpha = 0.85f), fontSize = 13.sp)
+            }
+          }
+        }
+      }
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      BasicTextField(
+        value = commentInput,
+        onValueChange = { commentInput = it },
+        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 13.sp),
+        cursorBrush = SolidColor(Color(0xFFFFC94A)),
+        modifier = Modifier
+          .weight(1f)
+          .clip(RoundedCornerShape(14.dp))
+          .background(Color.White.copy(alpha = 0.06f))
+          .padding(horizontal = 12.dp, vertical = 8.dp),
+        decorationBox = { inner ->
+          if (commentInput.isEmpty()) {
+            Text("Write a comment…", color = Color(0xFF7A7A7A), fontSize = 13.sp)
+          }
+          inner()
+        }
+      )
+      Spacer(modifier = Modifier.width(8.dp))
+      IconButton(
+        onClick = {
+          if (commentInput.isNotBlank()) {
+            onAddComment(commentInput.trim())
+            commentInput = ""
+          }
+        },
+        modifier = Modifier.size(32.dp)
+      ) {
+        Icon(Icons.Filled.Send, contentDescription = "Send comment", tint = Color(0xFFFFC94A), modifier = Modifier.size(20.dp))
+      }
+    }
   }
 }
 
@@ -2800,22 +2932,47 @@ private fun ChatGizaMediaCreateSheet(viewModel: ChatViewModel, onDismiss: () -> 
   }
 }
 
-// Reached via ChatGiZa Media's "+" -> Post. Local-only for now (see
-// MediaPost) -- text, an optional photo, and a bullish/neutral/bearish
-// sentiment tag, all wired to actually work rather than just closing the
-// sheet, since there's no backend feed to post to yet.
+// Downscales/compresses a picked photo into a small base64 data URL --
+// posts go through /api/media/posts as plain JSON (no blob storage
+// provisioned yet), so a full-resolution photo would both blow past the
+// request size the backend accepts and bloat every other user's feed load.
+private fun uriToPostImageDataUrl(context: android.content.Context, uri: Uri): String? {
+  return try {
+    val original = context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) } ?: return null
+    val maxDim = 1080
+    val scale = (maxDim.toFloat() / maxOf(original.width, original.height)).coerceAtMost(1f)
+    val resized = if (scale < 1f) {
+      Bitmap.createScaledBitmap(original, (original.width * scale).toInt(), (original.height * scale).toInt(), true)
+    } else {
+      original
+    }
+    val out = ByteArrayOutputStream()
+    resized.compress(Bitmap.CompressFormat.JPEG, 80, out)
+    val base64 = Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
+    "data:image/jpeg;base64,$base64"
+  } catch (e: Exception) {
+    null
+  }
+}
+
+// Reached via ChatGiZa Media's "+" -> Post. A real public post: text, an
+// optional photo, and a bullish/neutral/bearish sentiment tag, submitted to
+// /api/media/posts so it shows up in anyone's feed, not just this device's.
 @Composable
 private fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss: () -> Unit) {
   BackHandler { onDismiss() }
+  val context = LocalContext.current
+  val composerScope = rememberCoroutineScope()
   var text by remember { mutableStateOf("") }
   var imageUri by remember { mutableStateOf<Uri?>(null) }
   var sentiment by remember { mutableStateOf<String?>(null) }
+  var posting by remember { mutableStateOf(false) }
 
   val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
     if (uri != null) imageUri = uri
   }
 
-  val canPost = text.isNotBlank() || imageUri != null
+  val canPost = (text.isNotBlank() || imageUri != null) && !posting
 
   Box(
     modifier = Modifier
@@ -2834,8 +2991,16 @@ private fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss:
         Spacer(modifier = Modifier.weight(1f))
         Button(
           onClick = {
-            viewModel.addMediaPost(text.trim(), imageUri?.toString(), sentiment)
-            onDismiss()
+            posting = true
+            composerScope.launch {
+              val dataUrl = imageUri?.let { uri ->
+                withContext(Dispatchers.IO) { uriToPostImageDataUrl(context, uri) }
+              }
+              viewModel.createMediaPost(text.trim(), dataUrl, sentiment) { success ->
+                posting = false
+                if (success) onDismiss()
+              }
+            }
           },
           enabled = canPost,
           colors = ButtonDefaults.buttonColors(
@@ -2845,7 +3010,7 @@ private fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss:
           shape = RoundedCornerShape(20.dp),
           contentPadding = PaddingValues(horizontal = 22.dp, vertical = 8.dp)
         ) {
-          Text("Post", color = Color.Black, fontWeight = FontWeight.SemiBold)
+          Text(if (posting) "Posting…" else "Post", color = Color.Black, fontWeight = FontWeight.SemiBold)
         }
       }
 
