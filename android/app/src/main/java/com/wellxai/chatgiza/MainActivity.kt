@@ -35,16 +35,13 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -56,12 +53,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
@@ -263,7 +258,6 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -326,7 +320,7 @@ class MainActivity : ComponentActivity() {
           // back to History before the tap's destination ever became visible.
           // Keeping the drawer mounted continuously across all of these
           // avoids that race entirely instead of just narrowing it.
-          val screensInsideHistoryDrawer = screen is AppScreen.Chat || screen is AppScreen.Imagine ||
+          val screensInsideHistoryDrawer = screen is AppScreen.Chat || screen is AppScreen.Media ||
             screen is AppScreen.History || screen is AppScreen.Account || screen is AppScreen.Settings ||
             screen is AppScreen.Projects || screen is AppScreen.Scheduled || screen is AppScreen.LiveVision
           if (screensInsideHistoryDrawer) {
@@ -350,7 +344,7 @@ class MainActivity : ComponentActivity() {
               snapshotFlow { drawerState.currentValue }.collect { value ->
                 when {
                   value == DrawerValue.Open &&
-                    (viewModel.screen is AppScreen.Chat || viewModel.screen is AppScreen.Imagine) ->
+                    (viewModel.screen is AppScreen.Chat || viewModel.screen is AppScreen.Media) ->
                     viewModel.openHistory()
                   value == DrawerValue.Closed && viewModel.screen is AppScreen.History -> viewModel.closeHistory()
                 }
@@ -387,7 +381,7 @@ class MainActivity : ComponentActivity() {
               }
             ) {
               when (screen) {
-                is AppScreen.Imagine -> ImagineScreen(viewModel)
+                is AppScreen.Media -> ChatGizaMediaScreen(viewModel)
                 is AppScreen.Account -> AccountScreen(viewModel)
                 is AppScreen.Settings -> SettingsScreen(viewModel)
                 is AppScreen.Projects -> ProjectsScreen(viewModel)
@@ -423,7 +417,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Projects -> ProjectsScreen(viewModel)
             is AppScreen.Scheduled -> ScheduledScreen(viewModel)
             is AppScreen.Billing -> BillingScreen(viewModel)
-            is AppScreen.Imagine -> ImagineScreen(viewModel)
+            is AppScreen.Media -> ChatGizaMediaScreen(viewModel)
             is AppScreen.LiveVision -> LiveVisionScreen(viewModel)
           }
         }
@@ -849,7 +843,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
   Scaffold(
     topBar = {
       CenterAlignedTopAppBar(
-        title = { AskImagineTabs(current = "Ask", onAsk = {}, onImagine = { viewModel.openImagine() }) },
+        title = { AskImagineTabs(current = "Ask", onAsk = {}, onImagine = { viewModel.openChatGizaMedia() }) },
         navigationIcon = {
           IconButton(onClick = { viewModel.openHistory() }) {
             TwoLineMenuIcon(tint = colorScheme.onBackground)
@@ -1140,14 +1134,23 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
   }
 }
 
+// ChatGiZa Media now lives here, under the "Extra" tab, instead of
+// behind the History screen's old drag handle -- a dedicated screen
+// with its own back/history navigation instead of a slide-up panel.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ImagineScreen(viewModel: ChatViewModel) {
-  BackHandler { viewModel.closeImagine() }
+private fun ChatGizaMediaScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeChatGizaMedia() }
+  var showCreate by remember { mutableStateOf(false) }
+  var showPostComposer by remember { mutableStateOf(false) }
+  var replyingToPost by remember { mutableStateOf<ApiMediaPost?>(null) }
+  var selectedFeedTab by remember { mutableStateOf("Discover") }
+  var expandedCommentsPostId by remember { mutableStateOf<String?>(null) }
+
   Scaffold(
     topBar = {
       CenterAlignedTopAppBar(
-        title = { AskImagineTabs(current = "Imagine", onAsk = { viewModel.closeImagine() }, onImagine = {}) },
+        title = { AskImagineTabs(current = "Imagine", onAsk = { viewModel.closeChatGizaMedia() }, onImagine = {}) },
         navigationIcon = {
           IconButton(onClick = { viewModel.openHistory() }) {
             TwoLineMenuIcon(tint = colorScheme.onBackground)
@@ -1182,48 +1185,105 @@ private fun ImagineScreen(viewModel: ChatViewModel) {
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
       )
     },
-    containerColor = Color.Transparent
+    containerColor = Color(0xFF161616)
   ) { padding ->
-    Column(
-      modifier = Modifier.fillMaxSize().padding(padding).padding(20.dp),
-      horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-      Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-        when {
-          viewModel.generatingImage -> CircularProgressIndicator(color = colorScheme.onBackground)
-          viewModel.generatedImageUrl != null -> AsyncImage(
-            model = viewModel.generatedImageUrl,
-            contentDescription = viewModel.imaginePrompt,
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
-          )
-          else -> Text(
-            "Describe what you'd like to see.",
-            color = colorScheme.onBackground.copy(alpha = 0.5f),
-            fontSize = 15.sp
-          )
-        }
-      }
-      if (viewModel.imagineError != null) {
-        Text(viewModel.imagineError ?: "", color = Color(0xFFFF6B6B), fontSize = 12.sp)
-        Spacer(modifier = Modifier.height(8.dp))
-      }
-      Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        OutlinedTextField(
-          value = viewModel.imaginePrompt,
-          onValueChange = viewModel::onImaginePromptChange,
-          modifier = Modifier.weight(1f),
-          placeholder = { Text("A logo for a coffee shop…") },
-          shape = RoundedCornerShape(24.dp)
-        )
-        Spacer(modifier = Modifier.size(8.dp))
-        IconButton(
-          onClick = { viewModel.generateImage() },
-          enabled = viewModel.imaginePrompt.isNotBlank() && !viewModel.generatingImage
+    Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+      Column(modifier = Modifier.fillMaxSize()) {
+        // Reference feed's own tab row (Discover/Following/Campaign/Smart)
+        // -- visual-only for now since there's still just one shared post
+        // list behind them, same as History's own tab row.
+        Row(
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+          verticalAlignment = Alignment.CenterVertically
         ) {
-          Icon(Icons.Filled.Send, contentDescription = "Generate", tint = colorScheme.onBackground)
+          Row(
+            modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(18.dp)
+          ) {
+            listOf("Discover", "Following", "Campaign", "Smart").forEach { tab ->
+              Text(
+                tab,
+                color = if (tab == selectedFeedTab) Color.White else Color.White.copy(alpha = 0.45f),
+                fontSize = 15.sp,
+                fontWeight = if (tab == selectedFeedTab) FontWeight.Bold else FontWeight.Medium,
+                modifier = Modifier.clickable { selectedFeedTab = tab }
+              )
+            }
+          }
         }
+        // Public feed (see ChatViewModel.loadMediaPosts) -- fetch fresh
+        // every time this screen opens so a post from another account
+        // shows up without needing to kill and reopen the app.
+        LaunchedEffect(Unit) { viewModel.loadMediaPosts() }
+        if (viewModel.mediaPosts.isEmpty()) {
+          Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+            if (viewModel.loadingMediaPosts) {
+              CircularProgressIndicator(color = Color.White, modifier = Modifier.size(28.dp))
+            }
+            // Otherwise left empty on purpose — no placeholder icon/text.
+          }
+        } else {
+          LazyColumn(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+          ) {
+            items(viewModel.mediaPosts, key = { it.id }) { post ->
+              MediaPostRow(
+                post,
+                isOwnPost = post.authorId == viewModel.userId,
+                comments = viewModel.mediaComments[post.id],
+                commentsExpanded = expandedCommentsPostId == post.id,
+                onLikeClick = { viewModel.toggleMediaPostLike(post.id) },
+                onDismissClick = { viewModel.removeMediaPost(post.id) },
+                onToggleComments = {
+                  if (expandedCommentsPostId == post.id) {
+                    expandedCommentsPostId = null
+                  } else {
+                    expandedCommentsPostId = post.id
+                    viewModel.loadMediaComments(post.id)
+                  }
+                },
+                onOpenComposer = { replyingToPost = post }
+              )
+            }
+          }
+        }
+      }
+      Box(
+        modifier = Modifier
+          .align(Alignment.BottomEnd)
+          .padding(20.dp)
+          .size(56.dp)
+          .clip(CircleShape)
+          .background(Color(0xFFFFC94A))
+          .clickable(onClick = { showCreate = true }),
+        contentAlignment = Alignment.Center
+      ) {
+        Icon(Icons.Filled.Add, contentDescription = "Unda", tint = Color.Black, modifier = Modifier.size(26.dp))
+      }
+      val replyTarget = replyingToPost
+      if (replyTarget != null) {
+        MediaCommentComposerSheet(
+          authorName = replyTarget.authorName,
+          onDismiss = { replyingToPost = null },
+          onSubmit = { text -> viewModel.addMediaComment(replyTarget.id, text) }
+        )
       }
     }
+  }
+  if (showCreate) {
+    ChatGizaMediaCreateSheet(
+      viewModel,
+      onDismiss = { showCreate = false },
+      onPostClick = {
+        showCreate = false
+        showPostComposer = true
+      }
+    )
+  }
+  if (showPostComposer) {
+    ChatGizaMediaPostComposerScreen(viewModel, onDismiss = { showPostComposer = false })
   }
 }
 
@@ -2134,12 +2194,6 @@ private fun HistoryNavTab(icon: ImageVector, label: String, onClick: () -> Unit)
   }
 }
 
-// A fast enough flick commits the ChatGiZa Media panel open/closed on its
-// own, regardless of how far it had actually been dragged — px/s, not
-// dp/s, since this is compared directly against raw pointer deltas summed
-// over time rather than a density-converted value.
-private const val MEDIA_FLING_VELOCITY_THRESHOLD = 1000f
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HistoryScreen(viewModel: ChatViewModel) {
@@ -2163,76 +2217,6 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   // tab row without pretending there are three more distinct datasets.
   var selectedHistoryTab by remember { mutableStateOf("History") }
 
-  var showChatGizaMedia by remember { mutableStateOf(false) }
-  var showChatGizaMediaCreate by remember { mutableStateOf(false) }
-  var showChatGizaMediaPostComposer by remember { mutableStateOf(false) }
-  // Fully finger-driven, no auto-animation and no resting "peek" floor —
-  // 0 = closed (no height at all), 1 = fully open. The only animation is
-  // the spring on release, and only in one of two directions: if the drag
-  // crossed the "committed" threshold it finishes opening to 1, otherwise
-  // it always springs all the way back to 0 (fully dismissed).
-  val mediaProgress = remember { Animatable(0f) }
-  // The live value WHILE a finger is down is tracked here, as a plain
-  // synchronous var — not by calling Animatable.snapTo from a freshly
-  // launched coroutine on every single pointer-move callback. That
-  // per-event "launch a coroutine, read .value, write .value" pattern is
-  // exactly what was causing the drag to stutter, stick halfway, or stop
-  // responding entirely: bursts of drag events during a fast swipe would
-  // spawn overlapping coroutines that each read a stale mediaProgress.value
-  // (because an earlier launched snapTo hadn't actually applied yet), so
-  // most of a fast drag's motion got silently discarded out of order.
-  // Reading/writing a plain Compose state var has no such race.
-  var mediaDragValue by remember { mutableStateOf(0f) }
-  var isDraggingMedia by remember { mutableStateOf(false) }
-  val mediaHeightFraction = if (isDraggingMedia) mediaDragValue else mediaProgress.value
-  // Measured from a container that's always present (not gated behind
-  // showChatGizaMedia), so the very first drag of the session already has
-  // an accurate range instead of a stale/zero value on the first frame.
-  var bottomBarHeight by remember { mutableStateOf(0.dp) }
-  var totalContentHeightPx by remember { mutableStateOf(0) }
-  val density = LocalDensity.current
-  val mediaScope = rememberCoroutineScope()
-  val mediaAvailableHeightPx = (totalContentHeightPx - with(density) { bottomBarHeight.toPx() }).toInt().coerceAtLeast(1)
-
-  fun startMediaDrag() {
-    if (!showChatGizaMedia) showChatGizaMedia = true
-    mediaDragValue = mediaHeightFraction
-    isDraggingMedia = true
-  }
-
-  fun updateMediaDrag(dragAmount: Float) {
-    mediaDragValue = (mediaDragValue - dragAmount / mediaAvailableHeightPx).coerceIn(0f, 1f)
-  }
-
-  // Two ways to commit, not one — the position rule (halfway) is untouched
-  // from before; a fast fling now OVERRIDES it in either direction, so a
-  // quick flick up commits to fully open even from low progress, and a
-  // quick flick down commits closed even from high progress. A slow/no-
-  // velocity release still falls through to the original halfway check.
-  fun settleMediaDrag(flingVelocityY: Float = 0f) {
-    val dragValueAtRelease = mediaDragValue
-    isDraggingMedia = false
-    mediaScope.launch {
-      mediaProgress.snapTo(dragValueAtRelease)
-      val shouldOpen = when {
-        flingVelocityY <= -MEDIA_FLING_VELOCITY_THRESHOLD -> true
-        flingVelocityY >= MEDIA_FLING_VELOCITY_THRESHOLD -> false
-        else -> mediaProgress.value >= 0.5f
-      }
-      if (shouldOpen) {
-        mediaProgress.animateTo(1f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium))
-      } else {
-        mediaProgress.animateTo(0f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium))
-        showChatGizaMedia = false
-      }
-    }
-  }
-
-  Box(
-    modifier = Modifier
-      .fillMaxSize()
-      .onGloballyPositioned { coords -> totalContentHeightPx = coords.size.height }
-  ) {
   Scaffold(
     containerColor = Color.Transparent,
     bottomBar = {
@@ -2241,62 +2225,16 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
       Column(
         modifier = Modifier
           .fillMaxWidth()
-          .onGloballyPositioned { coords -> bottomBarHeight = with(density) { coords.size.height.toDp() } }
           .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
           .background(Color(0xFF23252B))
           .navigationBarsPadding()
       ) {
-        // ChatGiZa Media drag handle — sits above the tab row. The panel
-        // height now follows this same continuous gesture 1:1 from the
-        // very first pixel of movement (like a real bottom sheet / an
-        // Instagram-style swipe-up), rather than just flipping a boolean
-        // after a small threshold and leaving the rest of the motion to a
-        // separate, disconnected detector inside the panel itself.
-        Box(
-          modifier = Modifier
-            .fillMaxWidth()
-            .pointerInput(mediaAvailableHeightPx) {
-              var velocityTracker = VelocityTracker()
-              detectVerticalDragGestures(
-                onDragStart = {
-                  startMediaDrag()
-                  velocityTracker = VelocityTracker()
-                },
-                onVerticalDrag = { change, dragAmount ->
-                  change.consume()
-                  velocityTracker.addPosition(change.uptimeMillis, change.position)
-                  updateMediaDrag(dragAmount)
-                },
-                onDragEnd = { settleMediaDrag(velocityTracker.calculateVelocity().y) },
-                onDragCancel = { settleMediaDrag() }
-              )
-            }
-            .clickable(onClick = {
-              showChatGizaMedia = true
-              mediaScope.launch { mediaProgress.snapTo(1f) }
-            })
-            .padding(top = 10.dp, bottom = 8.dp),
-          contentAlignment = Alignment.Center
-        ) {
-          // Only draw this pill while the panel is closed — once it's open,
-          // the panel has its own handle at its top edge, and showing both
-          // at once read as two disconnected controls rather than one.
-          if (!showChatGizaMedia) {
-            Box(
-              modifier = Modifier
-                .width(36.dp)
-                .height(4.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(colorScheme.onBackground.copy(alpha = 0.35f))
-            )
-          }
-        }
         // Five-tab bottom nav, same slot layout as the reference's
         // Home/Markets/Trade/Earn/Assets bar, re-purposed for ChatGiZa.
         Row(
           modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 2.dp, bottom = 4.dp),
+            .padding(top = 10.dp, bottom = 8.dp),
           horizontalArrangement = Arrangement.SpaceEvenly
         ) {
           HistoryNavTab(Icons.Outlined.Settings, "Settings", onClick = { viewModel.openAccount() })
@@ -2558,216 +2496,13 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
     )
   }
 
-  // ChatGiZa Media panel — an in-layout panel (not a system
-  // ModalBottomSheet), so it stops right above the bottom nav instead of
-  // covering the whole screen: the nav row stays visible and tappable
-  // the entire time the panel is open.
-  if (showChatGizaMedia) {
-    Box(
-      modifier = Modifier
-        .fillMaxSize()
-        .padding(bottom = bottomBarHeight)
-    ) {
-      Box(
-        modifier = Modifier
-          .fillMaxSize()
-          .background(Color.Black.copy(alpha = 0.55f))
-          .clickable(
-            indication = null,
-            interactionSource = remember { MutableInteractionSource() },
-            onClick = { showChatGizaMedia = false }
-          )
-      )
-      ChatGizaMediaPanel(
-        viewModel = viewModel,
-        modifier = Modifier
-          .align(Alignment.BottomCenter)
-          .fillMaxWidth()
-          .fillMaxHeight(mediaHeightFraction),
-        onDismiss = { showChatGizaMedia = false },
-        onCreateClick = { showChatGizaMediaCreate = true },
-        onDragStart = ::startMediaDrag,
-        onDrag = ::updateMediaDrag,
-        onDragEnd = { settleMediaDrag(it) },
-        onDragCancel = { settleMediaDrag() }
-      )
-    }
-  }
-  if (showChatGizaMediaCreate) {
-    ChatGizaMediaCreateSheet(
-      viewModel,
-      onDismiss = { showChatGizaMediaCreate = false },
-      onPostClick = {
-        showChatGizaMediaCreate = false
-        showChatGizaMediaPostComposer = true
-      }
-    )
-  }
-  if (showChatGizaMediaPostComposer) {
-    ChatGizaMediaPostComposerScreen(viewModel, onDismiss = { showChatGizaMediaPostComposer = false })
-  }
-  }
 }
 
 // --- ChatGiZa Media --------------------------------------------------------
-// Reached by dragging/tapping the small handle above the History screen's
-// bottom nav. A real shared feed backed by /api/media/posts: posting,
-// liking, and commenting all round-trip to the backend, so any signed-in
-// user sees any other user's posts here.
-
-@Composable
-private fun ChatGizaMediaPanel(
-  viewModel: ChatViewModel,
-  modifier: Modifier = Modifier,
-  onDismiss: () -> Unit,
-  onCreateClick: () -> Unit,
-  onDragStart: () -> Unit,
-  onDrag: (Float) -> Unit,
-  onDragEnd: (Float) -> Unit,
-  onDragCancel: () -> Unit
-) {
-  // A plain in-layout panel rather than a system ModalBottomSheet — a
-  // modal sheet is a separate window that always covers the full screen
-  // height (including whatever sits behind it), which was hiding the
-  // Settings/Projects/... nav row underneath. This panel's height is
-  // capped by the caller (fillMaxHeight fraction, positioned above the
-  // measured bottom-bar height), so that row stays visible and tappable.
-  // Hoisted above the Column so both the LazyColumn (which sets it, per
-  // post) and the composer sheet below (a sibling of the Column, not a
-  // child -- it needs to float above everything, including the "+" FAB)
-  // can see it.
-  var replyingToPost by remember { mutableStateOf<ApiMediaPost?>(null) }
-  Box(
-    modifier = modifier
-      .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-      .background(Color(0xFF161616))
-  ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-      // Live drag tracking and settle-on-release both live in the parent
-      // (HistoryScreen) now, shared with the outer handle below the nav bar
-      // — this handle just forwards raw gesture events up via callbacks
-      // instead of keeping its own separate Animatable/settle logic, which
-      // used to race the outer handle's (see the comment on mediaDragValue
-      // in HistoryScreen for what that race actually broke).
-      Box(
-        modifier = Modifier
-          .fillMaxWidth()
-          .pointerInput(Unit) {
-            var velocityTracker = VelocityTracker()
-            detectVerticalDragGestures(
-              onDragStart = {
-                onDragStart()
-                velocityTracker = VelocityTracker()
-              },
-              onDragEnd = { onDragEnd(velocityTracker.calculateVelocity().y) },
-              onDragCancel = { onDragCancel() },
-              onVerticalDrag = { change, dragAmount ->
-                change.consume()
-                velocityTracker.addPosition(change.uptimeMillis, change.position)
-                onDrag(dragAmount)
-              }
-            )
-          }
-          .clickable(onClick = onDismiss)
-          .padding(vertical = 10.dp),
-        contentAlignment = Alignment.Center
-      ) {
-        Box(
-          modifier = Modifier
-            .width(36.dp)
-            .height(4.dp)
-            .clip(RoundedCornerShape(2.dp))
-            .background(Color.White.copy(alpha = 0.35f))
-        )
-      }
-      // Reference feed's own tab row (Discover/Following/Campaign/Smart) in
-      // place of a plain "ChatGiZa Media" title — these tabs are visual-only
-      // for now since there's still just one local post list behind them,
-      // same as History's own tab row before it had real per-tab data.
-      var selectedFeedTab by remember { mutableStateOf("Discover") }
-      Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Row(
-          modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
-          horizontalArrangement = Arrangement.spacedBy(18.dp)
-        ) {
-          listOf("Discover", "Following", "Campaign", "Smart").forEach { tab ->
-            Text(
-              tab,
-              color = if (tab == selectedFeedTab) Color.White else Color.White.copy(alpha = 0.45f),
-              fontSize = 15.sp,
-              fontWeight = if (tab == selectedFeedTab) FontWeight.Bold else FontWeight.Medium,
-              modifier = Modifier.clickable { selectedFeedTab = tab }
-            )
-          }
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Icon(Icons.Outlined.Menu, contentDescription = "Menu", tint = Color.White, modifier = Modifier.size(22.dp))
-      }
-      // Public feed now (see ChatViewModel.loadMediaPosts) -- fetch fresh
-      // every time the panel is opened so a post from another account shows
-      // up without needing to kill and reopen the app.
-      LaunchedEffect(Unit) { viewModel.loadMediaPosts() }
-      var expandedCommentsPostId by remember { mutableStateOf<String?>(null) }
-      if (viewModel.mediaPosts.isEmpty()) {
-        Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-          if (viewModel.loadingMediaPosts) {
-            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(28.dp))
-          }
-          // Otherwise left empty on purpose — no placeholder icon/text.
-        }
-      } else {
-        LazyColumn(
-          modifier = Modifier.weight(1f).fillMaxWidth(),
-          contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-          verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-          items(viewModel.mediaPosts, key = { it.id }) { post ->
-            MediaPostRow(
-              post,
-              isOwnPost = post.authorId == viewModel.userId,
-              comments = viewModel.mediaComments[post.id],
-              commentsExpanded = expandedCommentsPostId == post.id,
-              onLikeClick = { viewModel.toggleMediaPostLike(post.id) },
-              onDismissClick = { viewModel.removeMediaPost(post.id) },
-              onToggleComments = {
-                if (expandedCommentsPostId == post.id) {
-                  expandedCommentsPostId = null
-                } else {
-                  expandedCommentsPostId = post.id
-                  viewModel.loadMediaComments(post.id)
-                }
-              },
-              onOpenComposer = { replyingToPost = post }
-            )
-          }
-        }
-      }
-    }
-    Box(
-      modifier = Modifier
-        .align(Alignment.BottomEnd)
-        .padding(20.dp)
-        .size(56.dp)
-        .clip(CircleShape)
-        .background(Color(0xFFFFC94A))
-        .clickable(onClick = onCreateClick),
-      contentAlignment = Alignment.Center
-    ) {
-      Icon(Icons.Filled.Add, contentDescription = "Unda", tint = Color.Black, modifier = Modifier.size(26.dp))
-    }
-    val replyTarget = replyingToPost
-    if (replyTarget != null) {
-      MediaCommentComposerSheet(
-        authorName = replyTarget.authorName,
-        onDismiss = { replyingToPost = null },
-        onSubmit = { text -> viewModel.addMediaComment(replyTarget.id, text) }
-      )
-    }
-  }
-}
+// Reached via the "Extra" tab at the top of the Chat screen now (see
+// ChatGizaMediaScreen). A real shared feed backed by /api/media/posts:
+// posting, liking, and commenting all round-trip to the backend, so any
+// signed-in user sees any other user's posts here.
 
 private fun formatMediaPostTimeAgo(createdAt: Long): String {
   val minutes = (System.currentTimeMillis() - createdAt).coerceAtLeast(0) / 60000
