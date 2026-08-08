@@ -8,6 +8,7 @@ import ChatMessageBubble from "@/components/ChatMessageBubble";
 import ChatComposer, { type ComposerTool } from "@/components/ChatComposer";
 import GeneratingMediaPlaceholder from "@/components/GeneratingMediaPlaceholder";
 import MediaLibrary from "@/components/MediaLibrary";
+import ChatGizaMediaFeed from "@/components/ChatGizaMediaFeed";
 import ProjectsPanel, { type Project } from "@/components/ProjectsPanel";
 import ScheduledPanel, { type ScheduledTask } from "@/components/ScheduledPanel";
 import PluginsPanel, { type PluginKey } from "@/components/PluginsPanel";
@@ -345,6 +346,7 @@ function ChatGizaInner() {
   const [streamingTool, setStreamingTool] = useState<ComposerTool>(null);
   const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [mediaFeedOpen, setMediaFeedOpen] = useState(false);
   const [projectsOpen, setProjectsOpen] = useState(false);
   const [scheduledOpen, setScheduledOpen] = useState(false);
   const [pluginsOpen, setPluginsOpen] = useState(false);
@@ -1494,6 +1496,7 @@ function ChatGizaInner() {
         onDelete={deleteConversation}
         onShare={shareConversation}
         onOpenLibrary={() => setLibraryOpen(true)}
+        onOpenMedia={() => setMediaFeedOpen(true)}
         onOpenProjects={() => setProjectsOpen(true)}
         onOpenCode={() => setCodeOpen(true)}
         onOpenSearch={() => setSearchOpen(true)}
@@ -1646,6 +1649,8 @@ function ChatGizaInner() {
           }}
         />
       )}
+
+      {mediaFeedOpen && <ChatGizaMediaFeed onClose={() => setMediaFeedOpen(false)} />}
 
       {projectsOpen && (
         <ProjectsPanel

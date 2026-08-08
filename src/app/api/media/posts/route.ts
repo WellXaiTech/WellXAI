@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { ensureUserExists } from "@/lib/userIndex";
 import { getRequestUser } from "@/lib/requestUser";
-import { uploadPostImage } from "@/lib/mediaStorage";
+import { uploadPostImage, isOwnVideoUrl } from "@/lib/mediaStorage";
 
 const MAX_TEXT_LENGTH = 2000;
 // The client still sends a base64 data URL (that's what the existing
@@ -19,6 +19,7 @@ type PostRow = {
   user_id: string;
   caption: string | null;
   image_url: string | null;
+  video_url: string | null;
   sentiment: Sentiment | null;
   created_at: string;
   users: { name: string | null; image: string | null } | { name: string | null; image: string | null }[] | null;
@@ -36,6 +37,7 @@ function toPost(row: PostRow) {
     ...authorOf(row),
     text: row.caption ?? "",
     imageDataUrl: row.image_url,
+    videoUrl: row.video_url,
     sentiment: row.sentiment,
     createdAt: new Date(row.created_at).getTime(),
   };
@@ -50,7 +52,7 @@ export async function GET(req: NextRequest) {
   try {
     const { data: rows } = await supabaseAdmin
       .from("media_posts")
-      .select("id, user_id, caption, image_url, sentiment, created_at, users(name, image)")
+      .select("id, user_id, caption, image_url, video_url, sentiment, created_at, users(name, image)")
       .order("created_at", { ascending: false })
       .limit(FEED_PAGE_SIZE);
     const posts = ((rows ?? []) as PostRow[]).map(toPost);
@@ -91,11 +93,16 @@ export async function POST(req: NextRequest) {
     body.imageDataUrl.length <= MAX_IMAGE_DATA_URL_LENGTH
       ? body.imageDataUrl
       : null;
+  // Videos are uploaded straight to Storage by the client beforehand (see
+  // /api/media/video-upload-url) -- here we only ever receive the resulting
+  // URL, which we verify actually points at our own video bucket before
+  // trusting it, since we never saw the bytes ourselves.
+  const videoUrl = typeof body?.videoUrl === "string" && isOwnVideoUrl(body.videoUrl) ? body.videoUrl : null;
   const sentiment: Sentiment | null =
     body?.sentiment === "bullish" || body?.sentiment === "neutral" || body?.sentiment === "bearish" ? body.sentiment : null;
 
-  if (!text && !rawImageDataUrl) {
-    return NextResponse.json({ error: "A post needs text or a photo" }, { status: 400 });
+  if (!text && !rawImageDataUrl && !videoUrl) {
+    return NextResponse.json({ error: "A post needs text, a photo, or a video" }, { status: 400 });
   }
 
   try {
@@ -108,7 +115,7 @@ export async function POST(req: NextRequest) {
 
     const { data, error } = await supabaseAdmin
       .from("media_posts")
-      .insert({ user_id: user.id, caption: text || null, image_url: imageUrl, sentiment })
+      .insert({ user_id: user.id, caption: text || null, image_url: imageUrl, video_url: videoUrl, sentiment })
       .select()
       .single();
     if (error || !data) throw error ?? new Error("insert failed");
@@ -121,6 +128,7 @@ export async function POST(req: NextRequest) {
         authorImage: user.image,
         text,
         imageDataUrl: imageUrl,
+        videoUrl,
         sentiment,
         createdAt: new Date(data.created_at).getTime(),
         likeCount: 0,
