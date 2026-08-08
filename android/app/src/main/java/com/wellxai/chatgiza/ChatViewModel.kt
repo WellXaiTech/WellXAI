@@ -891,10 +891,43 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     }
   }
 
-  fun createMediaPost(text: String, imageDataUrl: String?, sentiment: String?, onDone: (Boolean) -> Unit) {
+  var uploadingMediaVideo by mutableStateOf(false)
+    private set
+
+  fun createMediaPost(
+    text: String,
+    imageDataUrl: String?,
+    videoBytes: ByteArray?,
+    videoMime: String?,
+    sentiment: String?,
+    onDone: (Boolean) -> Unit
+  ) {
     val token = tokenStore.getToken() ?: run { mediaError = "Not signed in"; return onDone(false) }
     viewModelScope.launch {
-      when (val result = ChatGizaApi.createMediaPost(token, text, imageDataUrl, sentiment)) {
+      var videoUrl: String? = null
+      if (videoBytes != null && videoMime != null) {
+        uploadingMediaVideo = true
+        when (val slotResult = ChatGizaApi.createVideoUploadSlot(token, videoMime)) {
+          is ApiResult.Success -> {
+            when (val uploadResult = ChatGizaApi.uploadVideoBytes(slotResult.value.signedUrl, videoMime, videoBytes)) {
+              is ApiResult.Success -> videoUrl = slotResult.value.publicUrl
+              is ApiResult.Failure -> {
+                mediaError = uploadResult.message
+                uploadingMediaVideo = false
+                return@launch onDone(false)
+              }
+            }
+          }
+          is ApiResult.Failure -> {
+            mediaError = slotResult.message
+            uploadingMediaVideo = false
+            return@launch onDone(false)
+          }
+        }
+        uploadingMediaVideo = false
+      }
+
+      when (val result = ChatGizaApi.createMediaPost(token, text, imageDataUrl, videoUrl, sentiment)) {
         is ApiResult.Success -> {
           mediaPosts = listOf(result.value) + mediaPosts
           onDone(true)

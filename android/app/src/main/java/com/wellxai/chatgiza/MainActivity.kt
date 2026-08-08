@@ -10,6 +10,8 @@ import android.graphics.ImageFormat
 import android.graphics.Rect
 import android.graphics.YuvImage
 import android.net.Uri
+import android.widget.MediaController
+import android.widget.VideoView
 import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.util.Base64
@@ -2826,6 +2828,10 @@ private fun MediaPostRow(
             }
           }
         }
+        if (post.videoUrl != null) {
+          Spacer(modifier = Modifier.height(8.dp))
+          MediaPostVideoPlayer(url = post.videoUrl, modifier = Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(14.dp)))
+        }
         Spacer(modifier = Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
           MediaPostActionButton(
@@ -3045,6 +3051,22 @@ private fun MediaCommentComposerSheet(authorName: String, onDismiss: () -> Unit,
   }
 }
 
+// Plain platform VideoView + MediaController -- this is a short social-post
+// clip, not core app functionality, so it doesn't warrant pulling in
+// ExoPlayer/media3 as a new dependency just for this.
+@Composable
+private fun MediaPostVideoPlayer(url: String, modifier: Modifier = Modifier) {
+  AndroidView(
+    modifier = modifier.background(Color.Black),
+    factory = { ctx ->
+      VideoView(ctx).apply {
+        setVideoURI(Uri.parse(url))
+        setMediaController(MediaController(ctx).also { it.setAnchorView(this) })
+      }
+    }
+  )
+}
+
 @Composable
 private fun MediaPostActionButton(icon: ImageVector, count: Int?, tint: Color, onClick: () -> Unit) {
   Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable(onClick = onClick)) {
@@ -3168,6 +3190,7 @@ private fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss:
   val composerScope = rememberCoroutineScope()
   var text by remember { mutableStateOf("") }
   var imageUri by remember { mutableStateOf<Uri?>(null) }
+  var videoUri by remember { mutableStateOf<Uri?>(null) }
   var sentiment by remember { mutableStateOf<String?>(null) }
   var posting by remember { mutableStateOf(false) }
   // A failed post used to fail completely silently -- the button just went
@@ -3176,10 +3199,19 @@ private fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss:
   LaunchedEffect(Unit) { viewModel.clearMediaError() }
 
   val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-    if (uri != null) imageUri = uri
+    if (uri != null) {
+      videoUri = null
+      imageUri = uri
+    }
+  }
+  val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    if (uri != null) {
+      imageUri = null
+      videoUri = uri
+    }
   }
 
-  val canPost = (text.isNotBlank() || imageUri != null) && !posting
+  val canPost = (text.isNotBlank() || imageUri != null || videoUri != null) && !posting && !viewModel.uploadingMediaVideo
 
   Box(
     modifier = Modifier
@@ -3200,20 +3232,43 @@ private fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss:
           onClick = {
             posting = true
             composerScope.launch {
-              val pickedUri = imageUri
-              val dataUrl = pickedUri?.let { uri ->
+              val pickedImageUri = imageUri
+              val dataUrl = pickedImageUri?.let { uri ->
                 withContext(Dispatchers.IO) { uriToPostImageDataUrl(context, uri) }
               }
               // A picked photo that failed to decode used to just vanish --
               // the post still went through with dataUrl = null, so it
               // looked like posting worked but the picture was silently
               // dropped. Now a decode failure blocks the post instead.
-              if (pickedUri != null && dataUrl == null) {
+              if (pickedImageUri != null && dataUrl == null) {
                 posting = false
                 viewModel.reportMediaError("Couldn't attach that photo — try a different one")
                 return@launch
               }
-              viewModel.createMediaPost(text.trim(), dataUrl, sentiment) { success ->
+
+              val pickedVideoUri = videoUri
+              var videoBytes: ByteArray? = null
+              var videoMime: String? = null
+              if (pickedVideoUri != null) {
+                val mime = context.contentResolver.getType(pickedVideoUri) ?: "video/mp4"
+                if (mime !in setOf("video/mp4", "video/webm", "video/quicktime")) {
+                  posting = false
+                  viewModel.reportMediaError("Video must be MP4, WebM, or MOV")
+                  return@launch
+                }
+                val bytes = withContext(Dispatchers.IO) {
+                  runCatching { context.contentResolver.openInputStream(pickedVideoUri)?.use { it.readBytes() } }.getOrNull()
+                }
+                if (bytes == null || bytes.size > 50 * 1024 * 1024) {
+                  posting = false
+                  viewModel.reportMediaError(if (bytes == null) "Couldn't read that video" else "Video must be under 50MB")
+                  return@launch
+                }
+                videoBytes = bytes
+                videoMime = mime
+              }
+
+              viewModel.createMediaPost(text.trim(), dataUrl, videoBytes, videoMime, sentiment) { success ->
                 posting = false
                 if (success) onDismiss()
               }
@@ -3227,7 +3282,11 @@ private fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss:
           shape = RoundedCornerShape(20.dp),
           contentPadding = PaddingValues(horizontal = 22.dp, vertical = 8.dp)
         ) {
-          Text(if (posting) "Posting…" else "Post", color = Color.Black, fontWeight = FontWeight.SemiBold)
+          Text(
+            if (viewModel.uploadingMediaVideo) "Uploading…" else if (posting) "Posting…" else "Post",
+            color = Color.Black,
+            fontWeight = FontWeight.SemiBold
+          )
         }
       }
       if (viewModel.mediaError != null) {
@@ -3303,6 +3362,35 @@ private fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss:
             }
           }
         }
+
+        if (videoUri != null) {
+          Spacer(modifier = Modifier.height(16.dp))
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .height(180.dp)
+              .clip(RoundedCornerShape(16.dp))
+              .background(Color.White.copy(alpha = 0.06f)),
+            contentAlignment = Alignment.Center
+          ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              MediaVideoIcon(modifier = Modifier.size(20.dp), tint = Color(0xFFFFC94A))
+              Spacer(modifier = Modifier.width(8.dp))
+              Text("Video attached", color = Color.White, fontSize = 14.sp)
+            }
+            IconButton(
+              onClick = { videoUri = null },
+              modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(8.dp)
+                .size(30.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.55f))
+            ) {
+              Icon(Icons.Outlined.Close, contentDescription = "Remove video", tint = Color.White, modifier = Modifier.size(18.dp))
+            }
+          }
+        }
       }
 
       // Left cluster is content-insert affordances; the right cluster is a
@@ -3321,6 +3409,9 @@ private fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss:
         }
         IconButton(onClick = { imagePicker.launch("image/*") }, modifier = Modifier.size(30.dp)) {
           Icon(Icons.Outlined.Image, contentDescription = "Add photo", tint = Color(0xFFA8A8A8), modifier = Modifier.size(22.dp))
+        }
+        IconButton(onClick = { videoPicker.launch("video/*") }, modifier = Modifier.size(30.dp)) {
+          MediaVideoIcon(modifier = Modifier.size(20.dp), tint = Color(0xFFA8A8A8))
         }
         IconButton(onClick = { text += "#" }, modifier = Modifier.size(30.dp)) {
           Icon(Icons.Outlined.Tag, contentDescription = "Hashtag", tint = Color(0xFFA8A8A8), modifier = Modifier.size(22.dp))
