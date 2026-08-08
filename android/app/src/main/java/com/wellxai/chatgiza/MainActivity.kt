@@ -1261,6 +1261,72 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
   }
 }
 
+// Instagram/WhatsApp-Status-style row: "Your story" (with a small + badge --
+// this is now the only way to start a new post, replacing the old floating
+// button) followed by the most recent distinct posters, so people can see
+// who has new work without scrolling the whole feed. Tapping another
+// person's circle is visual-only for now, same as the Discover/Following/
+// Campaign/Smart tabs below (no per-author filtering behind it yet).
+@Composable
+private fun MediaStoriesRow(myImage: String?, myName: String, posts: List<ApiMediaPost>, onMyStoryClick: () -> Unit) {
+  val others = remember(posts) {
+    posts.distinctBy { it.authorId }.take(15)
+  }
+  val ringBrush = Brush.sweepGradient(listOf(Color(0xFFFEDA75), Color(0xFFFA7E1E), Color(0xFFD62976), Color(0xFF962FBF), Color(0xFF4F5BD5), Color(0xFFFEDA75)))
+
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .horizontalScroll(rememberScrollState())
+      .padding(horizontal = 12.dp, vertical = 10.dp),
+    horizontalArrangement = Arrangement.spacedBy(14.dp)
+  ) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(64.dp).clickable(onClick = onMyStoryClick)) {
+      Box(contentAlignment = Alignment.BottomEnd) {
+        if (myImage != null) {
+          AsyncImage(model = myImage, contentDescription = "Your story", modifier = Modifier.size(56.dp).clip(CircleShape))
+        } else {
+          Icon(Icons.Outlined.AccountCircle, contentDescription = "Your story", tint = Color.White, modifier = Modifier.size(56.dp))
+        }
+        Box(
+          modifier = Modifier
+            .size(20.dp)
+            .clip(CircleShape)
+            .background(Color(0xFFFFC94A))
+            .border(2.dp, Color(0xFF161616), CircleShape),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(Icons.Filled.Add, contentDescription = null, tint = Color.Black, modifier = Modifier.size(12.dp))
+        }
+      }
+      Spacer(modifier = Modifier.height(4.dp))
+      Text("Your story", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, maxLines = 1, softWrap = false)
+    }
+    others.forEach { post ->
+      Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(64.dp)) {
+        Box(
+          modifier = Modifier.size(60.dp).clip(CircleShape).background(ringBrush).padding(2.5.dp),
+          contentAlignment = Alignment.Center
+        ) {
+          if (post.authorImage != null) {
+            AsyncImage(
+              model = post.authorImage,
+              contentDescription = post.authorName,
+              modifier = Modifier.size(53.dp).clip(CircleShape).border(2.dp, Color(0xFF161616), CircleShape)
+            )
+          } else {
+            Box(modifier = Modifier.size(53.dp).clip(CircleShape).background(Color(0xFF23252B)), contentAlignment = Alignment.Center) {
+              Icon(Icons.Outlined.AccountCircle, contentDescription = post.authorName, tint = Color.White, modifier = Modifier.size(40.dp))
+            }
+          }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(post.authorName, color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, maxLines = 1, softWrap = false)
+      }
+    }
+  }
+}
+
 // ChatGiZa Media now lives here, under the "Extra" tab, instead of
 // behind the History screen's old drag handle -- a dedicated screen
 // with its own back/history navigation instead of a slide-up panel.
@@ -1283,35 +1349,46 @@ private fun ChatGizaMediaScreen(viewModel: ChatViewModel) {
 
   Scaffold(
     topBar = {
-      // A stripped-down bar just for this screen -- NOT the shared
-      // AskImagineTabs used on the Chat screen, so none of this touches
-      // Chat's own top bar. "Ask" (back to Chat) on the left, a search
-      // toggle on the right -- per the sketch, Discover/Following/
-      // Campaign/Smart live in their own bar at the very bottom instead.
-      CenterAlignedTopAppBar(
-        title = {},
-        navigationIcon = {
-          Text(
-            "Ask",
-            color = colorScheme.onBackground,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier
-              .padding(start = 12.dp)
-              .clip(RoundedCornerShape(20.dp))
-              .background(colorScheme.onBackground.copy(alpha = 0.06f))
-              .clickable(onClick = { viewModel.closeChatGizaMedia() })
-              .padding(horizontal = 14.dp, vertical = 8.dp)
-          )
-        },
-        actions = {
-          IconButton(onClick = { searchOpen = !searchOpen }) {
-            Icon(Icons.Outlined.Search, contentDescription = "Search", tint = colorScheme.onBackground)
+      // "+" (was a floating button over the feed -- now lives here, next to
+      // a Stories-style row for discovering what's new) -- ChatGiZa title
+      // -- search, matching the reference layout. Back is still available
+      // via the system gesture/button (BackHandler above); this screen is
+      // reached from Chat's "Extra" tools menu, not a persistent tab, so a
+      // dedicated on-screen back affordance isn't needed here.
+      Column(modifier = Modifier.background(Color(0xFF161616))) {
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          IconButton(onClick = { showCreate = true }) {
+            Icon(Icons.Filled.Add, contentDescription = "New post", tint = Color.White, modifier = Modifier.size(24.dp))
           }
-          Spacer(modifier = Modifier.width(6.dp))
-        },
-        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
-      )
+          Spacer(modifier = Modifier.weight(1f))
+          Text(
+            "ChatGiZa",
+            color = Color.Black,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+              .clip(RoundedCornerShape(20.dp))
+              .background(Color.White)
+              .padding(horizontal = 18.dp, vertical = 8.dp)
+          )
+          Spacer(modifier = Modifier.weight(1f))
+          IconButton(onClick = { searchOpen = !searchOpen }) {
+            Icon(Icons.Outlined.Search, contentDescription = "Search", tint = Color.White)
+          }
+        }
+        MediaStoriesRow(
+          myImage = viewModel.userImage,
+          myName = viewModel.userName ?: "You",
+          posts = viewModel.mediaPosts,
+          onMyStoryClick = { showCreate = true }
+        )
+      }
     },
     bottomBar = {
       // Reference feed's own tab row (Discover/Following/Campaign/Smart)
@@ -1420,18 +1497,6 @@ private fun ChatGizaMediaScreen(viewModel: ChatViewModel) {
             )
           }
         }
-      }
-      Box(
-        modifier = Modifier
-          .align(Alignment.BottomEnd)
-          .padding(20.dp)
-          .size(56.dp)
-          .clip(CircleShape)
-          .background(Color(0xFFFFC94A))
-          .clickable(onClick = { showCreate = true }),
-        contentAlignment = Alignment.Center
-      ) {
-        Icon(Icons.Filled.Add, contentDescription = "Unda", tint = Color.Black, modifier = Modifier.size(26.dp))
       }
       val replyTarget = replyingToPost
       if (replyTarget != null) {
