@@ -42,11 +42,13 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -256,6 +258,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -2334,6 +2337,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
               Box(modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)) {
                 HistoryRow(
                   convo,
+                  isVoice = viewModel.voiceConversationIds.contains(convo.id),
                   onClick = { viewModel.selectConversation(convo.id) },
                   onMenuClick = { menuConvo = convo }
                 )
@@ -3315,11 +3319,25 @@ private fun truncateTitle(title: String, maxChars: Int = 36): String {
   return safeCut.trimEnd() + "…"
 }
 
+// Inbox-style: bold all-caps title, a short reply preview underneath, and
+// a compact day+month date at top-right -- matches the SMS-inbox reference
+// (name/number bold, message preview below, "14 May" at top-right) rather
+// than the previous title-then-full-date layout.
 @Composable
-private fun HistoryRow(convo: ApiConversation, onClick: () -> Unit, onMenuClick: () -> Unit) {
+private fun HistoryRow(convo: ApiConversation, isVoice: Boolean, onClick: () -> Unit, onMenuClick: () -> Unit) {
   val lastMessage = convo.messages.lastOrNull()
-  val dateText = lastMessage?.createdAt?.let { formatDate(it) } ?: ""
+  val dateText = lastMessage?.createdAt?.let { formatHistoryRowDate(it) } ?: ""
+  val lastReply = convo.messages.lastOrNull { it.role == "assistant" }?.content?.trim().orEmpty()
   val title = truncateTitle(convo.title.ifBlank { "New chat" })
+  val displayTitle = if (isVoice) "VOICE" else title.uppercase()
+
+  // Presses lift the row (translate up + a soft shadow) and settle back
+  // down on release, instead of the row just sitting flat with no tactile
+  // feedback before the options menu (or opening the conversation) fires.
+  val interactionSource = remember { MutableInteractionSource() }
+  val isPressed by interactionSource.collectIsPressedAsState()
+  val liftOffset by animateDpAsState(if (isPressed) (-3).dp else 0.dp, label = "historyRowLift")
+  val liftElevation by animateDpAsState(if (isPressed) 8.dp else 0.dp, label = "historyRowElevation")
 
   // No card background here by design — rows sit directly on the plain
   // background, matching the reference's BTC/CORE/MNT rows (no per-row
@@ -3327,7 +3345,9 @@ private fun HistoryRow(convo: ApiConversation, onClick: () -> Unit, onMenuClick:
   Row(
     modifier = Modifier
       .fillMaxWidth()
-      .clickable(onClick = onClick)
+      .offset(y = liftOffset)
+      .shadow(liftElevation, RoundedCornerShape(12.dp), clip = false)
+      .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
       .padding(horizontal = 10.dp, vertical = 8.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
@@ -3338,12 +3358,16 @@ private fun HistoryRow(convo: ApiConversation, onClick: () -> Unit, onMenuClick:
         .background(Brush.linearGradient(avatarGradient(convo.id))),
       contentAlignment = Alignment.Center
     ) {
-      Text(
-        title.trim().take(1).uppercase(),
-        color = Color.White,
-        fontSize = 14.sp,
-        fontWeight = FontWeight.Bold
-      )
+      if (isVoice) {
+        Icon(Icons.Outlined.Mic, contentDescription = "Voice", tint = Color.White, modifier = Modifier.size(16.dp))
+      } else {
+        Text(
+          title.trim().take(1).uppercase(),
+          color = Color.White,
+          fontSize = 14.sp,
+          fontWeight = FontWeight.Bold
+        )
+      }
     }
     Spacer(modifier = Modifier.width(10.dp))
     Column(modifier = Modifier.weight(1f)) {
@@ -3358,27 +3382,38 @@ private fun HistoryRow(convo: ApiConversation, onClick: () -> Unit, onMenuClick:
           Spacer(modifier = Modifier.size(5.dp))
         }
         Text(
-          text = title,
+          text = displayTitle,
           color = colorScheme.onBackground,
-          fontSize = 15.sp,
-          fontWeight = FontWeight.Medium,
+          fontSize = 14.sp,
+          fontWeight = FontWeight.Bold,
           maxLines = 1,
           overflow = TextOverflow.Ellipsis
         )
       }
-      if (dateText.isNotEmpty()) {
-        Spacer(modifier = Modifier.height(1.dp))
-        Text(dateText, color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 11.sp)
+      if (lastReply.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+          lastReply,
+          color = colorScheme.onBackground.copy(alpha = 0.55f),
+          fontSize = 12.sp,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis
+        )
       }
     }
     Spacer(modifier = Modifier.width(2.dp))
-    IconButton(onClick = onMenuClick, modifier = Modifier.size(28.dp)) {
-      Icon(
-        Icons.Filled.MoreVert,
-        contentDescription = "Options",
-        tint = colorScheme.onBackground.copy(alpha = 0.6f),
-        modifier = Modifier.size(18.dp)
-      )
+    Column(horizontalAlignment = Alignment.End) {
+      if (dateText.isNotEmpty()) {
+        Text(dateText, color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 11.sp)
+      }
+      IconButton(onClick = onMenuClick, modifier = Modifier.size(28.dp)) {
+        Icon(
+          Icons.Filled.MoreVert,
+          contentDescription = "Options",
+          tint = colorScheme.onBackground.copy(alpha = 0.6f),
+          modifier = Modifier.size(18.dp)
+        )
+      }
     }
   }
 }
@@ -5418,6 +5453,14 @@ private fun BillingScreen(viewModel: ChatViewModel) {
 
 private fun formatDate(millis: Long): String {
   val fmt = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
+  return fmt.format(java.util.Date(millis))
+}
+
+// Compact "14 May" form for the History row's top-right date, matching the
+// reference inbox layout -- formatDate's "MMM d, yyyy" is used elsewhere
+// (e.g. billing) where the year actually matters.
+private fun formatHistoryRowDate(millis: Long): String {
+  val fmt = java.text.SimpleDateFormat("d MMM", java.util.Locale.getDefault())
   return fmt.format(java.util.Date(millis))
 }
 
