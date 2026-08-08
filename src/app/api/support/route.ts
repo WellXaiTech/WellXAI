@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { kv } from "@vercel/kv";
 import { auth } from "@/auth";
 import { sendMailBestEffort } from "@/lib/mailer";
+import { getWorkspaceForUser } from "@/lib/workspace";
 
 const SUPPORT_NOTIFY_EMAIL = process.env.SUPPORT_NOTIFY_EMAIL || "nicoloustz@gmail.com";
 
@@ -19,12 +20,17 @@ export async function POST(req: NextRequest) {
   }
 
   const session = await auth();
+  const userId = session?.user?.id ?? null;
+  const workspace = userId ? await getWorkspaceForUser(userId).catch(() => null) : null;
+  const priority = workspace !== null;
+
   const record = {
     id: crypto.randomUUID(),
     message,
     email,
-    userId: session?.user?.id ?? null,
+    userId,
     userName: session?.user?.name ?? null,
+    priority,
     createdAt: Date.now(),
   };
 
@@ -36,7 +42,7 @@ export async function POST(req: NextRequest) {
 
   const html = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
-      <p style="font-size: 18px; font-weight: 800; margin-bottom: 16px;">ChatGiZa — New customer message</p>
+      <p style="font-size: 18px; font-weight: 800; margin-bottom: 16px;">ChatGiZa — New customer message${priority ? " 🔺 PRIORITY (Workspace account)" : ""}</p>
       <p style="font-size: 14px; color: #333;"><strong>From:</strong> ${escapeHtml(email)}${
         record.userName ? ` (${escapeHtml(record.userName)})` : ""
       }</p>
@@ -44,7 +50,11 @@ export async function POST(req: NextRequest) {
     </div>
   `;
 
-  await sendMailBestEffort(SUPPORT_NOTIFY_EMAIL, `New customer message: ${email}`, html);
+  await sendMailBestEffort(
+    SUPPORT_NOTIFY_EMAIL,
+    `${priority ? "[PRIORITY] " : ""}New customer message: ${email}`,
+    html
+  );
 
   return NextResponse.json({ ok: true });
 }

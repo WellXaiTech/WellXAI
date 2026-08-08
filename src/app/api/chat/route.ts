@@ -2,6 +2,7 @@ import { streamChatReply, type ChatMessage, type ChatTool, type Personalization 
 import { auth } from "@/auth";
 import { getMobileUserId } from "@/lib/mobileAuth";
 import { isPaidAccount, checkConversationQuota, recordConversationUsage } from "@/lib/usageLimit";
+import { getWorkspaceInstructionsForUser } from "@/lib/workspace";
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -33,6 +34,14 @@ export async function POST(request: Request) {
   const session = await auth();
   const userId = session?.user?.id ?? (await getMobileUserId(request)) ?? undefined;
   const paid = await isPaidAccount(userId);
+
+  if (userId) {
+    try {
+      personalization.workspaceInstructions = (await getWorkspaceInstructionsForUser(userId)) ?? undefined;
+    } catch (err) {
+      console.error("Workspace instructions lookup failed:", err);
+    }
+  }
 
   // The old per-network mobile-data free-message wall existed to stop
   // SIM-cycling abuse of anonymous guest access — now that every user must

@@ -32,6 +32,7 @@ export type Personalization = {
   language?: string;
   location?: string;
   company?: CompanyProfile;
+  workspaceInstructions?: string;
 };
 
 type Provider = "openai" | "anthropic" | "mock";
@@ -220,6 +221,12 @@ function buildSystemPrompt(base: string, personalization?: Personalization): str
       "You are also representing this company, and know it well like a real staff member would — answer questions about " +
         "what it does, its services, or who works there confidently and naturally, in your own words, never as a copied data dump:\n" +
         lines.join("\n")
+    );
+  }
+  if (personalization?.workspaceInstructions?.trim()) {
+    parts.push(
+      `This user's ChatGiZa Workspace (a team/enterprise account) has custom instructions that apply to every ` +
+        `member's chats — follow them alongside everything else above:\n${personalization.workspaceInstructions.trim()}`
     );
   }
   return parts.join("\n\n");
