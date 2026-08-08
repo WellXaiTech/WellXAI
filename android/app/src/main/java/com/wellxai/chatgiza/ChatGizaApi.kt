@@ -112,12 +112,15 @@ data class ApiMediaPost(
   val authorImage: String?,
   val text: String,
   val imageDataUrl: String?,
+  val videoUrl: String?,
   val sentiment: String?,
   val createdAt: Long,
   val likeCount: Int,
   val likedByMe: Boolean,
   val commentCount: Int
 )
+
+data class VideoUploadSlot(val signedUrl: String, val publicUrl: String)
 
 data class ApiMediaComment(
   val id: String,
@@ -137,6 +140,10 @@ sealed class ApiResult<out T> {
  * embedded website, just the same REST endpoints the web app itself calls. */
 object ChatGizaApi {
   private const val BASE_URL = "https://www.chatgiza.com"
+  // Public/publishable key, safe to embed client-side (same one the web
+  // app ships in its browser bundle) -- required by Supabase Storage's
+  // direct-upload endpoint alongside the per-upload signed token.
+  private const val SUPABASE_PUBLISHABLE_KEY = "sb_publishable_VhoSIv6tr3o98PYH5yM_-w_Zj81mBYA"
   private val JSON = "application/json; charset=utf-8".toMediaType()
 
   private val client = OkHttpClient.Builder()
@@ -640,11 +647,13 @@ object ChatGizaApi {
     token: String,
     text: String,
     imageDataUrl: String?,
+    videoUrl: String?,
     sentiment: String?
   ): ApiResult<ApiMediaPost> = withContext(Dispatchers.IO) {
     try {
       val payload = JSONObject().put("text", text)
       if (imageDataUrl != null) payload.put("imageDataUrl", imageDataUrl)
+      if (videoUrl != null) payload.put("videoUrl", videoUrl)
       if (sentiment != null) payload.put("sentiment", sentiment)
       val request = Request.Builder()
         .url("$BASE_URL/api/media/posts")
@@ -657,6 +666,51 @@ object ChatGizaApi {
           return@withContext ApiResult.Failure(errorMessage(text2, response.code))
         }
         ApiResult.Success(mediaPostFromJson(JSONObject(text2).getJSONObject("post")))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  // Videos are too large to round-trip through our own JSON API, so they go
+  // straight to Supabase Storage from the device: mint a short-lived signed
+  // upload slot via our backend, PUT the bytes directly to Supabase, then
+  // create the post referencing the resulting public URL (mirrors the web
+  // app's upload flow, see src/components/ChatGizaMediaFeed.tsx).
+  suspend fun createVideoUploadSlot(token: String, mime: String): ApiResult<VideoUploadSlot> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject().put("mime", mime)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/media/video-upload-url")
+        .header("Authorization", "Bearer $token")
+        .post(payload.toString().toRequestBody(JSON))
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val obj = JSONObject(text)
+        ApiResult.Success(VideoUploadSlot(signedUrl = obj.getString("signedUrl"), publicUrl = obj.getString("publicUrl")))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun uploadVideoBytes(signedUrl: String, mime: String, bytes: ByteArray): ApiResult<Unit> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url(signedUrl)
+        .header("apikey", SUPABASE_PUBLISHABLE_KEY)
+        .put(bytes.toRequestBody(mime.toMediaType()))
+        .build()
+      client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          val text = response.body?.string().orEmpty()
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(Unit)
       }
     } catch (e: Exception) {
       ApiResult.Failure(e.message ?: "Network error")
@@ -778,6 +832,7 @@ object ChatGizaApi {
     authorImage = obj.optString("authorImage", null),
     text = obj.optString("text", ""),
     imageDataUrl = obj.optString("imageDataUrl", null),
+    videoUrl = obj.optString("videoUrl", null),
     sentiment = obj.optString("sentiment", null),
     createdAt = obj.optLong("createdAt", 0L),
     likeCount = obj.optInt("likeCount", 0),
