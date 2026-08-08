@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { kv } from "@vercel/kv";
+import { supabaseAdmin } from "@/lib/supabase";
 import { getRequestUser } from "@/lib/requestUser";
 
-const FEED_KEY = "chatgiza:media-posts";
-
-// Only the post's own author can remove it -- this is a shared public feed
-// now, not a local per-device list, so "dismiss" has to actually check
-// ownership server-side rather than just filtering a local array.
+// Only the post's own author can remove it -- this is a shared public feed,
+// not a local per-device list, so ownership has to be checked server-side.
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getRequestUser(req);
   if (!user) {
@@ -15,22 +12,14 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const { id } = await params;
 
   try {
-    const raw = await kv.lrange<string>(FEED_KEY, 0, -1);
-    const entry = raw.find((e) => {
-      try {
-        return (typeof e === "string" ? JSON.parse(e) : e)?.id === id;
-      } catch {
-        return false;
-      }
-    });
-    if (!entry) {
+    const { data: post } = await supabaseAdmin.from("media_posts").select("user_id").eq("id", id).maybeSingle();
+    if (!post) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
-    const parsed = typeof entry === "string" ? JSON.parse(entry) : entry;
-    if (parsed.authorId !== user.id) {
+    if (post.user_id !== user.id) {
       return NextResponse.json({ error: "You can only delete your own posts" }, { status: 403 });
     }
-    await kv.lrem(FEED_KEY, 1, entry);
+    await supabaseAdmin.from("media_posts").delete().eq("id", id);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Media post DELETE error:", err);

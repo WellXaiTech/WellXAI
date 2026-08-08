@@ -1,31 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { kv } from "@vercel/kv";
+import { supabaseAdmin } from "@/lib/supabase";
+import { ensureUserExists } from "@/lib/userIndex";
 import { getRequestUser } from "@/lib/requestUser";
 
 const MAX_COMMENT_LENGTH = 500;
-const MAX_COMMENTS_PER_POST = 500;
 
-type Comment = {
+type CommentRow = {
   id: string;
-  authorId: string;
-  authorName: string;
-  authorImage: string | null;
-  text: string;
-  createdAt: number;
+  user_id: string;
+  content: string;
+  created_at: string;
+  users: { name: string | null; image: string | null } | { name: string | null; image: string | null }[] | null;
 };
 
-function commentsKey(postId: string) {
-  return `chatgiza:media-comments:${postId}`;
-}
-
-function parseComment(entry: unknown): Comment | null {
-  try {
-    const parsed = typeof entry === "string" ? JSON.parse(entry) : entry;
-    if (parsed && typeof parsed.id === "string") return parsed as Comment;
-    return null;
-  } catch {
-    return null;
-  }
+function toComment(row: CommentRow) {
+  const u = Array.isArray(row.users) ? row.users[0] : row.users;
+  return {
+    id: row.id,
+    authorId: row.user_id,
+    authorName: u?.name || "ChatGiZa user",
+    authorImage: u?.image ?? null,
+    text: row.content,
+    createdAt: new Date(row.created_at).getTime(),
+  };
 }
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -36,11 +33,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params;
 
   try {
-    // Oldest-first for reading a conversation top to bottom -- comments are
-    // pushed onto the head with LPUSH for O(1) writes, so reverse on read.
-    const raw = await kv.lrange<string>(commentsKey(id), 0, -1);
-    const comments = raw.map(parseComment).filter((c): c is Comment => c !== null).reverse();
-    return NextResponse.json({ comments });
+    const { data } = await supabaseAdmin
+      .from("media_comments")
+      .select("id, user_id, content, created_at, users(name, image)")
+      .eq("post_id", id)
+      .order("created_at", { ascending: true });
+    return NextResponse.json({ comments: ((data ?? []) as CommentRow[]).map(toComment) });
   } catch (err) {
     console.error("Media comments GET error:", err);
     return NextResponse.json({ error: "Failed to load comments" }, { status: 500 });
@@ -60,20 +58,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Comment can't be empty" }, { status: 400 });
   }
 
-  const comment: Comment = {
-    id: crypto.randomUUID(),
-    authorId: user.id,
-    authorName: user.name,
-    authorImage: user.image,
-    text,
-    createdAt: Date.now(),
-  };
-
   try {
-    const key = commentsKey(id);
-    await kv.lpush(key, JSON.stringify(comment));
-    await kv.ltrim(key, 0, MAX_COMMENTS_PER_POST - 1);
-    return NextResponse.json({ comment });
+    await ensureUserExists(user.id, "", user.name, user.image ?? "");
+
+    const { data, error } = await supabaseAdmin
+      .from("media_comments")
+      .insert({ post_id: id, user_id: user.id, content: text })
+      .select()
+      .single();
+    if (error || !data) throw error ?? new Error("insert failed");
+
+    return NextResponse.json({
+      comment: { id: data.id, authorId: user.id, authorName: user.name, authorImage: user.image, text, createdAt: new Date(data.created_at).getTime() },
+    });
   } catch (err) {
     console.error("Media comments POST error:", err);
     return NextResponse.json({ error: "Failed to add comment" }, { status: 500 });

@@ -1,4 +1,4 @@
-import { kv } from "@vercel/kv";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export type UserRecord = {
   id: string;
@@ -9,16 +9,29 @@ export type UserRecord = {
   lastSeenAt: number;
 };
 
-const ALL_USERS_KEY = "chatgiza:all-users";
+type UserRow = {
+  id: string;
+  email: string | null;
+  name: string | null;
+  image: string | null;
+  created_at: string;
+  last_seen_at: string;
+};
 
-function userRecordKey(sub: string) {
-  return `chatgiza:user-record:${sub}`;
+function fromRow(row: UserRow): UserRecord {
+  return {
+    id: row.id,
+    email: row.email ?? "",
+    name: row.name ?? "",
+    image: row.image ?? "",
+    createdAt: new Date(row.created_at).getTime(),
+    lastSeenAt: new Date(row.last_seen_at).getTime(),
+  };
 }
 
 // Called once per real sign-in (not per token refresh) from the auth.ts jwt
-// callback. There's no DB user table in this JWT-session/no-adapter setup,
-// so this sorted set (score = createdAt) is the only durable index of who
-// has ever signed in -- it's what the admin dashboard enumerates.
+// callback. This is the durable record of who has ever signed in -- the
+// admin dashboard enumerates it directly from Postgres now.
 export async function recordUserSeen(
   sub: string,
   email: string,
@@ -26,30 +39,57 @@ export async function recordUserSeen(
   image: string,
   isNewAccount: boolean
 ): Promise<void> {
-  const key = userRecordKey(sub);
-  const now = Date.now();
-  const existing = isNewAccount ? null : await kv.get<UserRecord>(key);
-  const record: UserRecord = {
-    id: sub,
-    email: email || existing?.email || "",
-    name: name || existing?.name || "",
-    image: image || existing?.image || "",
-    createdAt: existing?.createdAt ?? now,
-    lastSeenAt: now,
-  };
-  await kv.set(key, record);
-  if (isNewAccount || !existing) {
-    await kv.zadd(ALL_USERS_KEY, { score: record.createdAt, member: sub });
+  const nowIso = new Date().toISOString();
+
+  if (isNewAccount) {
+    await supabaseAdmin.from("users").upsert(
+      { id: sub, email, name, image, last_seen_at: nowIso },
+      { onConflict: "id" }
+    );
+    return;
   }
+
+  // Returning user: only overwrite fields Google actually gave us this time,
+  // keep whatever was already on file otherwise.
+  const { data: existing } = await supabaseAdmin
+    .from("users")
+    .select("email, name, image")
+    .eq("id", sub)
+    .maybeSingle();
+
+  await supabaseAdmin.from("users").upsert(
+    {
+      id: sub,
+      email: email || existing?.email || "",
+      name: name || existing?.name || "",
+      image: image || existing?.image || "",
+      last_seen_at: nowIso,
+    },
+    { onConflict: "id" }
+  );
+}
+
+// Guarantees a `users` row exists for [id] without clobbering any real data
+// already on file -- needed before inserting anything that has a foreign
+// key to `users` (workspace members, api keys, media posts/comments), since
+// not every caller path (e.g. the native app's bearer-token auth) goes
+// through auth.ts's jwt callback first.
+export async function ensureUserExists(id: string, email: string, name: string, image: string): Promise<void> {
+  await supabaseAdmin
+    .from("users")
+    .upsert({ id, email: email || null, name: name || null, image: image || null }, { onConflict: "id", ignoreDuplicates: true });
 }
 
 export async function countUsers(): Promise<number> {
-  return (await kv.zcard(ALL_USERS_KEY)) ?? 0;
+  const { count } = await supabaseAdmin.from("users").select("*", { count: "exact", head: true });
+  return count ?? 0;
 }
 
 export async function listUsers(limit = 100): Promise<UserRecord[]> {
-  const subs = await kv.zrange<string[]>(ALL_USERS_KEY, 0, limit - 1, { rev: true });
-  if (!subs || subs.length === 0) return [];
-  const records = await Promise.all(subs.map((sub) => kv.get<UserRecord>(userRecordKey(sub))));
-  return records.filter((r): r is UserRecord => r !== null);
+  const { data } = await supabaseAdmin
+    .from("users")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data ?? []).map((row) => fromRow(row as UserRow));
 }
