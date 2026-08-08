@@ -2971,6 +2971,10 @@ private fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss:
   var imageUri by remember { mutableStateOf<Uri?>(null) }
   var sentiment by remember { mutableStateOf<String?>(null) }
   var posting by remember { mutableStateOf(false) }
+  // A failed post used to fail completely silently -- the button just went
+  // back to "Post" with nothing else happening, which read as "stuck" or
+  // "not doing anything" rather than "failed, here's why."
+  LaunchedEffect(Unit) { viewModel.clearMediaError() }
 
   val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
     if (uri != null) imageUri = uri
@@ -3016,6 +3020,14 @@ private fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss:
         ) {
           Text(if (posting) "Posting…" else "Post", color = Color.Black, fontWeight = FontWeight.SemiBold)
         }
+      }
+      if (viewModel.mediaError != null) {
+        Text(
+          viewModel.mediaError.orEmpty(),
+          color = Color(0xFFEA3943),
+          fontSize = 13.sp,
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
+        )
       }
 
       Column(
