@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { sendMailBestEffort } from "@/lib/mailer";
 import { welcomeEmail } from "@/lib/emailTemplates";
 import { recordSession, isRevoked } from "@/lib/sessions";
+import { recordUserSeen } from "@/lib/userIndex";
 
 function welcomedKey(sub: string) {
   return `chatgiza:welcomed:${sub}`;
@@ -38,6 +39,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (account && sub) {
         const email = profile?.email ?? user?.email;
         const name = typeof profile?.name === "string" ? profile.name : user?.name ?? "";
+        const image = typeof profile?.picture === "string" ? profile.picture : user?.image ?? "";
         token.sessionId = crypto.randomUUID();
         try {
           const key = welcomedKey(sub as string);
@@ -57,6 +59,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           await recordSession(sub as string, token.sessionId as string, ua);
         } catch (err) {
           console.error("recordSession failed:", err);
+        }
+        try {
+          await recordUserSeen(sub as string, (email as string) ?? "", name, image, !!token.isNewAccount);
+        } catch (err) {
+          console.error("recordUserSeen failed:", err);
         }
       }
 
