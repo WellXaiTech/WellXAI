@@ -2583,6 +2583,11 @@ private fun ChatGizaMediaPanel(
   // Settings/Projects/... nav row underneath. This panel's height is
   // capped by the caller (fillMaxHeight fraction, positioned above the
   // measured bottom-bar height), so that row stays visible and tappable.
+  // Hoisted above the Column so both the LazyColumn (which sets it, per
+  // post) and the composer sheet below (a sibling of the Column, not a
+  // child -- it needs to float above everything, including the "+" FAB)
+  // can see it.
+  var replyingToPost by remember { mutableStateOf<ApiMediaPost?>(null) }
   Box(
     modifier = modifier
       .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
@@ -2657,7 +2662,6 @@ private fun ChatGizaMediaPanel(
       // up without needing to kill and reopen the app.
       LaunchedEffect(Unit) { viewModel.loadMediaPosts() }
       var expandedCommentsPostId by remember { mutableStateOf<String?>(null) }
-      var replyingToPost by remember { mutableStateOf<ApiMediaPost?>(null) }
       if (viewModel.mediaPosts.isEmpty()) {
         Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
           if (viewModel.loadingMediaPosts) {
@@ -3229,7 +3233,7 @@ private fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss:
               // dropped. Now a decode failure blocks the post instead.
               if (pickedUri != null && dataUrl == null) {
                 posting = false
-                viewModel.setMediaError("Couldn't attach that photo — try a different one")
+                viewModel.reportMediaError("Couldn't attach that photo — try a different one")
                 return@launch
               }
               viewModel.createMediaPost(text.trim(), dataUrl, sentiment) { success ->
