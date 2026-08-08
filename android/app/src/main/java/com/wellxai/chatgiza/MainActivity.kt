@@ -2204,7 +2204,10 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           verticalAlignment = Alignment.CenterVertically
         ) {
           Box(
-            modifier = Modifier.clickable(onClick = { viewModel.openEditProfile() })
+            modifier = Modifier
+              .clickable(onClick = { viewModel.openEditProfile() })
+              .border(1.dp, colorScheme.onBackground.copy(alpha = 0.35f), CircleShape)
+              .padding(2.dp)
           ) {
             if (viewModel.userImage != null) {
               AsyncImage(
@@ -3373,6 +3376,8 @@ private fun HistoryRow(
     Box(
       modifier = Modifier
         .size(34.dp)
+        .border(1.dp, colorScheme.onBackground.copy(alpha = 0.35f), CircleShape)
+        .padding(2.dp)
         .clip(CircleShape)
         .background(Brush.linearGradient(avatarGradient(convo.id))),
       contentAlignment = Alignment.Center
