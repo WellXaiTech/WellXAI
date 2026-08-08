@@ -1,4 +1,10 @@
-import { getStoredVoiceURI, getStoredVoiceSpeed, speedToRate } from "@/lib/voice";
+import {
+  getStoredVoiceURI,
+  getStoredVoiceSpeed,
+  speedToRate,
+  getPremiumVoiceEnabled,
+  getStoredPremiumVoiceName,
+} from "@/lib/voice";
 
 // Chrome silently stops a single long SpeechSynthesisUtterance after ~15s
 // (a long-standing browser bug), so long text gets split into short
@@ -37,23 +43,71 @@ function speakChunks(chunks: string[], index: number, onDone?: () => void, onErr
   window.speechSynthesis.speak(utterance);
 }
 
-/** Speaks text aloud using the user's stored voice/speed preference. Fails silently if speech synthesis is unavailable or blocked. */
-export function speakText(text: string, onDone?: () => void, onError?: () => void) {
+function speakBrowser(text: string, onDone?: () => void, onError?: () => void) {
   if (typeof window === "undefined" || !window.speechSynthesis) {
     onError?.();
     return;
   }
+  window.speechSynthesis.cancel();
+  speakChunks(splitIntoSpeechChunks(text), 0, onDone, onError);
+}
+
+let premiumAudio: HTMLAudioElement | null = null;
+
+// Real OpenAI TTS audio via /api/tts, instead of the browser's free (and
+// often robotic-sounding) built-in voices. Falls back to the browser voice
+// on any failure (network error, not signed in, etc.) rather than going
+// silent, since the user still expects *something* to happen when they hit
+// the speak button.
+async function speakPremium(text: string, onDone?: () => void, onError?: () => void) {
+  try {
+    const res = await fetch("/api/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, voice: getStoredPremiumVoiceName() }),
+    });
+    if (!res.ok) throw new Error("TTS request failed");
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    premiumAudio?.pause();
+    const audio = new Audio(url);
+    audio.playbackRate = speedToRate(getStoredVoiceSpeed());
+    premiumAudio = audio;
+    audio.onended = () => {
+      URL.revokeObjectURL(url);
+      onDone?.();
+    };
+    audio.onerror = () => {
+      URL.revokeObjectURL(url);
+      onError?.();
+    };
+    await audio.play();
+  } catch {
+    speakBrowser(text, onDone, onError);
+  }
+}
+
+/** Speaks text aloud using the user's stored voice/speed preference --
+ * real OpenAI audio if Premium Voices is on, otherwise the browser's
+ * built-in speech synthesis. Fails silently if neither is available. */
+export function speakText(text: string, onDone?: () => void, onError?: () => void) {
   const plain = text.trim();
   if (!plain) {
     onDone?.();
     return;
   }
-  window.speechSynthesis.cancel();
-  speakChunks(splitIntoSpeechChunks(plain), 0, onDone, onError);
+  stopSpeaking();
+  if (getPremiumVoiceEnabled()) {
+    void speakPremium(plain, onDone, onError);
+  } else {
+    speakBrowser(plain, onDone, onError);
+  }
 }
 
 export function stopSpeaking() {
   if (typeof window !== "undefined" && window.speechSynthesis) {
     window.speechSynthesis.cancel();
   }
+  premiumAudio?.pause();
+  premiumAudio = null;
 }

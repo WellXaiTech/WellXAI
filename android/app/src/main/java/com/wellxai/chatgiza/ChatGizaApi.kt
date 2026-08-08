@@ -725,6 +725,33 @@ object ChatGizaApi {
     }
   }
 
+  /** Real OpenAI TTS audio (MP3 bytes) for the Premium Voice setting --
+   * same /api/tts endpoint the website uses, just returning raw bytes
+   * instead of playing them via an <audio> element. */
+  suspend fun getSpeechAudio(token: String, text: String, voice: String): ApiResult<ByteArray> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject().put("text", text).put("voice", voice)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/tts")
+        .header("Authorization", "Bearer $token")
+        .post(payload.toString().toRequestBody(JSON))
+        .build()
+      client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          val text2 = response.body?.string().orEmpty()
+          return@withContext ApiResult.Failure(errorMessage(text2, response.code))
+        }
+        val bytes = response.body?.bytes()
+        if (bytes == null || bytes.isEmpty()) {
+          return@withContext ApiResult.Failure("Empty audio response")
+        }
+        ApiResult.Success(bytes)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
   private fun mediaPostFromJson(obj: JSONObject): ApiMediaPost = ApiMediaPost(
     id = obj.getString("id"),
     authorId = obj.getString("authorId"),

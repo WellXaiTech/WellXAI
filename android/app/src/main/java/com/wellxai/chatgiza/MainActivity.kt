@@ -771,20 +771,50 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
   val listState = rememberLazyListState()
   val context = LocalContext.current
   val tts = remember { TtsController(context) }
+  val premiumTts = remember { PremiumTtsPlayer(context) }
   val haptic = LocalHapticFeedback.current
   var speakingMessageId by remember { mutableStateOf<String?>(null) }
   DisposableEffect(Unit) {
     tts.onDone = { speakingMessageId = null }
-    onDispose { tts.shutdown() }
+    onDispose {
+      tts.shutdown()
+      premiumTts.stop()
+    }
+  }
+
+  // Premium Voice (real OpenAI audio) falls back to the free on-device
+  // engine on any failure -- network error, not signed in, etc. -- rather
+  // than going silent, since the user still expects something to happen.
+  fun speakMessage(id: String, text: String) {
+    speakingMessageId = id
+    if (viewModel.premiumChatVoiceEnabled) {
+      viewModel.fetchPremiumSpeech(text) { bytes ->
+        if (bytes != null) {
+          premiumTts.play(
+            bytes,
+            onDone = { if (speakingMessageId == id) speakingMessageId = null },
+            onError = { tts.speak(text) }
+          )
+        } else {
+          tts.speak(text)
+        }
+      }
+    } else {
+      tts.speak(text)
+    }
+  }
+
+  fun stopSpeakingNow() {
+    tts.stop()
+    premiumTts.stop()
+    speakingMessageId = null
   }
 
   fun toggleSpeak(message: UiMessage) {
     if (speakingMessageId == message.id) {
-      tts.stop()
-      speakingMessageId = null
+      stopSpeakingNow()
     } else {
-      tts.speak(message.content)
-      speakingMessageId = message.id
+      speakMessage(message.id, message.content)
     }
   }
 
@@ -798,8 +828,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
     if (!viewModel.sending && viewModel.autoSpeakNextReply) {
       val lastAssistant = viewModel.messages.lastOrNull { it.role == "assistant" }
       if (lastAssistant != null && lastAssistant.content.isNotBlank()) {
-        tts.speak(lastAssistant.content)
-        speakingMessageId = lastAssistant.id
+        speakMessage(lastAssistant.id, lastAssistant.content)
       }
       viewModel.clearAutoSpeak()
     }
@@ -4013,6 +4042,17 @@ private fun VoiceScreen(viewModel: ChatViewModel) {
       }
 
       Spacer(modifier = Modifier.height(24.dp))
+
+      SettingsSwitchRow("Premium Voice for chat replies", viewModel.premiumChatVoiceEnabled) {
+        viewModel.setPremiumChatVoiceEnabled(!viewModel.premiumChatVoiceEnabled)
+      }
+      Text(
+        "Real AI-generated speech (the voice picked below) instead of your device's built-in voice, when you tap " +
+          "the speak icon on a reply.",
+        color = colorScheme.onBackground.copy(alpha = 0.6f),
+        fontSize = 12.sp,
+        modifier = Modifier.padding(bottom = 16.dp)
+      )
 
       Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         VOICE_OPTIONS.forEach { option ->

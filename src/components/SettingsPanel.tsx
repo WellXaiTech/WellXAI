@@ -16,7 +16,13 @@ import {
   setStoredVoiceSpeed,
   getStoredVoiceLang,
   setStoredVoiceLang,
+  getPremiumVoiceEnabled,
+  setPremiumVoiceEnabled,
+  getStoredPremiumVoiceName,
+  setStoredPremiumVoiceName,
+  PREMIUM_VOICE_NAMES,
   type VoiceSpeed,
+  type PremiumVoiceName,
 } from "@/lib/voice";
 
 export type Profile = {
@@ -475,6 +481,8 @@ export default function SettingsPanel({
   const [voiceURI, setVoiceURI] = useState("");
   const [voiceSpeed, setVoiceSpeed] = useState<VoiceSpeed>("normal");
   const [voiceLang, setVoiceLang] = useState("");
+  const [premiumVoice, setPremiumVoice] = useState(false);
+  const [premiumVoiceName, setPremiumVoiceName] = useState<PremiumVoiceName>("marin");
   const sharedConversations = conversations.filter((c) => c.shared);
   const archivedConversations = conversations.filter((c) => c.archived);
 
@@ -557,6 +565,8 @@ export default function SettingsPanel({
     setVoiceURI(getStoredVoiceURI());
     setVoiceSpeed(getStoredVoiceSpeed());
     setVoiceLang(getStoredVoiceLang());
+    setPremiumVoice(getPremiumVoiceEnabled());
+    setPremiumVoiceName(getStoredPremiumVoiceName());
     if (typeof window === "undefined" || !window.speechSynthesis) return;
     function loadVoices() {
       setVoices(window.speechSynthesis.getVoices());
@@ -1553,6 +1563,40 @@ export default function SettingsPanel({
                   />
                 </div>
               </div>
+
+              <div className="flex items-center justify-between gap-4 border-t border-border py-3">
+                <div>
+                  <h3 className="text-sm font-semibold">Premium Voice</h3>
+                  <p className="text-xs text-muted">Real AI-generated speech instead of your browser&apos;s built-in voice.</p>
+                </div>
+                <Toggle
+                  checked={premiumVoice}
+                  onChange={() => {
+                    const next = !premiumVoice;
+                    setPremiumVoice(next);
+                    setPremiumVoiceEnabled(next);
+                  }}
+                />
+              </div>
+
+              {premiumVoice && (
+                <div className="flex items-center justify-between gap-4 border-t border-border py-3">
+                  <h3 className="text-sm font-semibold">Premium voice</h3>
+                  <div className="w-40 shrink-0">
+                    <SettingsSelect
+                      value={premiumVoiceName}
+                      onChange={(name) => {
+                        setPremiumVoiceName(name);
+                        setStoredPremiumVoiceName(name);
+                      }}
+                      options={PREMIUM_VOICE_NAMES.map((name) => ({
+                        value: name,
+                        label: name.charAt(0).toUpperCase() + name.slice(1),
+                      }))}
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center justify-between gap-4 border-t border-border py-3">
                 <h3 className="text-sm font-semibold">Voice</h3>
