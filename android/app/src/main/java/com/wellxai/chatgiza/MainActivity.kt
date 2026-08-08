@@ -1408,7 +1408,7 @@ private fun ChatGizaMediaScreen(viewModel: ChatViewModel) {
         ) {
           Icon(Icons.Filled.Home, contentDescription = "Home", tint = Color.White, modifier = Modifier.size(24.dp))
         }
-        Icon(Icons.Outlined.PlayCircleOutline, contentDescription = "Reels", tint = Color.White, modifier = Modifier.size(26.dp))
+        Icon(Icons.Outlined.Videocam, contentDescription = "Reels", tint = Color.White, modifier = Modifier.size(26.dp))
         Icon(Icons.Filled.Send, contentDescription = "Explore", tint = Color.White, modifier = Modifier.size(24.dp))
         IconButton(onClick = { searchOpen = !searchOpen }) {
           Icon(Icons.Outlined.Search, contentDescription = "Search", tint = Color.White, modifier = Modifier.size(24.dp))
