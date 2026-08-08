@@ -770,6 +770,11 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var mediaComments by mutableStateOf<Map<String, List<ApiMediaComment>>>(emptyMap())
     private set
   var mediaError by mutableStateOf<String?>(null)
+    private set
+
+  fun clearMediaError() {
+    mediaError = null
+  }
 
   fun loadMediaPosts() {
     val token = tokenStore.getToken() ?: return
