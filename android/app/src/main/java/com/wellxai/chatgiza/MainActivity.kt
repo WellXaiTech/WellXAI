@@ -2050,18 +2050,22 @@ private fun imageProxyToJpeg(image: ImageProxy): ByteArray {
   return out.toByteArray()
 }
 
-// A few rotating promo lines for the History screen's Events section,
-// each with its own accent color so the banner visibly changes on every
-// rotation rather than just swapping text on a fixed background.
+// Events is a rotating promo carousel (per the reference: dark card,
+// small icon, "Events" label, bold rotating headline, and a "current/
+// total" counter badge) -- the card itself stays the same charcoal as
+// the rest of the screen; only the little icon swatch and the headline
+// rotate, each announcement getting its own icon color.
+private data class ChatGizaAnnouncement(val headline: String, val icon: ImageVector, val iconColor: Color)
+
 private val CHATGIZA_ANNOUNCEMENTS = listOf(
-  "ChatGiZa Pro sasa inapatikana — fungua uwezo kamili" to Color(0xFF6D5DF6),
-  "Jaribu ChatGiZa Media leo — shiriki na jamii" to Color(0xFF11998E),
-  "Live Vision iko tayari — ongea na uonyeshe kamera" to Color(0xFFEE0979),
-  "Uliza chochote, wakati wowote — ChatGiZa iko hapa" to Color(0xFFF7971E)
+  ChatGizaAnnouncement("ChatGiZa Pro sasa inapatikana — fungua uwezo kamili", Icons.Outlined.AutoAwesome, Color(0xFF6D5DF6)),
+  ChatGizaAnnouncement("Jaribu ChatGiZa Media leo — shiriki na jamii", Icons.Outlined.Whatshot, Color(0xFF11998E)),
+  ChatGizaAnnouncement("Live Vision iko tayari — ongea na uonyeshe kamera", Icons.Outlined.Videocam, Color(0xFFEE0979)),
+  ChatGizaAnnouncement("Uliza chochote, wakati wowote — ChatGiZa iko hapa", Icons.Outlined.Bolt, Color(0xFFF7971E))
 )
 
 @Composable
-private fun ChatGizaAnnouncementBanner() {
+private fun ChatGizaEventsCard() {
   var index by remember { mutableStateOf(0) }
   LaunchedEffect(Unit) {
     while (true) {
@@ -2069,17 +2073,51 @@ private fun ChatGizaAnnouncementBanner() {
       index = (index + 1) % CHATGIZA_ANNOUNCEMENTS.size
     }
   }
-  Crossfade(targetState = index, label = "chatGizaAnnouncement") { i ->
-    val (text, color) = CHATGIZA_ANNOUNCEMENTS[i]
+  Box(
+    modifier = Modifier
+      .fillMaxWidth()
+      .padding(horizontal = 10.dp, vertical = 4.dp)
+      .clip(RoundedCornerShape(20.dp))
+      .background(Color(0xFF23252B))
+      .padding(horizontal = 16.dp, vertical = 26.dp)
+  ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      Crossfade(targetState = index, label = "eventsIcon") { i ->
+        val item = CHATGIZA_ANNOUNCEMENTS[i]
+        Box(
+          modifier = Modifier.size(52.dp).clip(RoundedCornerShape(14.dp)).background(item.iconColor),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(item.icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+        }
+      }
+      Spacer(modifier = Modifier.size(14.dp))
+      Column(modifier = Modifier.weight(1f)) {
+        Text("Events", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 11.sp)
+        Spacer(modifier = Modifier.height(2.dp))
+        Crossfade(targetState = index, label = "eventsHeadline") { i ->
+          Text(
+            CHATGIZA_ANNOUNCEMENTS[i].headline,
+            color = colorScheme.onBackground,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold
+          )
+        }
+      }
+    }
     Box(
       modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 10.dp)
-        .clip(RoundedCornerShape(16.dp))
-        .background(color)
-        .padding(horizontal = 16.dp, vertical = 14.dp)
+        .align(Alignment.TopEnd)
+        .clip(RoundedCornerShape(10.dp))
+        .background(colorScheme.onBackground.copy(alpha = 0.12f))
+        .padding(horizontal = 8.dp, vertical = 3.dp)
     ) {
-      Text(text, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+      Text(
+        "${index + 1}/${CHATGIZA_ANNOUNCEMENTS.size}",
+        color = colorScheme.onBackground.copy(alpha = 0.7f),
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Medium
+      )
     }
   }
 }
@@ -2339,44 +2377,13 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
 
         // Big empty gap between Search and Events, matching the reference's
         // large open space above its promo card.
-        Spacer(modifier = Modifier.height(120.dp))
+        Spacer(modifier = Modifier.height(190.dp))
 
-        // Rotating ChatGiZa announcement banner, sitting right above the
-        // Events card -- cycles through a few promo lines with a
-        // different accent color each time.
-        ChatGizaAnnouncementBanner()
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // "Events" card — bigger now, same charcoal as the History card
-        // below for a consistent palette across the screen. "Events" is
-        // just the small label; the bold line is what it actually is.
-        Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF23252B))
-            .clickable(onClick = { viewModel.openScheduled() })
-            .padding(horizontal = 16.dp, vertical = 26.dp),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Box(
-            modifier = Modifier
-              .size(52.dp)
-              .clip(RoundedCornerShape(14.dp))
-              .background(colorScheme.onBackground.copy(alpha = 0.1f)),
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(Icons.Outlined.Schedule, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(24.dp))
-          }
-          Spacer(modifier = Modifier.size(14.dp))
-          Column(modifier = Modifier.weight(1f)) {
-            Text("Events", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 11.sp)
-            Spacer(modifier = Modifier.height(2.dp))
-            Text("Automations & scheduled tasks", color = colorScheme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-          }
-        }
+        // Events is a rotating promo carousel, not an Automations shortcut
+        // -- that was the wrong call earlier; Automations/Scheduled already
+        // has its own dedicated tab in the bottom nav below, so nothing is
+        // lost by decoupling this card from it.
+        ChatGizaEventsCard()
 
         Spacer(modifier = Modifier.height(32.dp))
       }
