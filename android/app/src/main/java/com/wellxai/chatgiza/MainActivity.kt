@@ -9,6 +9,7 @@ import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
 import android.graphics.Rect
 import android.graphics.YuvImage
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
@@ -1362,8 +1363,8 @@ private fun ChatGizaMediaScreen(viewModel: ChatViewModel) {
             .padding(horizontal = 12.dp, vertical = 10.dp),
           verticalAlignment = Alignment.CenterVertically
         ) {
-          IconButton(onClick = { showCreate = true }, modifier = Modifier.size(56.dp)) {
-            Icon(Icons.Filled.Add, contentDescription = "New post", tint = Color.White, modifier = Modifier.size(40.dp))
+          IconButton(onClick = { showCreate = true }) {
+            Icon(Icons.Filled.Add, contentDescription = "New post", tint = Color.White, modifier = Modifier.size(24.dp))
           }
           Spacer(modifier = Modifier.weight(1f))
           Text(
@@ -1373,9 +1374,9 @@ private fun ChatGizaMediaScreen(viewModel: ChatViewModel) {
             fontWeight = FontWeight.Bold
           )
           Spacer(modifier = Modifier.weight(1f))
-          // Balances the big "+" on the left so the title stays centered
-          // now that the search icon that used to sit here is gone.
-          Spacer(modifier = Modifier.size(56.dp))
+          // Balances the "+" on the left so the title stays centered now
+          // that the search icon that used to sit here is gone.
+          Spacer(modifier = Modifier.size(48.dp))
         }
         MediaStoriesRow(
           myImage = viewModel.userImage,
@@ -2789,29 +2790,28 @@ private fun MediaPostRow(
   onOpenComposer: () -> Unit
 ) {
   val context = LocalContext.current
-  // Starts collapsed to a short strip and expands on tap -- a full-size
-  // image immediately for every post made the feed mostly scrolling past
-  // pictures rather than reading posts, same complaint as a feed that's
-  // all thumbnails would draw the opposite way.
-  var imageExpanded by remember(post.id) { mutableStateOf(false) }
   var textExpanded by remember(post.id) { mutableStateOf(false) }
+  var following by remember(post.id) { mutableStateOf(false) }
   val isLongText = post.text.length > MEDIA_POST_TEXT_PREVIEW_LENGTH
+  // Every author shown here has, by definition, posted -- so the same
+  // Stories-row gradient ring applies unconditionally, not just for some
+  // posts, since there's no separate "story" concept behind the feed.
+  val ringBrush = Brush.sweepGradient(listOf(Color(0xFFFEDA75), Color(0xFFFA7E1E), Color(0xFFD62976), Color(0xFF962FBF), Color(0xFF4F5BD5), Color(0xFFFEDA75)))
 
   Column(modifier = Modifier.fillMaxWidth()) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-      if (post.authorImage != null) {
-        AsyncImage(
-          model = post.authorImage,
-          contentDescription = "Profile",
-          modifier = Modifier.size(36.dp).clip(CircleShape)
-        )
-      } else {
-        Icon(
-          Icons.Outlined.AccountCircle,
-          contentDescription = "Profile",
-          tint = Color.White,
-          modifier = Modifier.size(36.dp)
-        )
+      Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(ringBrush).padding(1.5.dp), contentAlignment = Alignment.Center) {
+        if (post.authorImage != null) {
+          AsyncImage(
+            model = post.authorImage,
+            contentDescription = "Profile",
+            modifier = Modifier.size(35.dp).clip(CircleShape).border(1.5.dp, Color(0xFF161616), CircleShape)
+          )
+        } else {
+          Box(modifier = Modifier.size(35.dp).clip(CircleShape).background(Color(0xFF23252B)).border(1.5.dp, Color(0xFF161616), CircleShape), contentAlignment = Alignment.Center) {
+            Icon(Icons.Outlined.AccountCircle, contentDescription = "Profile", tint = Color.White, modifier = Modifier.size(28.dp))
+          }
+        }
       }
       Spacer(modifier = Modifier.width(10.dp))
       Column(modifier = Modifier.weight(1f)) {
@@ -2849,54 +2849,32 @@ private fun MediaPostRow(
         }
         if (post.imageDataUrl != null) {
           Spacer(modifier = Modifier.height(8.dp))
-          Box(
-            modifier = Modifier
-              .fillMaxWidth()
-              // Collapsed shows roughly half of what expanded does -- a
-              // "meaningful" chunk of the picture rather than a thin strip
-              // that reads as just a color swatch.
-              .heightIn(max = if (imageExpanded) 320.dp else 160.dp)
-              .clip(RoundedCornerShape(14.dp))
-              // A flat background behind the image instead of leaving it
-              // blank while Coil loads (or if the load fails) -- the crop
-              // preview especially looked broken/empty for a beat on a
-              // slow connection.
-              .background(Color.White.copy(alpha = 0.06f))
-              .clickable { imageExpanded = !imageExpanded }
-          ) {
-            AsyncImage(
-              model = post.imageDataUrl,
-              contentDescription = "Post photo",
-              modifier = Modifier.fillMaxSize(),
-              // Collapsed strip: crop to fill so every post's preview is a
-              // consistent height. Expanded: show the whole picture
-              // uncropped -- Crop at 320dp was slicing off the top/bottom
-              // of anything taller than it was wide.
-              contentScale = if (imageExpanded) ContentScale.Fit else ContentScale.Crop
-            )
-            Box(
-              modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(8.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color.Black.copy(alpha = 0.45f))
-                .padding(horizontal = 6.dp, vertical = 3.dp)
-            ) {
-              Icon(
-                Icons.Outlined.KeyboardArrowDown,
-                contentDescription = if (imageExpanded) "Collapse photo" else "Expand photo",
-                tint = Color.White,
-                modifier = Modifier.size(14.dp).rotate(if (imageExpanded) 180f else 0f)
-              )
-            }
-          }
+          // Always shown at full width, uncropped -- no more tap-to-expand;
+          // the collapsed crop strip was hiding most of the picture by
+          // default, which read as broken/half-loaded rather than deliberate.
+          AsyncImage(
+            model = post.imageDataUrl,
+            contentDescription = "Post photo",
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color.White.copy(alpha = 0.06f)),
+            contentScale = ContentScale.FillWidth
+          )
         }
         if (post.videoUrl != null) {
           Spacer(modifier = Modifier.height(8.dp))
-          MediaPostVideoPlayer(url = post.videoUrl, modifier = Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(14.dp)))
+          MediaPostVideoPlayer(
+            url = post.videoUrl,
+            modifier = Modifier.fillMaxWidth().aspectRatio(9f / 16f).clip(RoundedCornerShape(14.dp))
+          )
         }
         Spacer(modifier = Modifier.height(10.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+          MediaPostActionButton(
+            icon = Icons.Filled.Favorite,
+            count = post.likeCount,
+            tint = if (post.likedByMe) Color(0xFFEA3943) else Color(0xFF8A8A8A),
+            onClick = onLikeClick
+          )
+          Spacer(modifier = Modifier.width(18.dp))
           MediaPostActionButton(
             icon = Icons.Outlined.Comment,
             count = post.commentCount,
@@ -2905,13 +2883,6 @@ private fun MediaPostRow(
           )
           Spacer(modifier = Modifier.width(18.dp))
           MediaPostActionButton(icon = Icons.Outlined.Repeat, count = 0, tint = Color(0xFF8A8A8A), onClick = {})
-          Spacer(modifier = Modifier.width(18.dp))
-          MediaPostActionButton(
-            icon = Icons.Outlined.ThumbUp,
-            count = post.likeCount,
-            tint = if (post.likedByMe) Color(0xFFFFC94A) else Color(0xFF8A8A8A),
-            onClick = onLikeClick
-          )
           Spacer(modifier = Modifier.width(18.dp))
           MediaPostActionButton(
             icon = Icons.Outlined.Share,
@@ -2925,6 +2896,9 @@ private fun MediaPostRow(
               context.startActivity(Intent.createChooser(sendIntent, "Share post"))
             }
           )
+          Spacer(modifier = Modifier.weight(1f))
+          // Visual-only for now -- no saved-posts list built yet.
+          Icon(Icons.Outlined.Bookmark, contentDescription = "Save", tint = Color(0xFF8A8A8A), modifier = Modifier.size(18.dp))
         }
         if (commentsExpanded) {
           MediaPostComments(comments = comments, onOpenComposer = onOpenComposer)
@@ -2933,6 +2907,22 @@ private fun MediaPostRow(
       if (isOwnPost) {
         IconButton(onClick = onDismissClick, modifier = Modifier.size(22.dp)) {
           Icon(Icons.Outlined.Close, contentDescription = "Dismiss", tint = Color(0xFF6E6E6E), modifier = Modifier.size(16.dp))
+        }
+      } else {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Text(
+            if (following) "Following" else "Follow",
+            color = if (following) Color.White.copy(alpha = 0.6f) else Color.Black,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier
+              .clip(RoundedCornerShape(14.dp))
+              .background(if (following) Color.White.copy(alpha = 0.12f) else Color.White)
+              .clickable { following = !following }
+              .padding(horizontal = 12.dp, vertical = 6.dp)
+          )
+          Spacer(modifier = Modifier.width(4.dp))
+          Icon(Icons.Filled.MoreVert, contentDescription = "More", tint = Color(0xFF8A8A8A), modifier = Modifier.size(18.dp))
         }
       }
     }
@@ -3280,8 +3270,27 @@ private fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss:
   }
   val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
     if (uri != null) {
-      imageUri = null
-      videoUri = uri
+      composerScope.launch {
+        // Checked at pick time, not just at Post -- faster feedback than
+        // silently uploading 40MB first and rejecting it after the fact.
+        val durationMs = withContext(Dispatchers.IO) {
+          val retriever = MediaMetadataRetriever()
+          try {
+            retriever.setDataSource(context, uri)
+            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+          } catch (e: Exception) {
+            null
+          } finally {
+            retriever.release()
+          }
+        }
+        if (durationMs != null && durationMs > 60_000L) {
+          viewModel.reportMediaError("Video must be 1 minute or shorter")
+        } else {
+          imageUri = null
+          videoUri = uri
+        }
+      }
     }
   }
 
