@@ -422,6 +422,10 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Media -> ChatGizaMediaScreen(viewModel)
             is AppScreen.LiveVision -> LiveVisionScreen(viewModel)
             is AppScreen.OpenSourceLicenses -> OpenSourceLicensesScreen(viewModel)
+            is AppScreen.KidsMode -> KidsModeScreen(viewModel)
+            is AppScreen.SharedConversations -> SharedConversationsScreen(viewModel)
+            is AppScreen.NsfwPreferences -> NsfwPreferencesScreen(viewModel)
+            is AppScreen.Connectors -> ConnectorsScreen(viewModel)
           }
         }
       }
@@ -4809,12 +4813,24 @@ private fun WidgetsScreen(viewModel: ChatViewModel) {
 private data class OssLicenseEntry(val name: String, val license: String, val licenseUrl: String)
 
 private val OSS_LICENSES = listOf(
-  OssLicenseEntry("AndroidX (AppCompat, Compose, Lifecycle, Security, Credentials, CameraX, …)", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
-  OssLicenseEntry("Kotlin & Kotlin Coroutines", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
+  OssLicenseEntry("Kotlin Standard Library", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
+  OssLicenseEntry("Kotlin Coroutines", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
+  OssLicenseEntry("AndroidX AppCompat", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
+  OssLicenseEntry("AndroidX CoordinatorLayout", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
+  OssLicenseEntry("AndroidX Core SplashScreen", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
+  OssLicenseEntry("Jetpack Compose UI & Graphics", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
+  OssLicenseEntry("Jetpack Compose Material 3", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
+  OssLicenseEntry("Material Icons (Core & Extended)", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
+  OssLicenseEntry("AndroidX Activity Compose", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
+  OssLicenseEntry("AndroidX Lifecycle (ViewModel, Runtime)", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
+  OssLicenseEntry("AndroidX Security Crypto", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
+  OssLicenseEntry("AndroidX Credentials", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
+  OssLicenseEntry("Google Identity Services (Sign-In)", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
+  OssLicenseEntry("AndroidX CameraX (Core, Camera2, Lifecycle, View)", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
   OssLicenseEntry("OkHttp", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
   OssLicenseEntry("Coil", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
-  OssLicenseEntry("Google Identity Services (Credential Manager, Google Sign-In)", "Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
-  OssLicenseEntry("Capacitor", "MIT License", "https://opensource.org/licenses/MIT"),
+  OssLicenseEntry("Capacitor Android", "MIT License", "https://opensource.org/licenses/MIT"),
+  OssLicenseEntry("Capacitor Cordova Plugins", "MIT License", "https://opensource.org/licenses/MIT"),
   OssLicenseEntry("Google Play Services", "Google APIs Terms of Service", "https://developers.google.com/terms")
 )
 
@@ -4975,6 +4991,144 @@ private fun HapticsScreen(viewModel: ChatViewModel) {
         if (value) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
       }
     )
+  }
+}
+
+@Composable
+private fun KidsModeScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeKidsMode() }
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color(0xFF181818))
+      .padding(20.dp)
+  ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      IconButton(onClick = { viewModel.closeKidsMode() }) {
+        Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+      }
+      Spacer(Modifier.width(18.dp))
+      Text(text = "Kids Mode", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+    }
+    Spacer(Modifier.height(28.dp))
+    HapticCard(
+      icon = Icons.Outlined.ChildCare,
+      title = "Enable Kids Mode",
+      checked = viewModel.kidsModeEnabled,
+      onCheckedChange = { viewModel.setKidsModeEnabled(it) }
+    )
+  }
+}
+
+@Composable
+private fun SharedConversationsScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeSharedConversations() }
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color(0xFF181818))
+      .padding(20.dp)
+  ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      IconButton(onClick = { viewModel.closeSharedConversations() }) {
+        Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+      }
+      Spacer(Modifier.width(18.dp))
+      Text(text = "Shared Conversations", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+    }
+    Spacer(Modifier.height(20.dp))
+    Text(
+      text = "Shared links can be viewed by anyone with the link. No shared links yet.",
+      color = Color(0xFFA8A8A8),
+      fontSize = 13.sp,
+      lineHeight = 18.sp
+    )
+  }
+}
+
+@Composable
+private fun NsfwPreferencesScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeNsfwPreferences() }
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color(0xFF181818))
+      .padding(20.dp)
+  ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      IconButton(onClick = { viewModel.closeNsfwPreferences() }) {
+        Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+      }
+      Spacer(Modifier.width(18.dp))
+      Text(text = "NSFW Preferences", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+    }
+    Spacer(Modifier.height(10.dp))
+    Text(
+      text = "Control how ChatGiZa handles mature content.",
+      color = Color(0xFFA8A8A8),
+      fontSize = 13.sp
+    )
+    Spacer(Modifier.height(24.dp))
+    HapticCard(
+      icon = Icons.Outlined.NoAdultContent,
+      title = "Blur mature images and video",
+      checked = viewModel.blurMatureContentEnabled,
+      onCheckedChange = { viewModel.setBlurMatureContentEnabled(it) }
+    )
+  }
+}
+
+@Composable
+private fun ConnectorsScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeConnectors() }
+  var query by remember { mutableStateOf("") }
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color(0xFF181818))
+      .padding(20.dp)
+  ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      IconButton(onClick = { viewModel.closeConnectors() }) {
+        Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+      }
+      Spacer(Modifier.width(18.dp))
+      Text(text = "Connectors", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+    }
+    Spacer(Modifier.height(10.dp))
+    Text(
+      text = "Connectors let GiZa use external tools and data sources.",
+      color = Color(0xFFA8A8A8),
+      fontSize = 13.sp
+    )
+    Spacer(Modifier.height(20.dp))
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      modifier = Modifier
+        .fillMaxWidth()
+        .height(42.dp)
+        .clip(RoundedCornerShape(21.dp))
+        .background(Color.White.copy(alpha = 0.08f))
+        .padding(horizontal = 14.dp)
+    ) {
+      Icon(Icons.Outlined.Search, contentDescription = null, tint = Color(0xFFA8A8A8), modifier = Modifier.size(18.dp))
+      Spacer(modifier = Modifier.width(8.dp))
+      Box(modifier = Modifier.weight(1f)) {
+        if (query.isEmpty()) {
+          Text("Search connectors", color = Color(0xFF7A7A7A), fontSize = 14.sp)
+        }
+        BasicTextField(
+          value = query,
+          onValueChange = { query = it },
+          singleLine = true,
+          textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp),
+          cursorBrush = SolidColor(Color.White),
+          modifier = Modifier.fillMaxWidth()
+        )
+      }
+    }
+    Spacer(Modifier.height(24.dp))
+    Text(text = "Featured", color = Color(0xFFA8A8A8), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
   }
 }
 
@@ -5322,11 +5476,11 @@ private fun AccountScreen(viewModel: ChatViewModel) {
       SettingsSection {
         SettingsMenuRow("Customize GiZa", icon = Icons.Outlined.Tune) { viewModel.openCustomize() }
         SettingsDivider()
-        SettingsMenuRow("Connectors", icon = Icons.Outlined.Hub)
+        SettingsMenuRow("Connectors", icon = Icons.Outlined.Hub) { viewModel.openConnectors() }
         SettingsDivider()
-        SettingsMenuRow("Kids Mode", icon = Icons.Outlined.ChildCare)
+        SettingsMenuRow("Kids Mode", icon = Icons.Outlined.ChildCare) { viewModel.openKidsMode() }
         SettingsDivider()
-        SettingsMenuRow("NSFW Preferences", icon = Icons.Outlined.NoAdultContent)
+        SettingsMenuRow("NSFW Preferences", icon = Icons.Outlined.NoAdultContent) { viewModel.openNsfwPreferences() }
       }
 
       SettingsSectionHeader("Voice")
@@ -5336,7 +5490,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
 
       SettingsSectionHeader("Data & Information")
       SettingsSection {
-        SettingsMenuRow("Shared Conversations", icon = Icons.Outlined.Link)
+        SettingsMenuRow("Shared Conversations", icon = Icons.Outlined.Link) { viewModel.openSharedConversations() }
         SettingsDivider()
         SettingsMenuRow("Data Controls", icon = Icons.Outlined.Storage) { viewModel.openDataControls() }
         SettingsDivider()
