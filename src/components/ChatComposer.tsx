@@ -5,7 +5,17 @@ import { createPortal } from "react-dom";
 import type { Attachment } from "@/lib/attachments";
 import TypingPlaceholder from "@/components/TypingPlaceholder";
 
-export type ComposerTool = "web_search" | "deep_research" | "deep_think" | "image" | "video" | null;
+export type ComposerTool =
+  | "web_search"
+  | "deep_research"
+  | "deep_think"
+  | "image"
+  | "video"
+  | "document_writer"
+  | "sql_helper"
+  | "python_helper"
+  | "business_assistant"
+  | null;
 
 type SpeechRecognitionLike = {
   lang: string;
@@ -110,12 +120,47 @@ const FileIcon = (
   </svg>
 );
 
+const DocumentIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+    <path d="M14 2v6h6" />
+    <path d="M8 13h8" />
+    <path d="M8 17h8" />
+  </svg>
+);
+
+const DatabaseIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <ellipse cx="12" cy="5" rx="8" ry="3" />
+    <path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5" />
+    <path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" />
+  </svg>
+);
+
+const CodeBracketIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M9 18l-6-6 6-6" />
+    <path d="M15 6l6 6-6 6" />
+  </svg>
+);
+
+const BriefcaseIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="2" y="7" width="20" height="14" rx="2" />
+    <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+  </svg>
+);
+
 const TOOL_LABELS: Record<Exclude<ComposerTool, null>, string> = {
   image: "Create image",
   video: "Create video",
   web_search: "Web search",
   deep_research: "Deep research",
   deep_think: "Deep Think",
+  document_writer: "Document Writer",
+  sql_helper: "SQL Helper",
+  python_helper: "Python Helper",
+  business_assistant: "Business Assistant",
 };
 
 export default function ChatComposer({
@@ -304,6 +349,30 @@ export default function ChatComposer({
       description: "Rigorous analysis and reasoning for high-stakes decisions",
       icon: BrainIcon,
       tool: "deep_think",
+    },
+    {
+      title: "Document Writer",
+      description: "Draft a finished report, letter, or proposal",
+      icon: DocumentIcon,
+      tool: "document_writer",
+    },
+    {
+      title: "SQL Helper",
+      description: "Write, fix, and explain SQL queries",
+      icon: DatabaseIcon,
+      tool: "sql_helper",
+    },
+    {
+      title: "Python Helper",
+      description: "Write and debug Python code",
+      icon: CodeBracketIcon,
+      tool: "python_helper",
+    },
+    {
+      title: "Business Assistant",
+      description: "Emails, proposals, and everyday business tasks",
+      icon: BriefcaseIcon,
+      tool: "business_assistant",
     },
   ];
 

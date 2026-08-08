@@ -73,7 +73,11 @@ data class PluginsState(
   val deepResearch: Boolean = true,
   val deepThink: Boolean = true,
   val image: Boolean = true,
-  val video: Boolean = true
+  val video: Boolean = true,
+  val documentWriter: Boolean = true,
+  val sqlHelper: Boolean = true,
+  val pythonHelper: Boolean = true,
+  val businessAssistant: Boolean = true
 )
 
 data class SettingsData(
@@ -756,7 +760,11 @@ object ChatGizaApi {
         deepResearch = pluginsObj.optBoolean("deep_research", true),
         deepThink = pluginsObj.optBoolean("deep_think", true),
         image = pluginsObj.optBoolean("image", true),
-        video = pluginsObj.optBoolean("video", true)
+        video = pluginsObj.optBoolean("video", true),
+        documentWriter = pluginsObj.optBoolean("document_writer", true),
+        sqlHelper = pluginsObj.optBoolean("sql_helper", true),
+        pythonHelper = pluginsObj.optBoolean("python_helper", true),
+        businessAssistant = pluginsObj.optBoolean("business_assistant", true)
       ),
       notifyOnComplete = obj.optBoolean("notifyOnComplete", true),
       notifyImageGen = obj.optBoolean("notifyImageGen", true),
@@ -797,6 +805,10 @@ object ChatGizaApi {
       .put("deep_think", data.plugins.deepThink)
       .put("image", data.plugins.image)
       .put("video", data.plugins.video)
+      .put("document_writer", data.plugins.documentWriter)
+      .put("sql_helper", data.plugins.sqlHelper)
+      .put("python_helper", data.plugins.pythonHelper)
+      .put("business_assistant", data.plugins.businessAssistant)
 
     val privacyObj = JSONObject()
       .put("improveModel", data.privacy.improveModel)

@@ -107,6 +107,10 @@ const DEFAULT_PLUGINS: Record<PluginKey, boolean> = {
   deep_think: true,
   image: true,
   video: true,
+  document_writer: true,
+  sql_helper: true,
+  python_helper: true,
+  business_assistant: true,
 };
 
 const DEFAULT_PROFILE: Profile = { nickname: "", about: "" };

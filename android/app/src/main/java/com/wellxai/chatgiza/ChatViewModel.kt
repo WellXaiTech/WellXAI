@@ -538,6 +538,10 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
       "deep_think" -> p.copy(deepThink = !p.deepThink)
       "image" -> p.copy(image = !p.image)
       "video" -> p.copy(video = !p.video)
+      "document_writer" -> p.copy(documentWriter = !p.documentWriter)
+      "sql_helper" -> p.copy(sqlHelper = !p.sqlHelper)
+      "python_helper" -> p.copy(pythonHelper = !p.pythonHelper)
+      "business_assistant" -> p.copy(businessAssistant = !p.businessAssistant)
       else -> p
     }
     persistSettings(settingsData.copy(plugins = updated))

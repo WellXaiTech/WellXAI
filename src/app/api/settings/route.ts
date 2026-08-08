@@ -3,7 +3,16 @@ import { kv } from "@vercel/kv";
 import { auth } from "@/auth";
 import { getMobileUserId } from "@/lib/mobileAuth";
 
-type PluginKey = "web_search" | "deep_research" | "deep_think" | "image" | "video";
+type PluginKey =
+  | "web_search"
+  | "deep_research"
+  | "deep_think"
+  | "image"
+  | "video"
+  | "document_writer"
+  | "sql_helper"
+  | "python_helper"
+  | "business_assistant";
 
 type PrivacyPrefs = {
   improveModel: boolean;
@@ -39,7 +48,17 @@ type SettingsData = {
 };
 
 const DEFAULT_SETTINGS_DATA: SettingsData = {
-  plugins: { web_search: true, deep_research: true, deep_think: true, image: true, video: true },
+  plugins: {
+    web_search: true,
+    deep_research: true,
+    deep_think: true,
+    image: true,
+    video: true,
+    document_writer: true,
+    sql_helper: true,
+    python_helper: true,
+    business_assistant: true,
+  },
   notifyOnComplete: true,
   notifyImageGen: true,
   allNotificationsEnabled: true,
@@ -55,7 +74,17 @@ const DEFAULT_SETTINGS_DATA: SettingsData = {
   companyRequests: [],
 };
 
-const PLUGIN_KEYS: PluginKey[] = ["web_search", "deep_research", "deep_think", "image", "video"];
+const PLUGIN_KEYS: PluginKey[] = [
+  "web_search",
+  "deep_research",
+  "deep_think",
+  "image",
+  "video",
+  "document_writer",
+  "sql_helper",
+  "python_helper",
+  "business_assistant",
+];
 
 function settingsKey(userId: string) {
   return `chatgiza:settings-data:${userId}`;

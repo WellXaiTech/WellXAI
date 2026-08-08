@@ -1,6 +1,15 @@
 "use client";
 
-export type PluginKey = "web_search" | "deep_research" | "deep_think" | "image" | "video";
+export type PluginKey =
+  | "web_search"
+  | "deep_research"
+  | "deep_think"
+  | "image"
+  | "video"
+  | "document_writer"
+  | "sql_helper"
+  | "python_helper"
+  | "business_assistant";
 
 const PLUGINS: { key: PluginKey; title: string; description: string }[] = [
   { key: "web_search", title: "Web search", description: "Let ChatGiZa look up real-time info to answer you." },
@@ -8,6 +17,10 @@ const PLUGINS: { key: PluginKey; title: string; description: string }[] = [
   { key: "deep_think", title: "Deep Think", description: "Reason more carefully through hard questions before answering." },
   { key: "image", title: "Create image", description: "Generate images and logos from a text prompt." },
   { key: "video", title: "Create video", description: "Generate short video clips from a text prompt." },
+  { key: "document_writer", title: "Document Writer", description: "Draft finished reports, letters, and proposals." },
+  { key: "sql_helper", title: "SQL Helper", description: "Write, fix, and explain SQL queries." },
+  { key: "python_helper", title: "Python Helper", description: "Write and debug Python code." },
+  { key: "business_assistant", title: "Business Assistant", description: "Emails, proposals, and everyday business tasks." },
 ];
 
 export default function PluginsPanel({
