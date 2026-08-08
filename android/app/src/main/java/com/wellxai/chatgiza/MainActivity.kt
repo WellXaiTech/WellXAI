@@ -286,6 +286,7 @@ import coil.compose.AsyncImage
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.util.Locale
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
@@ -952,18 +953,41 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
   val context = LocalContext.current
   val composerScope = rememberCoroutineScope()
   var attachError by remember { mutableStateOf(false) }
-  val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-    if (uri != null) {
-      attachError = false
-      composerScope.launch {
-        val dataUrl = withContext(Dispatchers.IO) { uriToPostImageDataUrl(context, uri) }
-        if (dataUrl != null) {
-          viewModel.setAttachedImage(uri, dataUrl)
-        } else {
-          attachError = true
-        }
+  var attachMenuOpen by remember { mutableStateOf(false) }
+
+  fun attachPickedImage(uri: Uri) {
+    attachError = false
+    composerScope.launch {
+      val dataUrl = withContext(Dispatchers.IO) { uriToPostImageDataUrl(context, uri) }
+      if (dataUrl != null) {
+        viewModel.setAttachedImage(uri, dataUrl)
+      } else {
+        attachError = true
       }
     }
+  }
+
+  val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    if (uri != null) attachPickedImage(uri)
+  }
+
+  var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+  val cameraCapture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+    val uri = pendingCameraUri
+    if (success && uri != null) attachPickedImage(uri)
+  }
+  var hasCameraPermission by remember {
+    mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
+  }
+  fun launchCamera() {
+    val photoFile = File(context.cacheDir, "composer_camera_${System.currentTimeMillis()}.jpg")
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
+    pendingCameraUri = uri
+    cameraCapture.launch(uri)
+  }
+  val cameraPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+    hasCameraPermission = granted
+    if (granted) launchCamera()
   }
 
   val speechLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -1087,19 +1111,59 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
           focusedIndicatorColor = Color.Transparent
         )
       )
-      Box {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+      Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        // Its own anchored menu (Camera/Gallery/Files/Skills/Connectors) --
+        // this used to open the same dropdown as the GiZa Pro pill below,
+        // which was two unrelated menus (attachments vs. model tools)
+        // merged into one list.
+        Box {
           FilledIconButton(
-            onClick = { toolMenuOpen = true },
+            onClick = { attachMenuOpen = true },
             modifier = Modifier.size(36.dp),
             colors = IconButtonDefaults.filledIconButtonColors(
               containerColor = colorScheme.onBackground.copy(alpha = 0.1f),
               contentColor = colorScheme.onBackground
             )
           ) {
-            Icon(Icons.Filled.Add, contentDescription = "Tools", modifier = Modifier.size(18.dp))
+            Icon(Icons.Filled.Add, contentDescription = "Attach", modifier = Modifier.size(18.dp))
           }
-          Spacer(modifier = Modifier.size(6.dp))
+          DropdownMenu(expanded = attachMenuOpen, onDismissRequest = { attachMenuOpen = false }) {
+            DropdownMenuItem(
+              text = { Text("Camera") },
+              leadingIcon = { Icon(Icons.Outlined.PhotoCamera, contentDescription = null) },
+              onClick = {
+                attachMenuOpen = false
+                if (hasCameraPermission) launchCamera() else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+              }
+            )
+            DropdownMenuItem(
+              text = { Text("Gallery") },
+              leadingIcon = { Icon(Icons.Outlined.Photo, contentDescription = null) },
+              onClick = {
+                attachMenuOpen = false
+                imagePicker.launch("image/*")
+              }
+            )
+            DropdownMenuItem(
+              text = { Text("Files") },
+              leadingIcon = { Icon(Icons.Outlined.Description, contentDescription = null) },
+              onClick = { attachMenuOpen = false }
+            )
+            HorizontalDivider()
+            DropdownMenuItem(
+              text = { Text("Skills") },
+              leadingIcon = { Icon(Icons.Outlined.Widgets, contentDescription = null) },
+              onClick = { attachMenuOpen = false }
+            )
+            DropdownMenuItem(
+              text = { Text("Connectors") },
+              leadingIcon = { Icon(Icons.Outlined.Hub, contentDescription = null) },
+              onClick = { attachMenuOpen = false }
+            )
+          }
+        }
+        Spacer(modifier = Modifier.size(6.dp))
+        Box {
           Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -1122,77 +1186,68 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             )
             Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(18.dp))
           }
-          Spacer(modifier = Modifier.weight(1f))
+          DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
+            DropdownMenuItem(text = { Text("GiZa Pro") }, onClick = { viewModel.selectTool(null); toolMenuOpen = false })
+            DropdownMenuItem(text = { Text("Web search") }, onClick = { viewModel.selectTool("web_search"); toolMenuOpen = false })
+            DropdownMenuItem(text = { Text("Deep research") }, onClick = { viewModel.selectTool("deep_research"); toolMenuOpen = false })
+            DropdownMenuItem(text = { Text("Deep Think") }, onClick = { viewModel.selectTool("deep_think"); toolMenuOpen = false })
+            DropdownMenuItem(text = { Text("Document Writer") }, onClick = { viewModel.selectTool("document_writer"); toolMenuOpen = false })
+            DropdownMenuItem(text = { Text("SQL Helper") }, onClick = { viewModel.selectTool("sql_helper"); toolMenuOpen = false })
+            DropdownMenuItem(text = { Text("Python Helper") }, onClick = { viewModel.selectTool("python_helper"); toolMenuOpen = false })
+            DropdownMenuItem(text = { Text("Business Assistant") }, onClick = { viewModel.selectTool("business_assistant"); toolMenuOpen = false })
+            DropdownMenuItem(text = { Text("AI Agent") }, onClick = { viewModel.selectTool("ai_agent"); toolMenuOpen = false })
+          }
+        }
+        Spacer(modifier = Modifier.weight(1f))
 
-          // MIC BUTTON
+        // MIC BUTTON
+        Box(
+          modifier = Modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .background(Color(0xFF333333))
+            .clickable { launchSpeech(autoSend = false) },
+          contentAlignment = Alignment.Center
+        ) {
+          MicIconCustom(modifier = Modifier.size(18.dp), tint = Color.White)
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        if (viewModel.input.isNotBlank()) {
+          // SEND BUTTON
           Box(
             modifier = Modifier
               .size(36.dp)
               .clip(CircleShape)
-              .background(Color(0xFF333333))
-              .clickable { launchSpeech(autoSend = false) },
+              .background(if (viewModel.sending) Color(0xFF555555) else Color(0xFFE0E0E0))
+              .clickable(enabled = !viewModel.sending) { tapHaptic(); viewModel.sendMessage() },
             contentAlignment = Alignment.Center
           ) {
-            MicIconCustom(modifier = Modifier.size(18.dp), tint = Color.White)
+            Icon(Icons.Filled.ArrowUpward, contentDescription = "Send", tint = Color.Black, modifier = Modifier.size(18.dp))
           }
-
-          Spacer(modifier = Modifier.width(8.dp))
-
-          if (viewModel.input.isNotBlank()) {
-            // SEND BUTTON
-            Box(
-              modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(if (viewModel.sending) Color(0xFF555555) else Color(0xFFE0E0E0))
-                .clickable(enabled = !viewModel.sending) { tapHaptic(); viewModel.sendMessage() },
-              contentAlignment = Alignment.Center
-            ) {
-              Icon(Icons.Filled.ArrowUpward, contentDescription = "Send", tint = Color.Black, modifier = Modifier.size(18.dp))
-            }
-          } else {
-            // SPEAK BUTTON (waveform icon + label)
-            Row(
-              modifier = Modifier
-                .height(36.dp)
-                .clip(RoundedCornerShape(18.dp))
-                .background(Color.White)
-                .clickable { viewModel.openLiveVision() }
-                .padding(horizontal = 12.dp),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              WaveformIconCustom(modifier = Modifier.size(16.dp), tint = Color.Black)
-              Spacer(modifier = Modifier.width(6.dp))
-              Text(
-                text = "Speak",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black,
-                maxLines = 1,
-                softWrap = false
-              )
-            }
+        } else {
+          // SPEAK BUTTON (waveform icon + label)
+          Row(
+            modifier = Modifier
+              .height(36.dp)
+              .clip(RoundedCornerShape(18.dp))
+              .background(Color.White)
+              .clickable { viewModel.openLiveVision() }
+              .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            WaveformIconCustom(modifier = Modifier.size(16.dp), tint = Color.Black)
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+              text = "Speak",
+              fontSize = 13.sp,
+              fontWeight = FontWeight.Bold,
+              color = Color.Black,
+              maxLines = 1,
+              softWrap = false
+            )
           }
-        }
-        DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
-          DropdownMenuItem(
-            text = { Text("Photos") },
-            leadingIcon = { Icon(Icons.Outlined.Photo, contentDescription = null) },
-            onClick = {
-              toolMenuOpen = false
-              imagePicker.launch("image/*")
-            }
-          )
-          HorizontalDivider()
-          DropdownMenuItem(text = { Text("GiZa Pro") }, onClick = { viewModel.selectTool(null); toolMenuOpen = false })
-          DropdownMenuItem(text = { Text("Web search") }, onClick = { viewModel.selectTool("web_search"); toolMenuOpen = false })
-          DropdownMenuItem(text = { Text("Deep research") }, onClick = { viewModel.selectTool("deep_research"); toolMenuOpen = false })
-          DropdownMenuItem(text = { Text("Deep Think") }, onClick = { viewModel.selectTool("deep_think"); toolMenuOpen = false })
-          DropdownMenuItem(text = { Text("Document Writer") }, onClick = { viewModel.selectTool("document_writer"); toolMenuOpen = false })
-          DropdownMenuItem(text = { Text("SQL Helper") }, onClick = { viewModel.selectTool("sql_helper"); toolMenuOpen = false })
-          DropdownMenuItem(text = { Text("Python Helper") }, onClick = { viewModel.selectTool("python_helper"); toolMenuOpen = false })
-          DropdownMenuItem(text = { Text("Business Assistant") }, onClick = { viewModel.selectTool("business_assistant"); toolMenuOpen = false })
-          DropdownMenuItem(text = { Text("AI Agent") }, onClick = { viewModel.selectTool("ai_agent"); toolMenuOpen = false })
         }
       }
     }
