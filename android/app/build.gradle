@@ -114,7 +114,11 @@ dependencies {
     // phone-recorded MP4s whose moov atom sits at the end of the file
     // (very common straight out of a camera app); ExoPlayer's MP4
     // extractor handles that correctly via range-request seeking.
-    def media3Version = "1.11.0"
+    // Pinned to 1.5.1, not the latest -- newer media3 releases are compiled
+    // against a Kotlin stdlib metadata version this project's Kotlin
+    // compiler plugin (2.0.21) can't read ("Module was compiled with an
+    // incompatible version of Kotlin").
+    def media3Version = "1.5.1"
     implementation "androidx.media3:media3-exoplayer:$media3Version"
     implementation "androidx.media3:media3-ui:$media3Version"
 
