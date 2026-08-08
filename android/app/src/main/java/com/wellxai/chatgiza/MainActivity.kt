@@ -254,6 +254,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.draw.shadow
@@ -2118,11 +2119,26 @@ private fun imageProxyToJpeg(image: ImageProxy): ByteArray {
 private data class ChatGizaAnnouncement(val headline: String, val icon: ImageVector, val iconColor: Color)
 
 private val CHATGIZA_ANNOUNCEMENTS = listOf(
-  ChatGizaAnnouncement("ChatGiZa Pro sasa inapatikana — fungua uwezo kamili", Icons.Outlined.AutoAwesome, Color(0xFF6D5DF6)),
-  ChatGizaAnnouncement("Jaribu ChatGiZa Media leo — shiriki na jamii", Icons.Outlined.Whatshot, Color(0xFF11998E)),
-  ChatGizaAnnouncement("Live Vision iko tayari — ongea na uonyeshe kamera", Icons.Outlined.Videocam, Color(0xFFEE0979)),
-  ChatGizaAnnouncement("Uliza chochote, wakati wowote — ChatGiZa iko hapa", Icons.Outlined.Bolt, Color(0xFFF7971E))
+  ChatGizaAnnouncement("ChatGiZa Pro is here — unlock full power", Icons.Outlined.AutoAwesome, Color(0xFF6D5DF6)),
+  ChatGizaAnnouncement("Try ChatGiZa Media today — share with the community", Icons.Outlined.Whatshot, Color(0xFF11998E)),
+  ChatGizaAnnouncement("Live Vision is ready — talk and show your camera", Icons.Outlined.Videocam, Color(0xFFEE0979)),
+  ChatGizaAnnouncement("Ask anything, anytime — ChatGiZa is here", Icons.Outlined.Bolt, Color(0xFFF7971E))
 )
+
+// A flat fill read as plain/empty for a promo card -- this scatters a
+// fixed set of soft dots over a deep indigo base instead, giving it a
+// bit of texture without pulling focus from the headline. Fixed seed so
+// the speckle pattern doesn't jump around on every recomposition.
+private fun Modifier.speckledEventsBackground(): Modifier = this.drawBehind {
+  drawRect(Color(0xFF20233A))
+  val rnd = kotlin.random.Random(7)
+  repeat(70) {
+    val x = rnd.nextFloat() * size.width
+    val y = rnd.nextFloat() * size.height
+    val r = rnd.nextFloat() * 1.6f + 0.6f
+    drawCircle(color = Color.White.copy(alpha = 0.10f), radius = r, center = Offset(x, y))
+  }
+}
 
 @Composable
 private fun ChatGizaEventsCard() {
@@ -2138,8 +2154,8 @@ private fun ChatGizaEventsCard() {
       .fillMaxWidth()
       .padding(horizontal = 10.dp, vertical = 4.dp)
       .clip(RoundedCornerShape(20.dp))
-      .background(Color(0xFF23252B))
-      .padding(horizontal = 16.dp, vertical = 26.dp)
+      .speckledEventsBackground()
+      .padding(horizontal = 16.dp, vertical = 14.dp)
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
       Crossfade(targetState = index, label = "eventsIcon") { i ->
@@ -2323,7 +2339,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
         // lost by decoupling this card from it.
         ChatGizaEventsCard()
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(14.dp))
       }
 
       // History tab + the whole conversation list share ONE background —
