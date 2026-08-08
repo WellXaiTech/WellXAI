@@ -4,7 +4,7 @@ export type Attachment = {
   id: string;
   name: string;
   mimeType: string;
-  kind: "image" | "text" | "pdf-pages";
+  kind: "image" | "text" | "pdf-pages" | "video-frames";
   dataUrl?: string;
   text?: string;
   pages?: string[];
@@ -17,6 +17,10 @@ export type Attachment = {
 };
 
 const MAX_FILE_SIZE = 8 * 1024 * 1024;
+// Videos are only ever read locally (frames drawn to a canvas, extracted
+// via an object URL) -- never base64-encoded or held as one big string the
+// way images/PDFs are -- so a much bigger file is fine.
+const MAX_VIDEO_FILE_SIZE = 100 * 1024 * 1024;
 const MAX_TEXT_CHARS = 8000;
 
 function readAsDataUrl(file: File): Promise<string> {
@@ -30,6 +34,18 @@ function readAsDataUrl(file: File): Promise<string> {
 
 export async function readAttachment(file: File): Promise<Attachment[]> {
   const id = crypto.randomUUID();
+  const isVideo = file.type.startsWith("video/") || /\.(mp4|mov|webm|m4v)$/i.test(file.name);
+
+  if (isVideo) {
+    if (file.size > MAX_VIDEO_FILE_SIZE) {
+      throw new Error(`"${file.name}" is too large (max ${MAX_VIDEO_FILE_SIZE / (1024 * 1024)}MB)`);
+    }
+    const { extractVideoFrames } = await import("./extractVideoFrames");
+    const pages = await extractVideoFrames(file);
+    return [
+      { id, name: file.name, mimeType: file.type || "video/mp4", kind: "video-frames", pages, sizeBytes: file.size },
+    ];
+  }
 
   if (file.size > MAX_FILE_SIZE) {
     throw new Error(`"${file.name}" is too large (max 8MB)`);
@@ -88,20 +104,23 @@ export async function readAttachment(file: File): Promise<Attachment[]> {
     return [{ id, name: file.name, mimeType: file.type || "text/csv", kind: "text", text, sizeBytes: file.size }];
   }
 
-  throw new Error(`"${file.name}" isn't a supported file type yet (images, PDF, .txt, .md, .xlsx, .csv)`);
+  throw new Error(`"${file.name}" isn't a supported file type yet (images, PDF, .txt, .md, .xlsx, .csv, video)`);
 }
 
 export function buildApiContent(text: string, attachments: Attachment[]): string | ChatContentPart[] {
   const textAttachments = attachments.filter((a) => a.kind === "text");
   const imageAttachments = attachments.filter((a) => a.kind === "image");
-  const pdfPageAttachments = attachments.filter((a) => a.kind === "pdf-pages");
+  const framePageAttachments = attachments.filter((a) => a.kind === "pdf-pages" || a.kind === "video-frames");
 
   let combinedText = text;
   for (const a of textAttachments) {
     combinedText += `\n\n[Attached file: ${a.name}]\n${a.text}`;
   }
+  for (const a of attachments.filter((x) => x.kind === "video-frames")) {
+    combinedText += `\n\n[Attached video: ${a.name} — you are seeing ${a.pages?.length ?? 0} frames sampled evenly across it, not the full motion/audio]`;
+  }
 
-  const hasVisualContent = imageAttachments.length > 0 || pdfPageAttachments.length > 0;
+  const hasVisualContent = imageAttachments.length > 0 || framePageAttachments.length > 0;
   if (!hasVisualContent) {
     return combinedText;
   }
@@ -110,7 +129,7 @@ export function buildApiContent(text: string, attachments: Attachment[]): string
   for (const a of imageAttachments) {
     if (a.dataUrl) parts.push({ type: "image_url", image_url: { url: a.dataUrl } });
   }
-  for (const a of pdfPageAttachments) {
+  for (const a of framePageAttachments) {
     for (const page of a.pages ?? []) {
       parts.push({ type: "image_url", image_url: { url: page } });
     }
