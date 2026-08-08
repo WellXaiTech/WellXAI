@@ -15,6 +15,7 @@ export type ComposerTool =
   | "sql_helper"
   | "python_helper"
   | "business_assistant"
+  | "ai_agent"
   | null;
 
 type SpeechRecognitionLike = {
@@ -151,6 +152,17 @@ const BriefcaseIcon = (
   </svg>
 );
 
+const AgentIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="4" y="8" width="16" height="12" rx="2" />
+    <path d="M12 8V4" />
+    <circle cx="12" cy="3" r="1" />
+    <circle cx="9" cy="13" r="1" fill="currentColor" />
+    <circle cx="15" cy="13" r="1" fill="currentColor" />
+    <path d="M9 17h6" />
+  </svg>
+);
+
 const TOOL_LABELS: Record<Exclude<ComposerTool, null>, string> = {
   image: "Create image",
   video: "Create video",
@@ -161,6 +173,7 @@ const TOOL_LABELS: Record<Exclude<ComposerTool, null>, string> = {
   sql_helper: "SQL Helper",
   python_helper: "Python Helper",
   business_assistant: "Business Assistant",
+  ai_agent: "AI Agent",
 };
 
 export default function ChatComposer({
@@ -373,6 +386,12 @@ export default function ChatComposer({
       description: "Emails, proposals, and everyday business tasks",
       icon: BriefcaseIcon,
       tool: "business_assistant",
+    },
+    {
+      title: "AI Agent",
+      description: "Researches autonomously, searching multiple times before answering",
+      icon: AgentIcon,
+      tool: "ai_agent",
     },
   ];
 

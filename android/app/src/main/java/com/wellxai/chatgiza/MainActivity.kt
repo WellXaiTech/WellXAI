@@ -571,7 +571,8 @@ private val TOOL_LABELS = mapOf(
   "document_writer" to "Document Writer",
   "sql_helper" to "SQL Helper",
   "python_helper" to "Python Helper",
-  "business_assistant" to "Business Assistant"
+  "business_assistant" to "Business Assistant",
+  "ai_agent" to "AI Agent"
 )
 
 @Composable
@@ -1129,6 +1130,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
           DropdownMenuItem(text = { Text("SQL Helper") }, onClick = { viewModel.selectTool("sql_helper"); toolMenuOpen = false })
           DropdownMenuItem(text = { Text("Python Helper") }, onClick = { viewModel.selectTool("python_helper"); toolMenuOpen = false })
           DropdownMenuItem(text = { Text("Business Assistant") }, onClick = { viewModel.selectTool("business_assistant"); toolMenuOpen = false })
+          DropdownMenuItem(text = { Text("AI Agent") }, onClick = { viewModel.selectTool("ai_agent"); toolMenuOpen = false })
         }
       }
     }
@@ -1512,6 +1514,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
                   DropdownMenuItem(text = { Text("SQL Helper") }, onClick = { viewModel.selectTool("sql_helper"); toolMenuOpen = false })
                   DropdownMenuItem(text = { Text("Python Helper") }, onClick = { viewModel.selectTool("python_helper"); toolMenuOpen = false })
                   DropdownMenuItem(text = { Text("Business Assistant") }, onClick = { viewModel.selectTool("business_assistant"); toolMenuOpen = false })
+                  DropdownMenuItem(text = { Text("AI Agent") }, onClick = { viewModel.selectTool("ai_agent"); toolMenuOpen = false })
                 }
               }
               TextField(
@@ -5267,6 +5270,7 @@ private fun SettingsScreen(viewModel: ChatViewModel) {
       SettingsSwitchRow("SQL Helper", data.plugins.sqlHelper) { viewModel.togglePlugin("sql_helper") }
       SettingsSwitchRow("Python Helper", data.plugins.pythonHelper) { viewModel.togglePlugin("python_helper") }
       SettingsSwitchRow("Business Assistant", data.plugins.businessAssistant) { viewModel.togglePlugin("business_assistant") }
+      SettingsSwitchRow("AI Agent", data.plugins.aiAgent) { viewModel.togglePlugin("ai_agent") }
 
       Spacer(modifier = Modifier.height(20.dp))
       SettingsSectionTitle("Notifications")

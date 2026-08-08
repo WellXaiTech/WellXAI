@@ -567,6 +567,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
       "sql_helper" -> p.copy(sqlHelper = !p.sqlHelper)
       "python_helper" -> p.copy(pythonHelper = !p.pythonHelper)
       "business_assistant" -> p.copy(businessAssistant = !p.businessAssistant)
+      "ai_agent" -> p.copy(aiAgent = !p.aiAgent)
       else -> p
     }
     persistSettings(settingsData.copy(plugins = updated))
