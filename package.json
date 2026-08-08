@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
+    "@supabase/supabase-js": "^2.112.2",
     "@vercel/kv": "^3.0.0",
     "exceljs": "^4.4.0",
     "jspdf": "^4.2.1",
