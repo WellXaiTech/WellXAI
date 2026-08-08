@@ -1269,37 +1269,40 @@ private fun ChatGizaMediaScreen(viewModel: ChatViewModel) {
 
   Scaffold(
     topBar = {
+      // A stripped-down bar just for this screen -- NOT the shared
+      // AskImagineTabs used on the Chat screen, so none of this touches
+      // Chat's own top bar. Just a way back to Ask (top-left, where the
+      // hamburger used to be) and the new-chat shortcut; the Ask/Extra
+      // tab pill and the account/more icon are gone -- there's no need
+      // to pick "Extra" while already on it, or a second way into
+      // Account from here.
       CenterAlignedTopAppBar(
-        title = { AskImagineTabs(current = "Imagine", onAsk = { viewModel.closeChatGizaMedia() }, onImagine = {}) },
+        title = {},
         navigationIcon = {
-          IconButton(onClick = { viewModel.openHistory() }) {
-            TwoLineMenuIcon(tint = colorScheme.onBackground)
+          Row(
+            modifier = Modifier
+              .padding(start = 12.dp)
+              .clip(RoundedCornerShape(20.dp))
+              .clickable(onClick = { viewModel.closeChatGizaMedia() })
+              .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("Ask", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
           }
         },
         actions = {
-          // Pill with two separate icons — new chat and account/more —
-          // instead of one icon that was labeled "Account" but drew a
-          // pencil and actually opened Account (New Chat had no icon here).
-          Row(
+          Box(
             modifier = Modifier
               .padding(end = 12.dp)
-              .height(40.dp)
-              .clip(RoundedCornerShape(percent = 50))
-              .background(colorScheme.onBackground.copy(alpha = 0.12f)),
-            verticalAlignment = Alignment.CenterVertically
+              .size(40.dp)
+              .clip(CircleShape)
+              .background(colorScheme.onBackground.copy(alpha = 0.12f))
+              .clickable(onClick = { viewModel.newChat() }),
+            contentAlignment = Alignment.Center
           ) {
-            Box(
-              modifier = Modifier.size(40.dp).clickable(onClick = { viewModel.newChat() }),
-              contentAlignment = Alignment.Center
-            ) {
-              ComposeSquareIcon(modifier = Modifier.size(22.dp), tint = colorScheme.onBackground)
-            }
-            Box(
-              modifier = Modifier.size(40.dp).clickable(onClick = { viewModel.openAccount() }),
-              contentAlignment = Alignment.Center
-            ) {
-              Icon(Icons.Filled.MoreVert, contentDescription = "Account", tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
-            }
+            ComposeSquareIcon(modifier = Modifier.size(22.dp), tint = colorScheme.onBackground)
           }
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
