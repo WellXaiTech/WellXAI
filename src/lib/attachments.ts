@@ -77,7 +77,18 @@ export async function readAttachment(file: File): Promise<Attachment[]> {
     return [{ id, name: file.name, mimeType: file.type || "text/plain", kind: "text", text, sizeBytes: file.size }];
   }
 
-  throw new Error(`"${file.name}" isn't a supported file type yet (images, PDF, .txt, .md)`);
+  if (
+    /\.(xlsx|xls|csv)$/i.test(file.name) ||
+    file.type === "text/csv" ||
+    file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+    file.type === "application/vnd.ms-excel"
+  ) {
+    const { extractSpreadsheetText } = await import("./extractSpreadsheetText");
+    const text = await extractSpreadsheetText(file);
+    return [{ id, name: file.name, mimeType: file.type || "text/csv", kind: "text", text, sizeBytes: file.size }];
+  }
+
+  throw new Error(`"${file.name}" isn't a supported file type yet (images, PDF, .txt, .md, .xlsx, .csv)`);
 }
 
 export function buildApiContent(text: string, attachments: Attachment[]): string | ChatContentPart[] {

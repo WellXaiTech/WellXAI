@@ -387,7 +387,7 @@ export default function ChatComposer({
       ref={fileInputRef}
       type="file"
       multiple
-      accept="image/*,.pdf,.txt,.md,text/plain,application/pdf"
+      accept="image/*,.pdf,.txt,.md,text/plain,application/pdf,.xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
       className="hidden"
       onChange={(e) => {
         onAddFiles(e.target.files);
