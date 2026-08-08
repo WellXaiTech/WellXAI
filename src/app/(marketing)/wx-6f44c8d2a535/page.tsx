@@ -21,7 +21,7 @@ export default function AdminPage() {
       setState("forbidden");
       return;
     }
-    fetch("/api/admin/stats")
+    fetch("/api/wx-6f44c8d2a535/stats")
       .then(async (r) => {
         if (!r.ok) throw new Error("forbidden");
         return r.json();
