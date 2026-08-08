@@ -1279,48 +1279,46 @@ private fun ChatGizaMediaScreen(viewModel: ChatViewModel) {
       CenterAlignedTopAppBar(
         title = {},
         navigationIcon = {
-          Row(
+          Text(
+            "Ask",
+            color = colorScheme.onBackground,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
             modifier = Modifier
               .padding(start = 12.dp)
               .clip(RoundedCornerShape(20.dp))
               .clickable(onClick = { viewModel.closeChatGizaMedia() })
-              .padding(horizontal = 10.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(4.dp))
-            Text("Ask", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-          }
-        },
-        actions = {
-          Box(
-            modifier = Modifier
-              .padding(end = 12.dp)
-              .size(40.dp)
-              .clip(CircleShape)
-              .background(colorScheme.onBackground.copy(alpha = 0.12f))
-              .clickable(onClick = { viewModel.newChat() }),
-            contentAlignment = Alignment.Center
-          ) {
-            ComposeSquareIcon(modifier = Modifier.size(22.dp), tint = colorScheme.onBackground)
-          }
+              .padding(horizontal = 14.dp, vertical = 8.dp)
+          )
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
       )
     },
     containerColor = Color(0xFF161616)
   ) { padding ->
-    Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-      Column(modifier = Modifier.fillMaxSize()) {
-        // Reference feed's own tab row (Discover/Following/Campaign/Smart)
-        // -- visual-only for now since there's still just one shared post
-        // list behind them, same as History's own tab row.
-        Row(
-          modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
+    // No .padding(padding) on this Box -- the feed scrolls up underneath
+    // the (transparent) top bar instead of stopping at a hard boundary
+    // below it, same fix as the Chat screen's own "wall" issue. The tab
+    // row moved from a fixed Column header into the LazyColumn's first
+    // item so it scrolls away with the rest of the feed too.
+    Box(modifier = Modifier.fillMaxSize()) {
+      LaunchedEffect(Unit) { viewModel.loadMediaPosts() }
+      LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+          start = 16.dp,
+          end = 16.dp,
+          top = padding.calculateTopPadding() + 12.dp,
+          bottom = 16.dp
+        ),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+      ) {
+        item {
+          // Reference feed's own tab row (Discover/Following/Campaign/
+          // Smart) -- visual-only for now since there's still just one
+          // shared post list behind them, same as History's own tab row.
           Row(
-            modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(18.dp)
           ) {
             listOf("Discover", "Following", "Campaign", "Smart").forEach { tab ->
@@ -1334,42 +1332,34 @@ private fun ChatGizaMediaScreen(viewModel: ChatViewModel) {
             }
           }
         }
-        // Public feed (see ChatViewModel.loadMediaPosts) -- fetch fresh
-        // every time this screen opens so a post from another account
-        // shows up without needing to kill and reopen the app.
-        LaunchedEffect(Unit) { viewModel.loadMediaPosts() }
         if (viewModel.mediaPosts.isEmpty()) {
-          Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-            if (viewModel.loadingMediaPosts) {
-              CircularProgressIndicator(color = Color.White, modifier = Modifier.size(28.dp))
+          item {
+            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 60.dp), contentAlignment = Alignment.Center) {
+              if (viewModel.loadingMediaPosts) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(28.dp))
+              }
+              // Otherwise left empty on purpose — no placeholder icon/text.
             }
-            // Otherwise left empty on purpose — no placeholder icon/text.
           }
         } else {
-          LazyColumn(
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-          ) {
-            items(viewModel.mediaPosts, key = { it.id }) { post ->
-              MediaPostRow(
-                post,
-                isOwnPost = post.authorId == viewModel.userId,
-                comments = viewModel.mediaComments[post.id],
-                commentsExpanded = expandedCommentsPostId == post.id,
-                onLikeClick = { viewModel.toggleMediaPostLike(post.id) },
-                onDismissClick = { viewModel.removeMediaPost(post.id) },
-                onToggleComments = {
-                  if (expandedCommentsPostId == post.id) {
-                    expandedCommentsPostId = null
-                  } else {
-                    expandedCommentsPostId = post.id
-                    viewModel.loadMediaComments(post.id)
-                  }
-                },
-                onOpenComposer = { replyingToPost = post }
-              )
-            }
+          items(viewModel.mediaPosts, key = { it.id }) { post ->
+            MediaPostRow(
+              post,
+              isOwnPost = post.authorId == viewModel.userId,
+              comments = viewModel.mediaComments[post.id],
+              commentsExpanded = expandedCommentsPostId == post.id,
+              onLikeClick = { viewModel.toggleMediaPostLike(post.id) },
+              onDismissClick = { viewModel.removeMediaPost(post.id) },
+              onToggleComments = {
+                if (expandedCommentsPostId == post.id) {
+                  expandedCommentsPostId = null
+                } else {
+                  expandedCommentsPostId = post.id
+                  viewModel.loadMediaComments(post.id)
+                }
+              },
+              onOpenComposer = { replyingToPost = post }
+            )
           }
         }
       }
