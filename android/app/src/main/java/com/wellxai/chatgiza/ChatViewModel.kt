@@ -314,6 +314,31 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     tokenStore.setVoiceOutputDevice(device)
   }
 
+  var premiumChatVoiceEnabled by mutableStateOf(tokenStore.getPremiumChatVoiceEnabled())
+    private set
+
+  fun setPremiumChatVoiceEnabled(value: Boolean) {
+    premiumChatVoiceEnabled = value
+    tokenStore.setPremiumChatVoiceEnabled(value)
+  }
+
+  /** Fetches real OpenAI TTS audio for [text] using the current voice
+   * choice; [onResult] is invoked on the main thread with the MP3 bytes,
+   * or null if the request failed. */
+  fun fetchPremiumSpeech(text: String, onResult: (ByteArray?) -> Unit) {
+    val token = tokenStore.getToken()
+    if (token == null) {
+      onResult(null)
+      return
+    }
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.getSpeechAudio(token, text, selectedVoiceId)) {
+        is ApiResult.Success -> onResult(result.value)
+        is ApiResult.Failure -> onResult(null)
+      }
+    }
+  }
+
   var personality by mutableStateOf(tokenStore.getPersonality())
     private set
 

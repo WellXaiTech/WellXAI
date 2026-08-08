@@ -88,6 +88,13 @@ class TokenStore(context: Context) {
     prefs.edit().putString(KEY_VOICE_OUTPUT_DEVICE, value).apply()
   }
 
+  // Whether regular chat replies are read aloud with real OpenAI TTS audio
+  // (the same voice picked above) instead of the free on-device engine.
+  fun getPremiumChatVoiceEnabled(): Boolean = prefs.getBoolean(KEY_PREMIUM_CHAT_VOICE, false)
+  fun setPremiumChatVoiceEnabled(value: Boolean) {
+    prefs.edit().putBoolean(KEY_PREMIUM_CHAT_VOICE, value).apply()
+  }
+
   // One of PERSONALITY_OPTIONS' ids (assistant, therapist, romantic, ...) —
   // changes the live session's actual conversational tone server-side, not
   // just a UI label.
@@ -125,6 +132,7 @@ class TokenStore(context: Context) {
     val voiceActivationMode = getVoiceActivationMode()
     val voiceSpeed = getVoiceSpeed()
     val voiceOutputDevice = getVoiceOutputDevice()
+    val premiumChatVoiceEnabled = getPremiumChatVoiceEnabled()
     val ageConfirmed18Plus = getAgeConfirmed18Plus()
     prefs.edit().clear().apply()
     setHapticsEnabled(hapticsEnabled)
@@ -136,6 +144,7 @@ class TokenStore(context: Context) {
     setVoiceActivationMode(voiceActivationMode)
     setVoiceSpeed(voiceSpeed)
     setVoiceOutputDevice(voiceOutputDevice)
+    setPremiumChatVoiceEnabled(premiumChatVoiceEnabled)
     setAgeConfirmed18Plus(ageConfirmed18Plus)
   }
 
@@ -154,6 +163,7 @@ class TokenStore(context: Context) {
     private const val KEY_VOICE_ACTIVATION_MODE = "voice_activation_mode"
     private const val KEY_VOICE_SPEED = "voice_speed"
     private const val KEY_VOICE_OUTPUT_DEVICE = "voice_output_device"
+    private const val KEY_PREMIUM_CHAT_VOICE = "premium_chat_voice_enabled"
     private const val KEY_PERSONALITY = "personality"
     private const val KEY_CUSTOM_PERSONALITY_TEXT = "custom_personality_text"
     private const val KEY_AGE_CONFIRMED_18PLUS = "age_confirmed_18plus"
