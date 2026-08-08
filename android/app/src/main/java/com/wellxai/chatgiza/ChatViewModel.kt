@@ -1,5 +1,6 @@
 package com.wellxai.chatgiza
 
+import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -34,6 +35,7 @@ sealed class AppScreen {
   object Billing : AppScreen()
   object Media : AppScreen()
   object LiveVision : AppScreen()
+  object OpenSourceLicenses : AppScreen()
 }
 
 class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
@@ -95,6 +97,30 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var input by mutableStateOf("")
   var sending by mutableStateOf(false)
     private set
+
+  // A picture attached to whatever's about to be sent next -- the URI is
+  // kept only so the composer can show a thumbnail of it; the actual
+  // upload is the pre-encoded data URL (built by the composer via
+  // uriToPostImageDataUrl, same helper ChatGiZa Media's post composer
+  // uses, since the ViewModel itself has no Context to decode a Uri).
+  // Not persisted with the message afterwards -- the backend's
+  // conversation history storage only understands plain-text content, so
+  // the model sees the picture live but it won't reappear if the
+  // conversation is reopened later.
+  var attachedImageUri by mutableStateOf<Uri?>(null)
+    private set
+  var attachedImageDataUrl by mutableStateOf<String?>(null)
+    private set
+
+  fun setAttachedImage(uri: Uri, dataUrl: String) {
+    attachedImageUri = uri
+    attachedImageDataUrl = dataUrl
+  }
+
+  fun clearAttachedImage() {
+    attachedImageUri = null
+    attachedImageDataUrl = null
+  }
 
   /** One of null (default), "web_search", "deep_research", "deep_think". */
   var activeTool by mutableStateOf<String?>(null)
@@ -357,6 +383,14 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeWidgets() {
+    screen = AppScreen.Account
+  }
+
+  fun openOpenSourceLicenses() {
+    screen = AppScreen.OpenSourceLicenses
+  }
+
+  fun closeOpenSourceLicenses() {
     screen = AppScreen.Account
   }
 
@@ -974,7 +1008,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   fun sendMessage(viaVoice: Boolean = false) {
     val text = input.trim()
     val token = tokenStore.getToken()
-    if (text.isEmpty() || sending || token == null) return
+    val imageToSend = attachedImageDataUrl
+    if ((text.isEmpty() && imageToSend == null) || sending || token == null) return
     autoSpeakNextReply = viaVoice
 
     val now = System.currentTimeMillis()
@@ -982,6 +1017,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     val assistantId = UUID.randomUUID().toString()
     messages = messages + userMsg + UiMessage(assistantId, "assistant", "", now)
     input = ""
+    clearAttachedImage()
     sending = true
     errorMessage = null
 
@@ -1003,7 +1039,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         memory = if (profileData.memoryEnabled) profileData.memory else emptyList(),
         language = profileData.language,
         location = settingsData.location,
-        company = settingsData.company
+        company = settingsData.company,
+        imageDataUrl = imageToSend
       ) { chunk ->
         messages = messages.map { m ->
           if (m.id == assistantId) m.copy(content = m.content + chunk) else m
@@ -1017,7 +1054,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         }
       }
 
-      val title = if (isNewConversation) text.take(60) else conversations.find { it.id == conversationId }?.title ?: text.take(60)
+      val titleFallback = text.take(60).ifEmpty { "Photo" }
+      val title = if (isNewConversation) titleFallback else conversations.find { it.id == conversationId }?.title ?: titleFallback
       val updated = ApiConversation(
         id = conversationId,
         title = title,
