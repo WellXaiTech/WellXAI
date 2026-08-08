@@ -156,6 +156,13 @@ const MediaFeedIcon = (
   </svg>
 );
 
+const LiveVisionIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M23 7l-7 5 7 5V7Z" />
+    <rect x="1" y="5" width="15" height="14" rx="2" />
+  </svg>
+);
+
 const ImagesIcon = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -694,6 +701,7 @@ export default function ChatSidebar({
   onRename,
   onOpenLibrary,
   onOpenMedia,
+  onOpenLiveVision,
   onOpenProjects,
   onOpenCode,
   onOpenSearch,
@@ -720,6 +728,7 @@ export default function ChatSidebar({
   onRename: (id: string, title: string) => void;
   onOpenLibrary: () => void;
   onOpenMedia: () => void;
+  onOpenLiveVision: () => void;
   onOpenProjects: () => void;
   onOpenCode: () => void;
   onOpenSearch: () => void;
@@ -952,6 +961,7 @@ export default function ChatSidebar({
             <NavItem icon={ImagesIcon} label="images" onClick={closeMobileThen(onOpenLibrary)} />
             <NavItem icon={LibraryIcon} label="Library" onClick={closeMobileThen(onOpenLibrary)} />
             <NavItem icon={MediaFeedIcon} label="ChatGiZa Media" onClick={closeMobileThen(onOpenMedia)} />
+            <NavItem icon={LiveVisionIcon} label="Live Voice" onClick={closeMobileThen(onOpenLiveVision)} />
 
             <NavItem
               icon={KycIcon}
