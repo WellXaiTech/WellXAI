@@ -257,6 +257,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
@@ -2792,16 +2793,44 @@ private fun MediaPostRow(
         }
         if (post.imageDataUrl != null) {
           Spacer(modifier = Modifier.height(8.dp))
-          AsyncImage(
-            model = post.imageDataUrl,
-            contentDescription = "Post photo",
+          Box(
             modifier = Modifier
               .fillMaxWidth()
-              .heightIn(max = if (imageExpanded) 260.dp else 90.dp)
+              .heightIn(max = if (imageExpanded) 320.dp else 90.dp)
               .clip(RoundedCornerShape(14.dp))
-              .clickable { imageExpanded = !imageExpanded },
-            contentScale = ContentScale.Crop
-          )
+              // A flat background behind the image instead of leaving it
+              // blank while Coil loads (or if the load fails) -- the crop
+              // preview especially looked broken/empty for a beat on a
+              // slow connection.
+              .background(Color.White.copy(alpha = 0.06f))
+              .clickable { imageExpanded = !imageExpanded }
+          ) {
+            AsyncImage(
+              model = post.imageDataUrl,
+              contentDescription = "Post photo",
+              modifier = Modifier.fillMaxSize(),
+              // Collapsed strip: crop to fill so every post's preview is a
+              // consistent height. Expanded: show the whole picture
+              // uncropped -- Crop at 320dp was slicing off the top/bottom
+              // of anything taller than it was wide.
+              contentScale = if (imageExpanded) ContentScale.Fit else ContentScale.Crop
+            )
+            Box(
+              modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(8.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.Black.copy(alpha = 0.45f))
+                .padding(horizontal = 6.dp, vertical = 3.dp)
+            ) {
+              Icon(
+                Icons.Outlined.KeyboardArrowDown,
+                contentDescription = if (imageExpanded) "Collapse photo" else "Expand photo",
+                tint = Color.White,
+                modifier = Modifier.size(14.dp).rotate(if (imageExpanded) 180f else 0f)
+              )
+            }
+          }
         }
         Spacer(modifier = Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -2856,51 +2885,68 @@ private fun MediaPostComments(comments: List<ApiMediaComment>?, onAddComment: (S
     modifier = Modifier
       .fillMaxWidth()
       .padding(top = 10.dp)
-      .clip(RoundedCornerShape(12.dp))
+      .clip(RoundedCornerShape(14.dp))
       .background(Color.White.copy(alpha = 0.04f))
-      .padding(10.dp)
+      .padding(12.dp)
   ) {
     when {
-      comments == null -> Text("Loading comments…", color = Color(0xFF8A8A8A), fontSize = 12.sp)
-      comments.isEmpty() -> Text("No comments yet — say something!", color = Color(0xFF8A8A8A), fontSize = 12.sp)
+      comments == null -> Text(
+        "Loading comments…",
+        color = Color(0xFF8A8A8A),
+        fontSize = 12.sp,
+        modifier = Modifier.padding(vertical = 4.dp)
+      )
+      comments.isEmpty() -> Text(
+        "No comments yet — say something!",
+        color = Color(0xFF8A8A8A),
+        fontSize = 12.sp,
+        modifier = Modifier.padding(vertical = 4.dp)
+      )
       else -> {
-        comments.forEach { comment ->
-          Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.Top) {
+        comments.forEachIndexed { index, comment ->
+          Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.Top) {
             if (comment.authorImage != null) {
               AsyncImage(
                 model = comment.authorImage,
                 contentDescription = "Profile",
-                modifier = Modifier.size(22.dp).clip(CircleShape)
+                modifier = Modifier.size(24.dp).clip(CircleShape)
               )
             } else {
               Icon(
                 Icons.Outlined.AccountCircle,
                 contentDescription = "Profile",
                 tint = Color.White,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(24.dp)
               )
             }
             Spacer(modifier = Modifier.width(8.dp))
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
               Text(comment.authorName, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-              Text(comment.text, color = Color.White.copy(alpha = 0.85f), fontSize = 13.sp)
+              Spacer(modifier = Modifier.height(2.dp))
+              Text(comment.text, color = Color.White.copy(alpha = 0.85f), fontSize = 13.sp, lineHeight = 17.sp)
             }
+          }
+          if (index < comments.lastIndex) {
+            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.06f)))
           }
         }
       }
     }
-    Spacer(modifier = Modifier.height(8.dp))
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Spacer(modifier = Modifier.height(10.dp))
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      modifier = Modifier
+        .fillMaxWidth()
+        .clip(RoundedCornerShape(20.dp))
+        .background(Color.White.copy(alpha = 0.06f))
+        .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp)
+    ) {
       BasicTextField(
         value = commentInput,
         onValueChange = { commentInput = it },
         textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 13.sp),
         cursorBrush = SolidColor(Color(0xFFFFC94A)),
-        modifier = Modifier
-          .weight(1f)
-          .clip(RoundedCornerShape(14.dp))
-          .background(Color.White.copy(alpha = 0.06f))
-          .padding(horizontal = 12.dp, vertical = 8.dp),
+        modifier = Modifier.weight(1f).padding(vertical = 6.dp),
         decorationBox = { inner ->
           if (commentInput.isEmpty()) {
             Text("Write a comment…", color = Color(0xFF7A7A7A), fontSize = 13.sp)
@@ -2908,17 +2954,23 @@ private fun MediaPostComments(comments: List<ApiMediaComment>?, onAddComment: (S
           inner()
         }
       )
-      Spacer(modifier = Modifier.width(8.dp))
-      IconButton(
-        onClick = {
-          if (commentInput.isNotBlank()) {
+      Box(
+        modifier = Modifier
+          .size(30.dp)
+          .clip(CircleShape)
+          .background(if (commentInput.isNotBlank()) Color(0xFFFFC94A) else Color.White.copy(alpha = 0.08f))
+          .clickable(enabled = commentInput.isNotBlank()) {
             onAddComment(commentInput.trim())
             commentInput = ""
-          }
-        },
-        modifier = Modifier.size(32.dp)
+          },
+        contentAlignment = Alignment.Center
       ) {
-        Icon(Icons.Filled.Send, contentDescription = "Send comment", tint = Color(0xFFFFC94A), modifier = Modifier.size(20.dp))
+        Icon(
+          Icons.Filled.Send,
+          contentDescription = "Send comment",
+          tint = if (commentInput.isNotBlank()) Color.Black else Color(0xFF7A7A7A),
+          modifier = Modifier.size(15.dp)
+        )
       }
     }
   }
