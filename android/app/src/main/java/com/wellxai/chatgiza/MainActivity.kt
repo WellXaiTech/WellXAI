@@ -162,6 +162,7 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Autorenew
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.Business
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CardGiftcard
 import androidx.compose.material.icons.outlined.ChildCare
@@ -2015,6 +2016,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   // actually the active screen — otherwise it'd steal back navigation from
   // Chat/Imagine while the drawer is closed.
   BackHandler(enabled = viewModel.screen is AppScreen.History) { viewModel.closeHistory() }
+  val context = LocalContext.current
 
   val query = viewModel.historySearchQuery.trim()
   val visibleConversations = viewModel.conversations
@@ -2168,7 +2170,9 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           HistoryNavTab(Icons.Outlined.Settings, "Settings", onClick = { viewModel.openAccount() })
           HistoryNavTab(Icons.Outlined.Folder, "Projects", onClick = { viewModel.openProjects() })
           HistoryNavTab(Icons.Outlined.Schedule, "Scheduled", onClick = { viewModel.openScheduled() })
-          HistoryNavTab(Icons.Outlined.GraphicEq, "Speak", onClick = { viewModel.openLiveVision() })
+          HistoryNavTab(Icons.Outlined.Business, "Business", onClick = {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/business")))
+          })
           HistoryNavTab(Icons.Filled.Home, "Home", onClick = { viewModel.closeHistory() })
         }
       }
