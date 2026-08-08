@@ -813,7 +813,11 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     mediaError = null
   }
 
-  fun setMediaError(message: String) {
+  // Named differently from the auto-generated `mediaError` property setter
+  // (var ... private set already generates a JVM setMediaError(String?))
+  // -- a same-named fun here collides with it on JVM signature and fails
+  // the build ("Platform declaration clash").
+  fun reportMediaError(message: String) {
     mediaError = message
   }
 
