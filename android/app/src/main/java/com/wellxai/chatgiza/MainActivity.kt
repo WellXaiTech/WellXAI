@@ -255,6 +255,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.draw.rotate
@@ -2656,6 +2657,7 @@ private fun ChatGizaMediaPanel(
       // up without needing to kill and reopen the app.
       LaunchedEffect(Unit) { viewModel.loadMediaPosts() }
       var expandedCommentsPostId by remember { mutableStateOf<String?>(null) }
+      var replyingToPost by remember { mutableStateOf<ApiMediaPost?>(null) }
       if (viewModel.mediaPosts.isEmpty()) {
         Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
           if (viewModel.loadingMediaPosts) {
@@ -2685,7 +2687,7 @@ private fun ChatGizaMediaPanel(
                   viewModel.loadMediaComments(post.id)
                 }
               },
-              onAddComment = { text -> viewModel.addMediaComment(post.id, text) }
+              onOpenComposer = { replyingToPost = post }
             )
           }
         }
@@ -2702,6 +2704,14 @@ private fun ChatGizaMediaPanel(
       contentAlignment = Alignment.Center
     ) {
       Icon(Icons.Filled.Add, contentDescription = "Unda", tint = Color.Black, modifier = Modifier.size(26.dp))
+    }
+    val replyTarget = replyingToPost
+    if (replyTarget != null) {
+      MediaCommentComposerSheet(
+        authorName = replyTarget.authorName,
+        onDismiss = { replyingToPost = null },
+        onSubmit = { text -> viewModel.addMediaComment(replyTarget.id, text) }
+      )
     }
   }
 }
@@ -2730,7 +2740,7 @@ private fun MediaPostRow(
   onLikeClick: () -> Unit,
   onDismissClick: () -> Unit,
   onToggleComments: () -> Unit,
-  onAddComment: (String) -> Unit
+  onOpenComposer: () -> Unit
 ) {
   val context = LocalContext.current
   // Starts collapsed to a short strip and expands on tap -- a full-size
@@ -2796,7 +2806,10 @@ private fun MediaPostRow(
           Box(
             modifier = Modifier
               .fillMaxWidth()
-              .heightIn(max = if (imageExpanded) 320.dp else 90.dp)
+              // Collapsed shows roughly half of what expanded does -- a
+              // "meaningful" chunk of the picture rather than a thin strip
+              // that reads as just a color swatch.
+              .heightIn(max = if (imageExpanded) 320.dp else 160.dp)
               .clip(RoundedCornerShape(14.dp))
               // A flat background behind the image instead of leaving it
               // blank while Coil loads (or if the load fails) -- the crop
@@ -2864,7 +2877,7 @@ private fun MediaPostRow(
           )
         }
         if (commentsExpanded) {
-          MediaPostComments(comments = comments, onAddComment = onAddComment)
+          MediaPostComments(comments = comments, onOpenComposer = onOpenComposer)
         }
       }
       if (isOwnPost) {
@@ -2879,8 +2892,7 @@ private fun MediaPostRow(
 }
 
 @Composable
-private fun MediaPostComments(comments: List<ApiMediaComment>?, onAddComment: (String) -> Unit) {
-  var commentInput by remember { mutableStateOf("") }
+private fun MediaPostComments(comments: List<ApiMediaComment>?, onOpenComposer: () -> Unit) {
   Column(
     modifier = Modifier
       .fillMaxWidth()
@@ -2933,44 +2945,120 @@ private fun MediaPostComments(comments: List<ApiMediaComment>?, onAddComment: (S
       }
     }
     Spacer(modifier = Modifier.height(10.dp))
+    // Opens the full "Replying to @author" composer sheet instead of an
+    // inline field -- just a tappable trigger row here.
     Row(
       verticalAlignment = Alignment.CenterVertically,
       modifier = Modifier
         .fillMaxWidth()
         .clip(RoundedCornerShape(20.dp))
         .background(Color.White.copy(alpha = 0.06f))
-        .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp)
+        .clickable(onClick = onOpenComposer)
+        .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
-      BasicTextField(
-        value = commentInput,
-        onValueChange = { commentInput = it },
-        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 13.sp),
-        cursorBrush = SolidColor(Color(0xFFFFC94A)),
-        modifier = Modifier.weight(1f).padding(vertical = 6.dp),
-        decorationBox = { inner ->
-          if (commentInput.isEmpty()) {
-            Text("Write a comment…", color = Color(0xFF7A7A7A), fontSize = 13.sp)
-          }
-          inner()
-        }
-      )
+      Text("Write a comment…", color = Color(0xFF7A7A7A), fontSize = 13.sp)
+    }
+  }
+}
+
+@Composable
+private fun MediaExpandGlyph(modifier: Modifier = Modifier, tint: Color = Color.White) {
+  // Small diagonal-arrows "expand" cue -- hand-drawn since no Material
+  // Icons entry was verified to exist in this project's bundled set and
+  // guessing wrong here means another failed CI build.
+  Canvas(modifier = modifier) {
+    val scale = size.width / 24f
+    val strokeW = 1.6f * scale
+    val topArrow = Path().apply {
+      moveTo(9f * scale, 4f * scale)
+      lineTo(4f * scale, 4f * scale)
+      lineTo(4f * scale, 9f * scale)
+    }
+    drawPath(topArrow, color = tint, style = Stroke(width = strokeW, cap = StrokeCap.Round, join = StrokeJoin.Round))
+    drawLine(color = tint, start = Offset(5f * scale, 5f * scale), end = Offset(10.5f * scale, 10.5f * scale), strokeWidth = strokeW, cap = StrokeCap.Round)
+    val bottomArrow = Path().apply {
+      moveTo(15f * scale, 20f * scale)
+      lineTo(20f * scale, 20f * scale)
+      lineTo(20f * scale, 15f * scale)
+    }
+    drawPath(bottomArrow, color = tint, style = Stroke(width = strokeW, cap = StrokeCap.Round, join = StrokeJoin.Round))
+    drawLine(color = tint, start = Offset(19f * scale, 19f * scale), end = Offset(13.5f * scale, 13.5f * scale), strokeWidth = strokeW, cap = StrokeCap.Round)
+  }
+}
+
+// Matches the reference's reply composer: "Replying to @author", a
+// multi-line field, and a row of icons (emoji/photo/AI are decorative
+// placeholders for now -- foundation only, same as the rest of ChatGiZa
+// Media's create menu) plus a working Reply button.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MediaCommentComposerSheet(authorName: String, onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
+  var text by remember { mutableStateOf("") }
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFF161616)) {
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 20.dp)
+        .padding(bottom = 28.dp)
+    ) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("Replying to ", color = Color(0xFF8A8A8A), fontSize = 14.sp)
+        Text("@$authorName", color = Color(0xFFFFC94A), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+      }
+      Spacer(modifier = Modifier.height(12.dp))
       Box(
         modifier = Modifier
-          .size(30.dp)
-          .clip(CircleShape)
-          .background(if (commentInput.isNotBlank()) Color(0xFFFFC94A) else Color.White.copy(alpha = 0.08f))
-          .clickable(enabled = commentInput.isNotBlank()) {
-            onAddComment(commentInput.trim())
-            commentInput = ""
-          },
-        contentAlignment = Alignment.Center
+          .fillMaxWidth()
+          .heightIn(min = 100.dp)
+          .clip(RoundedCornerShape(14.dp))
+          .background(Color.White.copy(alpha = 0.05f))
+          .padding(14.dp)
       ) {
-        Icon(
-          Icons.Filled.Send,
-          contentDescription = "Send comment",
-          tint = if (commentInput.isNotBlank()) Color.Black else Color(0xFF7A7A7A),
-          modifier = Modifier.size(15.dp)
+        BasicTextField(
+          value = text,
+          onValueChange = { text = it },
+          textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp, lineHeight = 20.sp),
+          cursorBrush = SolidColor(Color(0xFFFFC94A)),
+          modifier = Modifier.fillMaxSize(),
+          decorationBox = { inner ->
+            if (text.isEmpty()) {
+              Text("Post your reply", color = Color(0xFF6E6E6E), fontSize = 15.sp)
+            }
+            inner()
+          }
         )
+        MediaExpandGlyph(
+          modifier = Modifier.align(Alignment.TopEnd).size(18.dp),
+          tint = Color.White.copy(alpha = 0.4f)
+        )
+      }
+      Spacer(modifier = Modifier.height(16.dp))
+      Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.08f)))
+      Spacer(modifier = Modifier.height(14.dp))
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Outlined.EmojiEmotions, contentDescription = null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(22.dp))
+        Spacer(modifier = Modifier.width(18.dp))
+        Icon(Icons.Outlined.Photo, contentDescription = null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(22.dp))
+        Spacer(modifier = Modifier.width(18.dp))
+        Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(22.dp))
+        Spacer(modifier = Modifier.weight(1f))
+        Button(
+          onClick = {
+            if (text.isNotBlank()) {
+              onSubmit(text.trim())
+              onDismiss()
+            }
+          },
+          enabled = text.isNotBlank(),
+          colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFFFFC94A),
+            disabledContainerColor = Color(0xFFFFC94A).copy(alpha = 0.35f)
+          ),
+          shape = RoundedCornerShape(18.dp),
+          contentPadding = PaddingValues(horizontal = 20.dp, vertical = 6.dp)
+        ) {
+          Text("Reply", color = Color.Black, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+        }
       }
     }
   }
