@@ -3054,19 +3054,37 @@ private fun ChatGizaMediaCreateSheet(viewModel: ChatViewModel, onDismiss: () -> 
 // request size the backend accepts and bloat every other user's feed load.
 private fun uriToPostImageDataUrl(context: android.content.Context, uri: Uri): String? {
   return try {
-    val original = context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) } ?: return null
     val maxDim = 1080
-    val scale = (maxDim.toFloat() / maxOf(original.width, original.height)).coerceAtMost(1f)
+    // Decoding a full camera-resolution photo straight to a Bitmap before
+    // downscaling it could allocate a huge buffer and OOM before the
+    // resize below ever ran. Reading the bounds first (no pixel data) to
+    // pick an inSampleSize keeps the actual decode close to the target
+    // size from the start.
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+
+    var sampleSize = 1
+    while (bounds.outWidth / (sampleSize * 2) >= maxDim || bounds.outHeight / (sampleSize * 2) >= maxDim) {
+      sampleSize *= 2
+    }
+    val sampled = context.contentResolver.openInputStream(uri)?.use {
+      BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sampleSize })
+    } ?: return null
+
+    val scale = (maxDim.toFloat() / maxOf(sampled.width, sampled.height)).coerceAtMost(1f)
     val resized = if (scale < 1f) {
-      Bitmap.createScaledBitmap(original, (original.width * scale).toInt(), (original.height * scale).toInt(), true)
+      Bitmap.createScaledBitmap(sampled, (sampled.width * scale).toInt(), (sampled.height * scale).toInt(), true)
     } else {
-      original
+      sampled
     }
     val out = ByteArrayOutputStream()
     resized.compress(Bitmap.CompressFormat.JPEG, 80, out)
     val base64 = Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
     "data:image/jpeg;base64,$base64"
   } catch (e: Exception) {
+    null
+  } catch (e: OutOfMemoryError) {
     null
   }
 }
@@ -3113,8 +3131,18 @@ private fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss:
           onClick = {
             posting = true
             composerScope.launch {
-              val dataUrl = imageUri?.let { uri ->
+              val pickedUri = imageUri
+              val dataUrl = pickedUri?.let { uri ->
                 withContext(Dispatchers.IO) { uriToPostImageDataUrl(context, uri) }
+              }
+              // A picked photo that failed to decode used to just vanish --
+              // the post still went through with dataUrl = null, so it
+              // looked like posting worked but the picture was silently
+              // dropped. Now a decode failure blocks the post instead.
+              if (pickedUri != null && dataUrl == null) {
+                posting = false
+                viewModel.setMediaError("Couldn't attach that photo — try a different one")
+                return@launch
               }
               viewModel.createMediaPost(text.trim(), dataUrl, sentiment) { success ->
                 posting = false
