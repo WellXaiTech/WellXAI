@@ -15,6 +15,7 @@ export type ChatTool =
   | "sql_helper"
   | "python_helper"
   | "business_assistant"
+  | "ai_agent"
   | null;
 
 export type CompanyProfile = {
@@ -153,6 +154,16 @@ const BUSINESS_ASSISTANT_PROMPT =
   "real drafts and recommendations, not just frameworks to fill in yourself, and ask one short clarifying " +
   "question first only if you genuinely can't produce something useful without it.";
 
+const AI_AGENT_PROMPT =
+  CAPABILITIES_PROMPT +
+  "\n\nYou are currently in AI Agent mode. You have a web_search tool available and can call it multiple times, " +
+  "back to back, to research a question thoroughly before answering — look things up, follow up on what you " +
+  "find with more specific searches, cross-check anything that seems uncertain, and only stop searching once " +
+  "you actually have enough to give a complete, well-grounded answer. Work autonomously: don't ask the user for " +
+  "permission before searching, and don't narrate each search step ('let me look that up...') — just do the " +
+  "research and then give one clear, complete final answer, citing sources inline as markdown links where it " +
+  "matters.";
+
 const TOOL_PROMPTS: Record<string, string> = {
   default: SYSTEM_PROMPT,
   deep_research: DEEP_RESEARCH_PROMPT,
@@ -161,6 +172,7 @@ const TOOL_PROMPTS: Record<string, string> = {
   sql_helper: SQL_HELPER_PROMPT,
   python_helper: PYTHON_HELPER_PROMPT,
   business_assistant: BUSINESS_ASSISTANT_PROMPT,
+  ai_agent: AI_AGENT_PROMPT,
 };
 
 const CANNED_REPLIES = [
@@ -231,6 +243,118 @@ function mockReplyFor(messages: ChatMessage[]): string {
   return `${reply}\n\nYou said: "${last}"`;
 }
 
+// AI Agent: a bounded tool-calling loop, not just a different system prompt
+// like the other modes. The model can call web_search as many times as it
+// wants (up to MAX_AGENT_STEPS) to research before committing to a final
+// answer -- genuinely autonomous multi-step behavior, not one built-in
+// search pass like the plain "Web search" tool.
+const MAX_AGENT_STEPS = 5;
+
+async function performAgentWebSearch(client: InstanceType<typeof import("openai").default>, query: string): Promise<string> {
+  try {
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-search-preview",
+      web_search_options: {},
+      messages: [
+        {
+          role: "system",
+          content:
+            "Search the web for the user's query and report back a concise, factual summary of what you find, " +
+            "with source names/links inline. This is an internal research step for another AI agent, not a " +
+            "user-facing reply -- be dense with facts, skip pleasantries.",
+        },
+        { role: "user", content: query },
+      ],
+    });
+    return completion.choices[0]?.message?.content?.trim() || "No results found.";
+  } catch (err) {
+    console.error("Agent web_search tool error:", err);
+    return "Search failed -- try a different query or answer from what you already know.";
+  }
+}
+
+async function runAiAgent(
+  client: InstanceType<typeof import("openai").default>,
+  system: string,
+  messages: ChatMessage[],
+  controller: ReadableStreamDefaultController<Uint8Array>,
+  encoder: TextEncoder
+) {
+  const WEB_SEARCH_TOOL = {
+    type: "function" as const,
+    function: {
+      name: "web_search",
+      description: "Search the web for current information. Call this as many times as needed, refining your query each time, before giving a final answer.",
+      parameters: {
+        type: "object",
+        properties: { query: { type: "string", description: "The search query" } },
+        required: ["query"],
+      },
+    },
+  };
+
+  // Loosely typed on purpose -- this array holds a mix of plain messages,
+  // an assistant message carrying tool_calls, and tool-result messages, and
+  // the OpenAI SDK's own message union already enforces the real shape at
+  // the call site below via the Parameters<> cast.
+  const conversation: Array<{ role: string; content: string | null; tool_calls?: unknown[]; tool_call_id?: string }> = [
+    { role: "system", content: system },
+    ...messages.map((m) => ({
+      role: m.role,
+      content: m.role === "user" ? (typeof m.content === "string" ? m.content : contentToText(m.content)) : contentToText(m.content),
+    })),
+  ];
+
+  for (let step = 0; step < MAX_AGENT_STEPS; step++) {
+    const completion = await client.chat.completions.create({
+      model: "gpt-5.5",
+      messages: conversation as Parameters<typeof client.chat.completions.create>[0]["messages"],
+      tools: [WEB_SEARCH_TOOL],
+      tool_choice: "auto",
+    });
+    const message = completion.choices[0]?.message;
+    if (!message) break;
+
+    const toolCalls = message.tool_calls;
+    if (!toolCalls || toolCalls.length === 0) {
+      // Done researching -- stream the final answer out in small chunks so
+      // it still feels like a live reply rather than one big paste.
+      const finalText = message.content ?? "";
+      const chunkSize = 24;
+      for (let i = 0; i < finalText.length; i += chunkSize) {
+        controller.enqueue(encoder.encode(finalText.slice(i, i + chunkSize)));
+      }
+      return;
+    }
+
+    conversation.push({ role: "assistant", content: message.content, tool_calls: toolCalls });
+    for (const call of toolCalls) {
+      let query = "";
+      if (call.type === "function") {
+        try {
+          query = JSON.parse(call.function.arguments)?.query ?? "";
+        } catch {
+          // Malformed arguments -- fall through with an empty query below.
+        }
+      }
+      const result = query ? await performAgentWebSearch(client, query) : "No query provided.";
+      conversation.push({ role: "tool", tool_call_id: call.id, content: result });
+    }
+  }
+
+  // Hit the step cap without a final answer -- ask once more, without
+  // tools, so the user still gets something instead of silence.
+  const wrapUp = await client.chat.completions.create({
+    model: "gpt-5.5",
+    messages: [
+      ...(conversation as Parameters<typeof client.chat.completions.create>[0]["messages"]),
+      { role: "user", content: "Give your best final answer now based on the research so far." },
+    ],
+  });
+  const text = wrapUp.choices[0]?.message?.content ?? "";
+  controller.enqueue(encoder.encode(text));
+}
+
 async function streamOpenAi(
   messages: ChatMessage[],
   tool: ChatTool,
@@ -244,6 +368,11 @@ async function streamOpenAi(
   const usesSearch = tool === "web_search" || tool === "deep_research";
   const deepThink = tool === "deep_think";
   const system = buildSystemPrompt(TOOL_PROMPTS[tool ?? "default"] ?? SYSTEM_PROMPT, personalization);
+
+  if (tool === "ai_agent") {
+    await runAiAgent(client, system, messages, controller, encoder);
+    return;
+  }
 
   const completion = await client.chat.completions.create({
     model: usesSearch ? "gpt-4o-search-preview" : "gpt-5.5",

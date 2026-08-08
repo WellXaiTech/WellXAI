@@ -9,7 +9,8 @@ export type PluginKey =
   | "document_writer"
   | "sql_helper"
   | "python_helper"
-  | "business_assistant";
+  | "business_assistant"
+  | "ai_agent";
 
 const PLUGINS: { key: PluginKey; title: string; description: string }[] = [
   { key: "web_search", title: "Web search", description: "Let ChatGiZa look up real-time info to answer you." },
@@ -21,6 +22,7 @@ const PLUGINS: { key: PluginKey; title: string; description: string }[] = [
   { key: "sql_helper", title: "SQL Helper", description: "Write, fix, and explain SQL queries." },
   { key: "python_helper", title: "Python Helper", description: "Write and debug Python code." },
   { key: "business_assistant", title: "Business Assistant", description: "Emails, proposals, and everyday business tasks." },
+  { key: "ai_agent", title: "AI Agent", description: "Searches the web autonomously, multiple times, before answering." },
 ];
 
 export default function PluginsPanel({

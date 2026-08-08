@@ -111,6 +111,7 @@ const DEFAULT_PLUGINS: Record<PluginKey, boolean> = {
   sql_helper: true,
   python_helper: true,
   business_assistant: true,
+  ai_agent: true,
 };
 
 const DEFAULT_PROFILE: Profile = { nickname: "", about: "" };

@@ -12,7 +12,8 @@ type PluginKey =
   | "document_writer"
   | "sql_helper"
   | "python_helper"
-  | "business_assistant";
+  | "business_assistant"
+  | "ai_agent";
 
 type PrivacyPrefs = {
   improveModel: boolean;
@@ -58,6 +59,7 @@ const DEFAULT_SETTINGS_DATA: SettingsData = {
     sql_helper: true,
     python_helper: true,
     business_assistant: true,
+    ai_agent: true,
   },
   notifyOnComplete: true,
   notifyImageGen: true,
@@ -84,6 +86,7 @@ const PLUGIN_KEYS: PluginKey[] = [
   "sql_helper",
   "python_helper",
   "business_assistant",
+  "ai_agent",
 ];
 
 function settingsKey(userId: string) {

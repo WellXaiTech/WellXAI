@@ -77,7 +77,8 @@ data class PluginsState(
   val documentWriter: Boolean = true,
   val sqlHelper: Boolean = true,
   val pythonHelper: Boolean = true,
-  val businessAssistant: Boolean = true
+  val businessAssistant: Boolean = true,
+  val aiAgent: Boolean = true
 )
 
 data class SettingsData(
@@ -791,7 +792,8 @@ object ChatGizaApi {
         documentWriter = pluginsObj.optBoolean("document_writer", true),
         sqlHelper = pluginsObj.optBoolean("sql_helper", true),
         pythonHelper = pluginsObj.optBoolean("python_helper", true),
-        businessAssistant = pluginsObj.optBoolean("business_assistant", true)
+        businessAssistant = pluginsObj.optBoolean("business_assistant", true),
+        aiAgent = pluginsObj.optBoolean("ai_agent", true)
       ),
       notifyOnComplete = obj.optBoolean("notifyOnComplete", true),
       notifyImageGen = obj.optBoolean("notifyImageGen", true),
@@ -836,6 +838,7 @@ object ChatGizaApi {
       .put("sql_helper", data.plugins.sqlHelper)
       .put("python_helper", data.plugins.pythonHelper)
       .put("business_assistant", data.plugins.businessAssistant)
+      .put("ai_agent", data.plugins.aiAgent)
 
     val privacyObj = JSONObject()
       .put("improveModel", data.privacy.improveModel)
