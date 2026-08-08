@@ -7,6 +7,7 @@ import { sendMailBestEffort } from "@/lib/mailer";
 import { welcomeEmail } from "@/lib/emailTemplates";
 import { recordSession, isRevoked } from "@/lib/sessions";
 import { recordUserSeen } from "@/lib/userIndex";
+import { verifySsoLoginToken } from "@/lib/sso";
 
 function welcomedKey(sub: string) {
   return `chatgiza:welcomed:${sub}`;
@@ -136,6 +137,32 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: (payload.name as string) ?? null,
           email: payload.email as string,
           image: (payload.picture as string) ?? null,
+        };
+      },
+    }),
+    Credentials({
+      id: "sso",
+      name: "Enterprise SSO",
+      credentials: {
+        ssoToken: { label: "ssoToken", type: "text" },
+      },
+      async authorize(credentials) {
+        const ssoToken = credentials?.ssoToken;
+        if (!ssoToken || typeof ssoToken !== "string") return null;
+
+        // The token is only ever minted by our own /api/auth/sso/callback
+        // right after it independently verified the identity provider's
+        // signed id_token -- decoding it successfully here (with our own
+        // AUTH_SECRET) IS the trust check, same shape as the One Tap flow
+        // above but for a per-workspace OIDC connection instead of Google.
+        const identity = await verifySsoLoginToken(ssoToken);
+        if (!identity) return null;
+
+        return {
+          id: identity.sub,
+          name: identity.name,
+          email: identity.email,
+          image: null,
         };
       },
     }),

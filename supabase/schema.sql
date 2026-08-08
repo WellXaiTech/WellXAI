@@ -14,6 +14,7 @@ create table if not exists workspaces (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   owner_id text not null references users(id),
+  custom_instructions text, -- shared org-wide AI behavior/persona, applied to every member's chats
   created_at timestamptz not null default now()
 );
 
@@ -41,9 +42,38 @@ create table if not exists api_keys (
   label text not null,
   key_prefix text not null,
   key_hash text not null unique,
+  priority boolean not null default false, -- higher /api/v1/chat rate limit -- true for workspace members
   created_at timestamptz not null default now(),
   last_used_at timestamptz,
   revoked_at timestamptz
+);
+
+-- Enterprise Security: an append-only audit trail of security-relevant
+-- events (membership changes, API key lifecycle, SSO logins). workspace_id
+-- is nullable so account-level events (e.g. an API key created by someone
+-- not in a workspace) can still be logged without forcing a workspace.
+create table if not exists security_events (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid references workspaces(id) on delete cascade,
+  actor_user_id text not null references users(id),
+  event_type text not null, -- e.g. 'member_joined', 'member_removed', 'api_key_created', 'sso_login'
+  detail text,
+  created_at timestamptz not null default now()
+);
+
+-- Enterprise SSO: one OIDC connection per workspace, keyed by the work
+-- email domain that should route into it. client_secret is stored plainly
+-- here (not hashed) because, unlike API keys, we must present it back to
+-- the identity provider on every token exchange -- access is restricted to
+-- the workspace owner at the API layer, same trust boundary as api_keys'
+-- underlying storage.
+create table if not exists workspace_sso (
+  workspace_id uuid primary key references workspaces(id) on delete cascade,
+  domain text not null unique,
+  issuer text not null,
+  client_id text not null,
+  client_secret text not null,
+  created_at timestamptz not null default now()
 );
 
 create table if not exists media_posts (
@@ -75,6 +105,7 @@ create index if not exists idx_workspace_members_user on workspace_members(user_
 create index if not exists idx_api_keys_user on api_keys(user_id);
 create index if not exists idx_media_posts_created on media_posts(created_at desc);
 create index if not exists idx_media_comments_post on media_comments(post_id);
+create index if not exists idx_security_events_workspace on security_events(workspace_id, created_at desc);
 
 -- Row Level Security: enabled with zero policies on every table. The app's
 -- server-side secret key (service_role) bypasses RLS entirely, so this
@@ -89,3 +120,5 @@ alter table api_keys enable row level security;
 alter table media_posts enable row level security;
 alter table media_likes enable row level security;
 alter table media_comments enable row level security;
+alter table security_events enable row level security;
+alter table workspace_sso enable row level security;
