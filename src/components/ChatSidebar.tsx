@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import AccountMenu, { type SettingsTab } from "@/components/AccountMenu";
 import type { PlanTier } from "@/lib/plans";
@@ -154,15 +153,6 @@ const MediaFeedIcon = (
     <path d="M3 15l4.5-4.5a2 2 0 0 1 2.8 0L15 15" />
     <circle cx="16.5" cy="8.5" r="1.5" />
     <path d="M14 15l1.5-1.5a2 2 0 0 1 2.8 0L21 16" />
-  </svg>
-);
-
-const TeamIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="9" cy="8" r="3" />
-    <path d="M2.5 20c.8-3.2 3.3-5.5 6.5-5.5s5.7 2.3 6.5 5.5" />
-    <circle cx="17" cy="8.5" r="2.5" />
-    <path d="M15.5 14.7c2.7.4 4.7 2.4 5.3 4.8" />
   </svg>
 );
 
@@ -844,7 +834,6 @@ export default function ChatSidebar({
     setEditingId(null);
   }
 
-  const router = useRouter();
   const { data: session, status } = useSession();
   const signedIn = status === "authenticated";
   const pinnedConversations = signedIn ? conversations.filter((c) => c.pinned) : [];
@@ -983,7 +972,6 @@ export default function ChatSidebar({
             <NavItem icon={DesignIcon} label="Design" onClick={closeMobileThen(() => onOpenComingSoon("Design"))} />
             <NavItem icon={StockIcon} label="Stock" onClick={closeMobileThen(() => onOpenComingSoon("Stock"))} />
             <NavItem icon={CodeIcon} label="Code" onClick={closeMobileThen(onOpenCode)} />
-            <NavItem icon={TeamIcon} label="Team Workspace" onClick={closeMobileThen(() => router.push("/workspace"))} />
           </div>
 
         <div
