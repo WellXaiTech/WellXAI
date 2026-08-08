@@ -543,17 +543,20 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     chatLinkSharingEnabled = value
   }
 
+  // Named update*/not set* -- a same-named fun collides with the
+  // auto-generated property setter's JVM signature and fails the build
+  // (bit this exact session twice already for other prefs).
   var kidsModeEnabled by mutableStateOf(false)
     private set
 
-  fun setKidsModeEnabled(value: Boolean) {
+  fun updateKidsModeEnabled(value: Boolean) {
     kidsModeEnabled = value
   }
 
   var blurMatureContentEnabled by mutableStateOf(true)
     private set
 
-  fun setBlurMatureContentEnabled(value: Boolean) {
+  fun updateBlurMatureContentEnabled(value: Boolean) {
     blurMatureContentEnabled = value
   }
 

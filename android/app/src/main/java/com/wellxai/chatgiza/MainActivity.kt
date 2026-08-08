@@ -5015,7 +5015,7 @@ private fun KidsModeScreen(viewModel: ChatViewModel) {
       icon = Icons.Outlined.ChildCare,
       title = "Enable Kids Mode",
       checked = viewModel.kidsModeEnabled,
-      onCheckedChange = { viewModel.setKidsModeEnabled(it) }
+      onCheckedChange = { viewModel.updateKidsModeEnabled(it) }
     )
   }
 }
@@ -5073,7 +5073,7 @@ private fun NsfwPreferencesScreen(viewModel: ChatViewModel) {
       icon = Icons.Outlined.NoAdultContent,
       title = "Blur mature images and video",
       checked = viewModel.blurMatureContentEnabled,
-      onCheckedChange = { viewModel.setBlurMatureContentEnabled(it) }
+      onCheckedChange = { viewModel.updateBlurMatureContentEnabled(it) }
     )
   }
 }
