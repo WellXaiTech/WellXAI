@@ -825,15 +825,25 @@ object ChatGizaApi {
     }
   }
 
+  // org.json's optString(name, null) does NOT return null for a JSON field
+  // that's explicitly `null` -- it stringifies JSONObject.NULL, returning
+  // the literal 4-character string "null" instead. Every nullable string
+  // field from our API (which always sends explicit `null`, not an omitted
+  // key) has to go through this instead, or e.g. a photo-only post's
+  // missing videoUrl gets parsed as the *string* "null" -- which is
+  // non-null in Kotlin, so `post.videoUrl != null` was true and rendered a
+  // broken video player under every single-media post.
+  private fun JSONObject.optNullableString(name: String): String? = if (isNull(name)) null else optString(name)
+
   private fun mediaPostFromJson(obj: JSONObject): ApiMediaPost = ApiMediaPost(
     id = obj.getString("id"),
     authorId = obj.getString("authorId"),
     authorName = obj.optString("authorName", "GiZa user"),
-    authorImage = obj.optString("authorImage", null),
+    authorImage = obj.optNullableString("authorImage"),
     text = obj.optString("text", ""),
-    imageDataUrl = obj.optString("imageDataUrl", null),
-    videoUrl = obj.optString("videoUrl", null),
-    sentiment = obj.optString("sentiment", null),
+    imageDataUrl = obj.optNullableString("imageDataUrl"),
+    videoUrl = obj.optNullableString("videoUrl"),
+    sentiment = obj.optNullableString("sentiment"),
     createdAt = obj.optLong("createdAt", 0L),
     likeCount = obj.optInt("likeCount", 0),
     likedByMe = obj.optBoolean("likedByMe", false),
@@ -844,7 +854,7 @@ object ChatGizaApi {
     id = obj.getString("id"),
     authorId = obj.getString("authorId"),
     authorName = obj.optString("authorName", "GiZa user"),
-    authorImage = obj.optString("authorImage", null),
+    authorImage = obj.optNullableString("authorImage"),
     text = obj.optString("text", ""),
     createdAt = obj.optLong("createdAt", 0L)
   )

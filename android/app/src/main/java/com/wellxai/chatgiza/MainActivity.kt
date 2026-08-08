@@ -1350,41 +1350,36 @@ private fun ChatGizaMediaScreen(viewModel: ChatViewModel) {
 
   Scaffold(
     topBar = {
-      // "+" (was a floating button over the feed -- now lives here, next to
-      // a Stories-style row for discovering what's new) -- ChatGiZa title
-      // -- search, matching the reference layout. Back is still available
-      // via the system gesture/button (BackHandler above); this screen is
-      // reached from Chat's "Extra" tools menu, not a persistent tab, so a
-      // dedicated on-screen back affordance isn't needed here.
-      Column(modifier = Modifier.background(Color(0xFF161616))) {
-        Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          IconButton(onClick = { showCreate = true }) {
-            Icon(Icons.Filled.Add, contentDescription = "New post", tint = Color.White, modifier = Modifier.size(24.dp))
-          }
-          Spacer(modifier = Modifier.weight(1f))
-          Text(
-            "ChatGiZa",
-            color = Color.White,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
-          )
-          Spacer(modifier = Modifier.weight(1f))
-          // Balances the "+" on the left so the title stays centered now
-          // that the search icon that used to sit here is gone.
-          Spacer(modifier = Modifier.size(48.dp))
+      // Just the nav row now -- "+", ChatGiZa, balance spacer. The Stories
+      // row moved into the scrollable feed (first item) so it scrolls away
+      // as you read posts, the same as the reference feed, instead of
+      // permanently eating screen height above every photo/video. Back is
+      // still available via the system gesture/button (BackHandler above);
+      // this screen is reached from Chat's "Extra" tools menu, not a
+      // persistent tab, so a dedicated on-screen back affordance isn't
+      // needed here.
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .background(Color(0xFF161616))
+          .statusBarsPadding()
+          .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        IconButton(onClick = { showCreate = true }) {
+          Icon(Icons.Filled.Add, contentDescription = "New post", tint = Color.White, modifier = Modifier.size(24.dp))
         }
-        MediaStoriesRow(
-          myImage = viewModel.userImage,
-          myName = viewModel.userName ?: "You",
-          posts = viewModel.mediaPosts,
-          onMyStoryClick = { showCreate = true }
+        Spacer(modifier = Modifier.weight(1f))
+        Text(
+          "ChatGiZa",
+          color = Color.White,
+          fontSize = 18.sp,
+          fontWeight = FontWeight.Bold
         )
+        Spacer(modifier = Modifier.weight(1f))
+        // Balances the "+" on the left so the title stays centered now
+        // that the search icon that used to sit here is gone.
+        Spacer(modifier = Modifier.size(48.dp))
       }
     },
     bottomBar = {
@@ -1435,6 +1430,14 @@ private fun ChatGizaMediaScreen(viewModel: ChatViewModel) {
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
       ) {
+        item {
+          MediaStoriesRow(
+            myImage = viewModel.userImage,
+            myName = viewModel.userName ?: "You",
+            posts = viewModel.mediaPosts,
+            onMyStoryClick = { showCreate = true }
+          )
+        }
         if (searchOpen) {
           item {
             Row(
@@ -2853,18 +2856,22 @@ private fun MediaPostRow(
           // Always shown at full width, uncropped -- no more tap-to-expand;
           // the collapsed crop strip was hiding most of the picture by
           // default, which read as broken/half-loaded rather than deliberate.
+          // A fixed tall aspect ratio (cropped to fill) instead of the
+          // source image's natural size -- a near-square upload was
+          // rendering small/short at full width, nothing like the large,
+          // immersive photo size the reference feed shows for every post.
           AsyncImage(
             model = post.imageDataUrl,
             contentDescription = "Post photo",
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color.White.copy(alpha = 0.06f)),
-            contentScale = ContentScale.FillWidth
+            modifier = Modifier.fillMaxWidth().aspectRatio(4f / 5f).clip(RoundedCornerShape(14.dp)).background(Color.White.copy(alpha = 0.06f)),
+            contentScale = ContentScale.Crop
           )
         }
         if (post.videoUrl != null) {
           Spacer(modifier = Modifier.height(8.dp))
           MediaPostVideoPlayer(
             url = post.videoUrl,
-            modifier = Modifier.fillMaxWidth().aspectRatio(9f / 16f).clip(RoundedCornerShape(14.dp))
+            modifier = Modifier.fillMaxWidth().aspectRatio(4f / 5f).clip(RoundedCornerShape(14.dp))
           )
         }
         Spacer(modifier = Modifier.height(10.dp))
