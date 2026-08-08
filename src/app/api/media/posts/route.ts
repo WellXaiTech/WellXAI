@@ -50,11 +50,16 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const { data: rows } = await supabaseAdmin
+    // The FK must be named explicitly -- media_likes and media_comments each
+    // also link media_posts to users, so a bare "users(...)" embed is
+    // ambiguous to PostgREST (it errors with PGRST201, which silently
+    // became an empty feed here since only `data` was destructured).
+    const { data: rows, error } = await supabaseAdmin
       .from("media_posts")
-      .select("id, user_id, caption, image_url, video_url, sentiment, created_at, users(name, image)")
+      .select("id, user_id, caption, image_url, video_url, sentiment, created_at, users!media_posts_user_id_fkey(name, image)")
       .order("created_at", { ascending: false })
       .limit(FEED_PAGE_SIZE);
+    if (error) throw error;
     const posts = ((rows ?? []) as PostRow[]).map(toPost);
 
     const [likeCounts, likedByMe, commentCounts] = await Promise.all([

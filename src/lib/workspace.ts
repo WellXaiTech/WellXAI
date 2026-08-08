@@ -45,11 +45,12 @@ async function getWorkspaceById(id: string): Promise<Workspace | null> {
   const { data: ws } = await supabaseAdmin.from("workspaces").select("*").eq("id", id).maybeSingle();
   if (!ws) return null;
 
-  const { data: members } = await supabaseAdmin
+  const { data: members, error } = await supabaseAdmin
     .from("workspace_members")
-    .select("user_id, role, joined_at, users(email, name)")
+    .select("user_id, role, joined_at, users!workspace_members_user_id_fkey(email, name)")
     .eq("workspace_id", id)
     .order("joined_at", { ascending: true });
+  if (error) throw error;
 
   return {
     id: ws.id,
