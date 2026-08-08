@@ -109,6 +109,15 @@ dependencies {
     // Remote images (Google profile picture, generated images)
     implementation 'io.coil-kt:coil-compose:2.6.0'
 
+    // ChatGiZa Media video posts -- the platform VideoView (plain
+    // MediaPlayer) frequently fails with "Can't play this video" on
+    // phone-recorded MP4s whose moov atom sits at the end of the file
+    // (very common straight out of a camera app); ExoPlayer's MP4
+    // extractor handles that correctly via range-request seeking.
+    def media3Version = "1.11.0"
+    implementation "androidx.media3:media3-exoplayer:$media3Version"
+    implementation "androidx.media3:media3-ui:$media3Version"
+
     // Live Vision: camera preview + frame capture for the realtime voice+vision assistant
     def cameraxVersion = "1.4.1"
     implementation "androidx.camera:camera-core:$cameraxVersion"

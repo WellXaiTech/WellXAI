@@ -10,8 +10,9 @@ import android.graphics.ImageFormat
 import android.graphics.Rect
 import android.graphics.YuvImage
 import android.net.Uri
-import android.widget.MediaController
-import android.widget.VideoView
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.util.Base64
@@ -3051,17 +3052,28 @@ private fun MediaCommentComposerSheet(authorName: String, onDismiss: () -> Unit,
   }
 }
 
-// Plain platform VideoView + MediaController -- this is a short social-post
-// clip, not core app functionality, so it doesn't warrant pulling in
-// ExoPlayer/media3 as a new dependency just for this.
+// ExoPlayer, not the platform VideoView/MediaPlayer -- the plain
+// MediaPlayer frequently refuses phone-recorded MP4s whose moov atom sits
+// at the end of the file with "Can't play this video", which ExoPlayer's
+// own MP4 extractor handles fine via range-request seeking.
 @Composable
 private fun MediaPostVideoPlayer(url: String, modifier: Modifier = Modifier) {
+  val context = LocalContext.current
+  val player = remember(url) {
+    ExoPlayer.Builder(context).build().apply {
+      setMediaItem(MediaItem.fromUri(url))
+      prepare()
+    }
+  }
+  DisposableEffect(player) {
+    onDispose { player.release() }
+  }
   AndroidView(
     modifier = modifier.background(Color.Black),
     factory = { ctx ->
-      VideoView(ctx).apply {
-        setVideoURI(Uri.parse(url))
-        setMediaController(MediaController(ctx).also { it.setAnchorView(this) })
+      PlayerView(ctx).apply {
+        this.player = player
+        useController = true
       }
     }
   )
