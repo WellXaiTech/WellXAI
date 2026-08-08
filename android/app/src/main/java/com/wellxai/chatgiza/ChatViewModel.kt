@@ -11,20 +11,6 @@ import java.util.UUID
 
 data class UiMessage(val id: String, val role: String, val content: String, val createdAt: Long? = null)
 
-// ChatGiZa Media posts are local-only for now (no backend feed exists yet) --
-// composed in ChatGizaMediaPostComposerScreen and shown in the panel's own
-// feed so posting actually produces visible, persisted-for-the-session
-// results instead of just closing a sheet with nothing to show for it.
-data class MediaPost(
-  val id: String,
-  val text: String,
-  val imageUri: String?,
-  val sentiment: String?,
-  val createdAt: Long,
-  val liked: Boolean = false,
-  val likeCount: Int = 0
-)
-
 sealed class AppScreen {
   object Loading : AppScreen()
   object SignedOut : AppScreen()
@@ -54,6 +40,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var screen by mutableStateOf<AppScreen>(AppScreen.Loading)
     private set
 
+  var userId by mutableStateOf<String?>(null)
+    private set
   var userName by mutableStateOf<String?>(null)
     private set
   var userEmail by mutableStateOf<String?>(null)
@@ -176,6 +164,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   init {
     if (tokenStore.getToken() != null) {
+      userId = tokenStore.getUserId()
       userName = tokenStore.getUserName()
       userEmail = tokenStore.getUserEmail()
       userImage = tokenStore.getUserImage()
@@ -679,7 +668,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
       when (val result = ChatGizaApi.mobileAuth(idToken)) {
         is ApiResult.Success -> {
           tokenStore.setToken(result.value.token)
-          tokenStore.setUser(result.value.user.name, result.value.user.email, result.value.user.image)
+          tokenStore.setUser(result.value.user.id, result.value.user.name, result.value.user.email, result.value.user.image)
+          userId = result.value.user.id
           userName = result.value.user.name
           userEmail = result.value.user.email
           userImage = result.value.user.image
@@ -717,6 +707,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     conversations = emptyList()
     messages = emptyList()
     activeConversationId = null
+    userId = null
     userName = null
     userEmail = null
     userImage = null
@@ -769,28 +760,104 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     screen = AppScreen.History
   }
 
-  var mediaPosts by mutableStateOf<List<MediaPost>>(emptyList())
+  // ChatGiZa Media is a real shared feed now (backend-backed via
+  // /api/media/posts) -- anyone signed in can see anyone else's posts, not
+  // just what this device posted this session.
+  var mediaPosts by mutableStateOf<List<ApiMediaPost>>(emptyList())
     private set
+  var loadingMediaPosts by mutableStateOf(false)
+    private set
+  var mediaComments by mutableStateOf<Map<String, List<ApiMediaComment>>>(emptyMap())
+    private set
+  var mediaError by mutableStateOf<String?>(null)
 
-  fun addMediaPost(text: String, imageUri: String?, sentiment: String?) {
-    val post = MediaPost(
-      id = UUID.randomUUID().toString(),
-      text = text,
-      imageUri = imageUri,
-      sentiment = sentiment,
-      createdAt = System.currentTimeMillis()
-    )
-    mediaPosts = listOf(post) + mediaPosts
-  }
-
-  fun toggleMediaPostLike(id: String) {
-    mediaPosts = mediaPosts.map {
-      if (it.id == id) it.copy(liked = !it.liked, likeCount = it.likeCount + if (it.liked) -1 else 1) else it
+  fun loadMediaPosts() {
+    val token = tokenStore.getToken() ?: return
+    loadingMediaPosts = true
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.getMediaPosts(token)) {
+        is ApiResult.Success -> mediaPosts = result.value
+        is ApiResult.Failure -> mediaError = result.message
+      }
+      loadingMediaPosts = false
     }
   }
 
-  fun removeMediaPost(id: String) {
-    mediaPosts = mediaPosts.filter { it.id != id }
+  fun createMediaPost(text: String, imageDataUrl: String?, sentiment: String?, onDone: (Boolean) -> Unit) {
+    val token = tokenStore.getToken() ?: return onDone(false)
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.createMediaPost(token, text, imageDataUrl, sentiment)) {
+        is ApiResult.Success -> {
+          mediaPosts = listOf(result.value) + mediaPosts
+          onDone(true)
+        }
+        is ApiResult.Failure -> {
+          mediaError = result.message
+          onDone(false)
+        }
+      }
+    }
+  }
+
+  fun toggleMediaPostLike(postId: String) {
+    val token = tokenStore.getToken() ?: return
+    // Optimistic flip so the tap feels instant; corrected by (or reverted
+    // to match) the server's real state once the request comes back.
+    mediaPosts = mediaPosts.map {
+      if (it.id == postId) it.copy(likedByMe = !it.likedByMe, likeCount = it.likeCount + if (it.likedByMe) -1 else 1) else it
+    }
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.toggleMediaPostLike(token, postId)) {
+        is ApiResult.Success -> {
+          mediaPosts = mediaPosts.map {
+            if (it.id == postId) it.copy(likedByMe = result.value.liked, likeCount = result.value.likeCount) else it
+          }
+        }
+        is ApiResult.Failure -> {
+          mediaPosts = mediaPosts.map {
+            if (it.id == postId) it.copy(likedByMe = !it.likedByMe, likeCount = it.likeCount + if (it.likedByMe) -1 else 1) else it
+          }
+          mediaError = result.message
+        }
+      }
+    }
+  }
+
+  fun removeMediaPost(postId: String) {
+    val token = tokenStore.getToken() ?: return
+    val previous = mediaPosts
+    mediaPosts = mediaPosts.filter { it.id != postId }
+    viewModelScope.launch {
+      val result = ChatGizaApi.deleteMediaPost(token, postId)
+      if (result is ApiResult.Failure) {
+        mediaPosts = previous
+        mediaError = result.message
+      }
+    }
+  }
+
+  fun loadMediaComments(postId: String) {
+    val token = tokenStore.getToken() ?: return
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.getMediaComments(token, postId)) {
+        is ApiResult.Success -> mediaComments = mediaComments + (postId to result.value)
+        is ApiResult.Failure -> mediaError = result.message
+      }
+    }
+  }
+
+  fun addMediaComment(postId: String, text: String) {
+    val token = tokenStore.getToken() ?: return
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.addMediaComment(token, postId, text)) {
+        is ApiResult.Success -> {
+          val existing = mediaComments[postId].orEmpty()
+          mediaComments = mediaComments + (postId to (existing + result.value))
+          mediaPosts = mediaPosts.map { if (it.id == postId) it.copy(commentCount = it.commentCount + 1) else it }
+        }
+        is ApiResult.Failure -> mediaError = result.message
+      }
+    }
   }
 
   fun closeHistory() {

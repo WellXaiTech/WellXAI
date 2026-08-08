@@ -27,12 +27,14 @@ class TokenStore(context: Context) {
     prefs.edit().putString(KEY_TOKEN, token).apply()
   }
 
+  fun getUserId(): String? = prefs.getString(KEY_ID, null)
   fun getUserName(): String? = prefs.getString(KEY_NAME, null)
   fun getUserEmail(): String? = prefs.getString(KEY_EMAIL, null)
   fun getUserImage(): String? = prefs.getString(KEY_IMAGE, null)
 
-  fun setUser(name: String?, email: String?, image: String?) {
+  fun setUser(id: String?, name: String?, email: String?, image: String?) {
     prefs.edit()
+      .putString(KEY_ID, id)
       .putString(KEY_NAME, name)
       .putString(KEY_EMAIL, email)
       .putString(KEY_IMAGE, image)
@@ -139,6 +141,7 @@ class TokenStore(context: Context) {
 
   companion object {
     private const val KEY_TOKEN = "mobile_token"
+    private const val KEY_ID = "user_id"
     private const val KEY_NAME = "user_name"
     private const val KEY_EMAIL = "user_email"
     private const val KEY_IMAGE = "user_image"

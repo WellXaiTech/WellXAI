@@ -100,6 +100,29 @@ data class BillingSubscription(
 
 data class BillingSummary(val subscription: BillingSubscription?)
 
+data class ApiMediaPost(
+  val id: String,
+  val authorId: String,
+  val authorName: String,
+  val authorImage: String?,
+  val text: String,
+  val imageDataUrl: String?,
+  val sentiment: String?,
+  val createdAt: Long,
+  val likeCount: Int,
+  val likedByMe: Boolean,
+  val commentCount: Int
+)
+
+data class ApiMediaComment(
+  val id: String,
+  val authorId: String,
+  val authorName: String,
+  val authorImage: String?,
+  val text: String,
+  val createdAt: Long
+)
+
 sealed class ApiResult<out T> {
   data class Success<T>(val value: T) : ApiResult<T>()
   data class Failure(val message: String) : ApiResult<Nothing>()
@@ -569,6 +592,157 @@ object ChatGizaApi {
       ApiResult.Failure(e.message ?: "Network error")
     }
   }
+
+  suspend fun getMediaPosts(token: String): ApiResult<List<ApiMediaPost>> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/media/posts")
+        .header("Authorization", "Bearer $token")
+        .get()
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val arr = JSONObject(text).optJSONArray("posts") ?: JSONArray()
+        ApiResult.Success((0 until arr.length()).map { i -> mediaPostFromJson(arr.getJSONObject(i)) })
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun createMediaPost(
+    token: String,
+    text: String,
+    imageDataUrl: String?,
+    sentiment: String?
+  ): ApiResult<ApiMediaPost> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject().put("text", text)
+      if (imageDataUrl != null) payload.put("imageDataUrl", imageDataUrl)
+      if (sentiment != null) payload.put("sentiment", sentiment)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/media/posts")
+        .header("Authorization", "Bearer $token")
+        .post(payload.toString().toRequestBody(JSON))
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text2 = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text2, response.code))
+        }
+        ApiResult.Success(mediaPostFromJson(JSONObject(text2).getJSONObject("post")))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun deleteMediaPost(token: String, postId: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/media/posts/$postId")
+        .header("Authorization", "Bearer $token")
+        .delete()
+        .build()
+      client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          val text = response.body?.string().orEmpty()
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  data class LikeResult(val liked: Boolean, val likeCount: Int)
+
+  suspend fun toggleMediaPostLike(token: String, postId: String): ApiResult<LikeResult> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/media/posts/$postId/like")
+        .header("Authorization", "Bearer $token")
+        .post("".toRequestBody(JSON))
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val json = JSONObject(text)
+        ApiResult.Success(LikeResult(json.getBoolean("liked"), json.getInt("likeCount")))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun getMediaComments(token: String, postId: String): ApiResult<List<ApiMediaComment>> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/media/posts/$postId/comments")
+        .header("Authorization", "Bearer $token")
+        .get()
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val arr = JSONObject(text).optJSONArray("comments") ?: JSONArray()
+        ApiResult.Success((0 until arr.length()).map { i -> mediaCommentFromJson(arr.getJSONObject(i)) })
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun addMediaComment(token: String, postId: String, text: String): ApiResult<ApiMediaComment> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject().put("text", text)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/media/posts/$postId/comments")
+        .header("Authorization", "Bearer $token")
+        .post(payload.toString().toRequestBody(JSON))
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text2 = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text2, response.code))
+        }
+        ApiResult.Success(mediaCommentFromJson(JSONObject(text2).getJSONObject("comment")))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  private fun mediaPostFromJson(obj: JSONObject): ApiMediaPost = ApiMediaPost(
+    id = obj.getString("id"),
+    authorId = obj.getString("authorId"),
+    authorName = obj.optString("authorName", "GiZa user"),
+    authorImage = obj.optString("authorImage", null),
+    text = obj.optString("text", ""),
+    imageDataUrl = obj.optString("imageDataUrl", null),
+    sentiment = obj.optString("sentiment", null),
+    createdAt = obj.optLong("createdAt", 0L),
+    likeCount = obj.optInt("likeCount", 0),
+    likedByMe = obj.optBoolean("likedByMe", false),
+    commentCount = obj.optInt("commentCount", 0)
+  )
+
+  private fun mediaCommentFromJson(obj: JSONObject): ApiMediaComment = ApiMediaComment(
+    id = obj.getString("id"),
+    authorId = obj.getString("authorId"),
+    authorName = obj.optString("authorName", "GiZa user"),
+    authorImage = obj.optString("authorImage", null),
+    text = obj.optString("text", ""),
+    createdAt = obj.optLong("createdAt", 0L)
+  )
 
   private fun settingsDataFromJson(obj: JSONObject): SettingsData {
     val pluginsObj = obj.optJSONObject("plugins") ?: JSONObject()
