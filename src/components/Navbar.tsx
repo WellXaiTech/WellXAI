@@ -9,7 +9,7 @@ import { CHATGIZA_APK_URL } from "@/lib/useInstallPrompt";
 
 // These pages represent WellXAI, the company, rather than the ChatGiZa
 // product — the logo should read "WellXAI" there instead.
-const COMPANY_BRANDED_PATHS = ["/terms", "/privacy"];
+const COMPANY_BRANDED_PATHS = ["/terms", "/privacy", "/admin"];
 
 const links = [
   { href: "/research", label: "Research" },
