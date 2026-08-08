@@ -4044,7 +4044,7 @@ private fun VoiceScreen(viewModel: ChatViewModel) {
       Spacer(modifier = Modifier.height(24.dp))
 
       SettingsSwitchRow("Premium Voice for chat replies", viewModel.premiumChatVoiceEnabled) {
-        viewModel.setPremiumChatVoiceEnabled(!viewModel.premiumChatVoiceEnabled)
+        viewModel.updatePremiumChatVoiceEnabled(!viewModel.premiumChatVoiceEnabled)
       }
       Text(
         "Real AI-generated speech (the voice picked below) instead of your device's built-in voice, when you tap " +

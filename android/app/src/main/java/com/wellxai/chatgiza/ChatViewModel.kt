@@ -317,7 +317,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var premiumChatVoiceEnabled by mutableStateOf(tokenStore.getPremiumChatVoiceEnabled())
     private set
 
-  fun setPremiumChatVoiceEnabled(value: Boolean) {
+  fun updatePremiumChatVoiceEnabled(value: Boolean) {
     premiumChatVoiceEnabled = value
     tokenStore.setPremiumChatVoiceEnabled(value)
   }
