@@ -1281,42 +1281,42 @@ private fun MediaStoriesRow(myImage: String?, myName: String, posts: List<ApiMed
       .padding(horizontal = 12.dp, vertical = 10.dp),
     horizontalArrangement = Arrangement.spacedBy(14.dp)
   ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(64.dp).clickable(onClick = onMyStoryClick)) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp).clickable(onClick = onMyStoryClick)) {
       Box(contentAlignment = Alignment.BottomEnd) {
         if (myImage != null) {
-          AsyncImage(model = myImage, contentDescription = "Your story", modifier = Modifier.size(56.dp).clip(CircleShape))
+          AsyncImage(model = myImage, contentDescription = "Your story", modifier = Modifier.size(64.dp).clip(CircleShape))
         } else {
-          Icon(Icons.Outlined.AccountCircle, contentDescription = "Your story", tint = Color.White, modifier = Modifier.size(56.dp))
+          Icon(Icons.Outlined.AccountCircle, contentDescription = "Your story", tint = Color.White, modifier = Modifier.size(64.dp))
         }
         Box(
           modifier = Modifier
-            .size(20.dp)
+            .size(22.dp)
             .clip(CircleShape)
             .background(Color(0xFFFFC94A))
             .border(2.dp, Color(0xFF161616), CircleShape),
           contentAlignment = Alignment.Center
         ) {
-          Icon(Icons.Filled.Add, contentDescription = null, tint = Color.Black, modifier = Modifier.size(12.dp))
+          Icon(Icons.Filled.Add, contentDescription = null, tint = Color.Black, modifier = Modifier.size(13.dp))
         }
       }
       Spacer(modifier = Modifier.height(4.dp))
       Text("Your story", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, maxLines = 1, softWrap = false)
     }
     others.forEach { post ->
-      Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(64.dp)) {
+      Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp)) {
         Box(
-          modifier = Modifier.size(60.dp).clip(CircleShape).background(ringBrush).padding(2.5.dp),
+          modifier = Modifier.size(68.dp).clip(CircleShape).background(ringBrush).padding(2.5.dp),
           contentAlignment = Alignment.Center
         ) {
           if (post.authorImage != null) {
             AsyncImage(
               model = post.authorImage,
               contentDescription = post.authorName,
-              modifier = Modifier.size(53.dp).clip(CircleShape).border(2.dp, Color(0xFF161616), CircleShape)
+              modifier = Modifier.size(61.dp).clip(CircleShape).border(2.dp, Color(0xFF161616), CircleShape)
             )
           } else {
-            Box(modifier = Modifier.size(53.dp).clip(CircleShape).background(Color(0xFF23252B)), contentAlignment = Alignment.Center) {
-              Icon(Icons.Outlined.AccountCircle, contentDescription = post.authorName, tint = Color.White, modifier = Modifier.size(40.dp))
+            Box(modifier = Modifier.size(61.dp).clip(CircleShape).background(Color(0xFF23252B)), contentAlignment = Alignment.Center) {
+              Icon(Icons.Outlined.AccountCircle, contentDescription = post.authorName, tint = Color.White, modifier = Modifier.size(46.dp))
             }
           }
         }
@@ -1339,13 +1339,7 @@ private fun ChatGizaMediaScreen(viewModel: ChatViewModel) {
   var replyingToPost by remember { mutableStateOf<ApiMediaPost?>(null) }
   var selectedFeedTab by remember { mutableStateOf("Discover") }
   var expandedCommentsPostId by remember { mutableStateOf<String?>(null) }
-  var searchOpen by remember { mutableStateOf(false) }
-  var searchQuery by remember { mutableStateOf("") }
-  val visiblePosts = remember(viewModel.mediaPosts, searchQuery) {
-    val q = searchQuery.trim()
-    if (q.isEmpty()) viewModel.mediaPosts
-    else viewModel.mediaPosts.filter { it.text.contains(q, ignoreCase = true) || it.authorName.contains(q, ignoreCase = true) }
-  }
+  val visiblePosts = viewModel.mediaPosts
 
   Scaffold(
     topBar = {
@@ -1363,24 +1357,20 @@ private fun ChatGizaMediaScreen(viewModel: ChatViewModel) {
             .padding(horizontal = 12.dp, vertical = 10.dp),
           verticalAlignment = Alignment.CenterVertically
         ) {
-          IconButton(onClick = { showCreate = true }) {
-            Icon(Icons.Filled.Add, contentDescription = "New post", tint = Color.White, modifier = Modifier.size(24.dp))
+          IconButton(onClick = { showCreate = true }, modifier = Modifier.size(56.dp)) {
+            Icon(Icons.Filled.Add, contentDescription = "New post", tint = Color.White, modifier = Modifier.size(40.dp))
           }
           Spacer(modifier = Modifier.weight(1f))
           Text(
             "ChatGiZa",
-            color = Color.Black,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier
-              .clip(RoundedCornerShape(20.dp))
-              .background(Color.White)
-              .padding(horizontal = 18.dp, vertical = 8.dp)
+            color = Color.White,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold
           )
           Spacer(modifier = Modifier.weight(1f))
-          IconButton(onClick = { searchOpen = !searchOpen }) {
-            Icon(Icons.Outlined.Search, contentDescription = "Search", tint = Color.White)
-          }
+          // Balances the big "+" on the left so the title stays centered
+          // now that the search icon that used to sit here is gone.
+          Spacer(modifier = Modifier.size(56.dp))
         }
         MediaStoriesRow(
           myImage = viewModel.userImage,
@@ -1436,42 +1426,11 @@ private fun ChatGizaMediaScreen(viewModel: ChatViewModel) {
         ),
         verticalArrangement = Arrangement.spacedBy(14.dp)
       ) {
-        if (searchOpen) {
-          item {
-            Row(
-              verticalAlignment = Alignment.CenterVertically,
-              modifier = Modifier
-                .fillMaxWidth()
-                .height(38.dp)
-                .clip(RoundedCornerShape(19.dp))
-                .background(Color.White.copy(alpha = 0.08f))
-                .padding(horizontal = 12.dp)
-            ) {
-              Icon(Icons.Outlined.Search, contentDescription = null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(16.dp))
-              Spacer(modifier = Modifier.width(6.dp))
-              Box(modifier = Modifier.weight(1f)) {
-                if (searchQuery.isEmpty()) {
-                  Text("Search posts", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
-                }
-                BasicTextField(
-                  value = searchQuery,
-                  onValueChange = { searchQuery = it },
-                  singleLine = true,
-                  textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 13.sp),
-                  cursorBrush = SolidColor(Color.White),
-                  modifier = Modifier.fillMaxWidth()
-                )
-              }
-            }
-          }
-        }
         if (visiblePosts.isEmpty()) {
           item {
             Box(modifier = Modifier.fillMaxWidth().padding(vertical = 60.dp), contentAlignment = Alignment.Center) {
               if (viewModel.loadingMediaPosts) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(28.dp))
-              } else if (searchQuery.isNotEmpty()) {
-                Text("No matches.", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
               }
               // Otherwise left empty on purpose — no placeholder icon/text.
             }
