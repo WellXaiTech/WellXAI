@@ -26,7 +26,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       await supabaseAdmin.from("media_likes").delete().eq("post_id", id).eq("user_id", user.id);
     } else {
       await ensureUserExists(user.id, "", user.name, user.image ?? "");
-      await supabaseAdmin.from("media_likes").insert({ post_id: id, user_id: user.id });
+      const { error: insertError } = await supabaseAdmin.from("media_likes").insert({ post_id: id, user_id: user.id });
+      // Two rapid taps can both pass the "existing" check above before
+      // either insert lands, so the loser hits the (post_id, user_id)
+      // primary key here -- that's not a real failure, the like already
+      // exists exactly as intended, so don't bounce it to the client as
+      // an error (which was reverting the optimistic UI even though the
+      // like had actually gone through).
+      if (insertError && insertError.code !== "23505") {
+        throw insertError;
+      }
     }
 
     const { count } = await supabaseAdmin.from("media_likes").select("*", { count: "exact", head: true }).eq("post_id", id);

@@ -92,12 +92,17 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => null);
   const text = typeof body?.text === "string" ? body.text.trim().slice(0, MAX_TEXT_LENGTH) : "";
-  const rawImageDataUrl =
-    typeof body?.imageDataUrl === "string" &&
-    body.imageDataUrl.startsWith("data:image/") &&
-    body.imageDataUrl.length <= MAX_IMAGE_DATA_URL_LENGTH
-      ? body.imageDataUrl
-      : null;
+  // A provided-but-invalid/oversized image used to just get dropped here
+  // (falling through to `null`), so a post with a too-large photo silently
+  // published as text-only with no indication the picture never made it.
+  const imageDataUrlInput = typeof body?.imageDataUrl === "string" ? body.imageDataUrl : null;
+  if (imageDataUrlInput && !imageDataUrlInput.startsWith("data:image/")) {
+    return NextResponse.json({ error: "Invalid photo data" }, { status: 400 });
+  }
+  if (imageDataUrlInput && imageDataUrlInput.length > MAX_IMAGE_DATA_URL_LENGTH) {
+    return NextResponse.json({ error: "Photo is too large" }, { status: 400 });
+  }
+  const rawImageDataUrl = imageDataUrlInput;
   // Videos are uploaded straight to Storage by the client beforehand (see
   // /api/media/video-upload-url) -- here we only ever receive the resulting
   // URL, which we verify actually points at our own video bucket before

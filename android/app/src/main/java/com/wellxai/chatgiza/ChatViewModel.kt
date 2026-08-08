@@ -813,8 +813,12 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     mediaError = null
   }
 
+  fun setMediaError(message: String) {
+    mediaError = message
+  }
+
   fun loadMediaPosts() {
-    val token = tokenStore.getToken() ?: return
+    val token = tokenStore.getToken() ?: run { mediaError = "Not signed in"; return }
     loadingMediaPosts = true
     viewModelScope.launch {
       when (val result = ChatGizaApi.getMediaPosts(token)) {
@@ -826,7 +830,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun createMediaPost(text: String, imageDataUrl: String?, sentiment: String?, onDone: (Boolean) -> Unit) {
-    val token = tokenStore.getToken() ?: return onDone(false)
+    val token = tokenStore.getToken() ?: run { mediaError = "Not signed in"; return onDone(false) }
     viewModelScope.launch {
       when (val result = ChatGizaApi.createMediaPost(token, text, imageDataUrl, sentiment)) {
         is ApiResult.Success -> {
@@ -842,7 +846,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun toggleMediaPostLike(postId: String) {
-    val token = tokenStore.getToken() ?: return
+    val token = tokenStore.getToken() ?: run { mediaError = "Not signed in"; return }
     // Optimistic flip so the tap feels instant; corrected by (or reverted
     // to match) the server's real state once the request comes back.
     mediaPosts = mediaPosts.map {
@@ -866,7 +870,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun removeMediaPost(postId: String) {
-    val token = tokenStore.getToken() ?: return
+    val token = tokenStore.getToken() ?: run { mediaError = "Not signed in"; return }
     val previous = mediaPosts
     mediaPosts = mediaPosts.filter { it.id != postId }
     viewModelScope.launch {
@@ -879,7 +883,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun loadMediaComments(postId: String) {
-    val token = tokenStore.getToken() ?: return
+    val token = tokenStore.getToken() ?: run { mediaError = "Not signed in"; return }
     viewModelScope.launch {
       when (val result = ChatGizaApi.getMediaComments(token, postId)) {
         is ApiResult.Success -> mediaComments = mediaComments + (postId to result.value)
@@ -889,7 +893,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun addMediaComment(postId: String, text: String) {
-    val token = tokenStore.getToken() ?: return
+    val token = tokenStore.getToken() ?: run { mediaError = "Not signed in"; return }
     viewModelScope.launch {
       when (val result = ChatGizaApi.addMediaComment(token, postId, text)) {
         is ApiResult.Success -> {
