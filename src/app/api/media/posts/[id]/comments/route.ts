@@ -33,11 +33,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params;
 
   try {
-    const { data } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from("media_comments")
-      .select("id, user_id, content, created_at, users(name, image)")
+      .select("id, user_id, content, created_at, users!media_comments_user_id_fkey(name, image)")
       .eq("post_id", id)
       .order("created_at", { ascending: true });
+    if (error) throw error;
     return NextResponse.json({ comments: ((data ?? []) as CommentRow[]).map(toComment) });
   } catch (err) {
     console.error("Media comments GET error:", err);
