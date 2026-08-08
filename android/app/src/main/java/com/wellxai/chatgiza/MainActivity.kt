@@ -34,6 +34,7 @@ import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -2049,6 +2050,40 @@ private fun imageProxyToJpeg(image: ImageProxy): ByteArray {
   return out.toByteArray()
 }
 
+// A few rotating promo lines for the History screen's Events section,
+// each with its own accent color so the banner visibly changes on every
+// rotation rather than just swapping text on a fixed background.
+private val CHATGIZA_ANNOUNCEMENTS = listOf(
+  "ChatGiZa Pro sasa inapatikana — fungua uwezo kamili" to Color(0xFF6D5DF6),
+  "Jaribu ChatGiZa Media leo — shiriki na jamii" to Color(0xFF11998E),
+  "Live Vision iko tayari — ongea na uonyeshe kamera" to Color(0xFFEE0979),
+  "Uliza chochote, wakati wowote — ChatGiZa iko hapa" to Color(0xFFF7971E)
+)
+
+@Composable
+private fun ChatGizaAnnouncementBanner() {
+  var index by remember { mutableStateOf(0) }
+  LaunchedEffect(Unit) {
+    while (true) {
+      delay(4000)
+      index = (index + 1) % CHATGIZA_ANNOUNCEMENTS.size
+    }
+  }
+  Crossfade(targetState = index, label = "chatGizaAnnouncement") { i ->
+    val (text, color) = CHATGIZA_ANNOUNCEMENTS[i]
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 10.dp)
+        .clip(RoundedCornerShape(16.dp))
+        .background(color)
+        .padding(horizontal = 16.dp, vertical = 14.dp)
+    ) {
+      Text(text, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    }
+  }
+}
+
 @Composable
 private fun HistoryNavTab(icon: ImageVector, label: String, onClick: () -> Unit) {
   Column(
@@ -2304,7 +2339,14 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
 
         // Big empty gap between Search and Events, matching the reference's
         // large open space above its promo card.
-        Spacer(modifier = Modifier.height(190.dp))
+        Spacer(modifier = Modifier.height(120.dp))
+
+        // Rotating ChatGiZa announcement banner, sitting right above the
+        // Events card -- cycles through a few promo lines with a
+        // different accent color each time.
+        ChatGizaAnnouncementBanner()
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         // "Events" card — bigger now, same charcoal as the History card
         // below for a consistent palette across the screen. "Events" is
