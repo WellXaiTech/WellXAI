@@ -32,7 +32,7 @@ sealed class AppScreen {
   object Projects : AppScreen()
   object Scheduled : AppScreen()
   object Billing : AppScreen()
-  object Imagine : AppScreen()
+  object Media : AppScreen()
   object LiveVision : AppScreen()
 }
 
@@ -55,23 +55,11 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     historySearchQuery = value
   }
 
-  var imaginePrompt by mutableStateOf("")
-  var generatingImage by mutableStateOf(false)
-    private set
-  var generatedImageUrl by mutableStateOf<String?>(null)
-    private set
-  var imagineError by mutableStateOf<String?>(null)
-    private set
-
-  fun onImaginePromptChange(value: String) {
-    imaginePrompt = value
+  fun openChatGizaMedia() {
+    screen = AppScreen.Media
   }
 
-  fun openImagine() {
-    screen = AppScreen.Imagine
-  }
-
-  fun closeImagine() {
+  fun closeChatGizaMedia() {
     screen = AppScreen.Chat
   }
 
@@ -81,21 +69,6 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeLiveVision() {
     screen = AppScreen.Chat
-  }
-
-  fun generateImage() {
-    val prompt = imaginePrompt.trim()
-    val token = tokenStore.getToken()
-    if (prompt.isEmpty() || token == null || generatingImage) return
-    generatingImage = true
-    imagineError = null
-    viewModelScope.launch {
-      when (val result = ChatGizaApi.generateImage(token, prompt)) {
-        is ApiResult.Success -> generatedImageUrl = result.value
-        is ApiResult.Failure -> imagineError = result.message
-      }
-      generatingImage = false
-    }
   }
 
   /** All of the signed-in user's conversations, most-recent-first. */
@@ -748,8 +721,6 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     userName = null
     userEmail = null
     userImage = null
-    generatedImageUrl = null
-    imaginePrompt = ""
     profileData = ProfileData()
     nicknameInput = ""
     aboutInput = ""
