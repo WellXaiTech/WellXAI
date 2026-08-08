@@ -32,6 +32,7 @@ const columns: { heading: string; links: { label: string; href: string }[] }[] =
       { label: "API Platform", href: "/developers" },
       { label: "Docs", href: "/developers" },
       { label: "Release Notes", href: "/developers" },
+      { label: "Team Workspace", href: "/workspace" },
     ],
   },
   {
