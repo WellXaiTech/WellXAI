@@ -36,6 +36,10 @@ sealed class AppScreen {
   object Media : AppScreen()
   object LiveVision : AppScreen()
   object OpenSourceLicenses : AppScreen()
+  object KidsMode : AppScreen()
+  object SharedConversations : AppScreen()
+  object NsfwPreferences : AppScreen()
+  object Connectors : AppScreen()
 }
 
 class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
@@ -394,6 +398,38 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     screen = AppScreen.Account
   }
 
+  fun openKidsMode() {
+    screen = AppScreen.KidsMode
+  }
+
+  fun closeKidsMode() {
+    screen = AppScreen.Account
+  }
+
+  fun openSharedConversations() {
+    screen = AppScreen.SharedConversations
+  }
+
+  fun closeSharedConversations() {
+    screen = AppScreen.Account
+  }
+
+  fun openNsfwPreferences() {
+    screen = AppScreen.NsfwPreferences
+  }
+
+  fun closeNsfwPreferences() {
+    screen = AppScreen.Account
+  }
+
+  fun openConnectors() {
+    screen = AppScreen.Connectors
+  }
+
+  fun closeConnectors() {
+    screen = AppScreen.Account
+  }
+
   fun openHaptics() {
     screen = AppScreen.Haptics
   }
@@ -505,6 +541,20 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun setChatLinkSharing(value: Boolean) {
     chatLinkSharingEnabled = value
+  }
+
+  var kidsModeEnabled by mutableStateOf(false)
+    private set
+
+  fun setKidsModeEnabled(value: Boolean) {
+    kidsModeEnabled = value
+  }
+
+  var blurMatureContentEnabled by mutableStateOf(true)
+    private set
+
+  fun setBlurMatureContentEnabled(value: Boolean) {
+    blurMatureContentEnabled = value
   }
 
   fun saveProfile() {
