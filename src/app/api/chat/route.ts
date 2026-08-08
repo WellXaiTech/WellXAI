@@ -1,7 +1,6 @@
 import { streamChatReply, type ChatMessage, type ChatTool, type Personalization } from "@/lib/ai";
 import { auth } from "@/auth";
 import { getMobileUserId } from "@/lib/mobileAuth";
-import { isPaidAccount, checkConversationQuota, recordConversationUsage } from "@/lib/usageLimit";
 import { getWorkspaceInstructionsForUser } from "@/lib/workspace";
 
 export async function POST(request: Request) {
@@ -33,7 +32,6 @@ export async function POST(request: Request) {
 
   const session = await auth();
   const userId = session?.user?.id ?? (await getMobileUserId(request)) ?? undefined;
-  const paid = await isPaidAccount(userId);
 
   if (userId) {
     try {
@@ -41,23 +39,6 @@ export async function POST(request: Request) {
     } catch (err) {
       console.error("Workspace instructions lookup failed:", err);
     }
-  }
-
-  // The old per-network mobile-data free-message wall existed to stop
-  // SIM-cycling abuse of anonymous guest access — now that every user must
-  // sign in with a real Google account first (no more guest trial), that
-  // threat model doesn't apply, so it's gone. What's left is per-account:
-  // signed-in, unpaid: 10 free messages per conversation, renewing every 24h.
-  const conversationId = typeof body.conversationId === "string" ? body.conversationId : null;
-  if (userId && conversationId) {
-    const quotaMessage = await checkConversationQuota(userId, conversationId, paid);
-    if (quotaMessage) {
-      return Response.json({ error: quotaMessage }, { status: 403 });
-    }
-  }
-
-  if (userId && conversationId) {
-    await recordConversationUsage(userId, conversationId, paid);
   }
 
   const stream = streamChatReply(messages, tool, personalization);
