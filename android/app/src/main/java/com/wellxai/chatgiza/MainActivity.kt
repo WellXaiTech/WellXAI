@@ -163,6 +163,7 @@ import androidx.compose.material.icons.outlined.AttachMoney
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Autorenew
 import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Business
 import androidx.compose.material.icons.outlined.CalendarMonth
