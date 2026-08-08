@@ -75,6 +75,16 @@ create index if not exists idx_api_keys_user on api_keys(user_id);
 create index if not exists idx_media_posts_created on media_posts(created_at desc);
 create index if not exists idx_media_comments_post on media_comments(post_id);
 
--- Row Level Security: off for now, all access goes through server-side API
--- routes using the secret key (same trust model as the existing @vercel/kv
--- usage -- the Postgres tables are never queried directly from the browser).
+-- Row Level Security: enabled with zero policies on every table. The app's
+-- server-side secret key (service_role) bypasses RLS entirely, so this
+-- doesn't affect our own API routes -- it just guarantees that if the
+-- public/anon key were ever exposed or misused client-side, it would see
+-- zero rows on every table instead of full read/write access.
+alter table users enable row level security;
+alter table workspaces enable row level security;
+alter table workspace_members enable row level security;
+alter table workspace_invites enable row level security;
+alter table api_keys enable row level security;
+alter table media_posts enable row level security;
+alter table media_likes enable row level security;
+alter table media_comments enable row level security;

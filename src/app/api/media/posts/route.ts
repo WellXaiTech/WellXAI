@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { ensureUserExists } from "@/lib/userIndex";
 import { getRequestUser } from "@/lib/requestUser";
+import { uploadPostImage } from "@/lib/mediaStorage";
 
 const MAX_TEXT_LENGTH = 2000;
-// No blob storage is wired up yet, so photos are inlined as base64 data
-// URLs right in the post row. Capped well under Vercel's request body
-// limit -- this is meant for a single shared photo, not a gallery.
+// The client still sends a base64 data URL (that's what the existing
+// upload flow produces) -- capped well under Vercel's request body limit.
+// The server uploads it to Supabase Storage and stores the resulting
+// public URL, not the base64 itself.
 const MAX_IMAGE_DATA_URL_LENGTH = 700_000;
 const FEED_PAGE_SIZE = 50;
 
@@ -83,7 +85,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => null);
   const text = typeof body?.text === "string" ? body.text.trim().slice(0, MAX_TEXT_LENGTH) : "";
-  const imageDataUrl =
+  const rawImageDataUrl =
     typeof body?.imageDataUrl === "string" &&
     body.imageDataUrl.startsWith("data:image/") &&
     body.imageDataUrl.length <= MAX_IMAGE_DATA_URL_LENGTH
@@ -92,16 +94,21 @@ export async function POST(req: NextRequest) {
   const sentiment: Sentiment | null =
     body?.sentiment === "bullish" || body?.sentiment === "neutral" || body?.sentiment === "bearish" ? body.sentiment : null;
 
-  if (!text && !imageDataUrl) {
+  if (!text && !rawImageDataUrl) {
     return NextResponse.json({ error: "A post needs text or a photo" }, { status: 400 });
   }
 
   try {
     await ensureUserExists(user.id, "", user.name, user.image ?? "");
 
+    const imageUrl = rawImageDataUrl ? await uploadPostImage(rawImageDataUrl) : null;
+    if (rawImageDataUrl && !imageUrl) {
+      return NextResponse.json({ error: "Failed to upload photo" }, { status: 500 });
+    }
+
     const { data, error } = await supabaseAdmin
       .from("media_posts")
-      .insert({ user_id: user.id, caption: text || null, image_url: imageDataUrl, sentiment })
+      .insert({ user_id: user.id, caption: text || null, image_url: imageUrl, sentiment })
       .select()
       .single();
     if (error || !data) throw error ?? new Error("insert failed");
@@ -113,7 +120,7 @@ export async function POST(req: NextRequest) {
         authorName: user.name,
         authorImage: user.image,
         text,
-        imageDataUrl,
+        imageDataUrl: imageUrl,
         sentiment,
         createdAt: new Date(data.created_at).getTime(),
         likeCount: 0,
