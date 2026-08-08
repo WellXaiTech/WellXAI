@@ -2183,18 +2183,18 @@ private fun imageProxyToJpeg(image: ImageProxy): ByteArray {
 private data class ChatGizaAnnouncement(val headline: String, val icon: ImageVector, val iconColor: Color)
 
 private val CHATGIZA_ANNOUNCEMENTS = listOf(
-  ChatGizaAnnouncement("ChatGiZa Pro is here — unlock full power", Icons.Outlined.AutoAwesome, Color(0xFF6D5DF6)),
-  ChatGizaAnnouncement("Try ChatGiZa Media today — share with the community", Icons.Outlined.Whatshot, Color(0xFF11998E)),
-  ChatGizaAnnouncement("Live Vision is ready — talk and show your camera", Icons.Outlined.Videocam, Color(0xFFEE0979)),
-  ChatGizaAnnouncement("Ask anything, anytime — ChatGiZa is here", Icons.Outlined.Bolt, Color(0xFFF7971E))
+  ChatGizaAnnouncement("GiZa Pro — smarter answers, deeper research", Icons.Outlined.AutoAwesome, Color(0xFF6D5DF6)),
+  ChatGizaAnnouncement("New: attach photos in chat — GiZa can see them", Icons.Outlined.Photo, Color(0xFFF7971E)),
+  ChatGizaAnnouncement("ChatGiZa Media — share and discover with the community", Icons.Outlined.Whatshot, Color(0xFF11998E)),
+  ChatGizaAnnouncement("Live Vision — talk to GiZa face to face", Icons.Outlined.Videocam, Color(0xFFEE0979))
 )
 
 // A flat fill read as plain/empty for a promo card -- this scatters a
-// fixed set of soft dots over a deep indigo base instead, giving it a
-// bit of texture without pulling focus from the headline. Fixed seed so
-// the speckle pattern doesn't jump around on every recomposition.
+// fixed set of soft dots over a deep plum base instead, giving it a bit
+// of texture without pulling focus from the headline. Fixed seed so the
+// speckle pattern doesn't jump around on every recomposition.
 private fun Modifier.speckledEventsBackground(): Modifier = this.drawBehind {
-  drawRect(Color(0xFF20233A))
+  drawRect(Brush.linearGradient(listOf(Color(0xFF2C2350), Color(0xFF241A3D))))
   val rnd = kotlin.random.Random(7)
   repeat(70) {
     val x = rnd.nextFloat() * size.width
@@ -2219,7 +2219,7 @@ private fun ChatGizaEventsCard() {
       .padding(horizontal = 10.dp, vertical = 4.dp)
       .clip(RoundedCornerShape(20.dp))
       .speckledEventsBackground()
-      .padding(horizontal = 16.dp, vertical = 14.dp)
+      .padding(horizontal = 16.dp, vertical = 10.dp)
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
       Crossfade(targetState = index, label = "eventsIcon") { i ->
@@ -2248,14 +2248,14 @@ private fun ChatGizaEventsCard() {
     Box(
       modifier = Modifier
         .align(Alignment.TopEnd)
-        .clip(RoundedCornerShape(10.dp))
-        .background(colorScheme.onBackground.copy(alpha = 0.12f))
-        .padding(horizontal = 8.dp, vertical = 3.dp)
+        .clip(RoundedCornerShape(8.dp))
+        .background(Color.White.copy(alpha = 0.12f))
+        .padding(horizontal = 6.dp, vertical = 2.dp)
     ) {
       Text(
         "${index + 1}/${CHATGIZA_ANNOUNCEMENTS.size}",
-        color = colorScheme.onBackground.copy(alpha = 0.7f),
-        fontSize = 11.sp,
+        color = Color.White.copy(alpha = 0.7f),
+        fontSize = 9.sp,
         fontWeight = FontWeight.Medium
       )
     }
@@ -2419,21 +2419,31 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
         ) {
           // Tab row — only "History" has a real dataset behind it; the
           // other three are visual-only until there's an actual GiZa/
-          // Private/V2 concept to filter into.
+          // Private/V2 concept to filter into. Wrapped in its own pill
+          // background (instead of sitting bare on the card) so it reads
+          // as one dedicated control, with a second highlight pill behind
+          // whichever tab is selected.
           Row(
-            horizontalArrangement = Arrangement.spacedBy(18.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier
-              .horizontalScroll(rememberScrollState())
               .padding(horizontal = 14.dp)
+              .clip(RoundedCornerShape(20.dp))
+              .background(colorScheme.onBackground.copy(alpha = 0.06f))
+              .horizontalScroll(rememberScrollState())
+              .padding(6.dp)
           ) {
             listOf("History", "GiZa", "Private", "V2").forEach { tab ->
               val selected = selectedHistoryTab == tab
               Text(
                 tab,
                 color = if (selected) colorScheme.onBackground else colorScheme.onBackground.copy(alpha = 0.4f),
-                fontSize = 15.sp,
+                fontSize = 14.sp,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.clickable { selectedHistoryTab = tab }
+                modifier = Modifier
+                  .clip(RoundedCornerShape(16.dp))
+                  .background(if (selected) colorScheme.onBackground.copy(alpha = 0.12f) else Color.Transparent)
+                  .clickable { selectedHistoryTab = tab }
+                  .padding(horizontal = 12.dp, vertical = 6.dp)
               )
             }
           }
