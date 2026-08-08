@@ -1337,9 +1337,14 @@ private fun ChatGizaMediaScreen(viewModel: ChatViewModel) {
   var showCreate by remember { mutableStateOf(false) }
   var showPostComposer by remember { mutableStateOf(false) }
   var replyingToPost by remember { mutableStateOf<ApiMediaPost?>(null) }
-  var selectedFeedTab by remember { mutableStateOf("Discover") }
   var expandedCommentsPostId by remember { mutableStateOf<String?>(null) }
-  val visiblePosts = viewModel.mediaPosts
+  var searchOpen by remember { mutableStateOf(false) }
+  var searchQuery by remember { mutableStateOf("") }
+  val visiblePosts = remember(viewModel.mediaPosts, searchQuery) {
+    val q = searchQuery.trim()
+    if (q.isEmpty()) viewModel.mediaPosts
+    else viewModel.mediaPosts.filter { it.text.contains(q, ignoreCase = true) || it.authorName.contains(q, ignoreCase = true) }
+  }
 
   Scaffold(
     topBar = {
@@ -1381,56 +1386,89 @@ private fun ChatGizaMediaScreen(viewModel: ChatViewModel) {
       }
     },
     bottomBar = {
-      // Reference feed's own tab row (Discover/Following/Campaign/Smart)
-      // -- visual-only for now since there's still just one shared post
-      // list behind them, same as History's own tab row. Lives in its
-      // own bottom bar per the sketch, not scrolling with the feed.
+      // Icon-only bottom nav (Home / Reels / Explore / Search / Profile)
+      // replacing the old Discover/Following/Campaign/Smart text tabs.
+      // Reels, Explore, and Profile are visual-only for now -- same
+      // "ship the layout, wire it up later" precedent those text tabs
+      // set -- Home (always "active", this screen) and Search are real.
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
-          .background(Color(0xFF23252B))
+          .background(Color(0xFF161616))
           .navigationBarsPadding()
-          .padding(vertical = 14.dp)
-          .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(24.dp)
+          .padding(horizontal = 20.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
       ) {
-        Spacer(modifier = Modifier.width(2.dp))
-        listOf("Discover", "Following", "Campaign", "Smart").forEach { tab ->
-          Text(
-            tab,
-            color = if (tab == selectedFeedTab) Color.White else Color.White.copy(alpha = 0.45f),
-            fontSize = 15.sp,
-            fontWeight = if (tab == selectedFeedTab) FontWeight.Bold else FontWeight.Medium,
-            modifier = Modifier.clickable { selectedFeedTab = tab }
-          )
+        Box(
+          modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color.White.copy(alpha = 0.12f))
+            .padding(horizontal = 18.dp, vertical = 8.dp)
+        ) {
+          Icon(Icons.Filled.Home, contentDescription = "Home", tint = Color.White, modifier = Modifier.size(24.dp))
+        }
+        Icon(Icons.Outlined.SmartDisplay, contentDescription = "Reels", tint = Color.White, modifier = Modifier.size(26.dp))
+        Icon(Icons.Outlined.Send, contentDescription = "Explore", tint = Color.White, modifier = Modifier.size(24.dp))
+        IconButton(onClick = { searchOpen = !searchOpen }) {
+          Icon(Icons.Outlined.Search, contentDescription = "Search", tint = Color.White, modifier = Modifier.size(24.dp))
+        }
+        if (viewModel.userImage != null) {
+          AsyncImage(model = viewModel.userImage, contentDescription = "Profile", modifier = Modifier.size(28.dp).clip(CircleShape))
+        } else {
+          Icon(Icons.Outlined.AccountCircle, contentDescription = "Profile", tint = Color.White, modifier = Modifier.size(28.dp))
         }
       }
     },
     containerColor = Color(0xFF161616)
   ) { padding ->
-    // Top padding skipped on this Box -- the feed scrolls up underneath
-    // the (transparent) top bar instead of stopping at a hard boundary
-    // below it, same fix as the Chat screen's own "wall" issue. Bottom
-    // padding is kept so the feed and the "+" button stop above the new
-    // bottom tab bar instead of hiding behind it.
-    Box(modifier = Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding())) {
+    // Full top padding now (the header stopped being a transparent
+    // overlay once it grew a solid background + the Stories row's real
+    // tap targets) -- content used to scroll up underneath it, which
+    // read as posts "intruding" into the header on scroll.
+    Box(modifier = Modifier.fillMaxSize().padding(top = padding.calculateTopPadding(), bottom = padding.calculateBottomPadding())) {
       LaunchedEffect(Unit) { viewModel.loadMediaPosts() }
       LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-          start = 16.dp,
-          end = 16.dp,
-          top = padding.calculateTopPadding() + 12.dp,
-          bottom = 16.dp
-        ),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
       ) {
+        if (searchOpen) {
+          item {
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              modifier = Modifier
+                .fillMaxWidth()
+                .height(38.dp)
+                .clip(RoundedCornerShape(19.dp))
+                .background(Color.White.copy(alpha = 0.08f))
+                .padding(horizontal = 12.dp)
+            ) {
+              Icon(Icons.Outlined.Search, contentDescription = null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(16.dp))
+              Spacer(modifier = Modifier.width(6.dp))
+              Box(modifier = Modifier.weight(1f)) {
+                if (searchQuery.isEmpty()) {
+                  Text("Search posts", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+                }
+                BasicTextField(
+                  value = searchQuery,
+                  onValueChange = { searchQuery = it },
+                  singleLine = true,
+                  textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 13.sp),
+                  cursorBrush = SolidColor(Color.White),
+                  modifier = Modifier.fillMaxWidth()
+                )
+              }
+            }
+          }
+        }
         if (visiblePosts.isEmpty()) {
           item {
             Box(modifier = Modifier.fillMaxWidth().padding(vertical = 60.dp), contentAlignment = Alignment.Center) {
               if (viewModel.loadingMediaPosts) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(28.dp))
+              } else if (searchQuery.isNotEmpty()) {
+                Text("No matches.", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
               }
               // Otherwise left empty on purpose — no placeholder icon/text.
             }
