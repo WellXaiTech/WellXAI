@@ -102,6 +102,13 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var conversations by mutableStateOf<List<ApiConversation>>(emptyList())
     private set
 
+  // Conversations started by dictating the first message rather than typing
+  // it -- History shows these differently (a mic icon + "VOICE" instead of
+  // the message text). Local-only/session-only: there's no backend field
+  // for this yet, so it resets on a fresh history load from the server.
+  var voiceConversationIds by mutableStateOf<Set<String>>(emptySet())
+    private set
+
   var loadingHistory by mutableStateOf(false)
     private set
 
@@ -972,6 +979,9 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     val conversationId = activeConversationId ?: UUID.randomUUID().toString()
     val isNewConversation = activeConversationId == null
     activeConversationId = conversationId
+    if (viaVoice && isNewConversation) {
+      voiceConversationIds = voiceConversationIds + conversationId
+    }
 
     activeChatJob = viewModelScope.launch {
       val history = messages.dropLast(1).map { ChatMessage(it.role, it.content) }
