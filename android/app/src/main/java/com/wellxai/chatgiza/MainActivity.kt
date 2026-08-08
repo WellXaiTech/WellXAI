@@ -2245,7 +2245,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
 
         // Big empty gap between Search and Events, matching the reference's
         // large open space above its promo card.
-        Spacer(modifier = Modifier.height(120.dp))
+        Spacer(modifier = Modifier.height(170.dp))
 
         // "Events" card — bigger now, same charcoal as the History card
         // below for a consistent palette across the screen. "Events" is
@@ -2277,9 +2277,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           }
         }
 
-        // Small gap — Events and History should sit close together, not
-        // far apart like before.
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(32.dp))
       }
 
       // History tab + the whole conversation list share ONE background —
@@ -2338,6 +2336,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
                 HistoryRow(
                   convo,
                   isVoice = viewModel.voiceConversationIds.contains(convo.id),
+                  hapticsEnabled = viewModel.hapticsEnabled && viewModel.hapticsOnPress,
                   onClick = { viewModel.selectConversation(convo.id) },
                   onMenuClick = { menuConvo = convo }
                 )
@@ -3292,17 +3291,12 @@ private fun MediaCreatorPadIcon(modifier: Modifier = Modifier, tint: Color = Col
   }
 }
 
-private val AVATAR_GRADIENTS = listOf(
-  listOf(Color(0xFF6D5DF6), Color(0xFF2979FF)),
-  listOf(Color(0xFFFF6B6B), Color(0xFFFF9F43)),
-  listOf(Color(0xFF11998E), Color(0xFF38EF7D)),
-  listOf(Color(0xFFF7971E), Color(0xFFFFD200)),
-  listOf(Color(0xFFEE0979), Color(0xFFFF6A00)),
-  listOf(Color(0xFF00C6FF), Color(0xFF0072FF))
-)
+// One consistent gradient for every avatar now, not a different color per
+// conversation -- a different color per row read as visually noisy/random
+// rather than meaningful, and made the list harder to scan at a glance.
+private val AVATAR_GRADIENT = listOf(Color(0xFF4A4D57), Color(0xFF2C2E35))
 
-private fun avatarGradient(seed: String): List<Color> =
-  AVATAR_GRADIENTS[Math.floorMod(seed.hashCode(), AVATAR_GRADIENTS.size)]
+private fun avatarGradient(seed: String): List<Color> = AVATAR_GRADIENT
 
 /** Truncates a conversation title to a sane max length, breaking on a word
  * boundary when there is one close enough to the cutoff so the preview
@@ -3324,7 +3318,13 @@ private fun truncateTitle(title: String, maxChars: Int = 36): String {
 // (name/number bold, message preview below, "14 May" at top-right) rather
 // than the previous title-then-full-date layout.
 @Composable
-private fun HistoryRow(convo: ApiConversation, isVoice: Boolean, onClick: () -> Unit, onMenuClick: () -> Unit) {
+private fun HistoryRow(
+  convo: ApiConversation,
+  isVoice: Boolean,
+  hapticsEnabled: Boolean,
+  onClick: () -> Unit,
+  onMenuClick: () -> Unit
+) {
   val lastMessage = convo.messages.lastOrNull()
   val dateText = lastMessage?.createdAt?.let { formatHistoryRowDate(it) } ?: ""
   val lastReply = convo.messages.lastOrNull { it.role == "assistant" }?.content?.trim().orEmpty()
@@ -3334,10 +3334,19 @@ private fun HistoryRow(convo: ApiConversation, isVoice: Boolean, onClick: () -> 
   // Presses lift the row (translate up + a soft shadow) and settle back
   // down on release, instead of the row just sitting flat with no tactile
   // feedback before the options menu (or opening the conversation) fires.
+  // The lift is deliberately large (not a subtle 2-3dp nudge) plus a real
+  // vibration on press-down, so it reads as a clear physical response
+  // rather than something easy to miss.
   val interactionSource = remember { MutableInteractionSource() }
   val isPressed by interactionSource.collectIsPressedAsState()
-  val liftOffset by animateDpAsState(if (isPressed) (-3).dp else 0.dp, label = "historyRowLift")
-  val liftElevation by animateDpAsState(if (isPressed) 8.dp else 0.dp, label = "historyRowElevation")
+  val liftOffset by animateDpAsState(if (isPressed) (-14).dp else 0.dp, label = "historyRowLift")
+  val liftElevation by animateDpAsState(if (isPressed) 18.dp else 0.dp, label = "historyRowElevation")
+  val haptic = LocalHapticFeedback.current
+  LaunchedEffect(isPressed) {
+    if (isPressed && hapticsEnabled) {
+      haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+    }
+  }
 
   // No card background here by design — rows sit directly on the plain
   // background, matching the reference's BTC/CORE/MNT rows (no per-row
