@@ -51,6 +51,7 @@ create table if not exists media_posts (
   user_id text not null references users(id),
   caption text,
   image_url text,
+  video_url text,
   sentiment text, -- 'bullish' | 'neutral' | 'bearish' | null
   created_at timestamptz not null default now()
 );

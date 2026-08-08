@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getRequestUser } from "@/lib/requestUser";
-import { deletePostImage } from "@/lib/mediaStorage";
+import { deletePostImage, deletePostVideo } from "@/lib/mediaStorage";
 
 // Only the post's own author can remove it -- this is a shared public feed,
 // not a local per-device list, so ownership has to be checked server-side.
@@ -13,7 +13,11 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const { id } = await params;
 
   try {
-    const { data: post } = await supabaseAdmin.from("media_posts").select("user_id, image_url").eq("id", id).maybeSingle();
+    const { data: post } = await supabaseAdmin
+      .from("media_posts")
+      .select("user_id, image_url, video_url")
+      .eq("id", id)
+      .maybeSingle();
     if (!post) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
@@ -21,7 +25,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return NextResponse.json({ error: "You can only delete your own posts" }, { status: 403 });
     }
     await supabaseAdmin.from("media_posts").delete().eq("id", id);
-    await deletePostImage(post.image_url);
+    await Promise.all([deletePostImage(post.image_url), deletePostVideo(post.video_url)]);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Media post DELETE error:", err);
