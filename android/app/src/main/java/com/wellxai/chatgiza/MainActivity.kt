@@ -567,7 +567,11 @@ private fun SignedOutScreen(signingIn: Boolean, error: String?, onSignIn: () -> 
 private val TOOL_LABELS = mapOf(
   "web_search" to "Web search",
   "deep_research" to "Deep research",
-  "deep_think" to "Deep Think"
+  "deep_think" to "Deep Think",
+  "document_writer" to "Document Writer",
+  "sql_helper" to "SQL Helper",
+  "python_helper" to "Python Helper",
+  "business_assistant" to "Business Assistant"
 )
 
 @Composable
@@ -1092,6 +1096,10 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
           DropdownMenuItem(text = { Text("Web search") }, onClick = { viewModel.selectTool("web_search"); toolMenuOpen = false })
           DropdownMenuItem(text = { Text("Deep research") }, onClick = { viewModel.selectTool("deep_research"); toolMenuOpen = false })
           DropdownMenuItem(text = { Text("Deep Think") }, onClick = { viewModel.selectTool("deep_think"); toolMenuOpen = false })
+          DropdownMenuItem(text = { Text("Document Writer") }, onClick = { viewModel.selectTool("document_writer"); toolMenuOpen = false })
+          DropdownMenuItem(text = { Text("SQL Helper") }, onClick = { viewModel.selectTool("sql_helper"); toolMenuOpen = false })
+          DropdownMenuItem(text = { Text("Python Helper") }, onClick = { viewModel.selectTool("python_helper"); toolMenuOpen = false })
+          DropdownMenuItem(text = { Text("Business Assistant") }, onClick = { viewModel.selectTool("business_assistant"); toolMenuOpen = false })
         }
       }
     }
@@ -1471,6 +1479,10 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
                   DropdownMenuItem(text = { Text("Web search") }, onClick = { viewModel.selectTool("web_search"); toolMenuOpen = false })
                   DropdownMenuItem(text = { Text("Deep research") }, onClick = { viewModel.selectTool("deep_research"); toolMenuOpen = false })
                   DropdownMenuItem(text = { Text("Deep Think") }, onClick = { viewModel.selectTool("deep_think"); toolMenuOpen = false })
+                  DropdownMenuItem(text = { Text("Document Writer") }, onClick = { viewModel.selectTool("document_writer"); toolMenuOpen = false })
+                  DropdownMenuItem(text = { Text("SQL Helper") }, onClick = { viewModel.selectTool("sql_helper"); toolMenuOpen = false })
+                  DropdownMenuItem(text = { Text("Python Helper") }, onClick = { viewModel.selectTool("python_helper"); toolMenuOpen = false })
+                  DropdownMenuItem(text = { Text("Business Assistant") }, onClick = { viewModel.selectTool("business_assistant"); toolMenuOpen = false })
                 }
               }
               TextField(
@@ -5211,6 +5223,10 @@ private fun SettingsScreen(viewModel: ChatViewModel) {
       SettingsSwitchRow("Deep think", data.plugins.deepThink) { viewModel.togglePlugin("deep_think") }
       SettingsSwitchRow("Image generation", data.plugins.image) { viewModel.togglePlugin("image") }
       SettingsSwitchRow("Video generation", data.plugins.video) { viewModel.togglePlugin("video") }
+      SettingsSwitchRow("Document Writer", data.plugins.documentWriter) { viewModel.togglePlugin("document_writer") }
+      SettingsSwitchRow("SQL Helper", data.plugins.sqlHelper) { viewModel.togglePlugin("sql_helper") }
+      SettingsSwitchRow("Python Helper", data.plugins.pythonHelper) { viewModel.togglePlugin("python_helper") }
+      SettingsSwitchRow("Business Assistant", data.plugins.businessAssistant) { viewModel.togglePlugin("business_assistant") }
 
       Spacer(modifier = Modifier.height(20.dp))
       SettingsSectionTitle("Notifications")

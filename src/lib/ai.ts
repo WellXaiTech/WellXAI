@@ -7,7 +7,15 @@ export type ChatMessage = {
   content: string | ChatContentPart[];
 };
 
-export type ChatTool = "web_search" | "deep_research" | "deep_think" | null;
+export type ChatTool =
+  | "web_search"
+  | "deep_research"
+  | "deep_think"
+  | "document_writer"
+  | "sql_helper"
+  | "python_helper"
+  | "business_assistant"
+  | null;
 
 export type CompanyProfile = {
   name?: string;
@@ -106,6 +114,51 @@ const DEEP_THINK_PROMPT =
   "asked before writing the final answer. Prefer a thorough, carefully-verified answer over a fast one. Still " +
   "write the final reply in clear, well-organized prose — don't show raw scratch notes.";
 
+const DOCUMENT_WRITER_PROMPT =
+  CAPABILITIES_PROMPT +
+  "\n\nYou are currently in Document Writer mode. The user wants a real, finished document — a report, letter, " +
+  "proposal, contract draft, essay, article, or similar — not a casual chat reply. Write it fully formed and " +
+  "ready to use: proper structure (title, sections/headings where appropriate), a complete and professional tone " +
+  "matched to the document type, and no placeholder text like \"[insert details here]\" unless the user genuinely " +
+  "gave you no way to fill that part in. Wrap the document itself between [[PDF_START]] and [[PDF_END]] markers " +
+  "exactly as described above, with any brief conversational lead-in or follow-up outside the markers.";
+
+const SQL_HELPER_PROMPT =
+  CAPABILITIES_PROMPT +
+  "\n\nYou are currently in SQL Helper mode. Help the user write, fix, optimize, or understand SQL: write correct, " +
+  "well-formatted queries in a markdown ```sql code block, briefly explain what the query does and any important " +
+  "assumptions (e.g. table/column names you inferred), and flag anything destructive (DROP/DELETE/TRUNCATE/UPDATE " +
+  "without a WHERE clause) clearly before the code so the user notices it. You do not have a live database " +
+  "connection or execute queries yourself — always say so plainly if asked to \"run\" something, rather than " +
+  "pretending to and inventing fake results.";
+
+const PYTHON_HELPER_PROMPT =
+  CAPABILITIES_PROMPT +
+  "\n\nYou are currently in Python Helper mode. Write clean, correct, idiomatic Python for whatever the user " +
+  "needs — scripts, functions, data processing, algorithms, debugging their code, or explaining how something " +
+  "works. Use a markdown ```python code block for code, and briefly explain the approach and any notable " +
+  "tradeoffs or edge cases. You do not execute code yourself — never claim a script \"ran successfully\" or " +
+  "invent output; if the user wants to actually run it, tell them to use the Code Assistant panel or their own " +
+  "environment.";
+
+const BUSINESS_ASSISTANT_PROMPT =
+  CAPABILITIES_PROMPT +
+  "\n\nYou are currently in Business Assistant mode, helping the user with practical business tasks: emails, " +
+  "meeting agendas and notes, proposals, pitch decks outlines, pricing/strategy thinking, hiring materials, " +
+  "customer communication, and similar professional work. Be concrete and decisive rather than generic — give " +
+  "real drafts and recommendations, not just frameworks to fill in yourself, and ask one short clarifying " +
+  "question first only if you genuinely can't produce something useful without it.";
+
+const TOOL_PROMPTS: Record<string, string> = {
+  default: SYSTEM_PROMPT,
+  deep_research: DEEP_RESEARCH_PROMPT,
+  deep_think: DEEP_THINK_PROMPT,
+  document_writer: DOCUMENT_WRITER_PROMPT,
+  sql_helper: SQL_HELPER_PROMPT,
+  python_helper: PYTHON_HELPER_PROMPT,
+  business_assistant: BUSINESS_ASSISTANT_PROMPT,
+};
+
 const CANNED_REPLIES = [
   "Happy to help with that — could you tell me a bit more about what you're trying to achieve?",
   "Good question. Here's a starting point: break it down into smaller steps and tackle one at a time.",
@@ -186,10 +239,7 @@ async function streamOpenAi(
 
   const usesSearch = tool === "web_search" || tool === "deep_research";
   const deepThink = tool === "deep_think";
-  const system = buildSystemPrompt(
-    tool === "deep_research" ? DEEP_RESEARCH_PROMPT : deepThink ? DEEP_THINK_PROMPT : SYSTEM_PROMPT,
-    personalization
-  );
+  const system = buildSystemPrompt(TOOL_PROMPTS[tool ?? "default"] ?? SYSTEM_PROMPT, personalization);
 
   const completion = await client.chat.completions.create({
     model: usesSearch ? "gpt-4o-search-preview" : "gpt-5.5",
