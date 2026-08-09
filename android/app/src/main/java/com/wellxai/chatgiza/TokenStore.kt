@@ -116,14 +116,15 @@ class TokenStore(context: Context) {
     prefs.edit().putBoolean(KEY_AGE_CONFIRMED_18PLUS, value).apply()
   }
 
-  /** Opt-in bridge between Chat and ChatGiZa Media: when on, ChatGiZa's own
-   * replies get auto-posted to the signed-in user's Extra Media feed. Off
-   * by default, and deliberately NOT preserved across clear() (sign-out) --
-   * this posts to a public feed under whichever account is signed in, so a
-   * new sign-in on a shared device shouldn't silently inherit it. */
-  fun getAutoShareToExtraMedia(): Boolean = prefs.getBoolean(KEY_AUTO_SHARE_TO_MEDIA, false)
-  fun setAutoShareToExtraMedia(value: Boolean) {
-    prefs.edit().putBoolean(KEY_AUTO_SHARE_TO_MEDIA, value).apply()
+  /** Permission gate for the Chat<->Extra Media bridge (granted via the "+"
+   * -> "Connect With ChatGiZa" sheet in Extra Media). Off by default, and
+   * deliberately NOT preserved across clear() (sign-out) -- this permission
+   * is what lets chat replies reach a public feed under whichever account
+   * is signed in, so a new sign-in on a shared device shouldn't silently
+   * inherit it. */
+  fun getChatGizaMediaConnected(): Boolean = prefs.getBoolean(KEY_CHATGIZA_MEDIA_CONNECTED, false)
+  fun setChatGizaMediaConnected(value: Boolean) {
+    prefs.edit().putBoolean(KEY_CHATGIZA_MEDIA_CONNECTED, value).apply()
   }
 
   /** Wipes the session but keeps device-level prefs (haptics, voice) that
@@ -177,6 +178,6 @@ class TokenStore(context: Context) {
     private const val KEY_PERSONALITY = "personality"
     private const val KEY_CUSTOM_PERSONALITY_TEXT = "custom_personality_text"
     private const val KEY_AGE_CONFIRMED_18PLUS = "age_confirmed_18plus"
-    private const val KEY_AUTO_SHARE_TO_MEDIA = "auto_share_to_extra_media"
+    private const val KEY_CHATGIZA_MEDIA_CONNECTED = "chatgiza_media_connected"
   }
 }

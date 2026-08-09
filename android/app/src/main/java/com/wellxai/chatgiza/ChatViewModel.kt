@@ -449,20 +449,23 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     tokenStore.setThemeMode(value)
   }
 
-  // Opt-in bridge between Chat and ChatGiZa Media (Extra tab) -- off by
-  // default; when on, ChatGiZa's own replies (not the user's prompts) are
-  // posted to the user's own Extra Media feed automatically as they land.
-  var autoShareRepliesToMedia by mutableStateOf(tokenStore.getAutoShareToExtraMedia())
+  // Permission gate for the Chat<->Extra Media bridge: the user connects
+  // once (via the "+" -> "Connect With ChatGiZa" sheet in Extra Media),
+  // then a "Push to Extra" action appears under substantial ChatGiZa
+  // replies (documents/letters, not short conversational ones) so they can
+  // send that specific reply to their own Extra Media feed if they want.
+  // Nothing is ever posted automatically -- every push is a deliberate tap.
+  var chatGizaMediaConnected by mutableStateOf(tokenStore.getChatGizaMediaConnected())
     private set
 
-  fun updateAutoShareRepliesToMedia(value: Boolean) {
-    autoShareRepliesToMedia = value
-    tokenStore.setAutoShareToExtraMedia(value)
+  fun setChatGizaMediaConnected(value: Boolean) {
+    chatGizaMediaConnected = value
+    tokenStore.setChatGizaMediaConnected(value)
   }
 
-  private fun maybeAutoShareReply(content: String) {
-    if (!autoShareRepliesToMedia || content.isBlank()) return
-    createMediaPost(content, emptyList(), null, null, null) {}
+  fun pushReplyToExtraMedia(content: String, onDone: (Boolean) -> Unit) {
+    if (content.isBlank()) return onDone(false)
+    createMediaPost(content, emptyList(), null, null, null, onDone)
   }
 
   var hapticsEnabled by mutableStateOf(tokenStore.getHapticsEnabled())
@@ -1154,8 +1157,6 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         messages = messages.map { m ->
           if (m.id == assistantId && m.content.isEmpty()) m.copy(content = "(failed to respond)") else m
         }
-      } else {
-        maybeAutoShareReply(messages.firstOrNull { it.id == assistantId }?.content.orEmpty())
       }
 
       val titleFallback = text.take(60).ifEmpty { "Photo" }
@@ -1210,8 +1211,6 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         messages = messages.map { m ->
           if (m.id == assistantId && m.content.isEmpty()) m.copy(content = "(failed to respond)") else m
         }
-      } else {
-        maybeAutoShareReply(messages.firstOrNull { it.id == assistantId }?.content.orEmpty())
       }
 
       val updated = ApiConversation(

@@ -97,6 +97,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -862,17 +863,6 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
           }
         },
         actions = {
-          // Opt-in toggle: when lit, ChatGiZa's own replies auto-post to
-          // the user's Extra Media feed as they arrive. Off (dim) by
-          // default -- nothing leaves the chat unless this is turned on.
-          IconButton(onClick = { viewModel.updateAutoShareRepliesToMedia(!viewModel.autoShareRepliesToMedia) }) {
-            Icon(
-              Icons.Outlined.Share,
-              contentDescription = if (viewModel.autoShareRepliesToMedia) "Auto-share to Extra Media: on" else "Auto-share to Extra Media: off",
-              tint = if (viewModel.autoShareRepliesToMedia) Color(0xFFFFC94A) else colorScheme.onBackground.copy(alpha = 0.45f),
-              modifier = Modifier.size(20.dp)
-            )
-          }
           // Pill with two separate icons — new chat and account/more —
           // instead of one icon that was labeled "Account" but drew a
           // pencil and actually opened Account (New Chat had no icon here).
@@ -934,9 +924,11 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
               message = message,
               showActions = !isStreamingThis,
               isSpeaking = speakingMessageId == message.id,
+              chatGizaMediaConnected = viewModel.chatGizaMediaConnected,
               onSpeakToggle = { toggleSpeak(message) },
               onRegenerate = { viewModel.regenerateMessage(message.id) },
-              onDelete = { viewModel.deleteMessage(message.id) }
+              onDelete = { viewModel.deleteMessage(message.id) },
+              onPushToExtra = { onDone -> viewModel.pushReplyToExtraMedia(message.content, onDone) }
             )
           }
         }
@@ -2741,9 +2733,15 @@ internal fun MediaPostVideoPlayer(url: String, modifier: Modifier = Modifier) {
   )
 }
 
+// "+" in ChatGiZa Media now opens this instead of a Post/Article/Video
+// menu -- it's the permission gate for the Chat<->Extra Media bridge.
+// Connecting only flips a local flag (ChatViewModel.chatGizaMediaConnected)
+// that unlocks the "Push to Extra" action under substantial ChatGiZa
+// replies in Chat (see MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH) -- nothing is
+// posted automatically just from connecting.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ChatGizaMediaCreateSheet(onDismiss: () -> Unit, onPostClick: () -> Unit) {
+internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () -> Unit) {
   ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFF161616)) {
     Column(
       modifier = Modifier
@@ -2751,27 +2749,40 @@ internal fun ChatGizaMediaCreateSheet(onDismiss: () -> Unit, onPostClick: () -> 
         .padding(horizontal = 20.dp)
         .padding(bottom = 32.dp)
     ) {
-      Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        MediaCreateOption("Post", Modifier.weight(1f), onPostClick) {
-          Icon(Icons.Filled.Edit, contentDescription = "Post", tint = Color(0xFFFFC94A), modifier = Modifier.size(26.dp))
-        }
-        MediaCreateOption("Article", Modifier.weight(1f), onDismiss) {
-          Icon(Icons.Outlined.Description, contentDescription = "Article", tint = Color(0xFFFFC94A), modifier = Modifier.size(24.dp))
-        }
-        MediaCreateOption("Video", Modifier.weight(1f), onDismiss) {
-          MediaVideoIcon(modifier = Modifier.size(24.dp), tint = Color(0xFFFFC94A))
-        }
-      }
+      Text("Connect With ChatGiZa", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(10.dp))
-      // Side by side under Post/Video (not stacked full-width rows) --
-      // matches the sketch: Creator Center sits under Post, CreatorPad
-      // sits under Video.
-      Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        MediaCreateWideRow("Creator Center", Modifier.weight(1f), onDismiss) {
-          Icon(Icons.Outlined.Widgets, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+      Text(
+        "Ruhusu akaunti yako ya Extra kuingiliana moja kwa moja na ChatGiZa. " +
+          "Ukishaunganisha, chini ya barua, makala, picha au video unayotengeneza kwenye chat " +
+          "utapata chaguo la kuituma moja kwa moja kwenye Extra Media -- ukitaka tu. " +
+          "Maongezi ya kawaida (kama \"Habari\" au \"Mambo vipi\") hayapewi chaguo hili.",
+        color = Color.White.copy(alpha = 0.75f),
+        fontSize = 14.sp,
+        lineHeight = 20.sp
+      )
+      Spacer(modifier = Modifier.height(24.dp))
+      if (viewModel.chatGizaMediaConnected) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Icon(Icons.Filled.Check, contentDescription = null, tint = Color(0xFF16C784), modifier = Modifier.size(20.dp))
+          Spacer(modifier = Modifier.width(8.dp))
+          Text("Connected", color = Color(0xFF16C784), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         }
-        MediaCreateWideRow("CreatorPad", Modifier.weight(1f), onDismiss) {
-          MediaCreatorPadIcon(modifier = Modifier.size(20.dp), tint = Color.White)
+        Spacer(modifier = Modifier.height(14.dp))
+        OutlinedButton(
+          onClick = { viewModel.setChatGizaMediaConnected(false) },
+          modifier = Modifier.fillMaxWidth(),
+          shape = RoundedCornerShape(20.dp)
+        ) {
+          Text("Disconnect")
+        }
+      } else {
+        Button(
+          onClick = { viewModel.setChatGizaMediaConnected(true) },
+          modifier = Modifier.fillMaxWidth(),
+          colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC94A)),
+          shape = RoundedCornerShape(20.dp)
+        ) {
+          Text("Connect", color = Color.Black, fontWeight = FontWeight.SemiBold)
         }
       }
     }
@@ -3134,46 +3145,6 @@ private fun SentimentToggleIcon(icon: ImageVector, tint: Color, active: Boolean,
   }
 }
 
-@Composable
-private fun MediaCreateOption(label: String, modifier: Modifier = Modifier, onClick: () -> Unit, icon: @Composable () -> Unit) {
-  Column(
-    modifier = modifier
-      .clip(RoundedCornerShape(14.dp))
-      .background(Color.White.copy(alpha = 0.06f))
-      .clickable(onClick = onClick)
-      .padding(vertical = 16.dp),
-    horizontalAlignment = Alignment.CenterHorizontally
-  ) {
-    icon()
-    Spacer(modifier = Modifier.height(8.dp))
-    Text(label, color = Color.White, fontSize = 13.sp)
-  }
-}
-
-@Composable
-private fun MediaCreateWideRow(label: String, modifier: Modifier = Modifier, onClick: () -> Unit, icon: @Composable () -> Unit) {
-  Row(
-    modifier = modifier
-      .clip(RoundedCornerShape(14.dp))
-      .background(Color.White.copy(alpha = 0.06f))
-      .clickable(onClick = onClick)
-      .padding(horizontal = 12.dp, vertical = 14.dp),
-    verticalAlignment = Alignment.CenterVertically
-  ) {
-    icon()
-    Spacer(modifier = Modifier.width(10.dp))
-    Text(
-      label,
-      color = Color.White,
-      fontSize = 13.sp,
-      fontWeight = FontWeight.Medium,
-      maxLines = 1,
-      softWrap = false,
-      overflow = TextOverflow.Clip
-    )
-  }
-}
-
 // Hand-drawn instead of Icons.Outlined.PhotoCamera -- that name doesn't
 // resolve in this project's bundled Material Icons Extended (broke CI),
 // and guessing another name risks the same failure again.
@@ -3237,41 +3208,6 @@ private fun MediaVideoIcon(modifier: Modifier = Modifier, tint: Color = Color.Wh
       close()
     }
     drawPath(playTriangle, color = tint)
-  }
-}
-
-// Hand-drawn to match the reference's ascending-steps + diamond glyph —
-// no Material Icons entry has that exact silhouette.
-@Composable
-private fun MediaCreatorPadIcon(modifier: Modifier = Modifier, tint: Color = Color.White) {
-  Canvas(modifier = modifier) {
-    val scale = size.width / 24f
-    val strokeW = 1.6f * scale
-    drawRoundRect(
-      color = tint,
-      topLeft = Offset(3f * scale, 15f * scale),
-      size = Size(6.5f * scale, 6f * scale),
-      cornerRadius = CornerRadius(1.4f * scale, 1.4f * scale),
-      style = Stroke(width = strokeW, cap = StrokeCap.Round)
-    )
-    drawRoundRect(
-      color = tint,
-      topLeft = Offset(11f * scale, 8f * scale),
-      size = Size(6.5f * scale, 13f * scale),
-      cornerRadius = CornerRadius(1.4f * scale, 1.4f * scale),
-      style = Stroke(width = strokeW, cap = StrokeCap.Round)
-    )
-    val cx = 14.25f * scale
-    val cy = 4.4f * scale
-    val r = 2.3f * scale
-    val diamond = Path().apply {
-      moveTo(cx, cy - r)
-      lineTo(cx + r, cy)
-      lineTo(cx, cy + r)
-      lineTo(cx - r, cy)
-      close()
-    }
-    drawPath(diamond, color = tint, style = Stroke(width = strokeW))
   }
 }
 
@@ -5698,9 +5634,11 @@ private fun MessageBubble(
   message: UiMessage,
   showActions: Boolean,
   isSpeaking: Boolean,
+  chatGizaMediaConnected: Boolean,
   onSpeakToggle: () -> Unit,
   onRegenerate: () -> Unit,
-  onDelete: () -> Unit
+  onDelete: () -> Unit,
+  onPushToExtra: ((onDone: (Boolean) -> Unit) -> Unit)
 ) {
   val isUser = message.role == "user"
   Column(modifier = Modifier.fillMaxWidth()) {
@@ -5736,9 +5674,11 @@ private fun MessageBubble(
       MessageActionBar(
         message = message,
         isSpeaking = isSpeaking,
+        chatGizaMediaConnected = chatGizaMediaConnected,
         onSpeakToggle = onSpeakToggle,
         onRegenerate = onRegenerate,
-        onDelete = onDelete
+        onDelete = onDelete,
+        onPushToExtra = onPushToExtra
       )
     }
   }
@@ -5762,18 +5702,27 @@ private fun ActionBarItem(icon: ImageVector, label: String, tint: Color = colorS
   }
 }
 
+// Below this length a reply reads as ordinary conversation ("Habari",
+// "Mambo vipi", a quick answer) rather than something worth publishing --
+// "Push to Extra" only shows up for replies that look like an actual
+// generated document/letter/article, not every back-and-forth line.
+private const val MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH = 150
+
 @Composable
 private fun MessageActionBar(
   message: UiMessage,
   isSpeaking: Boolean,
+  chatGizaMediaConnected: Boolean,
   onSpeakToggle: () -> Unit,
   onRegenerate: () -> Unit,
-  onDelete: () -> Unit
+  onDelete: () -> Unit,
+  onPushToExtra: ((onDone: (Boolean) -> Unit) -> Unit)
 ) {
   val context = LocalContext.current
   val clipboard = LocalClipboardManager.current
   var reaction by remember(message.id) { mutableStateOf<String?>(null) }
   var moreOpen by remember { mutableStateOf(false) }
+  var pushState by remember(message.id) { mutableStateOf("idle") } // idle | pushing | pushed
   val accent = Color(0xFF2979FF)
 
   Row(
@@ -5810,6 +5759,18 @@ private fun MessageActionBar(
           addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         context.startActivity(Intent.createChooser(intent, null))
+      }
+    }
+    if (chatGizaMediaConnected && message.content.length >= MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH) {
+      ActionBarItem(
+        icon = Icons.Filled.Send,
+        label = if (pushState == "pushed") "Sent" else "To Extra",
+        tint = if (pushState == "pushed") accent else colorScheme.onBackground
+      ) {
+        if (pushState == "idle") {
+          pushState = "pushing"
+          onPushToExtra { success -> pushState = if (success) "pushed" else "idle" }
+        }
       }
     }
     ActionBarItem(
