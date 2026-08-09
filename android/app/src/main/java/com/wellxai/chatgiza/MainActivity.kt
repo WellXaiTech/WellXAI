@@ -651,39 +651,6 @@ private fun DeleteIcon(tint: Color, modifier: Modifier = Modifier) {
   }
 }
 
-/** Matches the exact custom mic glyph the user supplied (24x24 viewBox:
- * rounded capsule body, bottom semicircle bracket, stand line). */
-@Composable
-private fun MicIconCustom(modifier: Modifier = Modifier, tint: Color = Color.White) {
-  Canvas(modifier = modifier) {
-    val scale = size.width / 24f
-    val strokeW = 2f * scale
-    drawRoundRect(
-      color = tint,
-      topLeft = Offset(9f * scale, 2f * scale),
-      size = Size(6f * scale, 11f * scale),
-      cornerRadius = CornerRadius(3f * scale, 3f * scale),
-      style = Stroke(width = strokeW, cap = StrokeCap.Round)
-    )
-    drawArc(
-      color = tint,
-      startAngle = 0f,
-      sweepAngle = 180f,
-      useCenter = false,
-      topLeft = Offset(5f * scale, 3f * scale),
-      size = Size(14f * scale, 14f * scale),
-      style = Stroke(width = strokeW, cap = StrokeCap.Round)
-    )
-    drawLine(
-      color = tint,
-      start = Offset(12f * scale, 17f * scale),
-      end = Offset(12f * scale, 21f * scale),
-      strokeWidth = strokeW,
-      cap = StrokeCap.Round
-    )
-  }
-}
-
 /** Matches the exact custom waveform glyph the user supplied (24x24
  * viewBox, 5 filled rounded bars of varying height). */
 @Composable
@@ -1550,7 +1517,12 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             .clickable { launchSpeech(autoSend = false) },
           contentAlignment = Alignment.Center
         ) {
-          MicIconCustom(modifier = Modifier.size(18.dp), tint = Color.White)
+          Icon(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mic),
+            contentDescription = "Voice input",
+            tint = Color.White,
+            modifier = Modifier.size(18.dp)
+          )
         }
 
         Spacer(modifier = Modifier.width(8.dp))
