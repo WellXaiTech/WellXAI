@@ -115,6 +115,8 @@ data class ApiMediaPost(
   val imageUrls: List<String>,
   val videoUrl: String?,
   val sentiment: String?,
+  // "post" (main feed/history only), "status" (stories row only), "both".
+  val destination: String,
   val createdAt: Long,
   val likeCount: Int,
   val likedByMe: Boolean,
@@ -652,10 +654,11 @@ object ChatGizaApi {
     text: String,
     imageDataUrls: List<String>,
     videoUrl: String?,
-    sentiment: String?
+    sentiment: String?,
+    destination: String = "post"
   ): ApiResult<ApiMediaPost> = withContext(Dispatchers.IO) {
     try {
-      val payload = JSONObject().put("text", text)
+      val payload = JSONObject().put("text", text).put("destination", destination)
       if (imageDataUrls.isNotEmpty()) payload.put("imageDataUrls", JSONArray(imageDataUrls))
       if (videoUrl != null) payload.put("videoUrl", videoUrl)
       if (sentiment != null) payload.put("sentiment", sentiment)
@@ -849,6 +852,7 @@ object ChatGizaApi {
     imageUrls = obj.optJSONArray("imageUrls")?.let { arr -> (0 until arr.length()).map { arr.getString(it) } } ?: emptyList(),
     videoUrl = obj.optNullableString("videoUrl"),
     sentiment = obj.optNullableString("sentiment"),
+    destination = obj.optString("destination", "post"),
     createdAt = obj.optLong("createdAt", 0L),
     likeCount = obj.optInt("likeCount", 0),
     likedByMe = obj.optBoolean("likedByMe", false),

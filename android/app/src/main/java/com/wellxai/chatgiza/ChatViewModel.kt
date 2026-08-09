@@ -483,9 +483,9 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     tokenStore.setChatGizaMediaConnected(value)
   }
 
-  fun pushReplyToExtraMedia(content: String, onDone: (Boolean) -> Unit) {
+  fun pushReplyToExtraMedia(content: String, destination: String, onDone: (Boolean) -> Unit) {
     if (content.isBlank()) return onDone(false)
-    createMediaPost(content, emptyList(), null, null, null, onDone)
+    createMediaPost(content, emptyList(), null, null, null, destination, onDone)
   }
 
   var hapticsEnabled by mutableStateOf(tokenStore.getHapticsEnabled())
@@ -939,6 +939,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     videoBytes: ByteArray?,
     videoMime: String?,
     sentiment: String?,
+    destination: String = "post",
     onDone: (Boolean) -> Unit
   ) {
     val token = tokenStore.getToken() ?: run { mediaError = "Not signed in"; return onDone(false) }
@@ -966,7 +967,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         uploadingMediaVideo = false
       }
 
-      when (val result = ChatGizaApi.createMediaPost(token, text, imageDataUrls, videoUrl, sentiment)) {
+      when (val result = ChatGizaApi.createMediaPost(token, text, imageDataUrls, videoUrl, sentiment, destination)) {
         is ApiResult.Success -> {
           mediaPosts = listOf(result.value) + mediaPosts
           onDone(true)

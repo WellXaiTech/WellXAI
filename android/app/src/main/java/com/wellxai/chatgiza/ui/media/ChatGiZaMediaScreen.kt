@@ -110,10 +110,20 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
   var searchOpen by remember { mutableStateOf(false) }
   var searchQuery by remember { mutableStateOf("") }
 
-  val visiblePosts = remember(viewModel.mediaPosts, searchQuery) {
+  // A post's destination ("post" == History/main feed, "status" == stories
+  // row, "both") decides which of these two lists it lands in -- a
+  // status-only post shouldn't show up in the scrollable feed, and a
+  // history-only post shouldn't show up as a story circle.
+  val feedEligiblePosts = remember(viewModel.mediaPosts) {
+    viewModel.mediaPosts.filter { it.destination != "status" }
+  }
+  val statusEligiblePosts = remember(viewModel.mediaPosts) {
+    viewModel.mediaPosts.filter { it.destination != "post" }
+  }
+  val visiblePosts = remember(feedEligiblePosts, searchQuery) {
     val q = searchQuery.trim()
-    if (q.isEmpty()) viewModel.mediaPosts
-    else viewModel.mediaPosts.filter { it.text.contains(q, ignoreCase = true) || it.authorName.contains(q, ignoreCase = true) }
+    if (q.isEmpty()) feedEligiblePosts
+    else feedEligiblePosts.filter { it.text.contains(q, ignoreCase = true) || it.authorName.contains(q, ignoreCase = true) }
   }
 
   var showHeader by remember { mutableStateOf(true) }
@@ -148,7 +158,7 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
       item {
         MediaStoriesRow(
           myImage = viewModel.userImage,
-          posts = viewModel.mediaPosts,
+          posts = statusEligiblePosts,
           onMyStoryClick = { showConnectSheet = true }
         )
         androidx.compose.material3.HorizontalDivider(color = Color(0xFFEDEDED))

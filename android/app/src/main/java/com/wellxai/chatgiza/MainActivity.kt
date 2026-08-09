@@ -932,9 +932,9 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
               onSpeakToggle = { toggleSpeak(message) },
               onRegenerate = { viewModel.regenerateMessage(message.id) },
               onDelete = { viewModel.deleteMessage(message.id) },
-              onPushToExtra = { caption, onDone ->
+              onPushToExtra = { caption, destination, onDone ->
                 val finalText = if (caption.isNullOrBlank()) message.content else "${message.content}\n\n$caption"
-                viewModel.pushReplyToExtraMedia(finalText, onDone)
+                viewModel.pushReplyToExtraMedia(finalText, destination, onDone)
               }
             )
           }
@@ -5810,7 +5810,7 @@ private fun MessageBubble(
   onSpeakToggle: () -> Unit,
   onRegenerate: () -> Unit,
   onDelete: () -> Unit,
-  onPushToExtra: (caption: String?, onDone: (Boolean) -> Unit) -> Unit
+  onPushToExtra: (caption: String?, destination: String, onDone: (Boolean) -> Unit) -> Unit
 ) {
   val isUser = message.role == "user"
   Column(modifier = Modifier.fillMaxWidth()) {
@@ -5892,7 +5892,7 @@ private fun MessageActionBar(
   onSpeakToggle: () -> Unit,
   onRegenerate: () -> Unit,
   onDelete: () -> Unit,
-  onPushToExtra: (caption: String?, onDone: (Boolean) -> Unit) -> Unit
+  onPushToExtra: (caption: String?, destination: String, onDone: (Boolean) -> Unit) -> Unit
 ) {
   val context = LocalContext.current
   val clipboard = LocalClipboardManager.current
@@ -5907,10 +5907,10 @@ private fun MessageActionBar(
   var pendingCaption by remember(message.id) { mutableStateOf<String?>(null) }
   val accent = Color(0xFF2979FF)
 
-  fun push(caption: String?) {
+  fun push(caption: String?, destination: String) {
     if (pushState == "idle") {
       pushState = "pushing"
-      onPushToExtra(caption) { success ->
+      onPushToExtra(caption, destination) { success ->
         pushState = if (success) "pushed" else "idle"
         Toast.makeText(
           context,
@@ -6009,7 +6009,7 @@ private fun MessageActionBar(
       posting = pushState == "pushing",
       onDismiss = { extraStage = "none" },
       onEdit = { extraStage = if (pendingCaption != null) "caption" else "options" },
-      onConfirm = { push(pendingCaption) }
+      onConfirm = { destination -> push(pendingCaption, destination) }
     )
   }
 }
@@ -6122,6 +6122,25 @@ private fun ExtraOptionsSheet(onDismiss: () -> Unit, onPost: () -> Unit, onCapti
 // instead of only being noticed after it's already public.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+private fun ExtraDestinationChip(label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+  Box(
+    modifier = modifier
+      .clip(RoundedCornerShape(14.dp))
+      .background(if (selected) Color(0xFFFFC94A) else Color.White.copy(alpha = 0.06f))
+      .clickable(onClick = onClick)
+      .padding(vertical = 12.dp),
+    contentAlignment = Alignment.Center
+  ) {
+    Text(
+      label,
+      color = if (selected) Color.Black else Color.White.copy(alpha = 0.8f),
+      fontSize = 13.sp,
+      fontWeight = FontWeight.SemiBold
+    )
+  }
+}
+
+@Composable
 private fun ExtraPostPreviewSheet(
   authorName: String,
   authorImage: String?,
@@ -6130,8 +6149,13 @@ private fun ExtraPostPreviewSheet(
   posting: Boolean,
   onDismiss: () -> Unit,
   onEdit: () -> Unit,
-  onConfirm: () -> Unit
+  onConfirm: (destination: String) -> Unit
 ) {
+  // Some people only ever want this in Status, others only want it kept in
+  // their permanent History, others want both -- so every push asks,
+  // rather than guessing one behavior for everyone. "post" here means
+  // History/the main feed, matching the backend's `destination` column.
+  var destination by remember { mutableStateOf("post") }
   ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFF161616)) {
     Column(
       modifier = Modifier
@@ -6193,6 +6217,14 @@ private fun ExtraPostPreviewSheet(
         }
       }
       Spacer(modifier = Modifier.height(20.dp))
+      Text("Where should this go?", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+      Spacer(modifier = Modifier.height(10.dp))
+      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        ExtraDestinationChip("History", destination == "post", Modifier.weight(1f)) { destination = "post" }
+        ExtraDestinationChip("Both", destination == "both", Modifier.weight(1f)) { destination = "both" }
+        ExtraDestinationChip("Status", destination == "status", Modifier.weight(1f)) { destination = "status" }
+      }
+      Spacer(modifier = Modifier.height(20.dp))
       Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         OutlinedButton(
           onClick = onEdit,
@@ -6203,7 +6235,7 @@ private fun ExtraPostPreviewSheet(
           Text("Edit")
         }
         Button(
-          onClick = onConfirm,
+          onClick = { onConfirm(destination) },
           enabled = !posting,
           colors = ButtonDefaults.buttonColors(
             containerColor = Color(0xFFFFC94A),
