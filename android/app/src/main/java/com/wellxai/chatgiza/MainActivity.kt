@@ -212,7 +212,6 @@ import androidx.compose.material.icons.outlined.NoAdultContent
 import androidx.compose.material.icons.outlined.Photo
 import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.Poll
-import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.RadioButtonChecked
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.RecordVoiceOver
@@ -1003,7 +1002,7 @@ private fun ChatConversationMenuSheet(
     ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_share), contentDescription = null, tint = Color.White) }, label = "Share") {
       onDismiss(); onShare()
     }
-    ChatMenuRow(icon = { Icon(Icons.Outlined.PushPin, contentDescription = null, tint = Color.White) }, label = if (pinned) "Unpin" else "Pin") {
+    ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_pin), contentDescription = null, tint = Color.White) }, label = if (pinned) "Unpin" else "Pin") {
       onDismiss(); onTogglePin()
     }
     ChatMenuRow(
@@ -2754,7 +2753,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             })
             .padding(vertical = 14.dp)
         ) {
-          Icon(Icons.Outlined.PushPin, contentDescription = null, tint = colorScheme.onBackground)
+          Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_pin), contentDescription = null, tint = colorScheme.onBackground)
           Spacer(modifier = Modifier.size(16.dp))
           Text(if (sheetConvo.pinned) "Unpin" else "Pin", color = colorScheme.onBackground, fontSize = 16.sp)
         }
@@ -3726,7 +3725,7 @@ private fun HistoryRow(
       Row(verticalAlignment = Alignment.CenterVertically) {
         if (convo.pinned) {
           Icon(
-            Icons.Outlined.PushPin,
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_pin),
             contentDescription = "Pinned",
             tint = colorScheme.onBackground.copy(alpha = 0.6f),
             modifier = Modifier.size(12.dp)
