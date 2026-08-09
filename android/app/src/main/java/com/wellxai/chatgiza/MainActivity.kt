@@ -1828,7 +1828,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           Box(
             modifier = Modifier
               .weight(1f)
-              .height(58.dp)
+              .height(46.dp)
               .clip(RoundedCornerShape(percent = 50))
               .background(Color(0xFF1A1A1A))
           ) {
@@ -1837,7 +1837,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
                 Box(
                   modifier = Modifier
                     .padding(start = 5.dp)
-                    .size(width = 50.dp, height = 48.dp)
+                    .size(width = 40.dp, height = 38.dp)
                     .clip(RoundedCornerShape(percent = 50))
                     .background(Color.White.copy(alpha = 0.10f))
                     .clickable(onClick = { toolMenuOpen = true }),
@@ -1876,7 +1876,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           Spacer(modifier = Modifier.size(8.dp))
           Box(
             modifier = Modifier
-              .size(width = 100.dp, height = 58.dp)
+              .size(width = 100.dp, height = 46.dp)
               .clip(RoundedCornerShape(percent = 50))
               .background(Color.White)
               .clickable(onClick = {
