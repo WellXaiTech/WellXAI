@@ -6207,18 +6207,16 @@ private fun ActionBarItem(painter: androidx.compose.ui.graphics.painter.Painter,
 
 @Composable
 private fun ActionBarItemShell(label: String, tint: Color, onClick: () -> Unit, icon: @Composable (Color) -> Unit) {
-  Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(60.dp)) {
-    Box(
-      modifier = Modifier
-        .size(48.dp)
-        .clip(RoundedCornerShape(14.dp))
-        .clickable(onClick = onClick),
-      contentAlignment = Alignment.Center
-    ) {
-      icon(tint)
-    }
-    Spacer(modifier = Modifier.height(4.dp))
-    Text(label, color = colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 10.sp, maxLines = 1, softWrap = false)
+  // label is kept as the icon's accessibility contentDescription even
+  // though it's no longer shown as visible text underneath.
+  Box(
+    modifier = Modifier
+      .size(48.dp)
+      .clip(RoundedCornerShape(14.dp))
+      .clickable(onClick = onClick),
+    contentAlignment = Alignment.Center
+  ) {
+    icon(tint)
   }
 }
 
@@ -6379,29 +6377,25 @@ private fun MessageActionBar(
 // option silently not being there.
 @Composable
 private fun ActionBarExtraItem(label: String, tint: Color, connected: Boolean, onNotConnected: () -> Unit, onOpen: () -> Unit) {
-  Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(60.dp)) {
+  Box(
+    modifier = Modifier
+      .size(48.dp)
+      .clip(RoundedCornerShape(14.dp))
+      .clickable { if (connected) onOpen() else onNotConnected() },
+    contentAlignment = Alignment.Center
+  ) {
+    Icon(Icons.Filled.Send, contentDescription = label, tint = tint, modifier = Modifier.size(20.dp))
     Box(
       modifier = Modifier
-        .size(48.dp)
-        .clip(RoundedCornerShape(14.dp))
-        .clickable { if (connected) onOpen() else onNotConnected() },
+        .align(Alignment.BottomEnd)
+        .padding(2.dp)
+        .size(14.dp)
+        .clip(CircleShape)
+        .background(colorScheme.background),
       contentAlignment = Alignment.Center
     ) {
-      Icon(Icons.Filled.Send, contentDescription = label, tint = tint, modifier = Modifier.size(20.dp))
-      Box(
-        modifier = Modifier
-          .align(Alignment.BottomEnd)
-          .padding(2.dp)
-          .size(14.dp)
-          .clip(CircleShape)
-          .background(colorScheme.background),
-        contentAlignment = Alignment.Center
-      ) {
-        Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = tint, modifier = Modifier.size(14.dp))
-      }
+      Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = tint, modifier = Modifier.size(14.dp))
     }
-    Spacer(modifier = Modifier.height(4.dp))
-    Text(label, color = colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 10.sp, maxLines = 1, softWrap = false)
   }
 }
 
