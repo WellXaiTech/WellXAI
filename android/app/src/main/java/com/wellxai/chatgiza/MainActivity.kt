@@ -1710,15 +1710,17 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
         // Flash and flip-camera sit level with the status pill (not pinned
         // to the very top of the screen) — one on each side of it.
         Box(modifier = Modifier.fillMaxWidth()) {
-          LiveCornerButton(
-            icon = if (torchOn) Icons.Outlined.FlashOn else Icons.Outlined.FlashOff,
-            contentDescription = "Flash",
-            enabled = cameraEnabled && !useFrontCamera,
-            modifier = Modifier.align(Alignment.CenterStart)
-          ) {
-            val next = !torchOn
-            runCatching { boundCamera?.cameraControl?.enableTorch(next) }
-            torchOn = next
+          if (cameraEnabled) {
+            LiveCornerButton(
+              icon = if (torchOn) Icons.Outlined.FlashOn else Icons.Outlined.FlashOff,
+              contentDescription = "Flash",
+              enabled = !useFrontCamera,
+              modifier = Modifier.align(Alignment.CenterStart)
+            ) {
+              val next = !torchOn
+              runCatching { boundCamera?.cameraControl?.enableTorch(next) }
+              torchOn = next
+            }
           }
           Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -1734,13 +1736,14 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
             Spacer(modifier = Modifier.size(6.dp))
             Text(statusText, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
           }
-          LiveCornerButton(
-            icon = Icons.Outlined.Cameraswitch,
-            contentDescription = "Flip camera",
-            enabled = cameraEnabled,
-            modifier = Modifier.align(Alignment.CenterEnd)
-          ) {
-            useFrontCamera = !useFrontCamera
+          if (cameraEnabled) {
+            LiveCornerButton(
+              icon = Icons.Outlined.Cameraswitch,
+              contentDescription = "Flip camera",
+              modifier = Modifier.align(Alignment.CenterEnd)
+            ) {
+              useFrontCamera = !useFrontCamera
+            }
           }
         }
 
