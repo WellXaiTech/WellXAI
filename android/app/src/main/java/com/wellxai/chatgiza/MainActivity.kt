@@ -1079,14 +1079,18 @@ private fun ChatConversationMenuSheet(
   // that always slides up from the bottom of the screen regardless of
   // where you tapped; this now opens right where the icon is, at the
   // top, sized to its content instead of stretching edge to edge.
-  DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
+  // Fixed width -- without one, the popup auto-sized to its widest
+  // child's intrinsic width, and the only child without fillMaxWidth()
+  // was the conversation title, so a short title opened a small menu
+  // and a long one opened a much wider menu.
+  DropdownMenu(expanded = true, onDismissRequest = onDismiss, modifier = Modifier.width(240.dp)) {
     Text(
       title,
       color = Color.White.copy(alpha = 0.5f),
       fontSize = 13.sp,
       maxLines = 1,
       overflow = TextOverflow.Ellipsis,
-      modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+      modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
     )
     ChatMenuRow(icon = { Icon(Icons.Outlined.Share, contentDescription = null, tint = Color.White) }, label = "Share") {
       onDismiss(); onShare()
