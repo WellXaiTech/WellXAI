@@ -6257,46 +6257,44 @@ private fun CaptionComposerSheet(onDismiss: () -> Unit, onSubmit: (String) -> Un
         lineHeight = 19.sp
       )
       Spacer(modifier = Modifier.height(18.dp))
-      Box(
-        modifier = Modifier
-          .fillMaxWidth()
-          .heightIn(min = 130.dp)
-          .clip(RoundedCornerShape(18.dp))
-          .background(Color.White.copy(alpha = 0.06f))
-          .padding(16.dp)
-      ) {
-        if (text.isEmpty()) {
-          Text("Write a caption for this post…", color = Color(0xFF6E6E6E), fontSize = 16.sp)
-        }
-        BasicTextField(
-          value = text,
-          onValueChange = { text = it },
-          textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 16.sp, lineHeight = 22.sp),
-          cursorBrush = SolidColor(Color(0xFFFFC94A)),
-          modifier = Modifier.fillMaxSize()
-        )
-      }
-      Spacer(modifier = Modifier.height(20.dp))
-      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        OutlinedButton(
-          onClick = onDismiss,
-          modifier = Modifier.weight(1f).height(52.dp),
-          shape = RoundedCornerShape(24.dp)
+      Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(
+          modifier = Modifier
+            .weight(1f)
+            .heightIn(min = 56.dp, max = 110.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color.White.copy(alpha = 0.06f))
+            .padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
-          Text("Cancel")
+          if (text.isEmpty()) {
+            Text("Write a caption for this post…", color = Color(0xFF6E6E6E), fontSize = 15.sp)
+          }
+          BasicTextField(
+            value = text,
+            onValueChange = { text = it },
+            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp, lineHeight = 20.sp),
+            cursorBrush = SolidColor(Color(0xFFFFC94A)),
+            modifier = Modifier.fillMaxWidth()
+          )
         }
-        Button(
+        IconButton(
           onClick = { if (text.isNotBlank()) onSubmit(text.trim()) },
           enabled = text.isNotBlank(),
-          colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFFFFC94A),
-            disabledContainerColor = Color(0xFFFFC94A).copy(alpha = 0.35f)
-          ),
-          shape = RoundedCornerShape(24.dp),
-          modifier = Modifier.weight(1f).height(52.dp)
+          modifier = Modifier
+            .size(52.dp)
+            .clip(CircleShape)
+            .background(if (text.isNotBlank()) Color(0xFFFFC94A) else Color(0xFFFFC94A).copy(alpha = 0.35f))
         ) {
-          Text("Review", color = Color.Black, fontWeight = FontWeight.SemiBold)
+          Icon(Icons.Filled.Send, contentDescription = "Send", tint = Color.Black, modifier = Modifier.size(22.dp))
         }
+      }
+      Spacer(modifier = Modifier.height(14.dp))
+      OutlinedButton(
+        onClick = onDismiss,
+        modifier = Modifier.fillMaxWidth().height(46.dp),
+        shape = RoundedCornerShape(24.dp)
+      ) {
+        Text("Cancel")
       }
     }
   }
