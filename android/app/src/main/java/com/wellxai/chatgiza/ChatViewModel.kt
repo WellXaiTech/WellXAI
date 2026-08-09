@@ -896,7 +896,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun createMediaPost(
     text: String,
-    imageDataUrl: String?,
+    imageDataUrls: List<String>,
     videoBytes: ByteArray?,
     videoMime: String?,
     sentiment: String?,
@@ -927,7 +927,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         uploadingMediaVideo = false
       }
 
-      when (val result = ChatGizaApi.createMediaPost(token, text, imageDataUrl, videoUrl, sentiment)) {
+      when (val result = ChatGizaApi.createMediaPost(token, text, imageDataUrls, videoUrl, sentiment)) {
         is ApiResult.Success -> {
           mediaPosts = listOf(result.value) + mediaPosts
           onDone(true)

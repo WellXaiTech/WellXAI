@@ -112,6 +112,7 @@ data class ApiMediaPost(
   val authorImage: String?,
   val text: String,
   val imageDataUrl: String?,
+  val imageUrls: List<String>,
   val videoUrl: String?,
   val sentiment: String?,
   val createdAt: Long,
@@ -646,13 +647,13 @@ object ChatGizaApi {
   suspend fun createMediaPost(
     token: String,
     text: String,
-    imageDataUrl: String?,
+    imageDataUrls: List<String>,
     videoUrl: String?,
     sentiment: String?
   ): ApiResult<ApiMediaPost> = withContext(Dispatchers.IO) {
     try {
       val payload = JSONObject().put("text", text)
-      if (imageDataUrl != null) payload.put("imageDataUrl", imageDataUrl)
+      if (imageDataUrls.isNotEmpty()) payload.put("imageDataUrls", JSONArray(imageDataUrls))
       if (videoUrl != null) payload.put("videoUrl", videoUrl)
       if (sentiment != null) payload.put("sentiment", sentiment)
       val request = Request.Builder()
@@ -842,6 +843,7 @@ object ChatGizaApi {
     authorImage = obj.optNullableString("authorImage"),
     text = obj.optString("text", ""),
     imageDataUrl = obj.optNullableString("imageDataUrl"),
+    imageUrls = obj.optJSONArray("imageUrls")?.let { arr -> (0 until arr.length()).map { arr.getString(it) } } ?: emptyList(),
     videoUrl = obj.optNullableString("videoUrl"),
     sentiment = obj.optNullableString("sentiment"),
     createdAt = obj.optLong("createdAt", 0L),
