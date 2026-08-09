@@ -1759,7 +1759,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
             ) {
               Column(
                 modifier = Modifier
-                  .size(width = 200.dp, height = 126.dp)
+                  .size(width = 210.dp, height = 140.dp)
                   .padding(start = 18.dp, end = 12.dp, top = 11.dp, bottom = 9.dp)
               ) {
                 CameraMenuRow(
@@ -3638,7 +3638,7 @@ private fun CameraMenuRow(iconRes: Int, label: String, onClick: () -> Unit) {
   Row(
     modifier = Modifier
       .fillMaxWidth()
-      .height(36.dp)
+      .height(44.dp)
       .clickable(onClick = onClick),
     verticalAlignment = Alignment.CenterVertically
   ) {
@@ -3646,10 +3646,10 @@ private fun CameraMenuRow(iconRes: Int, label: String, onClick: () -> Unit) {
       painter = androidx.compose.ui.res.painterResource(iconRes),
       contentDescription = null,
       tint = Color.White,
-      modifier = Modifier.size(16.dp)
+      modifier = Modifier.size(19.dp)
     )
-    Spacer(modifier = Modifier.width(14.dp))
-    Text(label, color = Color.White, fontSize = 13.sp)
+    Spacer(modifier = Modifier.width(16.dp))
+    Text(label, color = Color.White, fontSize = 16.sp)
   }
 }
 
