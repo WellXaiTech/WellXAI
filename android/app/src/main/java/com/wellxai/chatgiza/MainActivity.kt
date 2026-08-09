@@ -1125,7 +1125,52 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
         }
       }
       val attachedFile = viewModel.attachedFile
-      if (attachedFile != null) {
+      if (attachedFile != null && attachedFile.imageDataUrls.isNotEmpty()) {
+        // PDF -- a real thumbnail of the first rendered page, with a small
+        // "PDF" label overlay, instead of just a filename chip, so you can
+        // actually see what you're about to send before you send it.
+        Box(
+          modifier = Modifier.padding(top = 10.dp),
+          contentAlignment = Alignment.TopEnd
+        ) {
+          Box(
+            modifier = Modifier
+              .size(96.dp)
+              .clip(RoundedCornerShape(12.dp))
+              .background(Color.White)
+          ) {
+            AsyncImage(
+              model = attachedFile.imageDataUrls.first(),
+              contentDescription = attachedFile.name,
+              modifier = Modifier.fillMaxSize(),
+              contentScale = ContentScale.Crop
+            )
+            Box(
+              modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .background(Color.Black.copy(alpha = 0.75f))
+                .padding(vertical = 4.dp),
+              contentAlignment = Alignment.Center
+            ) {
+              Text("PDF", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+          }
+          Box(
+            modifier = Modifier
+              .padding(3.dp)
+              .size(18.dp)
+              .clip(CircleShape)
+              .background(Color.Black.copy(alpha = 0.6f))
+              .clickable(onClick = { viewModel.clearAttachedFile() }),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(Icons.Outlined.Close, contentDescription = "Remove file", tint = Color.White, modifier = Modifier.size(12.dp))
+          }
+        }
+      } else if (attachedFile != null) {
+        // Plain text file (.txt/.md/.csv) -- no page image to preview, so
+        // the compact name+icon chip is the best we can show.
         Row(
           modifier = Modifier
             .padding(top = 10.dp)
@@ -1181,7 +1226,12 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
           focusedIndicatorColor = Color.Transparent
         )
       )
-      Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+      Row(
+        verticalAlignment = Alignment.CenterVertically,
+        // A touch of breathing room off the very bottom edge of the card --
+        // it used to sit flush against it.
+        modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 6.dp)
+      ) {
         // Its own anchored menu (Camera/Gallery/Files/Skills/Connectors) --
         // this used to open the same dropdown as the GiZa Pro pill below,
         // which was two unrelated menus (attachments vs. model tools)
@@ -1247,7 +1297,10 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
               .padding(horizontal = 10.dp)
           ) {
             if (viewModel.activeTool == null) {
-              Icon(Icons.Outlined.Bolt, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp))
+              // Matches the sparkle already used for the GiZa Pro banner
+              // elsewhere (see ChatGizaAnnouncement) instead of a plain
+              // lightning bolt -- reads as "AI-powered", not just "fast".
+              Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp))
               Spacer(modifier = Modifier.size(4.dp))
             }
             Text(
