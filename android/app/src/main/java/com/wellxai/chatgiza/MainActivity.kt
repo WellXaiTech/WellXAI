@@ -927,6 +927,8 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
               showActions = !isStreamingThis,
               isSpeaking = speakingMessageId == message.id,
               chatGizaMediaConnected = viewModel.chatGizaMediaConnected,
+              extraAuthorName = viewModel.userName ?: "You",
+              extraAuthorImage = viewModel.userImage,
               onSpeakToggle = { toggleSpeak(message) },
               onRegenerate = { viewModel.regenerateMessage(message.id) },
               onDelete = { viewModel.deleteMessage(message.id) },
@@ -5803,6 +5805,8 @@ private fun MessageBubble(
   showActions: Boolean,
   isSpeaking: Boolean,
   chatGizaMediaConnected: Boolean,
+  extraAuthorName: String,
+  extraAuthorImage: String?,
   onSpeakToggle: () -> Unit,
   onRegenerate: () -> Unit,
   onDelete: () -> Unit,
@@ -5843,6 +5847,8 @@ private fun MessageBubble(
         message = message,
         isSpeaking = isSpeaking,
         chatGizaMediaConnected = chatGizaMediaConnected,
+        extraAuthorName = extraAuthorName,
+        extraAuthorImage = extraAuthorImage,
         onSpeakToggle = onSpeakToggle,
         onRegenerate = onRegenerate,
         onDelete = onDelete,
@@ -5891,7 +5897,12 @@ private fun MessageActionBar(
   var reaction by remember(message.id) { mutableStateOf<String?>(null) }
   var moreOpen by remember { mutableStateOf(false) }
   var pushState by remember(message.id) { mutableStateOf("idle") } // idle | pushing | pushed
-  var captionSheetOpen by remember { mutableStateOf(false) }
+  // none -> "options" (Post/Caption choice) -> either straight to "preview"
+  // (Post) or via "caption" (write one, then preview) -- Post always shows
+  // the preview before it actually goes out, so a wrong-looking reply can
+  // be caught before it's public instead of after.
+  var extraStage by remember(message.id) { mutableStateOf("none") }
+  var pendingCaption by remember(message.id) { mutableStateOf<String?>(null) }
   val accent = Color(0xFF2979FF)
 
   fun push(caption: String?) {
@@ -5904,6 +5915,7 @@ private fun MessageActionBar(
           if (success) "Sent to Extra Media" else "Couldn't send — try again",
           Toast.LENGTH_SHORT
         ).show()
+        if (success) extraStage = "none"
       }
     }
   }
@@ -5927,8 +5939,7 @@ private fun MessageActionBar(
             Toast.LENGTH_LONG
           ).show()
         },
-        onPost = { push(null) },
-        onCaption = { captionSheetOpen = true }
+        onOpen = { extraStage = "options" }
       )
     }
     ActionBarItem(
@@ -5978,63 +5989,231 @@ private fun MessageActionBar(
     }
   }
 
-  if (captionSheetOpen) {
-    CaptionComposerSheet(
-      onDismiss = { captionSheetOpen = false },
-      onSubmit = { caption ->
-        captionSheetOpen = false
-        push(caption)
-      }
+  when (extraStage) {
+    "options" -> ExtraOptionsSheet(
+      onDismiss = { extraStage = "none" },
+      onPost = { pendingCaption = null; extraStage = "preview" },
+      onCaption = { extraStage = "caption" }
+    )
+    "caption" -> CaptionComposerSheet(
+      onDismiss = { extraStage = "none" },
+      onSubmit = { caption -> pendingCaption = caption; extraStage = "preview" }
+    )
+    "preview" -> ExtraPostPreviewSheet(
+      authorName = extraAuthorName,
+      authorImage = extraAuthorImage,
+      bodyText = message.content,
+      caption = pendingCaption,
+      posting = pushState == "pushing",
+      onDismiss = { extraStage = "none" },
+      onEdit = { extraStage = if (pendingCaption != null) "caption" else "options" },
+      onConfirm = { push(pendingCaption) }
     )
   }
 }
 
 // "Extra" between Copy and Like. A single icon with a small dropdown-arrow
 // badge in the corner (instead of two icons crammed side by side) opens
-// the choice: "Post" pushes the reply to Extra Media as-is, "Caption"
-// lets the user write their own caption first (see CaptionComposerSheet).
-// Tapping while not connected skips the menu entirely and tells the user
-// to connect first, rather than the option silently not being there.
+// the full-size ExtraOptionsSheet below -- tapping while not connected
+// skips it entirely and tells the user to connect first, rather than the
+// option silently not being there.
 @Composable
-private fun ActionBarExtraItem(
-  label: String,
-  tint: Color,
-  connected: Boolean,
-  onNotConnected: () -> Unit,
-  onPost: () -> Unit,
-  onCaption: () -> Unit
-) {
-  var menuOpen by remember { mutableStateOf(false) }
+private fun ActionBarExtraItem(label: String, tint: Color, connected: Boolean, onNotConnected: () -> Unit, onOpen: () -> Unit) {
   Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(60.dp)) {
-    Box {
+    Box(
+      modifier = Modifier
+        .size(48.dp)
+        .clip(RoundedCornerShape(14.dp))
+        .background(colorScheme.onBackground.copy(alpha = 0.06f))
+        .clickable { if (connected) onOpen() else onNotConnected() },
+      contentAlignment = Alignment.Center
+    ) {
+      Icon(Icons.Filled.Send, contentDescription = label, tint = tint, modifier = Modifier.size(20.dp))
       Box(
         modifier = Modifier
-          .size(48.dp)
-          .clip(RoundedCornerShape(14.dp))
-          .background(colorScheme.onBackground.copy(alpha = 0.06f))
-          .clickable { if (connected) menuOpen = true else onNotConnected() },
+          .align(Alignment.BottomEnd)
+          .padding(2.dp)
+          .size(14.dp)
+          .clip(CircleShape)
+          .background(colorScheme.background),
         contentAlignment = Alignment.Center
       ) {
-        Icon(Icons.Filled.Send, contentDescription = label, tint = tint, modifier = Modifier.size(20.dp))
-        Box(
-          modifier = Modifier
-            .align(Alignment.BottomEnd)
-            .padding(2.dp)
-            .size(14.dp)
-            .clip(CircleShape)
-            .background(colorScheme.background),
-          contentAlignment = Alignment.Center
-        ) {
-          Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = tint, modifier = Modifier.size(14.dp))
-        }
-      }
-      DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-        DropdownMenuItem(text = { Text("Post") }, onClick = { menuOpen = false; onPost() })
-        DropdownMenuItem(text = { Text("Caption") }, onClick = { menuOpen = false; onCaption() })
+        Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = tint, modifier = Modifier.size(14.dp))
       }
     }
     Spacer(modifier = Modifier.height(4.dp))
     Text(label, color = colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 10.sp, maxLines = 1, softWrap = false)
+  }
+}
+
+// Reached via the "Extra" icon -- a bigger, full-weight sheet (matching
+// the size of a real share sheet) instead of a cramped dropdown, offering
+// the same two choices: "Post" goes straight to the preview step, straight
+// through preview before it actually posts; "Caption" collects a caption
+// first, then also lands on the preview.
+@Composable
+private fun ExtraOptionRow(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .clip(RoundedCornerShape(18.dp))
+      .background(Color.White.copy(alpha = 0.06f))
+      .clickable(onClick = onClick)
+      .padding(16.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Box(
+      modifier = Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).background(Color(0xFFFFC94A).copy(alpha = 0.14f)),
+      contentAlignment = Alignment.Center
+    ) {
+      Icon(icon, contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.size(20.dp))
+    }
+    Spacer(modifier = Modifier.width(14.dp))
+    Column(modifier = Modifier.weight(1f)) {
+      Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+      Spacer(modifier = Modifier.height(2.dp))
+      Text(subtitle, color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp, lineHeight = 17.sp)
+    }
+    Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ExtraOptionsSheet(onDismiss: () -> Unit, onPost: () -> Unit, onCaption: () -> Unit) {
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFF161616)) {
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 24.dp)
+        .padding(bottom = 36.dp, top = 4.dp)
+    ) {
+      Text("Send to Extra Media", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+      Spacer(modifier = Modifier.height(6.dp))
+      Text(
+        "Choose how this reply goes to your Extra profile. You'll see exactly how it looks before it's sent.",
+        color = Color.White.copy(alpha = 0.6f),
+        fontSize = 14.sp,
+        lineHeight = 19.sp
+      )
+      Spacer(modifier = Modifier.height(20.dp))
+      ExtraOptionRow(
+        icon = Icons.Filled.Send,
+        title = "Post",
+        subtitle = "Send this reply to Extra Media as-is.",
+        onClick = onPost
+      )
+      Spacer(modifier = Modifier.height(10.dp))
+      ExtraOptionRow(
+        icon = Icons.Outlined.Description,
+        title = "Caption",
+        subtitle = "Write your own caption first, then review together.",
+        onClick = onCaption
+      )
+    }
+  }
+}
+
+// The step that actually matters: shows the reply (and caption, if any)
+// laid out the way it'll actually appear on Extra Media -- avatar, name,
+// body text -- so something that reads wrong can be caught with "Edit"
+// instead of only being noticed after it's already public.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ExtraPostPreviewSheet(
+  authorName: String,
+  authorImage: String?,
+  bodyText: String,
+  caption: String?,
+  posting: Boolean,
+  onDismiss: () -> Unit,
+  onEdit: () -> Unit,
+  onConfirm: () -> Unit
+) {
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFF161616)) {
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 24.dp)
+        .padding(bottom = 36.dp, top = 4.dp)
+    ) {
+      Text("Preview", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+      Spacer(modifier = Modifier.height(4.dp))
+      Text(
+        "This is how it'll look on Extra Media.",
+        color = Color.White.copy(alpha = 0.6f),
+        fontSize = 14.sp
+      )
+      Spacer(modifier = Modifier.height(18.dp))
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(20.dp))
+          .background(Color.White.copy(alpha = 0.05f))
+          .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
+          .padding(18.dp)
+      ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          if (authorImage != null) {
+            AsyncImage(
+              model = authorImage,
+              contentDescription = "Profile",
+              modifier = Modifier.size(38.dp).clip(CircleShape),
+              contentScale = ContentScale.Crop
+            )
+          } else {
+            Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(38.dp))
+          }
+          Spacer(modifier = Modifier.width(10.dp))
+          Column {
+            Text(authorName, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text("Just now", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+          }
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+          if (bodyText.length > 400) bodyText.take(400) + "…" else bodyText,
+          color = Color.White.copy(alpha = 0.9f),
+          fontSize = 14.sp,
+          lineHeight = 20.sp
+        )
+        if (!caption.isNullOrBlank()) {
+          Spacer(modifier = Modifier.height(10.dp))
+          Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.08f)))
+          Spacer(modifier = Modifier.height(10.dp))
+          Text(
+            caption,
+            color = Color.White.copy(alpha = 0.75f),
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            fontStyle = FontStyle.Italic
+          )
+        }
+      }
+      Spacer(modifier = Modifier.height(20.dp))
+      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        OutlinedButton(
+          onClick = onEdit,
+          enabled = !posting,
+          modifier = Modifier.weight(1f).height(52.dp),
+          shape = RoundedCornerShape(24.dp)
+        ) {
+          Text("Edit")
+        }
+        Button(
+          onClick = onConfirm,
+          enabled = !posting,
+          colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFFFFC94A),
+            disabledContainerColor = Color(0xFFFFC94A).copy(alpha = 0.5f)
+          ),
+          shape = RoundedCornerShape(24.dp),
+          modifier = Modifier.weight(1f).height(52.dp)
+        ) {
+          Text(if (posting) "Posting…" else "Post to Extra", color = Color.Black, fontWeight = FontWeight.SemiBold)
+        }
+      }
+    }
   }
 }
 
@@ -6114,7 +6293,7 @@ private fun CaptionComposerSheet(onDismiss: () -> Unit, onSubmit: (String) -> Un
           shape = RoundedCornerShape(24.dp),
           modifier = Modifier.weight(1f).height(52.dp)
         ) {
-          Text("Post", color = Color.Black, fontWeight = FontWeight.SemiBold)
+          Text("Review", color = Color.Black, fontWeight = FontWeight.SemiBold)
         }
       }
     }
