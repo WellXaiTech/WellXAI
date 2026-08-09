@@ -6297,12 +6297,21 @@ private fun MessageActionBar(
           context.startActivity(Intent.createChooser(intent, null))
         }
       }
-      ActionBarItem(
-        icon = if (isSpeaking) Icons.Outlined.VolumeOff else Icons.Outlined.VolumeUp,
-        label = if (isSpeaking) "Stop" else "Read Aloud",
-        tint = if (isSpeaking) accent else colorScheme.onBackground,
-        onClick = onSpeakToggle
-      )
+      if (isSpeaking) {
+        ActionBarItem(
+          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_stop),
+          label = "Stop",
+          tint = accent,
+          onClick = onSpeakToggle
+        )
+      } else {
+        ActionBarItem(
+          icon = Icons.Outlined.VolumeUp,
+          label = "Read Aloud",
+          tint = colorScheme.onBackground,
+          onClick = onSpeakToggle
+        )
+      }
       ActionBarItem(Icons.Outlined.Autorenew, "Regenerate", onClick = onRegenerate)
       Box {
         ActionBarItem(Icons.Outlined.MoreHoriz, "More") { moreOpen = true }
