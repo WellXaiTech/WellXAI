@@ -1491,7 +1491,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             HorizontalDivider()
             DropdownMenuItem(
               text = { Text("Skills") },
-              leadingIcon = { Icon(Icons.Outlined.Widgets, contentDescription = null) },
+              leadingIcon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_skills), contentDescription = null) },
               onClick = { attachMenuOpen = false }
             )
             DropdownMenuItem(
