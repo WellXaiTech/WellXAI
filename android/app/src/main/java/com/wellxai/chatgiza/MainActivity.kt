@@ -6212,7 +6212,6 @@ private fun ActionBarItemShell(label: String, tint: Color, onClick: () -> Unit, 
       modifier = Modifier
         .size(48.dp)
         .clip(RoundedCornerShape(14.dp))
-        .background(colorScheme.onBackground.copy(alpha = 0.06f))
         .clickable(onClick = onClick),
       contentAlignment = Alignment.Center
     ) {
@@ -6385,7 +6384,6 @@ private fun ActionBarExtraItem(label: String, tint: Color, connected: Boolean, o
       modifier = Modifier
         .size(48.dp)
         .clip(RoundedCornerShape(14.dp))
-        .background(colorScheme.onBackground.copy(alpha = 0.06f))
         .clickable { if (connected) onOpen() else onNotConnected() },
       contentAlignment = Alignment.Center
     ) {
