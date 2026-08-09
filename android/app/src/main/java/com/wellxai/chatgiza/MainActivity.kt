@@ -1785,7 +1785,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               )
               DropdownMenuItem(
                 text = { Text("Share Screen") },
-                leadingIcon = { Icon(Icons.Outlined.ScreenShare, contentDescription = null) },
+                leadingIcon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_screen_share), contentDescription = null) },
                 onClick = {
                   cameraMenuOpen = false
                   shareScreenComingSoon = true
