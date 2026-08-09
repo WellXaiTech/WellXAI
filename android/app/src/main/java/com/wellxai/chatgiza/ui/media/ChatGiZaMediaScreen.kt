@@ -662,15 +662,23 @@ private fun MediaBottomNavigation(
 // =============================================================
 
 @Composable
-private fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget, onBack: () -> Unit) {
+internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget, onBack: () -> Unit) {
   BackHandler { onBack() }
   val isOwnProfile = target.authorId == viewModel.userId
   val authorPosts = remember(viewModel.mediaPosts, target.authorId) {
     viewModel.mediaPosts.filter { it.authorId == target.authorId }
   }
   val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+  // Dark, matching the rest of the app -- this screen (and the grid
+  // thumbnails' placeholder) was left over from an earlier all-white
+  // pass on the Media feed and read as visually disconnected from
+  // everywhere else in the app.
+  val bg = Color(0xFF161616)
+  val card = Color(0xFF23252B)
+  val onBg = Color.White
+  val onBgDim = Color(0xFFA8A8A8)
 
-  Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
+  Box(modifier = Modifier.fillMaxSize().background(bg)) {
     Column(modifier = Modifier.fillMaxSize()) {
       Row(
         modifier = Modifier
@@ -681,11 +689,11 @@ private fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget, 
         verticalAlignment = Alignment.CenterVertically
       ) {
         IconButton(onClick = onBack) {
-          Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.Black)
+          Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = onBg)
         }
         Text(
           target.authorName,
-          color = Color.Black,
+          color = onBg,
           fontSize = 16.sp,
           fontWeight = FontWeight.SemiBold,
           modifier = Modifier.weight(1f)
@@ -706,19 +714,19 @@ private fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget, 
                 contentScale = ContentScale.Crop
               )
             } else {
-              Icon(Icons.Outlined.AccountCircle, contentDescription = target.authorName, tint = Color.Gray, modifier = Modifier.size(84.dp))
+              Icon(Icons.Outlined.AccountCircle, contentDescription = target.authorName, tint = onBgDim, modifier = Modifier.size(84.dp))
             }
             Spacer(modifier = Modifier.width(28.dp))
             Column {
-              Text("${authorPosts.size}", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-              Text("Posts", color = Color.Gray, fontSize = 13.sp)
+              Text("${authorPosts.size}", color = onBg, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+              Text("Posts", color = onBgDim, fontSize = 13.sp)
             }
           }
         }
         item {
           Text(
             target.authorName,
-            color = Color.Black,
+            color = onBg,
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
@@ -729,6 +737,8 @@ private fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget, 
           if (isOwnProfile) {
             OutlinedButton(
               onClick = {},
+              colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = onBg),
+              border = androidx.compose.foundation.BorderStroke(1.dp, onBgDim.copy(alpha = 0.4f)),
               modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
             ) { Text("Edit Profile") }
           } else {
@@ -741,16 +751,21 @@ private fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget, 
                 onClick = { following = !following },
                 modifier = Modifier.weight(1f)
               ) { Text(if (following) "Following" else "Follow") }
-              OutlinedButton(onClick = {}, modifier = Modifier.weight(1f)) { Text("Message") }
+              OutlinedButton(
+                onClick = {},
+                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = onBg),
+                border = androidx.compose.foundation.BorderStroke(1.dp, onBgDim.copy(alpha = 0.4f)),
+                modifier = Modifier.weight(1f)
+              ) { Text("Message") }
             }
           }
           Spacer(modifier = Modifier.height(16.dp))
-          androidx.compose.material3.HorizontalDivider(color = Color(0xFFEDEDED))
+          androidx.compose.material3.HorizontalDivider(color = onBgDim.copy(alpha = 0.15f))
         }
         if (authorPosts.isEmpty()) {
           item {
             Box(modifier = Modifier.fillMaxWidth().padding(vertical = 60.dp), contentAlignment = Alignment.Center) {
-              Text("No posts yet.", color = Color.Gray, fontSize = 14.sp)
+              Text("No posts yet.", color = onBgDim, fontSize = 14.sp)
             }
           }
         } else {
@@ -768,13 +783,13 @@ private fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget, 
                     )
                   } else {
                     Box(
-                      modifier = Modifier.fillMaxSize().background(Color(0xFFF5F5F5)),
+                      modifier = Modifier.fillMaxSize().background(card),
                       contentAlignment = Alignment.Center
                     ) {
                       Text(
                         post.text.take(24),
                         fontSize = 10.sp,
-                        color = Color.Gray,
+                        color = onBgDim,
                         maxLines = 3,
                         modifier = Modifier.padding(4.dp)
                       )
