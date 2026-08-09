@@ -1102,7 +1102,7 @@ private fun ChatConversationMenuSheet(
       overflow = TextOverflow.Ellipsis,
       modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
     )
-    ChatMenuRow(icon = { Icon(Icons.Outlined.Share, contentDescription = null, tint = Color.White) }, label = "Share") {
+    ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_share), contentDescription = null, tint = Color.White) }, label = "Share") {
       onDismiss(); onShare()
     }
     ChatMenuRow(icon = { Icon(Icons.Outlined.PushPin, contentDescription = null, tint = Color.White) }, label = if (pinned) "Unpin" else "Pin") {
@@ -6321,7 +6321,7 @@ private fun MessageActionBar(
         "Dislike",
         tint = if (reaction == "down") accent else colorScheme.onBackground
       ) { reaction = if (reaction == "down") null else "down" }
-      ActionBarItem(Icons.Outlined.Share, "Share") {
+      ActionBarItem(androidx.compose.ui.res.painterResource(R.drawable.ic_share), "Share") {
         val intent = Intent(Intent.ACTION_SEND).apply {
           type = "text/plain"
           putExtra(Intent.EXTRA_TEXT, message.content)
