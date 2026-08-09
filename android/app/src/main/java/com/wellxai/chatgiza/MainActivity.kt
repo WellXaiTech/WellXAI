@@ -193,7 +193,6 @@ import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.Repeat
@@ -3107,7 +3106,12 @@ internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () ->
           .background(Color(0xFFFFC94A).copy(alpha = 0.14f)),
         contentAlignment = Alignment.Center
       ) {
-        Icon(Icons.Outlined.Link, contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.size(24.dp))
+        Icon(
+          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_share_link),
+          contentDescription = null,
+          tint = Color(0xFFFFC94A),
+          modifier = Modifier.size(24.dp)
+        )
       }
       Spacer(modifier = Modifier.height(16.dp))
       Text("Connect With ChatGiZa", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
@@ -5740,7 +5744,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
 
       SettingsSectionHeader("Data & Information")
       SettingsSection {
-        SettingsMenuRow("Shared Conversations", icon = Icons.Outlined.Link) { viewModel.openSharedConversations() }
+        SettingsMenuRow("Shared Conversations", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_share_link)) { viewModel.openSharedConversations() }
         SettingsDivider()
         SettingsMenuRow("Data Controls", icon = Icons.Outlined.Storage) { viewModel.openDataControls() }
         SettingsDivider()
@@ -5803,6 +5807,7 @@ private fun SettingsDivider() {
 private fun SettingsMenuRow(
   title: String,
   icon: ImageVector? = null,
+  painter: androidx.compose.ui.graphics.painter.Painter? = null,
   textColor: Color? = null,
   onClick: (() -> Unit)? = null
 ) {
@@ -5814,7 +5819,10 @@ private fun SettingsMenuRow(
       .padding(vertical = 14.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    if (icon != null) {
+    if (painter != null) {
+      Icon(painter, contentDescription = null, tint = contentColor, modifier = Modifier.size(22.dp))
+      Spacer(modifier = Modifier.width(16.dp))
+    } else if (icon != null) {
       Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(22.dp))
       Spacer(modifier = Modifier.width(16.dp))
     }
