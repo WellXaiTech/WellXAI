@@ -17,6 +17,7 @@ import androidx.media3.ui.PlayerView
 import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.util.Base64
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
@@ -2792,6 +2793,27 @@ internal fun MediaPostVideoPlayer(url: String, modifier: Modifier = Modifier) {
 // that unlocks the "Push to Extra" action under substantial ChatGiZa
 // replies in Chat (see MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH) -- nothing is
 // posted automatically just from connecting.
+@Composable
+private fun ConnectFeatureRow(icon: ImageVector, title: String, body: String) {
+  Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+    Box(
+      modifier = Modifier
+        .size(36.dp)
+        .clip(RoundedCornerShape(11.dp))
+        .background(Color(0xFFFFC94A).copy(alpha = 0.14f)),
+      contentAlignment = Alignment.Center
+    ) {
+      Icon(icon, contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.size(18.dp))
+    }
+    Spacer(modifier = Modifier.width(12.dp))
+    Column {
+      Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+      Spacer(modifier = Modifier.height(2.dp))
+      Text(body, color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp, lineHeight = 18.sp)
+    }
+  }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () -> Unit) {
@@ -2799,21 +2821,46 @@ internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () ->
     Column(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(horizontal = 20.dp)
-        .padding(bottom = 32.dp)
+        .padding(horizontal = 24.dp)
+        .padding(bottom = 36.dp, top = 4.dp)
     ) {
-      Text("Connect With ChatGiZa", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-      Spacer(modifier = Modifier.height(10.dp))
+      Box(
+        modifier = Modifier
+          .size(52.dp)
+          .clip(RoundedCornerShape(16.dp))
+          .background(Color(0xFFFFC94A).copy(alpha = 0.14f)),
+        contentAlignment = Alignment.Center
+      ) {
+        Icon(Icons.Outlined.Link, contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.size(24.dp))
+      }
+      Spacer(modifier = Modifier.height(16.dp))
+      Text("Connect With ChatGiZa", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+      Spacer(modifier = Modifier.height(6.dp))
       Text(
-        "Ruhusu akaunti yako ya Extra kuingiliana moja kwa moja na ChatGiZa. " +
-          "Ukishaunganisha, chini ya barua, makala, picha au video unayotengeneza kwenye chat " +
-          "utapata chaguo la kuituma moja kwa moja kwenye Extra Media -- ukitaka tu. " +
-          "Maongezi ya kawaida (kama \"Habari\" au \"Mambo vipi\") hayapewi chaguo hili.",
+        "Ruhusu akaunti yako ya Extra kuingiliana moja kwa moja na ChatGiZa. Ukishaunganisha, " +
+          "utaona chaguo la \"Extra\" chini ya majibu marefu ya ChatGiZa kwenye chat.",
         color = Color.White.copy(alpha = 0.75f),
         fontSize = 14.sp,
         lineHeight = 20.sp
       )
-      Spacer(modifier = Modifier.height(24.dp))
+      Spacer(modifier = Modifier.height(6.dp))
+      Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.08f)))
+      ConnectFeatureRow(
+        icon = Icons.Filled.Send,
+        title = "Post",
+        body = "Tuma barua, makala, au maandishi marefu moja kwa moja kwenye Extra Media -- ukitaka tu."
+      )
+      ConnectFeatureRow(
+        icon = Icons.Outlined.Description,
+        title = "Caption",
+        body = "Ongeza maneno yako mwenyewe chini ya post kabla ya kutuma."
+      )
+      ConnectFeatureRow(
+        icon = Icons.Outlined.Lock,
+        title = "Hii ni hiari",
+        body = "Maongezi ya kawaida (kama \"Habari\" au \"Mambo vipi\") hayapewi chaguo hili -- hakuna kinachotumwa bila wewe kubonyeza."
+      )
+      Spacer(modifier = Modifier.height(20.dp))
       if (viewModel.chatGizaMediaConnected) {
         Row(verticalAlignment = Alignment.CenterVertically) {
           Icon(Icons.Filled.Check, contentDescription = null, tint = Color(0xFF16C784), modifier = Modifier.size(20.dp))
@@ -2823,17 +2870,17 @@ internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () ->
         Spacer(modifier = Modifier.height(14.dp))
         OutlinedButton(
           onClick = { viewModel.updateChatGizaMediaConnected(false) },
-          modifier = Modifier.fillMaxWidth(),
-          shape = RoundedCornerShape(20.dp)
+          modifier = Modifier.fillMaxWidth().height(52.dp),
+          shape = RoundedCornerShape(24.dp)
         ) {
           Text("Disconnect")
         }
       } else {
         Button(
           onClick = { viewModel.updateChatGizaMediaConnected(true) },
-          modifier = Modifier.fillMaxWidth(),
+          modifier = Modifier.fillMaxWidth().height(52.dp),
           colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC94A)),
-          shape = RoundedCornerShape(20.dp)
+          shape = RoundedCornerShape(24.dp)
         ) {
           Text("Connect", color = Color.Black, fontWeight = FontWeight.SemiBold)
         }
@@ -5850,7 +5897,14 @@ private fun MessageActionBar(
   fun push(caption: String?) {
     if (pushState == "idle") {
       pushState = "pushing"
-      onPushToExtra(caption) { success -> pushState = if (success) "pushed" else "idle" }
+      onPushToExtra(caption) { success ->
+        pushState = if (success) "pushed" else "idle"
+        Toast.makeText(
+          context,
+          if (success) "Sent to Extra Media" else "Couldn't send — try again",
+          Toast.LENGTH_SHORT
+        ).show()
+      }
     }
   }
 
@@ -5861,10 +5915,18 @@ private fun MessageActionBar(
     ActionBarItem(Icons.Outlined.ContentCopy, "Copy") {
       clipboard.setText(AnnotatedString(message.content))
     }
-    if (chatGizaMediaConnected && message.content.length >= MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH) {
+    if (message.content.length >= MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH) {
       ActionBarExtraItem(
         label = if (pushState == "pushed") "Sent" else "Extra",
         tint = if (pushState == "pushed") accent else colorScheme.onBackground,
+        connected = chatGizaMediaConnected,
+        onNotConnected = {
+          Toast.makeText(
+            context,
+            "Connect ChatGiZa with Extra Media first — Extra > + > Connect With ChatGiZa",
+            Toast.LENGTH_LONG
+          ).show()
+        },
         onPost = { push(null) },
         onCaption = { captionSheetOpen = true }
       )
@@ -5927,26 +5989,44 @@ private fun MessageActionBar(
   }
 }
 
-// "Extra" between Copy and Like -- a small dropdown arrow makes it clear
-// tapping opens a choice, not an immediate action like the plain icons
-// around it: "Post" pushes the reply to Extra Media as-is, "Caption" lets
-// the user write their own caption first (see CaptionComposerSheet).
+// "Extra" between Copy and Like. A single icon with a small dropdown-arrow
+// badge in the corner (instead of two icons crammed side by side) opens
+// the choice: "Post" pushes the reply to Extra Media as-is, "Caption"
+// lets the user write their own caption first (see CaptionComposerSheet).
+// Tapping while not connected skips the menu entirely and tells the user
+// to connect first, rather than the option silently not being there.
 @Composable
-private fun ActionBarExtraItem(label: String, tint: Color, onPost: () -> Unit, onCaption: () -> Unit) {
+private fun ActionBarExtraItem(
+  label: String,
+  tint: Color,
+  connected: Boolean,
+  onNotConnected: () -> Unit,
+  onPost: () -> Unit,
+  onCaption: () -> Unit
+) {
   var menuOpen by remember { mutableStateOf(false) }
   Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(60.dp)) {
     Box {
-      Row(
+      Box(
         modifier = Modifier
           .size(48.dp)
           .clip(RoundedCornerShape(14.dp))
           .background(colorScheme.onBackground.copy(alpha = 0.06f))
-          .clickable { menuOpen = true },
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
+          .clickable { if (connected) menuOpen = true else onNotConnected() },
+        contentAlignment = Alignment.Center
       ) {
-        Icon(Icons.Filled.Send, contentDescription = label, tint = tint, modifier = Modifier.size(18.dp))
-        Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = tint, modifier = Modifier.size(16.dp))
+        Icon(Icons.Filled.Send, contentDescription = label, tint = tint, modifier = Modifier.size(20.dp))
+        Box(
+          modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .padding(2.dp)
+            .size(14.dp)
+            .clip(CircleShape)
+            .background(colorScheme.background),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = tint, modifier = Modifier.size(14.dp))
+        }
       }
       DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
         DropdownMenuItem(text = { Text("Post") }, onClick = { menuOpen = false; onPost() })
@@ -5961,7 +6041,11 @@ private fun ActionBarExtraItem(label: String, tint: Color, onPost: () -> Unit, o
 // Reached via "Extra" -> "Caption": a short caption the user writes
 // themselves, which lands under the reply's own text when posted to
 // Extra Media (ChatViewModel.pushReplyToExtraMedia builds the combined
-// text; this sheet only collects the caption itself).
+// text; this sheet only collects the caption itself). Bigger and more
+// explanatory than a bare text box -- an icon badge, a heading, and a
+// line explaining what happens on submit, closer to the rest of the
+// app's sheets (e.g. ConnectWithChatGizaSheet) than the plain composer
+// this replaced.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CaptionComposerSheet(onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
@@ -5970,42 +6054,68 @@ private fun CaptionComposerSheet(onDismiss: () -> Unit, onSubmit: (String) -> Un
     Column(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(horizontal = 20.dp)
-        .padding(bottom = 28.dp)
+        .padding(horizontal = 24.dp)
+        .padding(bottom = 36.dp, top = 4.dp)
     ) {
-      Text("Add a caption", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-      Spacer(modifier = Modifier.height(12.dp))
+      Box(
+        modifier = Modifier
+          .size(52.dp)
+          .clip(RoundedCornerShape(16.dp))
+          .background(Color(0xFFFFC94A).copy(alpha = 0.14f)),
+        contentAlignment = Alignment.Center
+      ) {
+        Icon(Icons.Filled.Send, contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.size(24.dp))
+      }
+      Spacer(modifier = Modifier.height(16.dp))
+      Text("Add a caption", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+      Spacer(modifier = Modifier.height(6.dp))
+      Text(
+        "This reply becomes the post; what you write below is added underneath it on your Extra Media profile.",
+        color = Color.White.copy(alpha = 0.6f),
+        fontSize = 14.sp,
+        lineHeight = 19.sp
+      )
+      Spacer(modifier = Modifier.height(18.dp))
       Box(
         modifier = Modifier
           .fillMaxWidth()
-          .heightIn(min = 80.dp)
-          .clip(RoundedCornerShape(14.dp))
-          .background(Color.White.copy(alpha = 0.05f))
-          .padding(14.dp)
+          .heightIn(min = 130.dp)
+          .clip(RoundedCornerShape(18.dp))
+          .background(Color.White.copy(alpha = 0.06f))
+          .padding(16.dp)
       ) {
         if (text.isEmpty()) {
-          Text("Write a caption for this post", color = Color(0xFF6E6E6E), fontSize = 15.sp)
+          Text("Write a caption for this post…", color = Color(0xFF6E6E6E), fontSize = 16.sp)
         }
         BasicTextField(
           value = text,
           onValueChange = { text = it },
-          textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp, lineHeight = 20.sp),
+          textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 16.sp, lineHeight = 22.sp),
           cursorBrush = SolidColor(Color(0xFFFFC94A)),
           modifier = Modifier.fillMaxSize()
         )
       }
-      Spacer(modifier = Modifier.height(16.dp))
-      Button(
-        onClick = { if (text.isNotBlank()) onSubmit(text.trim()) },
-        enabled = text.isNotBlank(),
-        colors = ButtonDefaults.buttonColors(
-          containerColor = Color(0xFFFFC94A),
-          disabledContainerColor = Color(0xFFFFC94A).copy(alpha = 0.35f)
-        ),
-        shape = RoundedCornerShape(20.dp),
-        modifier = Modifier.fillMaxWidth().height(48.dp)
-      ) {
-        Text("Post", color = Color.Black, fontWeight = FontWeight.SemiBold)
+      Spacer(modifier = Modifier.height(20.dp))
+      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        OutlinedButton(
+          onClick = onDismiss,
+          modifier = Modifier.weight(1f).height(52.dp),
+          shape = RoundedCornerShape(24.dp)
+        ) {
+          Text("Cancel")
+        }
+        Button(
+          onClick = { if (text.isNotBlank()) onSubmit(text.trim()) },
+          enabled = text.isNotBlank(),
+          colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFFFFC94A),
+            disabledContainerColor = Color(0xFFFFC94A).copy(alpha = 0.35f)
+          ),
+          shape = RoundedCornerShape(24.dp),
+          modifier = Modifier.weight(1f).height(52.dp)
+        ) {
+          Text("Post", color = Color.Black, fontWeight = FontWeight.SemiBold)
+        }
       }
     }
   }
