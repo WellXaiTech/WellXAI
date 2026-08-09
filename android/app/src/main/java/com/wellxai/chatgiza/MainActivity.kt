@@ -2443,7 +2443,7 @@ private fun ChatGizaEventsCard() {
       Crossfade(targetState = index, label = "eventsIcon") { i ->
         val item = CHATGIZA_ANNOUNCEMENTS[i]
         Box(
-          modifier = Modifier.size(52.dp).clip(RoundedCornerShape(14.dp)).background(item.iconColor),
+          modifier = Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(item.iconColor),
           contentAlignment = Alignment.Center
         ) {
           Icon(item.icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
