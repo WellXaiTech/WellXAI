@@ -5,11 +5,12 @@ import { getRequestUser } from "@/lib/requestUser";
 import { uploadPostImage, isOwnVideoUrl } from "@/lib/mediaStorage";
 
 const MAX_TEXT_LENGTH = 2000;
-// The client still sends a base64 data URL (that's what the existing
-// upload flow produces) -- capped well under Vercel's request body limit.
-// The server uploads it to Supabase Storage and stores the resulting
-// public URL, not the base64 itself.
+// The client still sends base64 data URLs (that's what the existing upload
+// flow produces) -- each capped well under Vercel's request body limit.
+// The server uploads them to Supabase Storage and stores the resulting
+// public URLs, not the base64 itself.
 const MAX_IMAGE_DATA_URL_LENGTH = 700_000;
+const MAX_IMAGES_PER_POST = 10;
 const FEED_PAGE_SIZE = 50;
 
 type Sentiment = "bullish" | "neutral" | "bearish";
@@ -30,13 +31,19 @@ function authorOf(row: PostRow): { authorName: string; authorImage: string | nul
   return { authorName: u?.name || "ChatGiZa user", authorImage: u?.image ?? null };
 }
 
-function toPost(row: PostRow) {
+// Posts have moved to a media_post_images carousel table, but older rows
+// (and older API clients) only ever had the single image_url column -- this
+// merges both into one imageUrls[] shape so every caller only deals with
+// one representation, new or legacy.
+function toPost(row: PostRow, carouselUrls: string[] | undefined) {
+  const imageUrls = carouselUrls?.length ? carouselUrls : row.image_url ? [row.image_url] : [];
   return {
     id: row.id,
     authorId: row.user_id,
     ...authorOf(row),
     text: row.caption ?? "",
-    imageDataUrl: row.image_url,
+    imageDataUrl: imageUrls[0] ?? null,
+    imageUrls,
     videoUrl: row.video_url,
     sentiment: row.sentiment,
     createdAt: new Date(row.created_at).getTime(),
@@ -60,7 +67,23 @@ export async function GET(req: NextRequest) {
       .order("created_at", { ascending: false })
       .limit(FEED_PAGE_SIZE);
     if (error) throw error;
-    const posts = ((rows ?? []) as PostRow[]).map(toPost);
+    const postRows = (rows ?? []) as PostRow[];
+    const postIds = postRows.map((r) => r.id);
+
+    const { data: imageRows, error: imageErr } = await supabaseAdmin
+      .from("media_post_images")
+      .select("post_id, url, position")
+      .in("post_id", postIds.length ? postIds : ["__none__"])
+      .order("position", { ascending: true });
+    if (imageErr) throw imageErr;
+    const carouselByPost = new Map<string, string[]>();
+    for (const row of imageRows ?? []) {
+      const list = carouselByPost.get(row.post_id) ?? [];
+      list.push(row.url);
+      carouselByPost.set(row.post_id, list);
+    }
+
+    const posts = postRows.map((row) => toPost(row, carouselByPost.get(row.id)));
 
     const [likeCounts, likedByMe, commentCounts] = await Promise.all([
       Promise.all(posts.map((p) => supabaseAdmin.from("media_likes").select("*", { count: "exact", head: true }).eq("post_id", p.id))),
@@ -92,17 +115,27 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => null);
   const text = typeof body?.text === "string" ? body.text.trim().slice(0, MAX_TEXT_LENGTH) : "";
-  // A provided-but-invalid/oversized image used to just get dropped here
-  // (falling through to `null`), so a post with a too-large photo silently
-  // published as text-only with no indication the picture never made it.
-  const imageDataUrlInput = typeof body?.imageDataUrl === "string" ? body.imageDataUrl : null;
-  if (imageDataUrlInput && !imageDataUrlInput.startsWith("data:image/")) {
-    return NextResponse.json({ error: "Invalid photo data" }, { status: 400 });
+
+  // Accepts the new plural imageDataUrls (a carousel) or the older singular
+  // imageDataUrl (still sent by not-yet-updated clients) -- normalized to
+  // one list either way.
+  const rawImageInputs: string[] = Array.isArray(body?.imageDataUrls)
+    ? body.imageDataUrls.filter((u: unknown): u is string => typeof u === "string")
+    : typeof body?.imageDataUrl === "string"
+      ? [body.imageDataUrl]
+      : [];
+  if (rawImageInputs.length > MAX_IMAGES_PER_POST) {
+    return NextResponse.json({ error: `A post can have at most ${MAX_IMAGES_PER_POST} photos` }, { status: 400 });
   }
-  if (imageDataUrlInput && imageDataUrlInput.length > MAX_IMAGE_DATA_URL_LENGTH) {
-    return NextResponse.json({ error: "Photo is too large" }, { status: 400 });
+  for (const dataUrl of rawImageInputs) {
+    if (!dataUrl.startsWith("data:image/")) {
+      return NextResponse.json({ error: "Invalid photo data" }, { status: 400 });
+    }
+    if (dataUrl.length > MAX_IMAGE_DATA_URL_LENGTH) {
+      return NextResponse.json({ error: "One of the photos is too large" }, { status: 400 });
+    }
   }
-  const rawImageDataUrl = imageDataUrlInput;
+
   // Videos are uploaded straight to Storage by the client beforehand (see
   // /api/media/video-upload-url) -- here we only ever receive the resulting
   // URL, which we verify actually points at our own video bucket before
@@ -111,24 +144,32 @@ export async function POST(req: NextRequest) {
   const sentiment: Sentiment | null =
     body?.sentiment === "bullish" || body?.sentiment === "neutral" || body?.sentiment === "bearish" ? body.sentiment : null;
 
-  if (!text && !rawImageDataUrl && !videoUrl) {
+  if (!text && rawImageInputs.length === 0 && !videoUrl) {
     return NextResponse.json({ error: "A post needs text, a photo, or a video" }, { status: 400 });
   }
 
   try {
     await ensureUserExists(user.id, "", user.name, user.image ?? "");
 
-    const imageUrl = rawImageDataUrl ? await uploadPostImage(rawImageDataUrl) : null;
-    if (rawImageDataUrl && !imageUrl) {
-      return NextResponse.json({ error: "Failed to upload photo" }, { status: 500 });
+    const uploadedUrls = await Promise.all(rawImageInputs.map((dataUrl) => uploadPostImage(dataUrl)));
+    if (uploadedUrls.some((url) => !url)) {
+      return NextResponse.json({ error: "Failed to upload one of the photos" }, { status: 500 });
     }
+    const imageUrls = uploadedUrls as string[];
 
     const { data, error } = await supabaseAdmin
       .from("media_posts")
-      .insert({ user_id: user.id, caption: text || null, image_url: imageUrl, video_url: videoUrl, sentiment })
+      .insert({ user_id: user.id, caption: text || null, video_url: videoUrl, sentiment })
       .select()
       .single();
     if (error || !data) throw error ?? new Error("insert failed");
+
+    if (imageUrls.length > 0) {
+      const { error: imagesError } = await supabaseAdmin
+        .from("media_post_images")
+        .insert(imageUrls.map((url, position) => ({ post_id: data.id, url, position })));
+      if (imagesError) throw imagesError;
+    }
 
     return NextResponse.json({
       post: {
@@ -137,7 +178,8 @@ export async function POST(req: NextRequest) {
         authorName: user.name,
         authorImage: user.image,
         text,
-        imageDataUrl: imageUrl,
+        imageDataUrl: imageUrls[0] ?? null,
+        imageUrls,
         videoUrl,
         sentiment,
         createdAt: new Date(data.created_at).getTime(),

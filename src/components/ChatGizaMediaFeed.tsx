@@ -13,6 +13,7 @@ type MediaPost = {
   authorImage: string | null;
   text: string;
   imageDataUrl: string | null;
+  imageUrls: string[];
   videoUrl: string | null;
   sentiment: Sentiment | null;
   createdAt: number;
@@ -32,6 +33,7 @@ type Comment = {
 
 const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 const MAX_IMAGE_DIMENSION = 1080;
+const MAX_IMAGES_PER_POST = 10;
 const ALLOWED_VIDEO_MIME = new Set(["video/mp4", "video/webm", "video/quicktime"]);
 
 const BackIcon = (
@@ -62,6 +64,25 @@ const CommentIcon = (
     <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
   </svg>
 );
+const RepostIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 1l4 4-4 4" />
+    <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+    <path d="M7 23l-4-4 4-4" />
+    <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+  </svg>
+);
+const SendIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 2 11 13" />
+    <path d="M22 2 15 22l-4-9-9-4 20-7Z" />
+  </svg>
+);
+const BookmarkIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M19 21 12 16l-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16Z" />
+  </svg>
+);
 const CloseSmallIcon = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
     <path d="M18 6 6 18M6 6l12 12" />
@@ -70,6 +91,16 @@ const CloseSmallIcon = (
 const TrashIcon = (
   <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
     <path d="M7 3.5h6M5 5h10M7 5v10a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1V5M8.5 8v5M11.5 8v5" />
+  </svg>
+);
+const ChevronLeftIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M15 18l-6-6 6-6" />
+  </svg>
+);
+const ChevronRightIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 18l6-6-6-6" />
   </svg>
 );
 
@@ -203,6 +234,47 @@ function CommentsPanel({ postId }: { postId: string }) {
   );
 }
 
+function MediaCarousel({ imageUrls }: { imageUrls: string[] }) {
+  const [index, setIndex] = useState(0);
+  if (imageUrls.length === 0) return null;
+  if (imageUrls.length === 1) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={imageUrls[0]} alt="" className="mt-3 aspect-[4/5] w-full rounded-xl object-cover" />;
+  }
+  return (
+    <div className="relative mt-3">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={imageUrls[index]} alt="" className="aspect-[4/5] w-full rounded-xl object-cover" />
+      <span className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-xs font-medium text-white">
+        {index + 1}/{imageUrls.length}
+      </span>
+      {index > 0 && (
+        <button
+          onClick={() => setIndex((i) => i - 1)}
+          aria-label="Previous photo"
+          className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-1.5 text-white hover:bg-black/70"
+        >
+          {ChevronLeftIcon}
+        </button>
+      )}
+      {index < imageUrls.length - 1 && (
+        <button
+          onClick={() => setIndex((i) => i + 1)}
+          aria-label="Next photo"
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-1.5 text-white hover:bg-black/70"
+        >
+          {ChevronRightIcon}
+        </button>
+      )}
+      <div className="mt-2 flex justify-center gap-1.5">
+        {imageUrls.map((_, i) => (
+          <span key={i} className={`h-1.5 w-1.5 rounded-full ${i === index ? "bg-foreground" : "bg-border"}`} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function PostCard({ post, myId, onLike, onDelete }: {
   post: MediaPost;
   myId: string | undefined;
@@ -210,7 +282,9 @@ function PostCard({ post, myId, onLike, onDelete }: {
   onDelete: (id: string) => void;
 }) {
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [following, setFollowing] = useState(false);
   const sentiment = SENTIMENTS.find((s) => s.key === post.sentiment);
+  const isOwnPost = post.authorId === myId;
 
   return (
     <div className="rounded-2xl border border-border p-4">
@@ -226,7 +300,7 @@ function PostCard({ post, myId, onLike, onDelete }: {
           {sentiment && (
             <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${sentiment.className}`}>{sentiment.label}</span>
           )}
-          {post.authorId === myId && (
+          {isOwnPost ? (
             <button
               onClick={() => {
                 if (confirm("Delete this post?")) onDelete(post.id);
@@ -236,18 +310,24 @@ function PostCard({ post, myId, onLike, onDelete }: {
             >
               {TrashIcon}
             </button>
+          ) : (
+            <button
+              onClick={() => setFollowing((v) => !v)}
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                following ? "bg-surface-2 text-muted" : "bg-foreground text-background"
+              }`}
+            >
+              {following ? "Following" : "Follow"}
+            </button>
           )}
         </div>
       </div>
 
       {post.text && <p className="mt-3 whitespace-pre-wrap break-words text-[15px]">{post.text}</p>}
 
-      {post.imageDataUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={post.imageDataUrl} alt="" className="mt-3 max-h-[480px] w-full rounded-xl object-cover" />
-      )}
+      <MediaCarousel imageUrls={post.imageUrls} />
       {post.videoUrl && (
-        <video src={post.videoUrl} controls className="mt-3 max-h-[480px] w-full rounded-xl bg-black" />
+        <video src={post.videoUrl} controls className="mt-3 aspect-[4/5] w-full rounded-xl bg-black object-cover" />
       )}
 
       <div className="mt-3 flex items-center gap-4 border-t border-border pt-3">
@@ -265,6 +345,9 @@ function PostCard({ post, myId, onLike, onDelete }: {
         >
           {CommentIcon} {post.commentCount}
         </button>
+        <span className="flex items-center gap-1.5 text-sm text-muted">{RepostIcon} 0</span>
+        <span className="flex items-center gap-1.5 text-sm text-muted">{SendIcon}</span>
+        <span className="ml-auto text-muted">{BookmarkIcon}</span>
       </div>
 
       {commentsOpen && <CommentsPanel postId={post.id} />}
@@ -278,8 +361,7 @@ export default function ChatGizaMediaFeed({ onClose }: { onClose: () => void }) 
   const [error, setError] = useState<string | null>(null);
 
   const [text, setText] = useState("");
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
   const [sentiment, setSentiment] = useState<Sentiment | null>(null);
@@ -300,18 +382,21 @@ export default function ChatGizaMediaFeed({ onClose }: { onClose: () => void }) 
     loadFeed();
   }, []);
 
-  async function handlePickImage(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+  async function handlePickImages(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []).slice(0, MAX_IMAGES_PER_POST - imagePreviews.length);
     e.target.value = "";
-    if (!file) return;
+    if (files.length === 0) return;
     clearVideo();
     try {
-      const compressed = await compressImageFile(file);
-      setImageDataUrl(compressed);
-      setImagePreview(compressed);
+      const compressed = await Promise.all(files.map(compressImageFile));
+      setImagePreviews((prev) => [...prev, ...compressed].slice(0, MAX_IMAGES_PER_POST));
     } catch {
-      setError("Couldn't read that photo");
+      setError("Couldn't read one of those photos");
     }
+  }
+
+  function removeImageAt(index: number) {
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   }
 
   function handlePickVideo(e: React.ChangeEvent<HTMLInputElement>) {
@@ -326,14 +411,9 @@ export default function ChatGizaMediaFeed({ onClose }: { onClose: () => void }) 
       setError("Video must be under 50MB");
       return;
     }
-    clearImage();
+    setImagePreviews([]);
     setVideoFile(file);
     setVideoPreviewUrl(URL.createObjectURL(file));
-  }
-
-  function clearImage() {
-    setImagePreview(null);
-    setImageDataUrl(null);
   }
 
   function clearVideo() {
@@ -361,7 +441,7 @@ export default function ChatGizaMediaFeed({ onClose }: { onClose: () => void }) 
   }
 
   async function handlePost() {
-    if (!text.trim() && !imageDataUrl && !videoFile) return;
+    if (!text.trim() && imagePreviews.length === 0 && !videoFile) return;
     setPosting(true);
     setError(null);
     try {
@@ -380,14 +460,14 @@ export default function ChatGizaMediaFeed({ onClose }: { onClose: () => void }) 
       const res = await fetch("/api/media/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: text.trim(), imageDataUrl, videoUrl, sentiment }),
+        body: JSON.stringify({ text: text.trim(), imageDataUrls: imagePreviews, videoUrl, sentiment }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to post");
 
       setPosts((prev) => [data.post, ...(prev ?? [])]);
       setText("");
-      clearImage();
+      setImagePreviews([]);
       clearVideo();
       setSentiment(null);
     } catch (err) {
@@ -424,7 +504,7 @@ export default function ChatGizaMediaFeed({ onClose }: { onClose: () => void }) 
     }
   }
 
-  const canPost = (text.trim() || imageDataUrl || videoFile) && !posting;
+  const canPost = (text.trim() || imagePreviews.length > 0 || videoFile) && !posting;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
@@ -450,17 +530,21 @@ export default function ChatGizaMediaFeed({ onClose }: { onClose: () => void }) 
               className="w-full resize-none bg-transparent text-[15px] outline-none placeholder:text-muted"
             />
 
-            {imagePreview && (
-              <div className="relative mt-2 inline-block">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={imagePreview} alt="" className="max-h-64 rounded-xl object-cover" />
-                <button
-                  onClick={clearImage}
-                  aria-label="Remove photo"
-                  className="absolute right-2 top-2 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
-                >
-                  {CloseSmallIcon}
-                </button>
+            {imagePreviews.length > 0 && (
+              <div className="mt-2 flex gap-2 overflow-x-auto">
+                {imagePreviews.map((src, i) => (
+                  <div key={i} className="relative shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={src} alt="" className="h-24 w-24 rounded-xl object-cover" />
+                    <button
+                      onClick={() => removeImageAt(i)}
+                      aria-label="Remove photo"
+                      className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
+                    >
+                      {CloseSmallIcon}
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
             {videoPreviewUrl && (
@@ -492,11 +576,19 @@ export default function ChatGizaMediaFeed({ onClose }: { onClose: () => void }) 
 
             <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
               <div className="flex items-center gap-1">
-                <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handlePickImage} />
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handlePickImages}
+                />
                 <button
                   onClick={() => imageInputRef.current?.click()}
-                  aria-label="Attach photo"
-                  className="rounded-full p-2 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                  aria-label="Attach photos"
+                  disabled={imagePreviews.length >= MAX_IMAGES_PER_POST}
+                  className="rounded-full p-2 text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-40"
                 >
                   {ImageIcon}
                 </button>

@@ -24,8 +24,16 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (post.user_id !== user.id) {
       return NextResponse.json({ error: "You can only delete your own posts" }, { status: 403 });
     }
+    const { data: carouselImages } = await supabaseAdmin.from("media_post_images").select("url").eq("post_id", id);
+    // media_post_images rows themselves cascade-delete with the post (FK ON
+    // DELETE CASCADE) -- only the underlying Storage files need cleaning up
+    // by hand here.
     await supabaseAdmin.from("media_posts").delete().eq("id", id);
-    await Promise.all([deletePostImage(post.image_url), deletePostVideo(post.video_url)]);
+    await Promise.all([
+      deletePostImage(post.image_url),
+      deletePostVideo(post.video_url),
+      ...(carouselImages ?? []).map((row) => deletePostImage(row.url)),
+    ]);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Media post DELETE error:", err);
