@@ -1690,11 +1690,12 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
         }
       }
     } else {
-      val statusText = when {
-        controller.errorMessage != null -> controller.errorMessage ?: ""
-        controller.isAiSpeaking -> "ChatGiZa is speaking…"
-        else -> "Go ahead"
-      }
+      // Transient network errors (e.g. a dropped WebSocket surfacing as
+      // "Broken pipe") used to print straight through here -- a raw
+      // socket exception message isn't something a user should ever see,
+      // so the status now always reads "Go ahead" outside of the
+      // AI-speaking state, regardless of what controller.errorMessage says.
+      val statusText = if (controller.isAiSpeaking) "ChatGiZa is speaking…" else "Go ahead"
 
       // No back arrow here by design — exiting Live Vision happens via the
       // system back gesture (BackHandler above) or the Stop button below.
