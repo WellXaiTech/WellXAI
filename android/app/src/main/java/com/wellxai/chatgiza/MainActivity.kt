@@ -1496,7 +1496,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             )
             DropdownMenuItem(
               text = { Text("Connectors") },
-              leadingIcon = { Icon(Icons.Outlined.Hub, contentDescription = null) },
+              leadingIcon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connectors), contentDescription = null) },
               onClick = { attachMenuOpen = false }
             )
           }
