@@ -1857,20 +1857,24 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
                   DropdownMenuItem(text = { Text("AI Agent") }, onClick = { viewModel.selectTool("ai_agent"); toolMenuOpen = false })
                 }
               }
-              TextField(
-                value = viewModel.input,
-                onValueChange = viewModel::onInputChange,
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Ask anything", color = Color.White.copy(alpha = 0.38f)) },
-                colors = TextFieldDefaults.colors(
-                  unfocusedContainerColor = Color.Transparent,
-                  focusedContainerColor = Color.Transparent,
-                  unfocusedIndicatorColor = Color.Transparent,
-                  focusedIndicatorColor = Color.Transparent,
-                  unfocusedTextColor = Color.White,
-                  focusedTextColor = Color.White
+              // Material3 TextField's own vertical padding is sized for a
+              // 56dp+ default height -- inside this pill's fixed 46dp it
+              // squashed the text against the top/bottom edges instead of
+              // centering it. A BasicTextField gives full control over
+              // that padding so the text actually sits centered and legible.
+              Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                if (viewModel.input.isEmpty()) {
+                  Text("Ask anything", color = Color.White.copy(alpha = 0.38f), fontSize = 15.sp)
+                }
+                BasicTextField(
+                  value = viewModel.input,
+                  onValueChange = viewModel::onInputChange,
+                  modifier = Modifier.fillMaxWidth(),
+                  singleLine = true,
+                  textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp),
+                  cursorBrush = SolidColor(Color.White)
                 )
-              )
+              }
             }
           }
           Spacer(modifier = Modifier.size(8.dp))
