@@ -6211,6 +6211,20 @@ private fun MessageBubble(
 
 @Composable
 private fun ActionBarItem(icon: ImageVector, label: String, tint: Color = colorScheme.onBackground, onClick: () -> Unit) {
+  ActionBarItemShell(label, tint, onClick) { iconTint ->
+    Icon(icon, contentDescription = label, tint = iconTint, modifier = Modifier.size(20.dp))
+  }
+}
+
+@Composable
+private fun ActionBarItem(painter: androidx.compose.ui.graphics.painter.Painter, label: String, tint: Color = colorScheme.onBackground, onClick: () -> Unit) {
+  ActionBarItemShell(label, tint, onClick) { iconTint ->
+    Icon(painter, contentDescription = label, tint = iconTint, modifier = Modifier.size(20.dp))
+  }
+}
+
+@Composable
+private fun ActionBarItemShell(label: String, tint: Color, onClick: () -> Unit, icon: @Composable (Color) -> Unit) {
   Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(60.dp)) {
     Box(
       modifier = Modifier
@@ -6220,7 +6234,7 @@ private fun ActionBarItem(icon: ImageVector, label: String, tint: Color = colorS
         .clickable(onClick = onClick),
       contentAlignment = Alignment.Center
     ) {
-      Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(20.dp))
+      icon(tint)
     }
     Spacer(modifier = Modifier.height(4.dp))
     Text(label, color = colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 10.sp, maxLines = 1, softWrap = false)
@@ -6278,7 +6292,7 @@ private fun MessageActionBar(
     modifier = Modifier.horizontalScroll(rememberScrollState()),
     horizontalArrangement = Arrangement.spacedBy(8.dp)
   ) {
-    ActionBarItem(Icons.Outlined.ContentCopy, "Copy") {
+    ActionBarItem(androidx.compose.ui.res.painterResource(R.drawable.ic_copy), "Copy") {
       clipboard.setText(AnnotatedString(message.content))
     }
     if (message.content.length >= MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH) {
