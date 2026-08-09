@@ -2769,7 +2769,7 @@ internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () ->
         }
         Spacer(modifier = Modifier.height(14.dp))
         OutlinedButton(
-          onClick = { viewModel.setChatGizaMediaConnected(false) },
+          onClick = { viewModel.updateChatGizaMediaConnected(false) },
           modifier = Modifier.fillMaxWidth(),
           shape = RoundedCornerShape(20.dp)
         ) {
@@ -2777,7 +2777,7 @@ internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () ->
         }
       } else {
         Button(
-          onClick = { viewModel.setChatGizaMediaConnected(true) },
+          onClick = { viewModel.updateChatGizaMediaConnected(true) },
           modifier = Modifier.fillMaxWidth(),
           colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC94A)),
           shape = RoundedCornerShape(20.dp)
