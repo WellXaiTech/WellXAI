@@ -30,7 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         .eq("follower_id", user.id)
         .eq("followed_id", targetId)
         .maybeSingle(),
-      kv.get<{ profile?: { bio?: string } }>(profileKey(targetId)),
+      kv.get<{ profile?: { bio?: string; displayName?: string } }>(profileKey(targetId)),
     ]);
 
     return NextResponse.json({
@@ -38,6 +38,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       followingCount: followingCountRes.count ?? 0,
       isFollowedByMe: isFollowingRes.data !== null,
       bio: profileData?.profile?.bio ?? "",
+      displayName: profileData?.profile?.displayName ?? "",
     });
   } catch (err) {
     console.error("Media user profile error:", err);

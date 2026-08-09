@@ -3828,6 +3828,25 @@ private fun CustomizeScreen(viewModel: ChatViewModel) {
 
       Spacer(modifier = Modifier.height(20.dp))
 
+      // The bold public display name shown on the Media profile (e.g.
+      // "QUANTARA") -- distinct from the nickname above, which only
+      // personalizes how the AI addresses you in chat.
+      Text(
+        "Account name (shown on your public profile)",
+        fontSize = 13.sp,
+        color = colorScheme.onBackground.copy(alpha = 0.6f)
+      )
+      Spacer(modifier = Modifier.height(6.dp))
+      OutlinedTextField(
+        value = viewModel.displayNameInput,
+        onValueChange = { if (it.length <= 60) viewModel.onDisplayNameChange(it) },
+        modifier = Modifier.fillMaxWidth(),
+        placeholder = { Text("e.g. QUANTARA") },
+        shape = RoundedCornerShape(12.dp)
+      )
+
+      Spacer(modifier = Modifier.height(20.dp))
+
       // Public-facing -- shown on the ChatGiZa Media profile page, unlike
       // the private "about" field below which is only ever fed to the AI
       // and must never be shown to other users.

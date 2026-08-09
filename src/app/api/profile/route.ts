@@ -15,6 +15,10 @@ type ProfileData = {
     // distinct from `about`, which is private AI-personalization
     // context and must never be surfaced to other users.
     bio?: string;
+    // Public display name shown boldly on the Media profile (e.g.
+    // "QUANTARA"), distinct from `nickname` -- nickname personalizes how
+    // the AI addresses you in chat, displayName is what other users see.
+    displayName?: string;
   };
   memory: string[];
   memoryEnabled: boolean;
@@ -22,7 +26,7 @@ type ProfileData = {
 };
 
 const DEFAULT_PROFILE_DATA: ProfileData = {
-  profile: { nickname: "", about: "", bio: "" },
+  profile: { nickname: "", about: "", bio: "", displayName: "" },
   memory: [],
   memoryEnabled: true,
   language: "",
@@ -74,6 +78,7 @@ export async function PUT(req: NextRequest) {
       birthDate: typeof body.profile?.birthDate === "string" ? body.profile.birthDate : undefined,
       country: typeof body.profile?.country === "string" ? body.profile.country : undefined,
       bio: typeof body.profile?.bio === "string" ? body.profile.bio.slice(0, 150) : "",
+      displayName: typeof body.profile?.displayName === "string" ? body.profile.displayName.slice(0, 60) : "",
     },
     memory: Array.isArray(body.memory) ? body.memory.filter((m: unknown) => typeof m === "string") : [],
     memoryEnabled: typeof body.memoryEnabled === "boolean" ? body.memoryEnabled : true,
