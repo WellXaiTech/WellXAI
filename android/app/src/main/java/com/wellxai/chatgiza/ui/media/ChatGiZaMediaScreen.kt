@@ -7,7 +7,9 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +35,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircle
@@ -143,6 +146,15 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
 
       item { Spacer(modifier = Modifier.height(if (showHeader) headerHeight else 0.dp)) }
+
+      item {
+        MediaStoriesRow(
+          myImage = viewModel.userImage,
+          posts = viewModel.mediaPosts,
+          onMyStoryClick = { showCreate = true }
+        )
+        androidx.compose.material3.HorizontalDivider(color = Color(0xFFEDEDED))
+      }
 
       if (searchOpen) {
         item {
@@ -283,6 +295,75 @@ private fun ChatGiZaHeader(topInset: androidx.compose.ui.unit.Dp, onAddClick: ()
       Text(text = "ChatGiZa", color = Color.Black, fontSize = 20.sp, fontWeight = FontWeight.Bold)
     }
     Spacer(modifier = Modifier.width(48.dp))
+  }
+}
+
+// =============================================================
+// STORIES ROW -- "Your story" (tap opens the create sheet, same as "+")
+// followed by the most recent distinct posters. Monochrome ring instead
+// of Instagram's gradient to match this screen's black/white palette.
+// =============================================================
+
+@Composable
+private fun MediaStoriesRow(myImage: String?, posts: List<ApiMediaPost>, onMyStoryClick: () -> Unit) {
+  val others = remember(posts) { posts.distinctBy { it.authorId }.take(15) }
+
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .horizontalScroll(rememberScrollState())
+      .padding(horizontal = 12.dp, vertical = 10.dp),
+    horizontalArrangement = Arrangement.spacedBy(14.dp)
+  ) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp).clickable(onClick = onMyStoryClick)) {
+      Box(contentAlignment = Alignment.BottomEnd) {
+        if (myImage != null) {
+          AsyncImage(
+            model = myImage,
+            contentDescription = "Your story",
+            modifier = Modifier.size(64.dp).clip(CircleShape).border(1.dp, Color(0xFFDADADA), CircleShape),
+            contentScale = ContentScale.Crop
+          )
+        } else {
+          Icon(Icons.Outlined.AccountCircle, contentDescription = "Your story", tint = Color.Gray, modifier = Modifier.size(64.dp))
+        }
+        Box(
+          modifier = Modifier
+            .size(22.dp)
+            .clip(CircleShape)
+            .background(Color.Black)
+            .border(2.dp, Color.White, CircleShape),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(Icons.Filled.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+        }
+      }
+      Spacer(modifier = Modifier.height(4.dp))
+      Text("Your story", color = Color.Black, fontSize = 11.sp, maxLines = 1, softWrap = false)
+    }
+    others.forEach { post ->
+      Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp)) {
+        Box(
+          modifier = Modifier.size(68.dp).clip(CircleShape).background(Color.Black).padding(2.5.dp),
+          contentAlignment = Alignment.Center
+        ) {
+          if (post.authorImage != null) {
+            AsyncImage(
+              model = post.authorImage,
+              contentDescription = post.authorName,
+              modifier = Modifier.size(61.dp).clip(CircleShape).border(2.dp, Color.White, CircleShape),
+              contentScale = ContentScale.Crop
+            )
+          } else {
+            Box(modifier = Modifier.size(61.dp).clip(CircleShape).background(Color(0xFFEDEDED)).border(2.dp, Color.White, CircleShape), contentAlignment = Alignment.Center) {
+              Icon(Icons.Outlined.AccountCircle, contentDescription = post.authorName, tint = Color.Gray, modifier = Modifier.size(46.dp))
+            }
+          }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(post.authorName, color = Color.Black, fontSize = 11.sp, maxLines = 1, softWrap = false)
+      }
+    }
   }
 }
 
