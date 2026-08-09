@@ -46,12 +46,12 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Comment
-import androidx.compose.material.icons.outlined.Repeat
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -499,7 +499,7 @@ private fun MediaPost(
 
       // Visual-only for now -- no repost backend built yet.
       IconButton(onClick = {}) {
-        Icon(imageVector = Icons.Outlined.Repeat, contentDescription = "Repost", tint = Color.DarkGray)
+        Icon(imageVector = Icons.Filled.Refresh, contentDescription = "Repost", tint = Color.DarkGray)
       }
       Text(text = "0", fontSize = 13.sp, color = Color.Black)
 
@@ -514,7 +514,7 @@ private fun MediaPost(
           context.startActivity(Intent.createChooser(sendIntent, "Share post"))
         }
       ) {
-        Icon(imageVector = Icons.Outlined.Share, contentDescription = "Share", tint = Color.Black)
+        Icon(imageVector = Icons.Filled.Send, contentDescription = "Share", tint = Color.Black)
       }
 
       // Visual-only for now -- no saved-posts list built yet.
