@@ -14,6 +14,7 @@ const MAX_IMAGES_PER_POST = 10;
 const FEED_PAGE_SIZE = 50;
 
 type Sentiment = "bullish" | "neutral" | "bearish";
+type Destination = "post" | "status" | "both";
 
 type PostRow = {
   id: string;
@@ -22,6 +23,7 @@ type PostRow = {
   image_url: string | null;
   video_url: string | null;
   sentiment: Sentiment | null;
+  destination: Destination;
   created_at: string;
   users: { name: string | null; image: string | null } | { name: string | null; image: string | null }[] | null;
 };
@@ -46,6 +48,7 @@ function toPost(row: PostRow, carouselUrls: string[] | undefined) {
     imageUrls,
     videoUrl: row.video_url,
     sentiment: row.sentiment,
+    destination: row.destination ?? "post",
     createdAt: new Date(row.created_at).getTime(),
   };
 }
@@ -63,7 +66,7 @@ export async function GET(req: NextRequest) {
     // became an empty feed here since only `data` was destructured).
     const { data: rows, error } = await supabaseAdmin
       .from("media_posts")
-      .select("id, user_id, caption, image_url, video_url, sentiment, created_at, users!media_posts_user_id_fkey(name, image)")
+      .select("id, user_id, caption, image_url, video_url, sentiment, destination, created_at, users!media_posts_user_id_fkey(name, image)")
       .order("created_at", { ascending: false })
       .limit(FEED_PAGE_SIZE);
     if (error) throw error;
@@ -143,6 +146,11 @@ export async function POST(req: NextRequest) {
   const videoUrl = typeof body?.videoUrl === "string" && isOwnVideoUrl(body.videoUrl) ? body.videoUrl : null;
   const sentiment: Sentiment | null =
     body?.sentiment === "bullish" || body?.sentiment === "neutral" || body?.sentiment === "bearish" ? body.sentiment : null;
+  // Where the post shows up: the main feed/history ("post"), the stories
+  // row ("status"), or both. Defaults to "post" so older clients that don't
+  // send this yet keep behaving exactly as before.
+  const destination: Destination =
+    body?.destination === "status" || body?.destination === "both" ? body.destination : "post";
 
   if (!text && rawImageInputs.length === 0 && !videoUrl) {
     return NextResponse.json({ error: "A post needs text, a photo, or a video" }, { status: 400 });
@@ -159,7 +167,7 @@ export async function POST(req: NextRequest) {
 
     const { data, error } = await supabaseAdmin
       .from("media_posts")
-      .insert({ user_id: user.id, caption: text || null, video_url: videoUrl, sentiment })
+      .insert({ user_id: user.id, caption: text || null, video_url: videoUrl, sentiment, destination })
       .select()
       .single();
     if (error || !data) throw error ?? new Error("insert failed");
@@ -182,6 +190,7 @@ export async function POST(req: NextRequest) {
         imageUrls,
         videoUrl,
         sentiment,
+        destination,
         createdAt: new Date(data.created_at).getTime(),
         likeCount: 0,
         likedByMe: false,

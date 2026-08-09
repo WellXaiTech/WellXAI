@@ -83,6 +83,10 @@ create table if not exists media_posts (
   image_url text,
   video_url text,
   sentiment text, -- 'bullish' | 'neutral' | 'bearish' | null
+  -- 'post' (main feed / history only), 'status' (stories row only), or
+  -- 'both'. Lets a single post choose where it shows up instead of every
+  -- post appearing in both places unconditionally.
+  destination text not null default 'post',
   created_at timestamptz not null default now()
 );
 

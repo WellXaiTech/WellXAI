@@ -16,6 +16,7 @@ type MediaPost = {
   imageUrls: string[];
   videoUrl: string | null;
   sentiment: Sentiment | null;
+  destination?: "post" | "status" | "both";
   createdAt: number;
   likeCount: number;
   likedByMe: boolean;
