@@ -439,6 +439,16 @@ class MainActivity : ComponentActivity() {
             is AppScreen.SharedConversations -> SharedConversationsScreen(viewModel)
             is AppScreen.NsfwPreferences -> NsfwPreferencesScreen(viewModel)
             is AppScreen.Connectors -> ConnectorsScreen(viewModel)
+            is AppScreen.Profile -> {
+              val uid = viewModel.userId
+              if (uid != null) {
+                com.wellxai.chatgiza.ui.media.MediaProfileScreen(
+                  viewModel = viewModel,
+                  target = com.wellxai.chatgiza.ui.media.ProfileTarget(uid, viewModel.userName ?: "You", viewModel.userImage),
+                  onBack = { viewModel.closeMediaProfile() }
+                )
+              }
+            }
           }
         }
       }
@@ -5622,6 +5632,35 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         verticalAlignment = Alignment.CenterVertically
       ) {
         Text("Settings", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+      }
+
+      // A way into the ChatGiZa Media profile view (avatar, real post
+      // count, grid of your posts) from Account -- separate from Edit
+      // Profile, which is still reached from History's avatar and only
+      // edits account fields rather than showing your posts.
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(14.dp))
+          .clickable(onClick = { viewModel.openMediaProfile() })
+          .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        if (viewModel.userImage != null) {
+          AsyncImage(
+            model = viewModel.userImage,
+            contentDescription = "Profile",
+            modifier = Modifier.size(44.dp).clip(CircleShape)
+          )
+        } else {
+          Icon(Icons.Outlined.AccountCircle, contentDescription = "Profile", tint = colorScheme.onBackground, modifier = Modifier.size(44.dp))
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+          Text(viewModel.userName ?: "You", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+          Text("View Profile", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 13.sp)
+        }
+        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.4f))
       }
 
       // No profile card and no GiZa Pro banner here anymore — the avatar in

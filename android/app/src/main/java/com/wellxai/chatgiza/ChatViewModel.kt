@@ -54,6 +54,7 @@ sealed class AppScreen {
   object SharedConversations : AppScreen()
   object NsfwPreferences : AppScreen()
   object Connectors : AppScreen()
+  object Profile : AppScreen()
 }
 
 class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
@@ -456,6 +457,14 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeConnectors() {
+    screen = AppScreen.Account
+  }
+
+  fun openMediaProfile() {
+    screen = AppScreen.Profile
+  }
+
+  fun closeMediaProfile() {
     screen = AppScreen.Account
   }
 
