@@ -1166,6 +1166,11 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
         onValueChange = viewModel::onInputChange,
         modifier = Modifier
           .fillMaxWidth()
+          // A long pasted message (e.g. a copied SMS) used to grow this
+          // field without bound, pushing the mic/send row below it clean
+          // off the bottom of the screen -- capped here so it scrolls
+          // internally instead, and Send always stays reachable.
+          .heightIn(max = 140.dp)
           .focusRequester(focusRequester),
         interactionSource = composerInteractionSource,
         placeholder = { Text("Ask anything") },
@@ -1282,7 +1287,8 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        if (viewModel.input.isNotBlank()) {
+        val hasSendableContent = viewModel.input.isNotBlank() || viewModel.attachedImageUri != null || viewModel.attachedFile != null
+        if (hasSendableContent) {
           // SEND BUTTON
           Box(
             modifier = Modifier
@@ -5841,19 +5847,22 @@ private fun MessageBubble(
         }
       }
     }
-    if (!isUser && message.content.isNotBlank() && showActions) {
+    if (message.content.isNotBlank() && showActions) {
       Spacer(modifier = Modifier.height(4.dp))
-      MessageActionBar(
-        message = message,
-        isSpeaking = isSpeaking,
-        chatGizaMediaConnected = chatGizaMediaConnected,
-        extraAuthorName = extraAuthorName,
-        extraAuthorImage = extraAuthorImage,
-        onSpeakToggle = onSpeakToggle,
-        onRegenerate = onRegenerate,
-        onDelete = onDelete,
-        onPushToExtra = onPushToExtra
-      )
+      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start) {
+        MessageActionBar(
+          message = message,
+          isUser = isUser,
+          isSpeaking = isSpeaking,
+          chatGizaMediaConnected = chatGizaMediaConnected,
+          extraAuthorName = extraAuthorName,
+          extraAuthorImage = extraAuthorImage,
+          onSpeakToggle = onSpeakToggle,
+          onRegenerate = onRegenerate,
+          onDelete = onDelete,
+          onPushToExtra = onPushToExtra
+        )
+      }
     }
   }
 }
@@ -5885,6 +5894,7 @@ private const val MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH = 150
 @Composable
 private fun MessageActionBar(
   message: UiMessage,
+  isUser: Boolean,
   isSpeaking: Boolean,
   chatGizaMediaConnected: Boolean,
   extraAuthorName: String,
@@ -5944,49 +5954,51 @@ private fun MessageActionBar(
         onOpen = { extraStage = "options" }
       )
     }
-    ActionBarItem(
-      Icons.Outlined.ThumbUp,
-      "Like",
-      tint = if (reaction == "up") accent else colorScheme.onBackground
-    ) { reaction = if (reaction == "up") null else "up" }
-    ActionBarItem(
-      Icons.Outlined.ThumbDown,
-      "Dislike",
-      tint = if (reaction == "down") accent else colorScheme.onBackground
-    ) { reaction = if (reaction == "down") null else "down" }
-    ActionBarItem(Icons.Outlined.Share, "Share") {
-      val intent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, message.content)
-      }
-      context.startActivity(Intent.createChooser(intent, null))
-    }
-    ActionBarItem(Icons.Outlined.PictureAsPdf, "PDF") {
-      runCatching {
-        val file = generateReplyPdf(context, "ChatGiZa reply", message.content)
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+    if (!isUser) {
+      ActionBarItem(
+        Icons.Outlined.ThumbUp,
+        "Like",
+        tint = if (reaction == "up") accent else colorScheme.onBackground
+      ) { reaction = if (reaction == "up") null else "up" }
+      ActionBarItem(
+        Icons.Outlined.ThumbDown,
+        "Dislike",
+        tint = if (reaction == "down") accent else colorScheme.onBackground
+      ) { reaction = if (reaction == "down") null else "down" }
+      ActionBarItem(Icons.Outlined.Share, "Share") {
         val intent = Intent(Intent.ACTION_SEND).apply {
-          type = "application/pdf"
-          putExtra(Intent.EXTRA_STREAM, uri)
-          addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+          type = "text/plain"
+          putExtra(Intent.EXTRA_TEXT, message.content)
         }
         context.startActivity(Intent.createChooser(intent, null))
       }
-    }
-    ActionBarItem(
-      icon = if (isSpeaking) Icons.Outlined.VolumeOff else Icons.Outlined.VolumeUp,
-      label = if (isSpeaking) "Stop" else "Read Aloud",
-      tint = if (isSpeaking) accent else colorScheme.onBackground,
-      onClick = onSpeakToggle
-    )
-    ActionBarItem(Icons.Outlined.Autorenew, "Regenerate", onClick = onRegenerate)
-    Box {
-      ActionBarItem(Icons.Outlined.MoreHoriz, "More") { moreOpen = true }
-      DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }) {
-        DropdownMenuItem(
-          text = { Text("Delete", color = Color(0xFFFF3B30)) },
-          onClick = { moreOpen = false; onDelete() }
-        )
+      ActionBarItem(Icons.Outlined.PictureAsPdf, "PDF") {
+        runCatching {
+          val file = generateReplyPdf(context, "ChatGiZa reply", message.content)
+          val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+          val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/pdf"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+          }
+          context.startActivity(Intent.createChooser(intent, null))
+        }
+      }
+      ActionBarItem(
+        icon = if (isSpeaking) Icons.Outlined.VolumeOff else Icons.Outlined.VolumeUp,
+        label = if (isSpeaking) "Stop" else "Read Aloud",
+        tint = if (isSpeaking) accent else colorScheme.onBackground,
+        onClick = onSpeakToggle
+      )
+      ActionBarItem(Icons.Outlined.Autorenew, "Regenerate", onClick = onRegenerate)
+      Box {
+        ActionBarItem(Icons.Outlined.MoreHoriz, "More") { moreOpen = true }
+        DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }) {
+          DropdownMenuItem(
+            text = { Text("Delete", color = Color(0xFFFF3B30)) },
+            onClick = { moreOpen = false; onDelete() }
+          )
+        }
       }
     }
   }
