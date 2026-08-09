@@ -83,6 +83,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.lazy.LazyColumn
@@ -983,6 +984,23 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
     if (uri != null) attachPickedImage(uri)
   }
 
+  fun attachPickedFile(uri: Uri) {
+    attachError = false
+    composerScope.launch {
+      val name = withContext(Dispatchers.IO) { queryFileDisplayName(context, uri) }
+      val file = withContext(Dispatchers.IO) { readAttachedFile(context, uri, name) }
+      if (file != null) {
+        viewModel.setAttachedFile(file)
+      } else {
+        attachError = true
+      }
+    }
+  }
+
+  val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    if (uri != null) attachPickedFile(uri)
+  }
+
   var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
   val cameraCapture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
     val uri = pendingCameraUri
@@ -1100,9 +1118,38 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
           }
         }
       }
+      val attachedFile = viewModel.attachedFile
+      if (attachedFile != null) {
+        Row(
+          modifier = Modifier
+            .padding(top = 10.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(colorScheme.onBackground.copy(alpha = 0.08f))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Icon(Icons.Outlined.Description, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(18.dp))
+          Spacer(modifier = Modifier.width(8.dp))
+          Text(
+            attachedFile.name,
+            color = colorScheme.onBackground,
+            fontSize = 13.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.widthIn(max = 220.dp)
+          )
+          Spacer(modifier = Modifier.width(8.dp))
+          Icon(
+            Icons.Outlined.Close,
+            contentDescription = "Remove file",
+            tint = colorScheme.onBackground.copy(alpha = 0.6f),
+            modifier = Modifier.size(16.dp).clickable(onClick = { viewModel.clearAttachedFile() })
+          )
+        }
+      }
       if (attachError) {
         Text(
-          "Couldn't attach that photo — try a different one",
+          "Couldn't attach that — try a different file",
           color = Color(0xFFFF6B6B),
           fontSize = 12.sp,
           modifier = Modifier.padding(top = 6.dp)
@@ -1159,7 +1206,10 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             DropdownMenuItem(
               text = { Text("Files") },
               leadingIcon = { Icon(Icons.Outlined.Description, contentDescription = null) },
-              onClick = { attachMenuOpen = false }
+              onClick = {
+                attachMenuOpen = false
+                filePicker.launch("*/*")
+              }
             )
             HorizontalDivider()
             DropdownMenuItem(
@@ -2823,6 +2873,74 @@ private fun uriToPostImageDataUrl(context: android.content.Context, uri: Uri): S
     resized.compress(Bitmap.CompressFormat.JPEG, 80, out)
     val base64 = Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
     "data:image/jpeg;base64,$base64"
+  } catch (e: Exception) {
+    null
+  } catch (e: OutOfMemoryError) {
+    null
+  }
+}
+
+// Composer's "Files" option. PDFs are rasterized to page images via the
+// platform's built-in PdfRenderer (no extra PDF-parsing dependency) and
+// sent as vision image parts -- the same path the backend already uses
+// for scanned/image-only PDFs on the web -- rather than extracting an
+// actual text layer, which would need a much heavier library.
+private const val MAX_ATTACHED_FILE_PDF_PAGES = 8
+private const val MAX_ATTACHED_FILE_TEXT_CHARS = 8000
+
+private fun queryFileDisplayName(context: android.content.Context, uri: Uri): String {
+  var name = "file"
+  context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+    val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+    if (nameIndex >= 0 && cursor.moveToFirst()) {
+      cursor.getString(nameIndex)?.let { name = it }
+    }
+  }
+  return name
+}
+
+private fun readAttachedFile(context: android.content.Context, uri: Uri, displayName: String): AttachedFile? {
+  val mime = context.contentResolver.getType(uri).orEmpty()
+  val lowerName = displayName.lowercase()
+  return when {
+    mime == "application/pdf" || lowerName.endsWith(".pdf") -> renderPdfPagesAsAttachment(context, uri, displayName)
+    mime.startsWith("text/") || lowerName.endsWith(".txt") || lowerName.endsWith(".md") || lowerName.endsWith(".csv") -> {
+      val raw = context.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } ?: return null
+      val text = if (raw.length > MAX_ATTACHED_FILE_TEXT_CHARS) {
+        raw.take(MAX_ATTACHED_FILE_TEXT_CHARS) + "\n[...truncated]"
+      } else {
+        raw
+      }
+      AttachedFile(name = displayName, text = text)
+    }
+    else -> null
+  }
+}
+
+private fun renderPdfPagesAsAttachment(context: android.content.Context, uri: Uri, displayName: String): AttachedFile? {
+  return try {
+    context.contentResolver.openFileDescriptor(uri, "r")?.use { descriptor ->
+      android.graphics.pdf.PdfRenderer(descriptor).use { renderer ->
+        val dataUrls = mutableListOf<String>()
+        val pageCount = minOf(renderer.pageCount, MAX_ATTACHED_FILE_PDF_PAGES)
+        for (i in 0 until pageCount) {
+          renderer.openPage(i).use { page ->
+            val scale = 2
+            val bitmap = Bitmap.createBitmap(
+              (page.width * scale).coerceAtLeast(1),
+              (page.height * scale).coerceAtLeast(1),
+              Bitmap.Config.ARGB_8888
+            )
+            bitmap.eraseColor(android.graphics.Color.WHITE)
+            page.render(bitmap, null, null, android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+            val out = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 82, out)
+            dataUrls.add("data:image/jpeg;base64,${Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)}")
+          }
+        }
+        if (dataUrls.isEmpty()) null else AttachedFile(name = displayName, imageDataUrls = dataUrls)
+      }
+    }
   } catch (e: Exception) {
     null
   } catch (e: OutOfMemoryError) {
