@@ -990,7 +990,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
       val name = withContext(Dispatchers.IO) { queryFileDisplayName(context, uri) }
       val file = withContext(Dispatchers.IO) { readAttachedFile(context, uri, name) }
       if (file != null) {
-        viewModel.setAttachedFile(file)
+        viewModel.updateAttachedFile(file)
       } else {
         attachError = true
       }

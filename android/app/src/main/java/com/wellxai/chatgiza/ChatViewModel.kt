@@ -138,7 +138,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var attachedFile by mutableStateOf<AttachedFile?>(null)
     private set
 
-  fun setAttachedFile(file: AttachedFile) {
+  fun updateAttachedFile(file: AttachedFile) {
     attachedFile = file
   }
 
