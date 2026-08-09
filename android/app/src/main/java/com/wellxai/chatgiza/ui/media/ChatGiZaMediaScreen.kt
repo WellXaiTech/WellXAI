@@ -681,6 +681,7 @@ private fun MediaBottomNavigation(
 @Composable
 internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget, onBack: () -> Unit) {
   BackHandler { onBack() }
+  val context = LocalContext.current
   val isOwnProfile = target.authorId == viewModel.userId
   val authorPosts = remember(viewModel.mediaPosts, target.authorId) {
     viewModel.mediaPosts.filter { it.authorId == target.authorId }
@@ -740,23 +741,55 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
           }
         }
         item {
-          Text(
-            target.authorName,
-            color = onBg,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-          )
+          Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+            Text(
+              target.authorName,
+              color = onBg,
+              fontSize = 15.sp,
+              fontWeight = FontWeight.SemiBold
+            )
+            // Only shown for your own profile -- there's no way yet for
+            // this screen to know another author's bio (the posts feed
+            // that supplies `target` doesn't carry it), so showing
+            // nothing here for other people is honest about that rather
+            // than displaying stale/blank data as if it were real.
+            if (isOwnProfile && viewModel.profileData.profile.bio.isNotBlank()) {
+              Spacer(modifier = Modifier.height(4.dp))
+              Text(viewModel.profileData.profile.bio, color = onBgDim, fontSize = 13.sp, lineHeight = 18.sp)
+            }
+          }
         }
         item {
           Spacer(modifier = Modifier.height(14.dp))
           if (isOwnProfile) {
-            OutlinedButton(
-              onClick = {},
-              colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = onBg),
-              border = androidx.compose.foundation.BorderStroke(1.dp, onBgDim.copy(alpha = 0.4f)),
-              modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-            ) { Text("Edit Profile") }
+            Row(
+              modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+              horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+              OutlinedButton(
+                onClick = { viewModel.openCustomize() },
+                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = onBg),
+                border = androidx.compose.foundation.BorderStroke(1.dp, onBgDim.copy(alpha = 0.4f)),
+                modifier = Modifier.weight(1f)
+              ) { Text("Edit Profile") }
+              OutlinedButton(
+                onClick = {
+                  val shareText = buildString {
+                    append(target.authorName)
+                    if (viewModel.profileData.profile.bio.isNotBlank()) append(" — ${viewModel.profileData.profile.bio}")
+                    append("\n\nFollow me on ChatGiZa!")
+                  }
+                  val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, shareText)
+                  }
+                  context.startActivity(Intent.createChooser(sendIntent, "Share profile"))
+                },
+                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = onBg),
+                border = androidx.compose.foundation.BorderStroke(1.dp, onBgDim.copy(alpha = 0.4f)),
+                modifier = Modifier.weight(1f)
+              ) { Text("Share Profile") }
+            }
           } else {
             var following by remember(target.authorId) { mutableStateOf(false) }
             Row(
