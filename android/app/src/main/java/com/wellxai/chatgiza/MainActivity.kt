@@ -1753,14 +1753,14 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
             DropdownMenu(
               expanded = cameraMenuOpen,
               onDismissRequest = { cameraMenuOpen = false },
-              shape = RoundedCornerShape(28.dp),
+              shape = RoundedCornerShape(16.dp),
               containerColor = Color(0xFF202020),
               border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A2A2A))
             ) {
               Column(
                 modifier = Modifier
-                  .size(width = 351.dp, height = 228.dp)
-                  .padding(start = 37.dp, end = 24.dp, top = 22.dp, bottom = 18.dp)
+                  .size(width = 200.dp, height = 126.dp)
+                  .padding(start = 18.dp, end = 12.dp, top = 11.dp, bottom = 9.dp)
               ) {
                 CameraMenuRow(
                   iconRes = R.drawable.ic_videocam,
@@ -3638,7 +3638,7 @@ private fun CameraMenuRow(iconRes: Int, label: String, onClick: () -> Unit) {
   Row(
     modifier = Modifier
       .fillMaxWidth()
-      .height(72.dp)
+      .height(36.dp)
       .clickable(onClick = onClick),
     verticalAlignment = Alignment.CenterVertically
   ) {
@@ -3646,10 +3646,10 @@ private fun CameraMenuRow(iconRes: Int, label: String, onClick: () -> Unit) {
       painter = androidx.compose.ui.res.painterResource(iconRes),
       contentDescription = null,
       tint = Color.White,
-      modifier = Modifier.size(24.dp)
+      modifier = Modifier.size(16.dp)
     )
-    Spacer(modifier = Modifier.width(28.dp))
-    Text(label, color = Color.White, fontSize = 18.sp)
+    Spacer(modifier = Modifier.width(14.dp))
+    Text(label, color = Color.White, fontSize = 13.sp)
   }
 }
 
