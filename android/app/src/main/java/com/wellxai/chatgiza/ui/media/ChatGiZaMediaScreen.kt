@@ -260,7 +260,6 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
 
   if (showCreate) {
     ChatGizaMediaCreateSheet(
-      viewModel,
       onDismiss = { showCreate = false },
       onPostClick = {
         showCreate = false

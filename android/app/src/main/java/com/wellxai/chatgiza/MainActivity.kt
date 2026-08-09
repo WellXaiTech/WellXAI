@@ -201,7 +201,6 @@ import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MicNone
 import androidx.compose.material.icons.outlined.ModeEdit
 import androidx.compose.material.icons.outlined.MoreHoriz
-import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material.icons.outlined.NoAdultContent
@@ -863,6 +862,17 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
           }
         },
         actions = {
+          // Opt-in toggle: when lit, ChatGiZa's own replies auto-post to
+          // the user's Extra Media feed as they arrive. Off (dim) by
+          // default -- nothing leaves the chat unless this is turned on.
+          IconButton(onClick = { viewModel.updateAutoShareRepliesToMedia(!viewModel.autoShareRepliesToMedia) }) {
+            Icon(
+              Icons.Outlined.Share,
+              contentDescription = if (viewModel.autoShareRepliesToMedia) "Auto-share to Extra Media: on" else "Auto-share to Extra Media: off",
+              tint = if (viewModel.autoShareRepliesToMedia) Color(0xFFFFC94A) else colorScheme.onBackground.copy(alpha = 0.45f),
+              modifier = Modifier.size(20.dp)
+            )
+          }
           // Pill with two separate icons — new chat and account/more —
           // instead of one icon that was labeled "Account" but drew a
           // pencil and actually opened Account (New Chat had no icon here).
@@ -2733,7 +2743,7 @@ internal fun MediaPostVideoPlayer(url: String, modifier: Modifier = Modifier) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ChatGizaMediaCreateSheet(viewModel: ChatViewModel, onDismiss: () -> Unit, onPostClick: () -> Unit) {
+internal fun ChatGizaMediaCreateSheet(onDismiss: () -> Unit, onPostClick: () -> Unit) {
   ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFF161616)) {
     Column(
       modifier = Modifier
@@ -2741,30 +2751,6 @@ internal fun ChatGizaMediaCreateSheet(viewModel: ChatViewModel, onDismiss: () ->
         .padding(horizontal = 20.dp)
         .padding(bottom = 32.dp)
     ) {
-      // "My Profile" + the signed-in user's own avatar, matching the
-      // reference — this sheet is about posting as yourself, not a
-      // ChatGiZa-branded header.
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        if (viewModel.userImage != null) {
-          AsyncImage(
-            model = viewModel.userImage,
-            contentDescription = "Profile",
-            modifier = Modifier.size(32.dp).clip(CircleShape)
-          )
-        } else {
-          Icon(
-            Icons.Outlined.AccountCircle,
-            contentDescription = "Profile",
-            tint = Color.White,
-            modifier = Modifier.size(32.dp)
-          )
-        }
-        Spacer(modifier = Modifier.width(10.dp))
-        Text("My Profile", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.weight(1f))
-        Icon(Icons.Outlined.Notifications, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
-      }
-      Spacer(modifier = Modifier.height(20.dp))
       Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         MediaCreateOption("Post", Modifier.weight(1f), onPostClick) {
           Icon(Icons.Filled.Edit, contentDescription = "Post", tint = Color(0xFFFFC94A), modifier = Modifier.size(26.dp))

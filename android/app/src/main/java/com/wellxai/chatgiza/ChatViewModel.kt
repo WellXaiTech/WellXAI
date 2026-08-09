@@ -449,6 +449,22 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     tokenStore.setThemeMode(value)
   }
 
+  // Opt-in bridge between Chat and ChatGiZa Media (Extra tab) -- off by
+  // default; when on, ChatGiZa's own replies (not the user's prompts) are
+  // posted to the user's own Extra Media feed automatically as they land.
+  var autoShareRepliesToMedia by mutableStateOf(tokenStore.getAutoShareToExtraMedia())
+    private set
+
+  fun updateAutoShareRepliesToMedia(value: Boolean) {
+    autoShareRepliesToMedia = value
+    tokenStore.setAutoShareToExtraMedia(value)
+  }
+
+  private fun maybeAutoShareReply(content: String) {
+    if (!autoShareRepliesToMedia || content.isBlank()) return
+    createMediaPost(content, emptyList(), null, null, null) {}
+  }
+
   var hapticsEnabled by mutableStateOf(tokenStore.getHapticsEnabled())
     private set
   var hapticsOnPress by mutableStateOf(tokenStore.getHapticsOnPress())
@@ -1138,6 +1154,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         messages = messages.map { m ->
           if (m.id == assistantId && m.content.isEmpty()) m.copy(content = "(failed to respond)") else m
         }
+      } else {
+        maybeAutoShareReply(messages.firstOrNull { it.id == assistantId }?.content.orEmpty())
       }
 
       val titleFallback = text.take(60).ifEmpty { "Photo" }
@@ -1192,6 +1210,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         messages = messages.map { m ->
           if (m.id == assistantId && m.content.isEmpty()) m.copy(content = "(failed to respond)") else m
         }
+      } else {
+        maybeAutoShareReply(messages.firstOrNull { it.id == assistantId }?.content.orEmpty())
       }
 
       val updated = ApiConversation(
