@@ -5887,6 +5887,8 @@ private fun MessageActionBar(
   message: UiMessage,
   isSpeaking: Boolean,
   chatGizaMediaConnected: Boolean,
+  extraAuthorName: String,
+  extraAuthorImage: String?,
   onSpeakToggle: () -> Unit,
   onRegenerate: () -> Unit,
   onDelete: () -> Unit,
