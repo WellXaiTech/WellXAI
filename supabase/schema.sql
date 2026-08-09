@@ -86,6 +86,18 @@ create table if not exists media_posts (
   created_at timestamptz not null default now()
 );
 
+-- Multiple photos per post (a carousel), ordered by `position`. A post's
+-- legacy single media_posts.image_url is still supported for old posts /
+-- old clients -- the API merges both into one imageUrls[] list so callers
+-- only ever deal with one shape.
+create table if not exists media_post_images (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references media_posts(id) on delete cascade,
+  url text not null,
+  position int not null default 0,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists media_likes (
   post_id uuid not null references media_posts(id) on delete cascade,
   user_id text not null references users(id),
@@ -105,6 +117,7 @@ create index if not exists idx_workspace_members_user on workspace_members(user_
 create index if not exists idx_api_keys_user on api_keys(user_id);
 create index if not exists idx_media_posts_created on media_posts(created_at desc);
 create index if not exists idx_media_comments_post on media_comments(post_id);
+create index if not exists idx_media_post_images_post on media_post_images(post_id, position);
 create index if not exists idx_security_events_workspace on security_events(workspace_id, created_at desc);
 
 -- Row Level Security: enabled with zero policies on every table. The app's
@@ -118,6 +131,7 @@ alter table workspace_members enable row level security;
 alter table workspace_invites enable row level security;
 alter table api_keys enable row level security;
 alter table media_posts enable row level security;
+alter table media_post_images enable row level security;
 alter table media_likes enable row level security;
 alter table media_comments enable row level security;
 alter table security_events enable row level security;
