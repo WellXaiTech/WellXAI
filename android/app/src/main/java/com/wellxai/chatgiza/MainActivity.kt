@@ -2715,7 +2715,6 @@ private const val MEDIA_POST_TEXT_PREVIEW_LENGTH = 180
 private const val MEDIA_MAX_IMAGES_PER_POST = 10
 
 @Composable
-@Composable
 private fun MediaCarousel(postId: String, imageUrls: List<String>) {
   if (imageUrls.size == 1) {
     // Always shown at full width, uncropped -- no more tap-to-expand;
