@@ -5,6 +5,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -70,9 +71,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
@@ -112,6 +119,7 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
   var searchOpen by remember { mutableStateOf(false) }
   var searchQuery by remember { mutableStateOf("") }
   var viewingProfile by remember { mutableStateOf<ProfileTarget?>(null) }
+  var showNotifications by remember { mutableStateOf(false) }
 
   // A post's destination ("post" == History/main feed, "status" == stories
   // row, "both") decides which of these two lists it lands in -- a
@@ -255,7 +263,43 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
       exit = slideOutVertically(targetOffsetY = { -it }),
       modifier = Modifier.align(Alignment.TopCenter)
     ) {
-      ChatGiZaHeader(topInset = topInset, onAddClick = { showConnectSheet = true })
+      ChatGiZaHeader(
+        topInset = topInset,
+        onAddClick = { showConnectSheet = true },
+        onNotificationsClick = { showNotifications = true }
+      )
+    }
+
+    if (showNotifications) {
+      Box(
+        modifier = Modifier
+          .fillMaxSize()
+          .background(Color.Black.copy(alpha = 0.4f))
+          .clickable(
+            indication = null,
+            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+          ) { showNotifications = false },
+        contentAlignment = Alignment.Center
+      ) {
+        Column(
+          modifier = Modifier
+            .padding(horizontal = 40.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White)
+            .clickable(
+              indication = null,
+              interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+            ) { }
+            .padding(28.dp),
+          horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+          NotificationBellIcon(modifier = Modifier.size(32.dp), tint = Color.Black)
+          Spacer(modifier = Modifier.height(12.dp))
+          Text("No notifications yet", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+          Spacer(modifier = Modifier.height(4.dp))
+          Text("We'll let you know when something happens.", color = Color.Gray, fontSize = 12.sp)
+        }
+      }
     }
 
     // =====================================================
@@ -312,7 +356,7 @@ private fun mediaGridGradient(seed: String): List<Color> =
 // =============================================================
 
 @Composable
-private fun ChatGiZaHeader(topInset: androidx.compose.ui.unit.Dp, onAddClick: () -> Unit) {
+private fun ChatGiZaHeader(topInset: androidx.compose.ui.unit.Dp, onAddClick: () -> Unit, onNotificationsClick: () -> Unit) {
   Row(
     modifier = Modifier
       .fillMaxWidth()
@@ -328,7 +372,58 @@ private fun ChatGiZaHeader(topInset: androidx.compose.ui.unit.Dp, onAddClick: ()
     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
       Text(text = "ChatGiZa", color = Color.Black, fontSize = 20.sp, fontWeight = FontWeight.Bold)
     }
-    Spacer(modifier = Modifier.width(48.dp))
+    IconButton(onClick = onNotificationsClick) {
+      NotificationBellIcon(modifier = Modifier.size(22.dp), tint = Color.Black)
+    }
+  }
+}
+
+// Hand-drawn -- no notifications backend exists yet, so this is a clearly
+// labeled placeholder ("No notifications yet") rather than a dead icon.
+@Composable
+private fun NotificationBellIcon(modifier: Modifier = Modifier, tint: Color = Color.Black) {
+  Canvas(modifier = modifier) {
+    val scale = size.width / 24f
+    val strokeW = 1.6f * scale
+    drawArc(
+      color = tint,
+      startAngle = 180f,
+      sweepAngle = 180f,
+      useCenter = false,
+      topLeft = Offset(4.5f * scale, 3f * scale),
+      size = Size(15f * scale, 15f * scale),
+      style = Stroke(width = strokeW, cap = StrokeCap.Round, join = StrokeJoin.Round)
+    )
+    drawLine(
+      color = tint,
+      start = Offset(4.5f * scale, 10.5f * scale),
+      end = Offset(3f * scale, 17f * scale),
+      strokeWidth = strokeW,
+      cap = StrokeCap.Round
+    )
+    drawLine(
+      color = tint,
+      start = Offset(19.5f * scale, 10.5f * scale),
+      end = Offset(21f * scale, 17f * scale),
+      strokeWidth = strokeW,
+      cap = StrokeCap.Round
+    )
+    drawLine(
+      color = tint,
+      start = Offset(3f * scale, 17f * scale),
+      end = Offset(21f * scale, 17f * scale),
+      strokeWidth = strokeW,
+      cap = StrokeCap.Round
+    )
+    drawArc(
+      color = tint,
+      startAngle = 0f,
+      sweepAngle = 180f,
+      useCenter = false,
+      topLeft = Offset(9.5f * scale, 17f * scale),
+      size = Size(5f * scale, 5f * scale),
+      style = Stroke(width = strokeW, cap = StrokeCap.Round, join = StrokeJoin.Round)
+    )
   }
 }
 
@@ -672,20 +767,22 @@ private fun MediaBottomNavigation(
 }
 
 // =============================================================
-// PROFILE -- avatar, real post count, a grid of that person's posts.
-// No follower/following/bio data exists on the backend yet, so those
-// are left out entirely rather than showing fabricated numbers; this
-// is a foundation to build on, not the full reference layout.
+// PROFILE -- avatar, real post/follower/following counts, bio, and a
+// grid of that person's posts (tap a grid image to view it fullscreen).
 // =============================================================
 
 @Composable
 internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget, onBack: () -> Unit) {
-  BackHandler { onBack() }
+  var fullscreenImage by remember { mutableStateOf<String?>(null) }
+  BackHandler(enabled = fullscreenImage != null) { fullscreenImage = null }
+  BackHandler(enabled = fullscreenImage == null) { onBack() }
   val context = LocalContext.current
   val isOwnProfile = target.authorId == viewModel.userId
   val authorPosts = remember(viewModel.mediaPosts, target.authorId) {
     viewModel.mediaPosts.filter { it.authorId == target.authorId }
   }
+  LaunchedEffect(target.authorId) { viewModel.loadMediaUserProfile(target.authorId) }
+  val userProfile = viewModel.mediaUserProfiles[target.authorId]
   val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
   // Dark, matching the rest of the app -- this screen (and the grid
   // thumbnails' placeholder) was left over from an earlier all-white
@@ -733,10 +830,23 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
             } else {
               Icon(Icons.Outlined.AccountCircle, contentDescription = target.authorName, tint = onBgDim, modifier = Modifier.size(84.dp))
             }
-            Spacer(modifier = Modifier.width(28.dp))
-            Column {
-              Text("${authorPosts.size}", color = onBg, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-              Text("Posts", color = onBgDim, fontSize = 13.sp)
+            Spacer(modifier = Modifier.width(20.dp))
+            Row(
+              modifier = Modifier.weight(1f),
+              horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+              Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("${authorPosts.size}", color = onBg, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("Posts", color = onBgDim, fontSize = 13.sp)
+              }
+              Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("${userProfile?.followerCount ?: 0}", color = onBg, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("Followers", color = onBgDim, fontSize = 13.sp)
+              }
+              Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("${userProfile?.followingCount ?: 0}", color = onBg, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("Following", color = onBgDim, fontSize = 13.sp)
+              }
             }
           }
         }
@@ -748,14 +858,13 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
               fontSize = 15.sp,
               fontWeight = FontWeight.SemiBold
             )
-            // Only shown for your own profile -- there's no way yet for
-            // this screen to know another author's bio (the posts feed
-            // that supplies `target` doesn't carry it), so showing
-            // nothing here for other people is honest about that rather
-            // than displaying stale/blank data as if it were real.
-            if (isOwnProfile && viewModel.profileData.profile.bio.isNotBlank()) {
+            // Own profile reads bio live from the editable profileData so
+            // it updates the instant Edit Profile is saved; other profiles
+            // read the fetched snapshot from /api/media/users/[id].
+            val bio = if (isOwnProfile) viewModel.profileData.profile.bio else userProfile?.bio.orEmpty()
+            if (bio.isNotBlank()) {
               Spacer(modifier = Modifier.height(4.dp))
-              Text(viewModel.profileData.profile.bio, color = onBgDim, fontSize = 13.sp, lineHeight = 18.sp)
+              Text(bio, color = onBgDim, fontSize = 13.sp, lineHeight = 18.sp)
             }
           }
         }
@@ -791,13 +900,13 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
               ) { Text("Share Profile") }
             }
           } else {
-            var following by remember(target.authorId) { mutableStateOf(false) }
+            val following = userProfile?.isFollowedByMe ?: false
             Row(
               modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
               horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
               androidx.compose.material3.Button(
-                onClick = { following = !following },
+                onClick = { viewModel.toggleFollowMediaUser(target.authorId) },
                 modifier = Modifier.weight(1f)
               ) { Text(if (following) "Following" else "Follow") }
               OutlinedButton(
@@ -827,7 +936,7 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
                     AsyncImage(
                       model = thumb,
                       contentDescription = null,
-                      modifier = Modifier.fillMaxSize(),
+                      modifier = Modifier.fillMaxSize().clickable { fullscreenImage = thumb },
                       contentScale = ContentScale.Crop
                     )
                   } else {
@@ -860,6 +969,30 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
           }
         }
         item { Spacer(modifier = Modifier.height(24.dp)) }
+      }
+    }
+
+    val zoomedImage = fullscreenImage
+    if (zoomedImage != null) {
+      Box(
+        modifier = Modifier
+          .fillMaxSize()
+          .background(Color.Black)
+          .clickable { fullscreenImage = null },
+        contentAlignment = Alignment.Center
+      ) {
+        AsyncImage(
+          model = zoomedImage,
+          contentDescription = null,
+          modifier = Modifier.fillMaxWidth(),
+          contentScale = ContentScale.Fit
+        )
+        IconButton(
+          onClick = { fullscreenImage = null },
+          modifier = Modifier.align(Alignment.TopStart).padding(top = topInset, start = 4.dp)
+        ) {
+          Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Close", tint = Color.White)
+        }
       }
     }
   }

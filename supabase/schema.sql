@@ -117,11 +117,20 @@ create table if not exists media_comments (
   created_at timestamptz not null default now()
 );
 
+create table if not exists media_follows (
+  follower_id text not null references users(id),
+  followed_id text not null references users(id),
+  created_at timestamptz not null default now(),
+  primary key (follower_id, followed_id)
+);
+
 create index if not exists idx_workspace_members_user on workspace_members(user_id);
 create index if not exists idx_api_keys_user on api_keys(user_id);
 create index if not exists idx_media_posts_created on media_posts(created_at desc);
 create index if not exists idx_media_comments_post on media_comments(post_id);
 create index if not exists idx_media_post_images_post on media_post_images(post_id, position);
+create index if not exists idx_media_follows_followed on media_follows(followed_id);
+create index if not exists idx_media_follows_follower on media_follows(follower_id);
 create index if not exists idx_security_events_workspace on security_events(workspace_id, created_at desc);
 
 -- Row Level Security: enabled with zero policies on every table. The app's
@@ -138,5 +147,6 @@ alter table media_posts enable row level security;
 alter table media_post_images enable row level security;
 alter table media_likes enable row level security;
 alter table media_comments enable row level security;
+alter table media_follows enable row level security;
 alter table security_events enable row level security;
 alter table workspace_sso enable row level security;

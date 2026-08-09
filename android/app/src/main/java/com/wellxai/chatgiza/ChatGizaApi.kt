@@ -769,6 +769,56 @@ object ChatGizaApi {
     }
   }
 
+  data class MediaUserProfile(val followerCount: Int, val followingCount: Int, val isFollowedByMe: Boolean, val bio: String)
+  data class FollowResult(val following: Boolean, val followerCount: Int)
+
+  suspend fun getMediaUserProfile(token: String, userId: String): ApiResult<MediaUserProfile> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/media/users/$userId")
+        .header("Authorization", "Bearer $token")
+        .get()
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val json = JSONObject(text)
+        ApiResult.Success(
+          MediaUserProfile(
+            followerCount = json.optInt("followerCount", 0),
+            followingCount = json.optInt("followingCount", 0),
+            isFollowedByMe = json.optBoolean("isFollowedByMe", false),
+            bio = json.optString("bio", "")
+          )
+        )
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun toggleFollowMediaUser(token: String, userId: String): ApiResult<FollowResult> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/media/users/$userId/follow")
+        .header("Authorization", "Bearer $token")
+        .post("".toRequestBody(JSON))
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val json = JSONObject(text)
+        ApiResult.Success(FollowResult(json.getBoolean("following"), json.getInt("followerCount")))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
   suspend fun getMediaComments(token: String, postId: String): ApiResult<List<ApiMediaComment>> = withContext(Dispatchers.IO) {
     try {
       val request = Request.Builder()

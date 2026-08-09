@@ -1066,6 +1066,51 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     }
   }
 
+  // Keyed by userId -- lets any number of profile screens (own or
+  // someone else's) show real follower/following counts and bio without
+  // each keeping its own separate copy in sync.
+  var mediaUserProfiles by mutableStateOf<Map<String, ChatGizaApi.MediaUserProfile>>(emptyMap())
+    private set
+
+  fun loadMediaUserProfile(userId: String) {
+    val token = tokenStore.getToken() ?: run { mediaError = "Not signed in"; return }
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.getMediaUserProfile(token, userId)) {
+        is ApiResult.Success -> mediaUserProfiles = mediaUserProfiles + (userId to result.value)
+        is ApiResult.Failure -> mediaError = result.message
+      }
+    }
+  }
+
+  fun toggleFollowMediaUser(userId: String) {
+    val token = tokenStore.getToken() ?: run { mediaError = "Not signed in"; return }
+    val previous = mediaUserProfiles[userId]
+    // Optimistic flip, same pattern as toggleMediaPostLike -- corrected
+    // by (or reverted to match) the server's real state once the
+    // request comes back.
+    if (previous != null) {
+      mediaUserProfiles = mediaUserProfiles + (userId to previous.copy(
+        isFollowedByMe = !previous.isFollowedByMe,
+        followerCount = previous.followerCount + if (previous.isFollowedByMe) -1 else 1
+      ))
+    }
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.toggleFollowMediaUser(token, userId)) {
+        is ApiResult.Success -> {
+          val current = mediaUserProfiles[userId]
+          mediaUserProfiles = mediaUserProfiles + (userId to (current?.copy(
+            isFollowedByMe = result.value.following,
+            followerCount = result.value.followerCount
+          ) ?: ChatGizaApi.MediaUserProfile(result.value.followerCount, 0, result.value.following, "")))
+        }
+        is ApiResult.Failure -> {
+          if (previous != null) mediaUserProfiles = mediaUserProfiles + (userId to previous)
+          mediaError = result.message
+        }
+      }
+    }
+  }
+
   fun closeHistory() {
     screen = AppScreen.Chat
   }
