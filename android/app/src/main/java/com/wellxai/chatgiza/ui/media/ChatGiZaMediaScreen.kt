@@ -70,6 +70,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
@@ -289,6 +290,22 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
 }
 
 data class ProfileTarget(val authorId: String, val authorName: String, val authorImage: String?)
+
+// A few gradients for the profile grid's text-only-post tiles, picked
+// deterministically by post id (same gradient every time for a given
+// post, but varied across posts) instead of one flat color for all of
+// them.
+private val MEDIA_GRID_GRADIENTS = listOf(
+  listOf(Color(0xFF6D5DF6), Color(0xFF2979FF)),
+  listOf(Color(0xFFFF6B6B), Color(0xFFFF9F43)),
+  listOf(Color(0xFF11998E), Color(0xFF38EF7D)),
+  listOf(Color(0xFFF7971E), Color(0xFFFFD200)),
+  listOf(Color(0xFFEE0979), Color(0xFFFF6A00)),
+  listOf(Color(0xFF00C6FF), Color(0xFF0072FF))
+)
+
+private fun mediaGridGradient(seed: String): List<Color> =
+  MEDIA_GRID_GRADIENTS[kotlin.math.abs(seed.hashCode()) % MEDIA_GRID_GRADIENTS.size]
 
 // =============================================================
 // CHATGIZA HEADER
@@ -674,7 +691,6 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
   // pass on the Media feed and read as visually disconnected from
   // everywhere else in the app.
   val bg = Color(0xFF161616)
-  val card = Color(0xFF23252B)
   val onBg = Color.White
   val onBgDim = Color(0xFFA8A8A8)
 
@@ -782,16 +798,25 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
                       contentScale = ContentScale.Crop
                     )
                   } else {
+                    // A flat gray tile for every text-only post read as a
+                    // wall of near-white boxes in the grid -- this picks
+                    // one of a few gradients deterministically from the
+                    // post id instead, so it's still the same tile every
+                    // time you look at this post, but the grid as a whole
+                    // isn't monotone.
                     Box(
-                      modifier = Modifier.fillMaxSize().background(card),
+                      modifier = Modifier
+                        .fillMaxSize()
+                        .background(Brush.linearGradient(mediaGridGradient(post.id))),
                       contentAlignment = Alignment.Center
                     ) {
                       Text(
                         post.text.take(24),
                         fontSize = 10.sp,
-                        color = onBgDim,
+                        color = Color.White,
+                        fontWeight = FontWeight.Medium,
                         maxLines = 3,
-                        modifier = Modifier.padding(4.dp)
+                        modifier = Modifier.padding(6.dp)
                       )
                     }
                   }
