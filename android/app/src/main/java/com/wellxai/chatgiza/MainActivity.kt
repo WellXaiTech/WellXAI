@@ -1811,7 +1811,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               onRelease = { controller.endPushToTalk() }
             )
           } else {
-            VoiceControlPill(icon = Icons.Outlined.MicNone, contentDescription = "Microphone", active = !micMuted) {
+            VoiceControlPill(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mic), contentDescription = "Microphone", active = !micMuted) {
               micMuted = !micMuted
               controller.setMicMuted(micMuted)
             }
@@ -1821,7 +1821,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Row(
           modifier = Modifier.fillMaxWidth(),
@@ -2045,9 +2045,9 @@ private fun VoiceControlPillShell(contentDescription: String, active: Boolean, o
   Box(
     modifier = Modifier
       .size(width = 84.dp, height = 46.dp)
-      .clip(RoundedCornerShape(14.dp))
+      .clip(RoundedCornerShape(percent = 50))
       .background(Color(0xFF1F1F1F))
-      .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(14.dp))
+      .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(percent = 50))
       .clickable(onClick = onClick),
     contentAlignment = Alignment.Center
   ) {
@@ -2107,7 +2107,7 @@ private fun PushToTalkPill(onPress: () -> Unit, onRelease: () -> Unit) {
     contentAlignment = Alignment.Center
   ) {
     Icon(
-      Icons.Outlined.MicNone,
+      painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mic),
       contentDescription = "Hold to talk",
       tint = if (pressed) Color.Black else Color.White,
       modifier = Modifier.size(26.dp)
