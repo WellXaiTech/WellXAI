@@ -1747,7 +1747,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
           Box {
-            VoiceControlPill(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_videocam), contentDescription = "Camera", active = cameraEnabled) {
+            VoiceControlPill(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_video), contentDescription = "Camera", active = cameraEnabled) {
               cameraMenuOpen = true
             }
             DropdownMenu(
@@ -1763,7 +1763,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
                   .padding(start = 18.dp, end = 12.dp, top = 11.dp, bottom = 9.dp)
               ) {
                 CameraMenuRow(
-                  iconRes = R.drawable.ic_videocam,
+                  iconRes = R.drawable.ic_video,
                   label = "Camera",
                   onClick = {
                     cameraMenuOpen = false
