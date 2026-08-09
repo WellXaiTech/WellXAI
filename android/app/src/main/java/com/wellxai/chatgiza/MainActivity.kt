@@ -226,8 +226,6 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.SupportAgent
-import androidx.compose.material.icons.outlined.ThumbDown
-import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material.icons.outlined.Tag
 import androidx.compose.material.icons.outlined.TrendingDown
 import androidx.compose.material.icons.outlined.TrendingUp
@@ -6213,9 +6211,15 @@ private fun ActionBarItem(icon: ImageVector, label: String, tint: Color = colorS
 }
 
 @Composable
-private fun ActionBarItem(painter: androidx.compose.ui.graphics.painter.Painter, label: String, tint: Color = colorScheme.onBackground, onClick: () -> Unit) {
+private fun ActionBarItem(
+  painter: androidx.compose.ui.graphics.painter.Painter,
+  label: String,
+  tint: Color = colorScheme.onBackground,
+  rotation: Float = 0f,
+  onClick: () -> Unit
+) {
   ActionBarItemShell(label, tint, onClick) { iconTint ->
-    Icon(painter, contentDescription = label, tint = iconTint, modifier = Modifier.size(20.dp))
+    Icon(painter, contentDescription = label, tint = iconTint, modifier = Modifier.size(20.dp).rotate(rotation))
   }
 }
 
@@ -6305,14 +6309,15 @@ private fun MessageActionBar(
     }
     if (!isUser) {
       ActionBarItem(
-        Icons.Outlined.ThumbUp,
-        "Like",
+        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_thumbs_up),
+        label = "Like",
         tint = if (reaction == "up") accent else colorScheme.onBackground
       ) { reaction = if (reaction == "up") null else "up" }
       ActionBarItem(
-        Icons.Outlined.ThumbDown,
-        "Dislike",
-        tint = if (reaction == "down") accent else colorScheme.onBackground
+        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_thumbs_up),
+        label = "Dislike",
+        tint = if (reaction == "down") accent else colorScheme.onBackground,
+        rotation = 180f
       ) { reaction = if (reaction == "down") null else "down" }
       ActionBarItem(androidx.compose.ui.res.painterResource(R.drawable.ic_share), "Share") {
         val intent = Intent(Intent.ACTION_SEND).apply {
