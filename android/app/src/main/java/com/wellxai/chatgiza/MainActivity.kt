@@ -1154,6 +1154,13 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
               )
+            } else {
+              // Visibly different from "blank" -- if rendering the page
+              // itself ever fails, this shows instead of a plain white box
+              // that looks broken/half-loaded.
+              Box(modifier = Modifier.fillMaxSize().background(Color(0xFFEDEDED)), contentAlignment = Alignment.Center) {
+                Icon(Icons.Outlined.Description, contentDescription = null, tint = Color(0xFF9A9A9A), modifier = Modifier.size(28.dp))
+              }
             }
             Box(
               modifier = Modifier
