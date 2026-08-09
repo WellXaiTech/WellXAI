@@ -395,11 +395,15 @@ textarea::placeholder {
   gap: 2px;
 }
 
+/* ChatGPT-style icon button: a 40x40 touch area around a 32x32 visible
+   button (rounded, hover background), with a 20x20 icon centered inside
+   -- the touch area and the visible button are deliberately different
+   sizes so the tap target stays comfortable without the button looking
+   oversized. */
 .tool-btn {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border: none;
-  border-radius: 12px;
   background: transparent;
   display: flex;
   align-items: center;
@@ -407,10 +411,24 @@ textarea::placeholder {
   color: var(--muted);
   cursor: pointer;
   transition: 0.18s ease;
+  position: relative;
+}
+
+.tool-btn::before {
+  content: "";
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: transparent;
+  transition: background 0.18s ease;
+}
+
+.tool-btn:hover::before {
+  background: var(--surface-2);
 }
 
 .tool-btn:hover {
-  background: var(--surface-2);
   color: var(--foreground);
 }
 
@@ -420,6 +438,12 @@ textarea::placeholder {
 
 .tool-btn.is-active {
   color: var(--foreground);
+}
+
+.tool-btn svg {
+  position: relative;
+  width: 20px;
+  height: 20px;
 }
 
 .glow-badge {
