@@ -137,6 +137,7 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Edit
@@ -1263,72 +1264,6 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
   }
 }
 
-// Instagram/WhatsApp-Status-style row: "Your story" (with a small + badge --
-// this is now the only way to start a new post, replacing the old floating
-// button) followed by the most recent distinct posters, so people can see
-// who has new work without scrolling the whole feed. Tapping another
-// person's circle is visual-only for now, same as the Discover/Following/
-// Campaign/Smart tabs below (no per-author filtering behind it yet).
-@Composable
-private fun MediaStoriesRow(myImage: String?, myName: String, posts: List<ApiMediaPost>, onMyStoryClick: () -> Unit) {
-  val others = remember(posts) {
-    posts.distinctBy { it.authorId }.take(15)
-  }
-  val ringBrush = Brush.sweepGradient(listOf(Color(0xFFFEDA75), Color(0xFFFA7E1E), Color(0xFFD62976), Color(0xFF962FBF), Color(0xFF4F5BD5), Color(0xFFFEDA75)))
-
-  Row(
-    modifier = Modifier
-      .fillMaxWidth()
-      .horizontalScroll(rememberScrollState())
-      .padding(horizontal = 12.dp, vertical = 10.dp),
-    horizontalArrangement = Arrangement.spacedBy(14.dp)
-  ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp).clickable(onClick = onMyStoryClick)) {
-      Box(contentAlignment = Alignment.BottomEnd) {
-        if (myImage != null) {
-          AsyncImage(model = myImage, contentDescription = "Your story", modifier = Modifier.size(64.dp).clip(CircleShape))
-        } else {
-          Icon(Icons.Outlined.AccountCircle, contentDescription = "Your story", tint = Color.White, modifier = Modifier.size(64.dp))
-        }
-        Box(
-          modifier = Modifier
-            .size(22.dp)
-            .clip(CircleShape)
-            .background(Color(0xFFFFC94A))
-            .border(2.dp, Color(0xFF161616), CircleShape),
-          contentAlignment = Alignment.Center
-        ) {
-          Icon(Icons.Filled.Add, contentDescription = null, tint = Color.Black, modifier = Modifier.size(13.dp))
-        }
-      }
-      Spacer(modifier = Modifier.height(4.dp))
-      Text("Your story", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, maxLines = 1, softWrap = false)
-    }
-    others.forEach { post ->
-      Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp)) {
-        Box(
-          modifier = Modifier.size(68.dp).clip(CircleShape).background(ringBrush).padding(2.5.dp),
-          contentAlignment = Alignment.Center
-        ) {
-          if (post.authorImage != null) {
-            AsyncImage(
-              model = post.authorImage,
-              contentDescription = post.authorName,
-              modifier = Modifier.size(61.dp).clip(CircleShape).border(2.dp, Color(0xFF161616), CircleShape)
-            )
-          } else {
-            Box(modifier = Modifier.size(61.dp).clip(CircleShape).background(Color(0xFF23252B)), contentAlignment = Alignment.Center) {
-              Icon(Icons.Outlined.AccountCircle, contentDescription = post.authorName, tint = Color.White, modifier = Modifier.size(46.dp))
-            }
-          }
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(post.authorName, color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, maxLines = 1, softWrap = false)
-      }
-    }
-  }
-}
-
 // ChatGiZa Media now lives here, under the "Extra" tab, instead of
 // behind the History screen's old drag handle -- a dedicated screen
 // with its own back/history navigation instead of a slide-up panel.
@@ -1350,11 +1285,11 @@ private fun ChatGizaMediaScreen(viewModel: ChatViewModel) {
 
   Scaffold(
     topBar = {
-      // Just the nav row now -- "+", ChatGiZa, balance spacer. The Stories
-      // row moved into the scrollable feed (first item) so it scrolls away
-      // as you read posts, the same as the reference feed, instead of
-      // permanently eating screen height above every photo/video. Back is
-      // still available via the system gesture/button (BackHandler above);
+      // Just the nav row now -- "+", ChatGiZa, balance spacer. No Stories
+      // row: the reference layout's header only has these two elements, and
+      // the row was permanently eating screen height above every
+      // photo/video. Back is still available via the system gesture/button
+      // (BackHandler above);
       // this screen is reached from Chat's "Extra" tools menu, not a
       // persistent tab, so a dedicated on-screen back affordance isn't
       // needed here.
@@ -1430,14 +1365,6 @@ private fun ChatGizaMediaScreen(viewModel: ChatViewModel) {
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
       ) {
-        item {
-          MediaStoriesRow(
-            myImage = viewModel.userImage,
-            myName = viewModel.userName ?: "You",
-            posts = viewModel.mediaPosts,
-            onMyStoryClick = { showCreate = true }
-          )
-        }
         if (searchOpen) {
           item {
             Row(
@@ -2782,6 +2709,82 @@ private fun formatMediaPostTimeAgo(createdAt: Long): String {
 // every real social feed handles long text, and keeps the feed scannable.
 private const val MEDIA_POST_TEXT_PREVIEW_LENGTH = 180
 
+// Matches the web composer's cap (ChatGizaMediaFeed.tsx) so both clients
+// enforce the same limit rather than one silently accepting more than the
+// other can render.
+private const val MEDIA_MAX_IMAGES_PER_POST = 10
+
+@Composable
+@Composable
+private fun MediaCarousel(postId: String, imageUrls: List<String>) {
+  if (imageUrls.size == 1) {
+    // Always shown at full width, uncropped -- no more tap-to-expand;
+    // the collapsed crop strip was hiding most of the picture by
+    // default, which read as broken/half-loaded rather than deliberate.
+    // A fixed tall aspect ratio (cropped to fill) instead of the
+    // source image's natural size -- a near-square upload was
+    // rendering small/short at full width, nothing like the large,
+    // immersive photo size the reference feed shows for every post.
+    AsyncImage(
+      model = imageUrls[0],
+      contentDescription = "Post photo",
+      modifier = Modifier.fillMaxWidth().aspectRatio(4f / 5f).clip(RoundedCornerShape(14.dp)).background(Color.White.copy(alpha = 0.06f)),
+      contentScale = ContentScale.Crop
+    )
+    return
+  }
+  var index by remember(postId) { mutableStateOf(0) }
+  Box(modifier = Modifier.fillMaxWidth().aspectRatio(4f / 5f).clip(RoundedCornerShape(14.dp)).background(Color.White.copy(alpha = 0.06f))) {
+    AsyncImage(
+      model = imageUrls[index],
+      contentDescription = "Post photo ${index + 1} of ${imageUrls.size}",
+      modifier = Modifier.fillMaxSize(),
+      contentScale = ContentScale.Crop
+    )
+    if (index > 0) {
+      IconButton(
+        onClick = { index -= 1 },
+        modifier = Modifier.align(Alignment.CenterStart).padding(4.dp).size(28.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.4f))
+      ) {
+        Icon(Icons.Filled.ChevronLeft, contentDescription = "Previous photo", tint = Color.White, modifier = Modifier.size(20.dp))
+      }
+    }
+    if (index < imageUrls.size - 1) {
+      IconButton(
+        onClick = { index += 1 },
+        modifier = Modifier.align(Alignment.CenterEnd).padding(4.dp).size(28.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.4f))
+      ) {
+        Icon(Icons.Filled.ChevronRight, contentDescription = "Next photo", tint = Color.White, modifier = Modifier.size(20.dp))
+      }
+    }
+    Text(
+      "${index + 1}/${imageUrls.size}",
+      color = Color.White,
+      fontSize = 11.sp,
+      fontWeight = FontWeight.SemiBold,
+      modifier = Modifier
+        .align(Alignment.TopEnd)
+        .padding(8.dp)
+        .clip(RoundedCornerShape(10.dp))
+        .background(Color.Black.copy(alpha = 0.5f))
+        .padding(horizontal = 8.dp, vertical = 3.dp)
+    )
+    Row(
+      modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
+      horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+      imageUrls.indices.forEach { dotIndex ->
+        Box(
+          modifier = Modifier
+            .size(if (dotIndex == index) 6.dp else 5.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = if (dotIndex == index) 0.95f else 0.45f))
+        )
+      }
+    }
+  }
+}
+
 @Composable
 private fun MediaPostRow(
   post: ApiMediaPost,
@@ -2851,21 +2854,9 @@ private fun MediaPostRow(
             modifier = if (isLongText) Modifier.clickable { textExpanded = !textExpanded } else Modifier
           )
         }
-        if (post.imageDataUrl != null) {
+        if (post.imageUrls.isNotEmpty()) {
           Spacer(modifier = Modifier.height(8.dp))
-          // Always shown at full width, uncropped -- no more tap-to-expand;
-          // the collapsed crop strip was hiding most of the picture by
-          // default, which read as broken/half-loaded rather than deliberate.
-          // A fixed tall aspect ratio (cropped to fill) instead of the
-          // source image's natural size -- a near-square upload was
-          // rendering small/short at full width, nothing like the large,
-          // immersive photo size the reference feed shows for every post.
-          AsyncImage(
-            model = post.imageDataUrl,
-            contentDescription = "Post photo",
-            modifier = Modifier.fillMaxWidth().aspectRatio(4f / 5f).clip(RoundedCornerShape(14.dp)).background(Color.White.copy(alpha = 0.06f)),
-            contentScale = ContentScale.Crop
-          )
+          MediaCarousel(postId = post.id, imageUrls = post.imageUrls)
         }
         if (post.videoUrl != null) {
           Spacer(modifier = Modifier.height(8.dp))
@@ -3261,7 +3252,7 @@ private fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss:
   val context = LocalContext.current
   val composerScope = rememberCoroutineScope()
   var text by remember { mutableStateOf("") }
-  var imageUri by remember { mutableStateOf<Uri?>(null) }
+  var imageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
   var videoUri by remember { mutableStateOf<Uri?>(null) }
   var sentiment by remember { mutableStateOf<String?>(null) }
   var posting by remember { mutableStateOf(false) }
@@ -3270,10 +3261,10 @@ private fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss:
   // "not doing anything" rather than "failed, here's why."
   LaunchedEffect(Unit) { viewModel.clearMediaError() }
 
-  val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-    if (uri != null) {
+  val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+    if (uris.isNotEmpty()) {
       videoUri = null
-      imageUri = uri
+      imageUris = (imageUris + uris).take(MEDIA_MAX_IMAGES_PER_POST)
     }
   }
   val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -3295,14 +3286,14 @@ private fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss:
         if (durationMs != null && durationMs > 60_000L) {
           viewModel.reportMediaError("Video must be 1 minute or shorter")
         } else {
-          imageUri = null
+          imageUris = emptyList()
           videoUri = uri
         }
       }
     }
   }
 
-  val canPost = (text.isNotBlank() || imageUri != null || videoUri != null) && !posting && !viewModel.uploadingMediaVideo
+  val canPost = (text.isNotBlank() || imageUris.isNotEmpty() || videoUri != null) && !posting && !viewModel.uploadingMediaVideo
 
   Box(
     modifier = Modifier
@@ -3323,19 +3314,20 @@ private fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss:
           onClick = {
             posting = true
             composerScope.launch {
-              val pickedImageUri = imageUri
-              val dataUrl = pickedImageUri?.let { uri ->
-                withContext(Dispatchers.IO) { uriToPostImageDataUrl(context, uri) }
+              val pickedImageUris = imageUris
+              val dataUrls = withContext(Dispatchers.IO) {
+                pickedImageUris.map { uri -> uriToPostImageDataUrl(context, uri) }
               }
               // A picked photo that failed to decode used to just vanish --
-              // the post still went through with dataUrl = null, so it
-              // looked like posting worked but the picture was silently
-              // dropped. Now a decode failure blocks the post instead.
-              if (pickedImageUri != null && dataUrl == null) {
+              // the post still went through without it, so it looked like
+              // posting worked but the picture was silently dropped. Now a
+              // decode failure blocks the post instead.
+              if (pickedImageUris.isNotEmpty() && dataUrls.any { it == null }) {
                 posting = false
-                viewModel.reportMediaError("Couldn't attach that photo — try a different one")
+                viewModel.reportMediaError("Couldn't attach one of those photos — try again")
                 return@launch
               }
+              val imageDataUrls = dataUrls.filterNotNull()
 
               val pickedVideoUri = videoUri
               var videoBytes: ByteArray? = null
@@ -3359,7 +3351,7 @@ private fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss:
                 videoMime = mime
               }
 
-              viewModel.createMediaPost(text.trim(), dataUrl, videoBytes, videoMime, sentiment) { success ->
+              viewModel.createMediaPost(text.trim(), imageDataUrls, videoBytes, videoMime, sentiment) { success ->
                 posting = false
                 if (success) onDismiss()
               }
@@ -3426,30 +3418,32 @@ private fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss:
           }
         }
 
-        if (imageUri != null) {
+        if (imageUris.isNotEmpty()) {
           Spacer(modifier = Modifier.height(16.dp))
-          Box(
-            modifier = Modifier
-              .fillMaxWidth()
-              .heightIn(max = 260.dp)
-              .clip(RoundedCornerShape(16.dp))
+          Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
           ) {
-            AsyncImage(
-              model = imageUri,
-              contentDescription = "Attached photo",
-              modifier = Modifier.fillMaxWidth(),
-              contentScale = ContentScale.Crop
-            )
-            IconButton(
-              onClick = { imageUri = null },
-              modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(8.dp)
-                .size(30.dp)
-                .clip(CircleShape)
-                .background(Color.Black.copy(alpha = 0.55f))
-            ) {
-              Icon(Icons.Outlined.Close, contentDescription = "Remove photo", tint = Color.White, modifier = Modifier.size(18.dp))
+            imageUris.forEachIndexed { index, uri ->
+              Box(modifier = Modifier.size(96.dp).clip(RoundedCornerShape(12.dp))) {
+                AsyncImage(
+                  model = uri,
+                  contentDescription = "Attached photo ${index + 1}",
+                  modifier = Modifier.fillMaxSize(),
+                  contentScale = ContentScale.Crop
+                )
+                IconButton(
+                  onClick = { imageUris = imageUris.toMutableList().also { it.removeAt(index) } },
+                  modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp)
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.55f))
+                ) {
+                  Icon(Icons.Outlined.Close, contentDescription = "Remove photo", tint = Color.White, modifier = Modifier.size(14.dp))
+                }
+              }
             }
           }
         }
