@@ -1474,7 +1474,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             )
             DropdownMenuItem(
               text = { Text("Gallery") },
-              leadingIcon = { Icon(Icons.Outlined.Photo, contentDescription = null) },
+              leadingIcon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_gallery), contentDescription = null) },
               onClick = {
                 attachMenuOpen = false
                 imagePicker.launch("image/*")
