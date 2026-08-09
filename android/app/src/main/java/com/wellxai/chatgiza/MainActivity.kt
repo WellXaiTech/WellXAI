@@ -200,7 +200,6 @@ import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Cameraswitch
 import androidx.compose.material.icons.outlined.EmojiEvents
-import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FlashOff
 import androidx.compose.material.icons.outlined.FlashOn
 import androidx.compose.material.icons.outlined.MedicalServices
@@ -1030,7 +1029,7 @@ private fun ChatConversationMenuSheet(
       onDismiss(); onTogglePin()
     }
     ChatMenuRow(
-      icon = { Icon(Icons.Outlined.Folder, contentDescription = null, tint = Color.White) },
+      icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_projects), contentDescription = null, tint = Color.White) },
       label = "Add to project",
       trailing = { Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp)) }
     ) { onDismiss(); onComingSoon("Add to project") }
@@ -2564,7 +2563,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           horizontalArrangement = Arrangement.SpaceEvenly
         ) {
           HistoryNavTab(androidx.compose.ui.res.painterResource(R.drawable.ic_settings), "Settings", onClick = { viewModel.openAccount() })
-          HistoryNavTab(Icons.Outlined.Folder, "Projects", onClick = { viewModel.openProjects() })
+          HistoryNavTab(androidx.compose.ui.res.painterResource(R.drawable.ic_projects), "Projects", onClick = { viewModel.openProjects() })
           HistoryNavTab(Icons.Outlined.Schedule, "Scheduled", onClick = { viewModel.openScheduled() })
           HistoryNavTab(Icons.Outlined.Business, "Business", onClick = {
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/business")))
