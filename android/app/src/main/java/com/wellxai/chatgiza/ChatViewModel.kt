@@ -1,5 +1,6 @@
 package com.wellxai.chatgiza
 
+import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -14,8 +15,16 @@ data class UiMessage(val id: String, val role: String, val content: String, val 
 
 // `text` is folded into the outgoing message text (PDF/plain-text files);
 // `imageDataUrls` are sent as vision image parts alongside it (a rendered
-// PDF's pages). A file only ever populates one of the two.
-data class AttachedFile(val name: String, val text: String? = null, val imageDataUrls: List<String> = emptyList())
+// PDF's pages). A file only ever populates one of the two. `previewBitmap`
+// is local-only (never sent anywhere) -- Coil's AsyncImage doesn't decode
+// data: URIs, so the composer preview needs the actual in-memory Bitmap
+// from render time rather than re-deriving it from imageDataUrls.
+data class AttachedFile(
+  val name: String,
+  val text: String? = null,
+  val imageDataUrls: List<String> = emptyList(),
+  val previewBitmap: Bitmap? = null
+)
 
 sealed class AppScreen {
   object Loading : AppScreen()
