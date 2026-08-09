@@ -508,7 +508,23 @@ export default function ChatGizaMediaFeed({ onClose }: { onClose: () => void }) 
   const canPost = (text.trim() || imagePreviews.length > 0 || videoFile) && !posting;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background">
+    // Permanently dark regardless of the site's light/dark theme setting --
+    // matches the native app's Media feed/profile, which is also fixed
+    // dark rather than theme-toggle-dependent. Overriding these CSS vars
+    // here (instead of on every className below) cascades through every
+    // bg-background/text-muted/border-border/etc. Tailwind class used
+    // throughout this file and its child components for free.
+    <div
+      className="fixed inset-0 z-50 flex flex-col bg-background"
+      style={{
+        "--background": "#10141f",
+        "--foreground": "#e5ebfa",
+        "--surface": "#171d2f",
+        "--surface-2": "#1c2333",
+        "--border": "#262e3f",
+        "--muted": "#9aa3b2",
+      } as React.CSSProperties}
+    >
       <div className="flex items-center gap-3 border-b border-border px-6 py-4 sm:px-10">
         <button
           onClick={onClose}
