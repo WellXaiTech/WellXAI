@@ -1482,7 +1482,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             )
             DropdownMenuItem(
               text = { Text("Files") },
-              leadingIcon = { Icon(Icons.Outlined.Description, contentDescription = null) },
+              leadingIcon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_files), contentDescription = null) },
               onClick = {
                 attachMenuOpen = false
                 filePicker.launch("*/*")
