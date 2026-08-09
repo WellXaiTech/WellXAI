@@ -37,6 +37,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Bookmark
@@ -109,6 +110,7 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
   var expandedCommentsPostId by remember { mutableStateOf<String?>(null) }
   var searchOpen by remember { mutableStateOf(false) }
   var searchQuery by remember { mutableStateOf("") }
+  var viewingProfile by remember { mutableStateOf<ProfileTarget?>(null) }
 
   // A post's destination ("post" == History/main feed, "status" == stories
   // row, "both") decides which of these two lists it lands in -- a
@@ -159,7 +161,8 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
         MediaStoriesRow(
           myImage = viewModel.userImage,
           posts = statusEligiblePosts,
-          onMyStoryClick = { showConnectSheet = true }
+          onMyStoryClick = { showConnectSheet = true },
+          onOpenProfile = { target -> viewingProfile = target }
         )
         androidx.compose.material3.HorizontalDivider(color = Color(0xFFEDEDED))
       }
@@ -223,7 +226,8 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
                 viewModel.loadMediaComments(post.id)
               }
             },
-            onOpenComposer = { replyingToPost = post }
+            onOpenComposer = { replyingToPost = post },
+            onOpenProfile = { viewingProfile = ProfileTarget(post.authorId, post.authorName, post.authorImage) }
           )
         }
       }
@@ -262,14 +266,29 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
       searchOpen = searchOpen,
       onSearchClick = { searchOpen = !searchOpen },
       onCreateClick = { showConnectSheet = true },
+      onProfileClick = {
+        val uid = viewModel.userId
+        if (uid != null) viewingProfile = ProfileTarget(uid, viewModel.userName ?: "You", viewModel.userImage)
+      },
       modifier = Modifier.align(Alignment.BottomCenter)
     )
+
+    val profileTarget = viewingProfile
+    if (profileTarget != null) {
+      MediaProfileScreen(
+        viewModel = viewModel,
+        target = profileTarget,
+        onBack = { viewingProfile = null }
+      )
+    }
   }
 
   if (showConnectSheet) {
     ConnectWithChatGizaSheet(viewModel, onDismiss = { showConnectSheet = false })
   }
 }
+
+data class ProfileTarget(val authorId: String, val authorName: String, val authorImage: String?)
 
 // =============================================================
 // CHATGIZA HEADER
@@ -303,7 +322,12 @@ private fun ChatGiZaHeader(topInset: androidx.compose.ui.unit.Dp, onAddClick: ()
 // =============================================================
 
 @Composable
-private fun MediaStoriesRow(myImage: String?, posts: List<ApiMediaPost>, onMyStoryClick: () -> Unit) {
+private fun MediaStoriesRow(
+  myImage: String?,
+  posts: List<ApiMediaPost>,
+  onMyStoryClick: () -> Unit,
+  onOpenProfile: (ProfileTarget) -> Unit
+) {
   val others = remember(posts) { posts.distinctBy { it.authorId }.take(15) }
 
   Row(
@@ -340,7 +364,12 @@ private fun MediaStoriesRow(myImage: String?, posts: List<ApiMediaPost>, onMySto
       Text("Your story", color = Color.Black, fontSize = 11.sp, maxLines = 1, softWrap = false)
     }
     others.forEach { post ->
-      Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp)) {
+      Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+          .width(72.dp)
+          .clickable { onOpenProfile(ProfileTarget(post.authorId, post.authorName, post.authorImage)) }
+      ) {
         Box(
           modifier = Modifier.size(68.dp).clip(CircleShape).background(Color.Black).padding(2.5.dp),
           contentAlignment = Alignment.Center
@@ -379,7 +408,8 @@ private fun MediaPost(
   onLikeClick: () -> Unit,
   onDeleteClick: () -> Unit,
   onToggleComments: () -> Unit,
-  onOpenComposer: () -> Unit
+  onOpenComposer: () -> Unit,
+  onOpenProfile: () -> Unit
 ) {
   val context = LocalContext.current
   val pagerState = rememberPagerState(pageCount = { post.imageUrls.size })
@@ -404,16 +434,21 @@ private fun MediaPost(
         AsyncImage(
           model = post.authorImage,
           contentDescription = "Profile",
-          modifier = Modifier.size(44.dp).clip(CircleShape),
+          modifier = Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onOpenProfile),
           contentScale = ContentScale.Crop
         )
       } else {
-        Icon(Icons.Outlined.AccountCircle, contentDescription = "Profile", tint = Color.Gray, modifier = Modifier.size(44.dp))
+        Icon(
+          Icons.Outlined.AccountCircle,
+          contentDescription = "Profile",
+          tint = Color.Gray,
+          modifier = Modifier.size(44.dp).clickable(onClick = onOpenProfile)
+        )
       }
 
       Spacer(modifier = Modifier.width(10.dp))
 
-      Column(modifier = Modifier.weight(1f)) {
+      Column(modifier = Modifier.weight(1f).clickable(onClick = onOpenProfile)) {
         Text(text = post.authorName, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         Text(text = formatMediaPostTimeAgo(post.createdAt), fontSize = 12.sp, color = Color.Gray)
       }
@@ -575,6 +610,7 @@ private fun MediaBottomNavigation(
   searchOpen: Boolean,
   onSearchClick: () -> Unit,
   onCreateClick: () -> Unit,
+  onProfileClick: () -> Unit,
   modifier: Modifier = Modifier
 ) {
   Row(
@@ -604,11 +640,154 @@ private fun MediaBottomNavigation(
       AsyncImage(
         model = viewModel.userImage,
         contentDescription = "Profile",
-        modifier = Modifier.size(26.dp).clip(CircleShape),
+        modifier = Modifier.size(26.dp).clip(CircleShape).clickable(onClick = onProfileClick),
         contentScale = ContentScale.Crop
       )
     } else {
-      Icon(Icons.Filled.Person, contentDescription = "Profile", tint = Color.DarkGray)
+      Icon(
+        Icons.Filled.Person,
+        contentDescription = "Profile",
+        tint = Color.DarkGray,
+        modifier = Modifier.clickable(onClick = onProfileClick)
+      )
+    }
+  }
+}
+
+// =============================================================
+// PROFILE -- avatar, real post count, a grid of that person's posts.
+// No follower/following/bio data exists on the backend yet, so those
+// are left out entirely rather than showing fabricated numbers; this
+// is a foundation to build on, not the full reference layout.
+// =============================================================
+
+@Composable
+private fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget, onBack: () -> Unit) {
+  BackHandler { onBack() }
+  val isOwnProfile = target.authorId == viewModel.userId
+  val authorPosts = remember(viewModel.mediaPosts, target.authorId) {
+    viewModel.mediaPosts.filter { it.authorId == target.authorId }
+  }
+  val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+
+  Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
+    Column(modifier = Modifier.fillMaxSize()) {
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(top = topInset)
+          .height(56.dp)
+          .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        IconButton(onClick = onBack) {
+          Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.Black)
+        }
+        Text(
+          target.authorName,
+          color = Color.Black,
+          fontSize = 16.sp,
+          fontWeight = FontWeight.SemiBold,
+          modifier = Modifier.weight(1f)
+        )
+      }
+
+      LazyColumn(modifier = Modifier.fillMaxSize()) {
+        item {
+          Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            if (target.authorImage != null) {
+              AsyncImage(
+                model = target.authorImage,
+                contentDescription = target.authorName,
+                modifier = Modifier.size(84.dp).clip(CircleShape),
+                contentScale = ContentScale.Crop
+              )
+            } else {
+              Icon(Icons.Outlined.AccountCircle, contentDescription = target.authorName, tint = Color.Gray, modifier = Modifier.size(84.dp))
+            }
+            Spacer(modifier = Modifier.width(28.dp))
+            Column {
+              Text("${authorPosts.size}", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+              Text("Posts", color = Color.Gray, fontSize = 13.sp)
+            }
+          }
+        }
+        item {
+          Text(
+            target.authorName,
+            color = Color.Black,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+          )
+        }
+        item {
+          Spacer(modifier = Modifier.height(14.dp))
+          if (isOwnProfile) {
+            OutlinedButton(
+              onClick = {},
+              modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            ) { Text("Edit Profile") }
+          } else {
+            var following by remember(target.authorId) { mutableStateOf(false) }
+            Row(
+              modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+              horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+              androidx.compose.material3.Button(
+                onClick = { following = !following },
+                modifier = Modifier.weight(1f)
+              ) { Text(if (following) "Following" else "Follow") }
+              OutlinedButton(onClick = {}, modifier = Modifier.weight(1f)) { Text("Message") }
+            }
+          }
+          Spacer(modifier = Modifier.height(16.dp))
+          androidx.compose.material3.HorizontalDivider(color = Color(0xFFEDEDED))
+        }
+        if (authorPosts.isEmpty()) {
+          item {
+            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 60.dp), contentAlignment = Alignment.Center) {
+              Text("No posts yet.", color = Color.Gray, fontSize = 14.sp)
+            }
+          }
+        } else {
+          items(authorPosts.chunked(3)) { rowPosts ->
+            Row(modifier = Modifier.fillMaxWidth()) {
+              rowPosts.forEach { post ->
+                Box(modifier = Modifier.weight(1f).aspectRatio(1f).padding(1.dp)) {
+                  val thumb = post.imageUrls.firstOrNull()
+                  if (thumb != null) {
+                    AsyncImage(
+                      model = thumb,
+                      contentDescription = null,
+                      modifier = Modifier.fillMaxSize(),
+                      contentScale = ContentScale.Crop
+                    )
+                  } else {
+                    Box(
+                      modifier = Modifier.fillMaxSize().background(Color(0xFFF5F5F5)),
+                      contentAlignment = Alignment.Center
+                    ) {
+                      Text(
+                        post.text.take(24),
+                        fontSize = 10.sp,
+                        color = Color.Gray,
+                        maxLines = 3,
+                        modifier = Modifier.padding(4.dp)
+                      )
+                    }
+                  }
+                }
+              }
+              repeat(3 - rowPosts.size) { Box(modifier = Modifier.weight(1f)) }
+            }
+          }
+        }
+        item { Spacer(modifier = Modifier.height(24.dp)) }
+      }
     }
   }
 }
