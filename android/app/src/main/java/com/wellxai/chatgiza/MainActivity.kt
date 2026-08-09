@@ -796,6 +796,10 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
   var chatDeleteConfirm by remember { mutableStateOf(false) }
   var findInChatOpen by remember { mutableStateOf(false) }
   var findInChatQuery by remember { mutableStateOf("") }
+  // Moved up from further down so the top bar's 3-dot icon (below) can
+  // reference it directly -- the menu now anchors to that icon instead
+  // of being a bottom sheet unrelated to where it was tapped from.
+  val activeConversation = viewModel.conversations.find { it.id == viewModel.activeConversationId }
   DisposableEffect(Unit) {
     tts.onDone = { speakingMessageId = null }
     onDispose {
@@ -891,11 +895,32 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
             ) {
               ComposeSquareIcon(modifier = Modifier.size(22.dp), tint = colorScheme.onBackground)
             }
-            Box(
-              modifier = Modifier.size(40.dp).clickable(onClick = { chatMenuOpen = true }),
-              contentAlignment = Alignment.Center
-            ) {
-              Icon(Icons.Filled.MoreVert, contentDescription = "Conversation menu", tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
+            Box {
+              Box(
+                modifier = Modifier.size(40.dp).clickable(onClick = { chatMenuOpen = true }),
+                contentAlignment = Alignment.Center
+              ) {
+                Icon(Icons.Filled.MoreVert, contentDescription = "Conversation menu", tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
+              }
+              if (chatMenuOpen) {
+                ChatConversationMenuSheet(
+                  title = activeConversation?.title ?: "New chat",
+                  pinned = activeConversation?.pinned ?: false,
+                  onDismiss = { chatMenuOpen = false },
+                  onShare = {
+                    val transcript = viewModel.messages.joinToString("\n\n") { m -> "${if (m.role == "user") "You" else "ChatGiZa"}: ${m.content}" }
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                      type = "text/plain"
+                      putExtra(Intent.EXTRA_TEXT, transcript)
+                    }
+                    context.startActivity(Intent.createChooser(intent, null))
+                  },
+                  onTogglePin = { activeConversation?.let { viewModel.togglePin(it.id) } },
+                  onFindInChat = { findInChatOpen = true },
+                  onDelete = { chatDeleteConfirm = true },
+                  onComingSoon = { label -> Toast.makeText(context, "$label — coming soon", Toast.LENGTH_SHORT).show() }
+                )
+              }
             }
           }
         },
@@ -1014,28 +1039,6 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
     }
   }
 
-  val activeConversation = viewModel.conversations.find { it.id == viewModel.activeConversationId }
-
-  if (chatMenuOpen) {
-    ChatConversationMenuSheet(
-      title = activeConversation?.title ?: "New chat",
-      pinned = activeConversation?.pinned ?: false,
-      onDismiss = { chatMenuOpen = false },
-      onShare = {
-        val transcript = viewModel.messages.joinToString("\n\n") { m -> "${if (m.role == "user") "You" else "ChatGiZa"}: ${m.content}" }
-        val intent = Intent(Intent.ACTION_SEND).apply {
-          type = "text/plain"
-          putExtra(Intent.EXTRA_TEXT, transcript)
-        }
-        context.startActivity(Intent.createChooser(intent, null))
-      },
-      onTogglePin = { activeConversation?.let { viewModel.togglePin(it.id) } },
-      onFindInChat = { findInChatOpen = true },
-      onDelete = { chatDeleteConfirm = true },
-      onComingSoon = { label -> Toast.makeText(context, "$label — coming soon", Toast.LENGTH_SHORT).show() }
-    )
-  }
-
   if (chatDeleteConfirm) {
     val target = activeConversation
     AlertDialog(
@@ -1071,42 +1074,45 @@ private fun ChatConversationMenuSheet(
   onDelete: () -> Unit,
   onComingSoon: (String) -> Unit
 ) {
-  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFF161616)) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
-      Text(
-        title,
-        color = Color.White.copy(alpha = 0.5f),
-        fontSize = 13.sp,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.padding(vertical = 10.dp)
-      )
-      ChatMenuRow(icon = { Icon(Icons.Outlined.Share, contentDescription = null, tint = Color.White) }, label = "Share") {
-        onDismiss(); onShare()
-      }
-      ChatMenuRow(icon = { Icon(Icons.Outlined.PushPin, contentDescription = null, tint = Color.White) }, label = if (pinned) "Unpin" else "Pin") {
-        onDismiss(); onTogglePin()
-      }
-      ChatMenuRow(
-        icon = { Icon(Icons.Outlined.Folder, contentDescription = null, tint = Color.White) },
-        label = "Add to project",
-        trailing = { Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp)) }
-      ) { onDismiss(); onComingSoon("Add to project") }
-      ChatMenuRow(icon = { Icon(Icons.Outlined.AttachFile, contentDescription = null, tint = Color.White) }, label = "Uploaded files") {
-        onDismiss(); onComingSoon("Uploaded files")
-      }
-      ChatMenuRow(icon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = Color.White) }, label = "Find in chat") {
-        onDismiss(); onFindInChat()
-      }
-      ChatMenuRow(icon = { Icon(Icons.Filled.Home, contentDescription = null, tint = Color.White) }, label = "Add to home") {
-        onDismiss(); onComingSoon("Add to home")
-      }
-      ChatMenuRow(icon = { Icon(Icons.Outlined.Archive, contentDescription = null, tint = Color.White) }, label = "Archive") {
-        onDismiss(); onComingSoon("Archive")
-      }
-      ChatMenuRow(icon = { DeleteIcon(tint = Color(0xFFFF6B6B)) }, label = "Delete", tint = Color(0xFFFF6B6B)) {
-        onDismiss(); onDelete()
-      }
+  // A DropdownMenu anchored at the 3-dot icon itself instead of a
+  // ModalBottomSheet -- a bottom sheet is a separate full-width surface
+  // that always slides up from the bottom of the screen regardless of
+  // where you tapped; this now opens right where the icon is, at the
+  // top, sized to its content instead of stretching edge to edge.
+  DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
+    Text(
+      title,
+      color = Color.White.copy(alpha = 0.5f),
+      fontSize = 13.sp,
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis,
+      modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+    )
+    ChatMenuRow(icon = { Icon(Icons.Outlined.Share, contentDescription = null, tint = Color.White) }, label = "Share") {
+      onDismiss(); onShare()
+    }
+    ChatMenuRow(icon = { Icon(Icons.Outlined.PushPin, contentDescription = null, tint = Color.White) }, label = if (pinned) "Unpin" else "Pin") {
+      onDismiss(); onTogglePin()
+    }
+    ChatMenuRow(
+      icon = { Icon(Icons.Outlined.Folder, contentDescription = null, tint = Color.White) },
+      label = "Add to project",
+      trailing = { Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp)) }
+    ) { onDismiss(); onComingSoon("Add to project") }
+    ChatMenuRow(icon = { Icon(Icons.Outlined.AttachFile, contentDescription = null, tint = Color.White) }, label = "Uploaded files") {
+      onDismiss(); onComingSoon("Uploaded files")
+    }
+    ChatMenuRow(icon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = Color.White) }, label = "Find in chat") {
+      onDismiss(); onFindInChat()
+    }
+    ChatMenuRow(icon = { Icon(Icons.Filled.Home, contentDescription = null, tint = Color.White) }, label = "Add to home") {
+      onDismiss(); onComingSoon("Add to home")
+    }
+    ChatMenuRow(icon = { Icon(Icons.Outlined.Archive, contentDescription = null, tint = Color.White) }, label = "Archive") {
+      onDismiss(); onComingSoon("Archive")
+    }
+    ChatMenuRow(icon = { DeleteIcon(tint = Color(0xFFFF6B6B)) }, label = "Delete", tint = Color(0xFFFF6B6B)) {
+      onDismiss(); onDelete()
     }
   }
 }
