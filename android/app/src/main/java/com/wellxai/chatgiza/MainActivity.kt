@@ -2734,7 +2734,11 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             })
             .padding(vertical = 14.dp)
         ) {
-          Icon(Icons.Outlined.ModeEdit, contentDescription = null, tint = colorScheme.onBackground)
+          Icon(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_rename),
+            contentDescription = null,
+            tint = colorScheme.onBackground
+          )
           Spacer(modifier = Modifier.size(16.dp))
           Text("Rename", color = colorScheme.onBackground, fontSize = 16.sp)
         }
