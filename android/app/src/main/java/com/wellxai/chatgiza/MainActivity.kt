@@ -929,7 +929,10 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
               onSpeakToggle = { toggleSpeak(message) },
               onRegenerate = { viewModel.regenerateMessage(message.id) },
               onDelete = { viewModel.deleteMessage(message.id) },
-              onPushToExtra = { onDone -> viewModel.pushReplyToExtraMedia(message.content, onDone) }
+              onPushToExtra = { caption, onDone ->
+                val finalText = if (caption.isNullOrBlank()) message.content else "${message.content}\n\n$caption"
+                viewModel.pushReplyToExtraMedia(finalText, onDone)
+              }
             )
           }
         }
@@ -5756,7 +5759,7 @@ private fun MessageBubble(
   onSpeakToggle: () -> Unit,
   onRegenerate: () -> Unit,
   onDelete: () -> Unit,
-  onPushToExtra: ((onDone: (Boolean) -> Unit) -> Unit)
+  onPushToExtra: (caption: String?, onDone: (Boolean) -> Unit) -> Unit
 ) {
   val isUser = message.role == "user"
   Column(modifier = Modifier.fillMaxWidth()) {
@@ -5822,8 +5825,8 @@ private fun ActionBarItem(icon: ImageVector, label: String, tint: Color = colorS
 
 // Below this length a reply reads as ordinary conversation ("Habari",
 // "Mambo vipi", a quick answer) rather than something worth publishing --
-// "Push to Extra" only shows up for replies that look like an actual
-// generated document/letter/article, not every back-and-forth line.
+// "Extra" only shows up for replies that look like an actual generated
+// document/letter/article, not every back-and-forth line.
 private const val MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH = 150
 
 @Composable
@@ -5834,14 +5837,22 @@ private fun MessageActionBar(
   onSpeakToggle: () -> Unit,
   onRegenerate: () -> Unit,
   onDelete: () -> Unit,
-  onPushToExtra: ((onDone: (Boolean) -> Unit) -> Unit)
+  onPushToExtra: (caption: String?, onDone: (Boolean) -> Unit) -> Unit
 ) {
   val context = LocalContext.current
   val clipboard = LocalClipboardManager.current
   var reaction by remember(message.id) { mutableStateOf<String?>(null) }
   var moreOpen by remember { mutableStateOf(false) }
   var pushState by remember(message.id) { mutableStateOf("idle") } // idle | pushing | pushed
+  var captionSheetOpen by remember { mutableStateOf(false) }
   val accent = Color(0xFF2979FF)
+
+  fun push(caption: String?) {
+    if (pushState == "idle") {
+      pushState = "pushing"
+      onPushToExtra(caption) { success -> pushState = if (success) "pushed" else "idle" }
+    }
+  }
 
   Row(
     modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -5849,6 +5860,14 @@ private fun MessageActionBar(
   ) {
     ActionBarItem(Icons.Outlined.ContentCopy, "Copy") {
       clipboard.setText(AnnotatedString(message.content))
+    }
+    if (chatGizaMediaConnected && message.content.length >= MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH) {
+      ActionBarExtraItem(
+        label = if (pushState == "pushed") "Sent" else "Extra",
+        tint = if (pushState == "pushed") accent else colorScheme.onBackground,
+        onPost = { push(null) },
+        onCaption = { captionSheetOpen = true }
+      )
     }
     ActionBarItem(
       Icons.Outlined.ThumbUp,
@@ -5879,18 +5898,6 @@ private fun MessageActionBar(
         context.startActivity(Intent.createChooser(intent, null))
       }
     }
-    if (chatGizaMediaConnected && message.content.length >= MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH) {
-      ActionBarItem(
-        icon = Icons.Filled.Send,
-        label = if (pushState == "pushed") "Sent" else "To Extra",
-        tint = if (pushState == "pushed") accent else colorScheme.onBackground
-      ) {
-        if (pushState == "idle") {
-          pushState = "pushing"
-          onPushToExtra { success -> pushState = if (success) "pushed" else "idle" }
-        }
-      }
-    }
     ActionBarItem(
       icon = if (isSpeaking) Icons.Outlined.VolumeOff else Icons.Outlined.VolumeUp,
       label = if (isSpeaking) "Stop" else "Read Aloud",
@@ -5905,6 +5912,100 @@ private fun MessageActionBar(
           text = { Text("Delete", color = Color(0xFFFF3B30)) },
           onClick = { moreOpen = false; onDelete() }
         )
+      }
+    }
+  }
+
+  if (captionSheetOpen) {
+    CaptionComposerSheet(
+      onDismiss = { captionSheetOpen = false },
+      onSubmit = { caption ->
+        captionSheetOpen = false
+        push(caption)
+      }
+    )
+  }
+}
+
+// "Extra" between Copy and Like -- a small dropdown arrow makes it clear
+// tapping opens a choice, not an immediate action like the plain icons
+// around it: "Post" pushes the reply to Extra Media as-is, "Caption" lets
+// the user write their own caption first (see CaptionComposerSheet).
+@Composable
+private fun ActionBarExtraItem(label: String, tint: Color, onPost: () -> Unit, onCaption: () -> Unit) {
+  var menuOpen by remember { mutableStateOf(false) }
+  Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(60.dp)) {
+    Box {
+      Row(
+        modifier = Modifier
+          .size(48.dp)
+          .clip(RoundedCornerShape(14.dp))
+          .background(colorScheme.onBackground.copy(alpha = 0.06f))
+          .clickable { menuOpen = true },
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Icon(Icons.Filled.Send, contentDescription = label, tint = tint, modifier = Modifier.size(18.dp))
+        Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = tint, modifier = Modifier.size(16.dp))
+      }
+      DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+        DropdownMenuItem(text = { Text("Post") }, onClick = { menuOpen = false; onPost() })
+        DropdownMenuItem(text = { Text("Caption") }, onClick = { menuOpen = false; onCaption() })
+      }
+    }
+    Spacer(modifier = Modifier.height(4.dp))
+    Text(label, color = colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 10.sp, maxLines = 1, softWrap = false)
+  }
+}
+
+// Reached via "Extra" -> "Caption": a short caption the user writes
+// themselves, which lands under the reply's own text when posted to
+// Extra Media (ChatViewModel.pushReplyToExtraMedia builds the combined
+// text; this sheet only collects the caption itself).
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CaptionComposerSheet(onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
+  var text by remember { mutableStateOf("") }
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFF161616)) {
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 20.dp)
+        .padding(bottom = 28.dp)
+    ) {
+      Text("Add a caption", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+      Spacer(modifier = Modifier.height(12.dp))
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .heightIn(min = 80.dp)
+          .clip(RoundedCornerShape(14.dp))
+          .background(Color.White.copy(alpha = 0.05f))
+          .padding(14.dp)
+      ) {
+        if (text.isEmpty()) {
+          Text("Write a caption for this post", color = Color(0xFF6E6E6E), fontSize = 15.sp)
+        }
+        BasicTextField(
+          value = text,
+          onValueChange = { text = it },
+          textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp, lineHeight = 20.sp),
+          cursorBrush = SolidColor(Color(0xFFFFC94A)),
+          modifier = Modifier.fillMaxSize()
+        )
+      }
+      Spacer(modifier = Modifier.height(16.dp))
+      Button(
+        onClick = { if (text.isNotBlank()) onSubmit(text.trim()) },
+        enabled = text.isNotBlank(),
+        colors = ButtonDefaults.buttonColors(
+          containerColor = Color(0xFFFFC94A),
+          disabledContainerColor = Color(0xFFFFC94A).copy(alpha = 0.35f)
+        ),
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth().height(48.dp)
+      ) {
+        Text("Post", color = Color.Black, fontWeight = FontWeight.SemiBold)
       }
     }
   }
