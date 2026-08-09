@@ -1732,7 +1732,12 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               .background(Color.White.copy(alpha = 0.12f))
               .padding(horizontal = 14.dp)
           ) {
-            Icon(Icons.Outlined.RecordVoiceOver, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+            Icon(
+              painter = androidx.compose.ui.res.painterResource(R.drawable.ic_talking),
+              contentDescription = null,
+              tint = Color.White,
+              modifier = Modifier.size(14.dp)
+            )
             Spacer(modifier = Modifier.size(6.dp))
             Text(statusText, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
           }
