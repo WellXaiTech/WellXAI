@@ -458,7 +458,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var chatGizaMediaConnected by mutableStateOf(tokenStore.getChatGizaMediaConnected())
     private set
 
-  fun setChatGizaMediaConnected(value: Boolean) {
+  fun updateChatGizaMediaConnected(value: Boolean) {
     chatGizaMediaConnected = value
     tokenStore.setChatGizaMediaConnected(value)
   }
