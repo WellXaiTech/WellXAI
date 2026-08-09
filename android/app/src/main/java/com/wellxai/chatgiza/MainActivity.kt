@@ -1754,30 +1754,42 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
             VoiceControlPill(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_videocam), contentDescription = "Camera", active = cameraEnabled) {
               cameraMenuOpen = true
             }
-            DropdownMenu(expanded = cameraMenuOpen, onDismissRequest = { cameraMenuOpen = false }) {
-              DropdownMenuItem(
-                text = { Text("Camera") },
-                leadingIcon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_videocam), contentDescription = null) },
-                onClick = {
-                  cameraMenuOpen = false
-                  if (cameraEnabled) {
-                    cameraProviderRef?.unbindAll()
-                    cameraEnabled = false
-                  } else if (hasCameraPermission) {
-                    cameraEnabled = true
-                  } else {
-                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+            DropdownMenu(
+              expanded = cameraMenuOpen,
+              onDismissRequest = { cameraMenuOpen = false },
+              shape = RoundedCornerShape(24.dp),
+              containerColor = Color(0xFF202020),
+              border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A2A2A))
+            ) {
+              Column(
+                modifier = Modifier
+                  .size(width = 343.dp, height = 220.dp)
+                  .padding(start = 37.dp, end = 24.dp, top = 22.dp, bottom = 18.dp)
+              ) {
+                CameraMenuRow(
+                  iconRes = R.drawable.ic_videocam,
+                  label = "Camera",
+                  onClick = {
+                    cameraMenuOpen = false
+                    if (cameraEnabled) {
+                      cameraProviderRef?.unbindAll()
+                      cameraEnabled = false
+                    } else if (hasCameraPermission) {
+                      cameraEnabled = true
+                    } else {
+                      cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                    }
                   }
-                }
-              )
-              DropdownMenuItem(
-                text = { Text("Share Screen") },
-                leadingIcon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_screen_share), contentDescription = null) },
-                onClick = {
-                  cameraMenuOpen = false
-                  shareScreenComingSoon = true
-                }
-              )
+                )
+                CameraMenuRow(
+                  iconRes = R.drawable.ic_screen_share,
+                  label = "Share Screen",
+                  onClick = {
+                    cameraMenuOpen = false
+                    shareScreenComingSoon = true
+                  }
+                )
+              }
             }
           }
           VoiceControlPill(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_speaker), contentDescription = "Speaker", active = speakerEnabled) {
@@ -3614,6 +3626,29 @@ private fun AttachMenuRow(iconRes: Int, label: String, onClick: () -> Unit) {
     )
     Spacer(modifier = Modifier.width(24.dp))
     Text(label, color = Color.White, fontSize = 15.sp)
+  }
+}
+
+// Live Vision's Camera dropdown -- exact spec (72dp row height, 24dp
+// icon, 28dp icon-to-label gap, 18sp label), same reasoning as
+// AttachMenuRow for why this is hand-built instead of DropdownMenuItem.
+@Composable
+private fun CameraMenuRow(iconRes: Int, label: String, onClick: () -> Unit) {
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .height(72.dp)
+      .clickable(onClick = onClick),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Icon(
+      painter = androidx.compose.ui.res.painterResource(iconRes),
+      contentDescription = null,
+      tint = Color.White,
+      modifier = Modifier.size(24.dp)
+    )
+    Spacer(modifier = Modifier.width(28.dp))
+    Text(label, color = Color.White, fontSize = 18.sp)
   }
 }
 
