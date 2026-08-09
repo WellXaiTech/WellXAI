@@ -1801,7 +1801,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               )
             }
           }
-          VoiceControlPill(icon = Icons.Outlined.VolumeUp, contentDescription = "Speaker", active = speakerEnabled) {
+          VoiceControlPill(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_speaker), contentDescription = "Speaker", active = speakerEnabled) {
             speakerEnabled = !speakerEnabled
             controller.setSpeakerEnabled(speakerEnabled)
           }
