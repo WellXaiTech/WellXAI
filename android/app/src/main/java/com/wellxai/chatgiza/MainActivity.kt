@@ -6140,6 +6140,7 @@ private fun ExtraDestinationChip(label: String, selected: Boolean, modifier: Mod
   }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ExtraPostPreviewSheet(
   authorName: String,
