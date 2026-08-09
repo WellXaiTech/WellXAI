@@ -676,32 +676,6 @@ private fun FilterIconCustom(modifier: Modifier = Modifier, tint: Color = Color.
   }
 }
 
-/** Hand-drawn "new chat" glyph — a rounded-square note outline with a
- * pencil poking diagonally past its top-right corner. Not in the Material
- * icon set under any name (ModeEdit/EditNote/BorderColor all draw a
- * visibly different shape), so drawn to match the reference exactly. */
-@Composable
-private fun ComposeSquareIcon(modifier: Modifier = Modifier, tint: Color = Color.White) {
-  Canvas(modifier = modifier) {
-    val scale = size.width / 24f
-    drawRoundRect(
-      color = tint,
-      topLeft = Offset(3.5f * scale, 5.5f * scale),
-      size = Size(14f * scale, 14f * scale),
-      cornerRadius = CornerRadius(4f * scale, 4f * scale),
-      style = Stroke(width = 1.7f * scale, cap = StrokeCap.Round)
-    )
-    // Pencil, diagonal, tip poking past the square's top-right corner.
-    drawLine(
-      color = tint,
-      start = Offset(10f * scale, 13.5f * scale),
-      end = Offset(19.5f * scale, 4f * scale),
-      strokeWidth = 2.6f * scale,
-      cap = StrokeCap.Round
-    )
-  }
-}
-
 @Composable
 private fun AskImagineTab(label: String, selected: Boolean, onClick: () -> Unit) {
   Box(
@@ -847,7 +821,12 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
               modifier = Modifier.size(40.dp).clickable(onClick = { viewModel.newChat() }),
               contentAlignment = Alignment.Center
             ) {
-              ComposeSquareIcon(modifier = Modifier.size(22.dp), tint = colorScheme.onBackground)
+              Icon(
+                painter = androidx.compose.ui.res.painterResource(R.drawable.ic_compose),
+                contentDescription = null,
+                tint = colorScheme.onBackground,
+                modifier = Modifier.size(22.dp)
+              )
             }
             Box {
               Box(
