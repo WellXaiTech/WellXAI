@@ -34,7 +34,11 @@ data class ApiProfile(
   val role: String? = null,
   val fullName: String? = null,
   val birthDate: String? = null,
-  val country: String? = null
+  val country: String? = null,
+  // Public-facing, shown on the ChatGiZa Media profile page -- distinct
+  // from `about`, which is private context fed to the AI, not something
+  // meant for other users to read.
+  val bio: String = ""
 )
 
 data class ProfileData(
@@ -981,7 +985,8 @@ object ChatGizaApi {
         role = profileObj.optString("role", null),
         fullName = profileObj.optString("fullName", null),
         birthDate = profileObj.optString("birthDate", null),
-        country = profileObj.optString("country", null)
+        country = profileObj.optString("country", null),
+        bio = profileObj.optString("bio", "")
       ),
       memory = (0 until memoryArr.length()).map { memoryArr.getString(it) },
       memoryEnabled = obj.optBoolean("memoryEnabled", true),
@@ -993,6 +998,7 @@ object ChatGizaApi {
     val profileObj = JSONObject()
       .put("nickname", data.profile.nickname)
       .put("about", data.profile.about)
+      .put("bio", data.profile.bio)
     data.profile.role?.let { profileObj.put("role", it) }
     data.profile.fullName?.let { profileObj.put("fullName", it) }
     data.profile.birthDate?.let { profileObj.put("birthDate", it) }

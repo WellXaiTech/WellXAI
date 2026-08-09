@@ -3828,6 +3828,31 @@ private fun CustomizeScreen(viewModel: ChatViewModel) {
 
       Spacer(modifier = Modifier.height(20.dp))
 
+      // Public-facing -- shown on the ChatGiZa Media profile page, unlike
+      // the private "about" field below which is only ever fed to the AI
+      // and must never be shown to other users.
+      Text(
+        "Bio (shown on your public profile)",
+        fontSize = 13.sp,
+        color = colorScheme.onBackground.copy(alpha = 0.6f)
+      )
+      Spacer(modifier = Modifier.height(6.dp))
+      OutlinedTextField(
+        value = viewModel.bioInput,
+        onValueChange = { if (it.length <= 150) viewModel.onBioChange(it) },
+        modifier = Modifier.fillMaxWidth(),
+        placeholder = { Text("e.g. Digital creator sharing ideas on ChatGiZa") },
+        shape = RoundedCornerShape(12.dp)
+      )
+      Text(
+        "${viewModel.bioInput.length}/150",
+        fontSize = 11.sp,
+        color = colorScheme.onBackground.copy(alpha = 0.4f),
+        modifier = Modifier.align(Alignment.End).padding(top = 2.dp)
+      )
+
+      Spacer(modifier = Modifier.height(20.dp))
+
       Text(
         "Anything ChatGiZa should know about you?",
         fontSize = 13.sp,

@@ -11,6 +11,10 @@ type ProfileData = {
     fullName?: string;
     birthDate?: string;
     country?: string;
+    // Public-facing (shown on the ChatGiZa Media profile page) --
+    // distinct from `about`, which is private AI-personalization
+    // context and must never be surfaced to other users.
+    bio?: string;
   };
   memory: string[];
   memoryEnabled: boolean;
@@ -18,7 +22,7 @@ type ProfileData = {
 };
 
 const DEFAULT_PROFILE_DATA: ProfileData = {
-  profile: { nickname: "", about: "" },
+  profile: { nickname: "", about: "", bio: "" },
   memory: [],
   memoryEnabled: true,
   language: "",
@@ -69,6 +73,7 @@ export async function PUT(req: NextRequest) {
       fullName: typeof body.profile?.fullName === "string" ? body.profile.fullName : undefined,
       birthDate: typeof body.profile?.birthDate === "string" ? body.profile.birthDate : undefined,
       country: typeof body.profile?.country === "string" ? body.profile.country : undefined,
+      bio: typeof body.profile?.bio === "string" ? body.profile.bio.slice(0, 150) : "",
     },
     memory: Array.isArray(body.memory) ? body.memory.filter((m: unknown) => typeof m === "string") : [],
     memoryEnabled: typeof body.memoryEnabled === "boolean" ? body.memoryEnabled : true,

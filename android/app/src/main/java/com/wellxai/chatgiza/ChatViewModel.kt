@@ -178,6 +178,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   var nicknameInput by mutableStateOf("")
   var aboutInput by mutableStateOf("")
+  var bioInput by mutableStateOf("")
 
   var settingsData by mutableStateOf(SettingsData())
     private set
@@ -227,6 +228,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
           profileData = result.value
           nicknameInput = result.value.profile.nickname
           aboutInput = result.value.profile.about
+          bioInput = result.value.profile.bio
           val nameParts = (result.value.profile.fullName ?: "").trim().split(" ", limit = 2)
           firstNameInput = nameParts.getOrElse(0) { "" }
           lastNameInput = nameParts.getOrElse(1) { "" }
@@ -552,6 +554,10 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     aboutInput = value
   }
 
+  fun onBioChange(value: String) {
+    bioInput = value
+  }
+
   private fun persistProfile(updated: ProfileData) {
     profileData = updated
     val token = tokenStore.getToken() ?: return
@@ -620,7 +626,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   fun saveProfile() {
     val token = tokenStore.getToken() ?: return
     savingProfile = true
-    val updated = profileData.copy(profile = profileData.profile.copy(nickname = nicknameInput, about = aboutInput))
+    val updated = profileData.copy(profile = profileData.profile.copy(nickname = nicknameInput, about = aboutInput, bio = bioInput))
     viewModelScope.launch {
       when (val result = ChatGizaApi.saveProfile(token, updated)) {
         is ApiResult.Success -> {
@@ -868,6 +874,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     profileData = ProfileData()
     nicknameInput = ""
     aboutInput = ""
+    bioInput = ""
     settingsData = SettingsData()
     projects = emptyList()
     scheduledTasks = emptyList()
