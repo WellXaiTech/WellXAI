@@ -54,6 +54,7 @@ import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Comment
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -424,6 +425,26 @@ private fun NotificationBellIcon(modifier: Modifier = Modifier, tint: Color = Co
       size = Size(5f * scale, 5f * scale),
       style = Stroke(width = strokeW, cap = StrokeCap.Round, join = StrokeJoin.Round)
     )
+  }
+}
+
+// Hand-drawn three-line "hamburger" menu glyph -- opens Account/Settings
+// from your own profile header, matching the reference layout's
+// top-right menu icon.
+@Composable
+private fun MediaMenuIcon(modifier: Modifier = Modifier, tint: Color = Color.Black) {
+  Canvas(modifier = modifier) {
+    val scale = size.width / 24f
+    val strokeW = 1.8f * scale
+    listOf(5.5f, 12f, 18.5f).forEach { y ->
+      drawLine(
+        color = tint,
+        start = Offset(3.5f * scale, y * scale),
+        end = Offset(20.5f * scale, y * scale),
+        strokeWidth = strokeW,
+        cap = StrokeCap.Round
+      )
+    }
   }
 }
 
@@ -802,16 +823,29 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
           .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        IconButton(onClick = onBack) {
-          Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = onBg)
+        IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
+          Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = onBg, modifier = Modifier.size(20.dp))
         }
-        Text(
-          target.authorName,
-          color = onBg,
-          fontSize = 16.sp,
-          fontWeight = FontWeight.SemiBold,
-          modifier = Modifier.weight(1f)
-        )
+        Row(
+          modifier = Modifier.weight(1f),
+          horizontalArrangement = Arrangement.Center,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Text(
+            target.authorName,
+            color = onBg,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold
+          )
+          Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = null, tint = onBg, modifier = Modifier.size(18.dp))
+        }
+        if (isOwnProfile) {
+          IconButton(onClick = { viewModel.openAccount() }, modifier = Modifier.size(40.dp)) {
+            MediaMenuIcon(modifier = Modifier.size(20.dp), tint = onBg)
+          }
+        } else {
+          Spacer(modifier = Modifier.size(40.dp))
+        }
       }
 
       LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -852,8 +886,15 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
         }
         item {
           Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+            // The bold display name (e.g. "QUANTARA") is a separate,
+            // user-set field shown here -- target.authorName (the header
+            // above) stays the account's real/login name, this is what
+            // other users see as the account's public identity. Falls
+            // back to authorName when nothing's been set.
+            val displayName = (if (isOwnProfile) viewModel.profileData.profile.displayName else userProfile?.displayName.orEmpty())
+              .ifBlank { target.authorName }
             Text(
-              target.authorName,
+              displayName,
               color = onBg,
               fontSize = 15.sp,
               fontWeight = FontWeight.SemiBold
@@ -930,13 +971,19 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
           items(authorPosts.chunked(3)) { rowPosts ->
             Row(modifier = Modifier.fillMaxWidth()) {
               rowPosts.forEach { post ->
-                Box(modifier = Modifier.weight(1f).aspectRatio(1f).padding(1.dp)) {
-                  val thumb = post.imageUrls.firstOrNull()
+                val thumb = post.imageUrls.firstOrNull()
+                Box(
+                  modifier = Modifier
+                    .weight(1f)
+                    .aspectRatio(1f)
+                    .padding(1.dp)
+                    .then(if (thumb != null) Modifier.clickable { fullscreenImage = thumb } else Modifier)
+                ) {
                   if (thumb != null) {
                     AsyncImage(
                       model = thumb,
                       contentDescription = null,
-                      modifier = Modifier.fillMaxSize().clickable { fullscreenImage = thumb },
+                      modifier = Modifier.fillMaxSize(),
                       contentScale = ContentScale.Crop
                     )
                   } else {

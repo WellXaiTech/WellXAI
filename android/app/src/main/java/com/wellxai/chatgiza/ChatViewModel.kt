@@ -179,6 +179,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var nicknameInput by mutableStateOf("")
   var aboutInput by mutableStateOf("")
   var bioInput by mutableStateOf("")
+  var displayNameInput by mutableStateOf("")
 
   var settingsData by mutableStateOf(SettingsData())
     private set
@@ -229,6 +230,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
           nicknameInput = result.value.profile.nickname
           aboutInput = result.value.profile.about
           bioInput = result.value.profile.bio
+          displayNameInput = result.value.profile.displayName
           val nameParts = (result.value.profile.fullName ?: "").trim().split(" ", limit = 2)
           firstNameInput = nameParts.getOrElse(0) { "" }
           lastNameInput = nameParts.getOrElse(1) { "" }
@@ -558,6 +560,10 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     bioInput = value
   }
 
+  fun onDisplayNameChange(value: String) {
+    displayNameInput = value
+  }
+
   private fun persistProfile(updated: ProfileData) {
     profileData = updated
     val token = tokenStore.getToken() ?: return
@@ -626,7 +632,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   fun saveProfile() {
     val token = tokenStore.getToken() ?: return
     savingProfile = true
-    val updated = profileData.copy(profile = profileData.profile.copy(nickname = nicknameInput, about = aboutInput, bio = bioInput))
+    val updated = profileData.copy(profile = profileData.profile.copy(nickname = nicknameInput, about = aboutInput, bio = bioInput, displayName = displayNameInput))
     viewModelScope.launch {
       when (val result = ChatGizaApi.saveProfile(token, updated)) {
         is ApiResult.Success -> {
@@ -875,6 +881,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     nicknameInput = ""
     aboutInput = ""
     bioInput = ""
+    displayNameInput = ""
     settingsData = SettingsData()
     projects = emptyList()
     scheduledTasks = emptyList()
