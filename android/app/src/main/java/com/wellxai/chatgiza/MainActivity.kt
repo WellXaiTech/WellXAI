@@ -1459,7 +1459,14 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
           DropdownMenu(expanded = attachMenuOpen, onDismissRequest = { attachMenuOpen = false }) {
             DropdownMenuItem(
               text = { Text("Camera") },
-              leadingIcon = { ComposerCameraIcon(modifier = Modifier.size(24.dp), tint = colorScheme.onBackground) },
+              leadingIcon = {
+                Icon(
+                  painter = androidx.compose.ui.res.painterResource(R.drawable.ic_camera),
+                  contentDescription = null,
+                  tint = colorScheme.onBackground,
+                  modifier = Modifier.size(24.dp)
+                )
+              },
               onClick = {
                 attachMenuOpen = false
                 if (hasCameraPermission) launchCamera() else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
@@ -3582,32 +3589,6 @@ private fun SentimentToggleIcon(icon: ImageVector, tint: Color, active: Boolean,
     contentAlignment = Alignment.Center
   ) {
     Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
-  }
-}
-
-// Hand-drawn instead of Icons.Outlined.PhotoCamera -- that name doesn't
-// resolve in this project's bundled Material Icons Extended (broke CI),
-// and guessing another name risks the same failure again.
-@Composable
-private fun ComposerCameraIcon(modifier: Modifier = Modifier, tint: Color = Color.White) {
-  Canvas(modifier = modifier) {
-    val scale = size.width / 24f
-    val strokeW = 1.6f * scale
-    drawRoundRect(
-      color = tint,
-      topLeft = Offset(2.5f * scale, 6f * scale),
-      size = Size(19f * scale, 14f * scale),
-      cornerRadius = CornerRadius(3f * scale, 3f * scale),
-      style = Stroke(width = strokeW, cap = StrokeCap.Round, join = StrokeJoin.Round)
-    )
-    drawRoundRect(
-      color = tint,
-      topLeft = Offset(9f * scale, 3.5f * scale),
-      size = Size(6f * scale, 3f * scale),
-      cornerRadius = CornerRadius(1.2f * scale, 1.2f * scale),
-      style = Stroke(width = strokeW, cap = StrokeCap.Round, join = StrokeJoin.Round)
-    )
-    drawCircle(color = tint, radius = 4f * scale, center = Offset(12f * scale, 13.2f * scale), style = Stroke(width = strokeW))
   }
 }
 
