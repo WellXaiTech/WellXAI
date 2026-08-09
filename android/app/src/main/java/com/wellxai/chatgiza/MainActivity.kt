@@ -1754,13 +1754,13 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
             DropdownMenu(
               expanded = cameraMenuOpen,
               onDismissRequest = { cameraMenuOpen = false },
-              shape = RoundedCornerShape(32.dp),
+              shape = RoundedCornerShape(24.dp),
               containerColor = Color(0xFF202020),
               border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A2A2A))
             ) {
               Column(
                 modifier = Modifier
-                  .size(width = 360.dp, height = 236.dp)
+                  .size(width = 343.dp, height = 220.dp)
                   .padding(start = 37.dp, end = 24.dp, top = 22.dp, bottom = 18.dp)
               ) {
                 CameraMenuRow(
