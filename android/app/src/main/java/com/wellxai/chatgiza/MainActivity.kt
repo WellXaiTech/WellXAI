@@ -1456,47 +1456,46 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
           ) {
             Icon(Icons.Filled.Add, contentDescription = "Attach", modifier = Modifier.size(18.dp))
           }
-          DropdownMenu(expanded = attachMenuOpen, onDismissRequest = { attachMenuOpen = false }) {
-            DropdownMenuItem(
-              text = { Text("Camera") },
-              leadingIcon = {
-                Icon(
-                  painter = androidx.compose.ui.res.painterResource(R.drawable.ic_camera),
-                  contentDescription = null,
-                  tint = colorScheme.onBackground,
-                  modifier = Modifier.size(24.dp)
-                )
-              },
+          DropdownMenu(
+            expanded = attachMenuOpen,
+            onDismissRequest = { attachMenuOpen = false },
+            shape = RoundedCornerShape(32.dp),
+            containerColor = Color(0xFF202020),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A2A2A))
+          ) {
+            AttachMenuRow(
+              iconRes = R.drawable.ic_camera,
+              label = "Camera",
               onClick = {
                 attachMenuOpen = false
                 if (hasCameraPermission) launchCamera() else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
               }
             )
-            DropdownMenuItem(
-              text = { Text("Gallery") },
-              leadingIcon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_gallery), contentDescription = null) },
+            AttachMenuRow(
+              iconRes = R.drawable.ic_gallery,
+              label = "Gallery",
               onClick = {
                 attachMenuOpen = false
                 imagePicker.launch("image/*")
               }
             )
-            DropdownMenuItem(
-              text = { Text("Files") },
-              leadingIcon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_files), contentDescription = null) },
+            AttachMenuRow(
+              iconRes = R.drawable.ic_files,
+              label = "Files",
               onClick = {
                 attachMenuOpen = false
                 filePicker.launch("*/*")
               }
             )
-            HorizontalDivider()
-            DropdownMenuItem(
-              text = { Text("Skills") },
-              leadingIcon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_skills), contentDescription = null) },
+            HorizontalDivider(color = Color(0xFF262626), thickness = 1.dp)
+            AttachMenuRow(
+              iconRes = R.drawable.ic_skills,
+              label = "Skills",
               onClick = { attachMenuOpen = false }
             )
-            DropdownMenuItem(
-              text = { Text("Connectors") },
-              leadingIcon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connectors), contentDescription = null) },
+            AttachMenuRow(
+              iconRes = R.drawable.ic_connectors,
+              label = "Connectors",
               onClick = { attachMenuOpen = false }
             )
           }
@@ -3589,6 +3588,31 @@ private fun SentimentToggleIcon(icon: ImageVector, tint: Color, active: Boolean,
     contentAlignment = Alignment.Center
   ) {
     Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+  }
+}
+
+// Built by hand instead of DropdownMenuItem -- its internal padding/
+// icon-text spacing isn't exposed as configurable params, and this
+// menu's spec calls for exact values (56dp row height, 24dp horizontal
+// padding, 24dp icon-to-label gap) that don't match M3's defaults.
+@Composable
+private fun AttachMenuRow(iconRes: Int, label: String, onClick: () -> Unit) {
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .height(56.dp)
+      .clickable(onClick = onClick)
+      .padding(horizontal = 24.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Icon(
+      painter = androidx.compose.ui.res.painterResource(iconRes),
+      contentDescription = null,
+      tint = Color.White,
+      modifier = Modifier.size(24.dp)
+    )
+    Spacer(modifier = Modifier.width(24.dp))
+    Text(label, color = Color.White, fontSize = 15.sp)
   }
 }
 
