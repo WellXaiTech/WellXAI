@@ -1808,7 +1808,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               controller.setMicMuted(micMuted)
             }
           }
-          VoiceControlPill(icon = Icons.Outlined.Settings, contentDescription = "Settings") {
+          VoiceControlPill(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_settings), contentDescription = "Settings") {
             voiceSettingsOpen = true
           }
         }
@@ -2016,6 +2016,20 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
 
 @Composable
 private fun VoiceControlPill(icon: ImageVector, contentDescription: String, active: Boolean = true, onClick: () -> Unit) {
+  VoiceControlPillShell(contentDescription, active, onClick) { tint ->
+    Icon(icon, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(24.dp))
+  }
+}
+
+@Composable
+private fun VoiceControlPill(painter: androidx.compose.ui.graphics.painter.Painter, contentDescription: String, active: Boolean = true, onClick: () -> Unit) {
+  VoiceControlPillShell(contentDescription, active, onClick) { tint ->
+    Icon(painter, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(24.dp))
+  }
+}
+
+@Composable
+private fun VoiceControlPillShell(contentDescription: String, active: Boolean, onClick: () -> Unit, icon: @Composable (Color) -> Unit) {
   Box(
     modifier = Modifier
       .size(width = 78.dp, height = 58.dp)
@@ -2025,12 +2039,7 @@ private fun VoiceControlPill(icon: ImageVector, contentDescription: String, acti
       .clickable(onClick = onClick),
     contentAlignment = Alignment.Center
   ) {
-    Icon(
-      icon,
-      contentDescription = contentDescription,
-      tint = Color.White.copy(alpha = if (active) 1f else 0.35f),
-      modifier = Modifier.size(24.dp)
-    )
+    icon(Color.White.copy(alpha = if (active) 1f else 0.35f))
   }
 }
 
@@ -2473,11 +2482,25 @@ private fun ChatGizaEventsCard() {
 
 @Composable
 private fun HistoryNavTab(icon: ImageVector, label: String, onClick: () -> Unit) {
+  HistoryNavTabShell(label, onClick) { tint ->
+    Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(24.dp))
+  }
+}
+
+@Composable
+private fun HistoryNavTab(painter: androidx.compose.ui.graphics.painter.Painter, label: String, onClick: () -> Unit) {
+  HistoryNavTabShell(label, onClick) { tint ->
+    Icon(painter, contentDescription = label, tint = tint, modifier = Modifier.size(24.dp))
+  }
+}
+
+@Composable
+private fun HistoryNavTabShell(label: String, onClick: () -> Unit, icon: @Composable (Color) -> Unit) {
   Column(
     horizontalAlignment = Alignment.CenterHorizontally,
     modifier = Modifier.clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 2.dp)
   ) {
-    Icon(icon, contentDescription = label, tint = colorScheme.onBackground.copy(alpha = 0.85f), modifier = Modifier.size(24.dp))
+    icon(colorScheme.onBackground.copy(alpha = 0.85f))
     Spacer(modifier = Modifier.height(2.dp))
     Text(label, color = colorScheme.onBackground.copy(alpha = 0.85f), fontSize = 10.sp)
   }
@@ -2526,7 +2549,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             .padding(top = 10.dp, bottom = 8.dp),
           horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-          HistoryNavTab(Icons.Outlined.Settings, "Settings", onClick = { viewModel.openAccount() })
+          HistoryNavTab(androidx.compose.ui.res.painterResource(R.drawable.ic_settings), "Settings", onClick = { viewModel.openAccount() })
           HistoryNavTab(Icons.Outlined.Folder, "Projects", onClick = { viewModel.openProjects() })
           HistoryNavTab(Icons.Outlined.Schedule, "Scheduled", onClick = { viewModel.openScheduled() })
           HistoryNavTab(Icons.Outlined.Business, "Business", onClick = {
