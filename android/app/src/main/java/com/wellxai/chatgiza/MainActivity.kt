@@ -235,7 +235,6 @@ import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Vibration
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VolumeOff
 import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.Whatshot
 import androidx.compose.material.icons.outlined.Widgets
@@ -2052,7 +2051,11 @@ private fun VoiceControlPillShell(contentDescription: String, active: Boolean, o
       .clickable(onClick = onClick),
     contentAlignment = Alignment.Center
   ) {
-    icon(Color.White.copy(alpha = if (active) 1f else 0.35f))
+    // 0.35 read as "the icon vanished into the dark pill" when a control
+    // (most noticeably Camera, off by default until permission is
+    // granted) starts in its inactive state -- still visibly dimmer than
+    // active, but no longer hard to make out.
+    icon(Color.White.copy(alpha = if (active) 1f else 0.7f))
   }
 }
 
@@ -2352,7 +2355,16 @@ private fun LiveVoiceSettingsSheet(
               .clickable { onOutputDeviceChange(id) }
               .padding(vertical = 10.dp)
           ) {
-            Icon(icon, contentDescription = null, tint = if (selected) Color.Black else Color.White, modifier = Modifier.size(18.dp))
+            if (id == "speaker") {
+              Icon(
+                painter = androidx.compose.ui.res.painterResource(R.drawable.ic_speaker),
+                contentDescription = null,
+                tint = if (selected) Color.Black else Color.White,
+                modifier = Modifier.size(18.dp)
+              )
+            } else {
+              Icon(icon, contentDescription = null, tint = if (selected) Color.Black else Color.White, modifier = Modifier.size(18.dp))
+            }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
               label,
@@ -6319,7 +6331,7 @@ private fun MessageActionBar(
         )
       } else {
         ActionBarItem(
-          icon = Icons.Outlined.VolumeUp,
+          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_speaker),
           label = "Read Aloud",
           tint = colorScheme.onBackground,
           onClick = onSpeakToggle
