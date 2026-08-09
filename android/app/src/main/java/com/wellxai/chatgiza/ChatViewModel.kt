@@ -12,6 +12,11 @@ import java.util.UUID
 
 data class UiMessage(val id: String, val role: String, val content: String, val createdAt: Long? = null)
 
+// `text` is folded into the outgoing message text (PDF/plain-text files);
+// `imageDataUrls` are sent as vision image parts alongside it (a rendered
+// PDF's pages). A file only ever populates one of the two.
+data class AttachedFile(val name: String, val text: String? = null, val imageDataUrls: List<String> = emptyList())
+
 sealed class AppScreen {
   object Loading : AppScreen()
   object SignedOut : AppScreen()
@@ -124,6 +129,21 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   fun clearAttachedImage() {
     attachedImageUri = null
     attachedImageDataUrl = null
+  }
+
+  // Same "sent live, not persisted with the message afterwards" tradeoff as
+  // attachedImage above. `imageDataUrls` covers both a rendered PDF's pages
+  // (sent as vision image parts, matching how the web treats scanned PDFs)
+  // and plain text files (.txt/.md/.csv), which instead land in `text`.
+  var attachedFile by mutableStateOf<AttachedFile?>(null)
+    private set
+
+  fun setAttachedFile(file: AttachedFile) {
+    attachedFile = file
+  }
+
+  fun clearAttachedFile() {
+    attachedFile = null
   }
 
   /** One of null (default), "web_search", "deep_research", "deep_think". */
@@ -1114,15 +1134,23 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     val text = input.trim()
     val token = tokenStore.getToken()
     val imageToSend = attachedImageDataUrl
-    if ((text.isEmpty() && imageToSend == null) || sending || token == null) return
+    val fileToSend = attachedFile
+    if ((text.isEmpty() && imageToSend == null && fileToSend == null) || sending || token == null) return
     autoSpeakNextReply = viaVoice
 
     val now = System.currentTimeMillis()
-    val userMsg = UiMessage(UUID.randomUUID().toString(), "user", text, now)
+    // The model sees the full extracted file text via apiText below; the
+    // chat bubble itself only shows a small trace of what was attached, so
+    // a big PDF/text file doesn't dump thousands of characters into the
+    // visible conversation.
+    val displayText = if (fileToSend != null) "$text\n\n📎 ${fileToSend.name}".trim() else text
+    val apiText = if (fileToSend?.text != null) "$text\n\n[Attached file: ${fileToSend.name}]\n${fileToSend.text}" else text
+    val userMsg = UiMessage(UUID.randomUUID().toString(), "user", displayText, now)
     val assistantId = UUID.randomUUID().toString()
     messages = messages + userMsg + UiMessage(assistantId, "assistant", "", now)
     input = ""
     clearAttachedImage()
+    clearAttachedFile()
     sending = true
     errorMessage = null
 
@@ -1134,7 +1162,11 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     }
 
     activeChatJob = viewModelScope.launch {
-      val history = messages.dropLast(1).map { ChatMessage(it.role, it.content) }
+      val historyBase = messages.dropLast(1)
+      val history = historyBase.mapIndexed { index, m ->
+        ChatMessage(m.role, if (index == historyBase.lastIndex) apiText else m.content)
+      }
+      val imagesToSend = (fileToSend?.imageDataUrls ?: emptyList()) + listOfNotNull(imageToSend)
       val result = ChatGizaApi.streamChat(
         token = token,
         messages = history,
@@ -1145,7 +1177,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         language = profileData.language,
         location = settingsData.location,
         company = settingsData.company,
-        imageDataUrl = imageToSend
+        imageDataUrls = imagesToSend
       ) { chunk ->
         messages = messages.map { m ->
           if (m.id == assistantId) m.copy(content = m.content + chunk) else m
@@ -1159,7 +1191,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         }
       }
 
-      val titleFallback = text.take(60).ifEmpty { "Photo" }
+      val titleFallback = text.take(60).ifEmpty { fileToSend?.name ?: "Photo" }
       val title = if (isNewConversation) titleFallback else conversations.find { it.id == conversationId }?.title ?: titleFallback
       val updated = ApiConversation(
         id = conversationId,

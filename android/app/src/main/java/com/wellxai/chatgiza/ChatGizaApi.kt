@@ -198,9 +198,12 @@ object ChatGizaApi {
     company: CompanyProfile,
     // Only ever attached to the newest user message (the one this
     // request is actually sending) -- the backend's ChatContentPart
-    // union already supports an image_url part alongside text, this
-    // just needed a client that could produce it.
-    imageDataUrl: String? = null,
+    // union already supports image_url parts alongside text, this just
+    // needed a client that could produce them. A rendered PDF's pages
+    // (see readAttachedFile in MainActivity.kt) show up here too, on top
+    // of a directly picked photo -- both are just image_url parts to the
+    // backend, which doesn't distinguish their origin.
+    imageDataUrls: List<String> = emptyList(),
     onChunk: (String) -> Unit
   ): ApiResult<Unit> =
     withContext(Dispatchers.IO) {
@@ -208,14 +211,14 @@ object ChatGizaApi {
         val messagesJson = JSONArray()
         messages.forEachIndexed { index, m ->
           val messageObj = JSONObject().put("role", m.role)
-          if (imageDataUrl != null && index == messages.lastIndex && m.role == "user") {
+          if (imageDataUrls.isNotEmpty() && index == messages.lastIndex && m.role == "user") {
             val parts = JSONArray()
             if (m.content.isNotEmpty()) {
               parts.put(JSONObject().put("type", "text").put("text", m.content))
             }
-            parts.put(
-              JSONObject().put("type", "image_url").put("image_url", JSONObject().put("url", imageDataUrl))
-            )
+            for (url in imageDataUrls) {
+              parts.put(JSONObject().put("type", "image_url").put("image_url", JSONObject().put("url", url)))
+            }
             messageObj.put("content", parts)
           } else {
             messageObj.put("content", m.content)
