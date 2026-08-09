@@ -2032,10 +2032,10 @@ private fun VoiceControlPill(painter: androidx.compose.ui.graphics.painter.Paint
 private fun VoiceControlPillShell(contentDescription: String, active: Boolean, onClick: () -> Unit, icon: @Composable (Color) -> Unit) {
   Box(
     modifier = Modifier
-      .size(width = 78.dp, height = 58.dp)
-      .clip(RoundedCornerShape(18.dp))
+      .size(40.dp)
+      .clip(RoundedCornerShape(14.dp))
       .background(Color(0xFF1F1F1F))
-      .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(18.dp))
+      .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(14.dp))
       .clickable(onClick = onClick),
     contentAlignment = Alignment.Center
   ) {
