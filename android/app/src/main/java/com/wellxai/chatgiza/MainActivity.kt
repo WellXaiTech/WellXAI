@@ -2020,14 +2020,14 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
 @Composable
 private fun VoiceControlPill(icon: ImageVector, contentDescription: String, active: Boolean = true, onClick: () -> Unit) {
   VoiceControlPillShell(contentDescription, active, onClick) { tint ->
-    Icon(icon, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(24.dp))
+    Icon(icon, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(20.dp))
   }
 }
 
 @Composable
 private fun VoiceControlPill(painter: androidx.compose.ui.graphics.painter.Painter, contentDescription: String, active: Boolean = true, onClick: () -> Unit) {
   VoiceControlPillShell(contentDescription, active, onClick) { tint ->
-    Icon(painter, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(24.dp))
+    Icon(painter, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(20.dp))
   }
 }
 
@@ -2035,10 +2035,10 @@ private fun VoiceControlPill(painter: androidx.compose.ui.graphics.painter.Paint
 private fun VoiceControlPillShell(contentDescription: String, active: Boolean, onClick: () -> Unit, icon: @Composable (Color) -> Unit) {
   Box(
     modifier = Modifier
-      .size(width = 84.dp, height = 58.dp)
-      .clip(RoundedCornerShape(18.dp))
+      .size(width = 84.dp, height = 46.dp)
+      .clip(RoundedCornerShape(14.dp))
       .background(Color(0xFF1F1F1F))
-      .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(18.dp))
+      .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(14.dp))
       .clickable(onClick = onClick),
     contentAlignment = Alignment.Center
   ) {
