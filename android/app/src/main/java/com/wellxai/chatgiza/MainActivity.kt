@@ -167,6 +167,8 @@ import androidx.compose.material.icons.outlined.AlternateEmail
 import androidx.compose.material.icons.outlined.AttachMoney
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.WorkspacePremium
+import androidx.compose.material.icons.outlined.Archive
+import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Autorenew
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Bookmark
@@ -790,6 +792,10 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
   val premiumTts = remember { PremiumTtsPlayer(context) }
   val haptic = LocalHapticFeedback.current
   var speakingMessageId by remember { mutableStateOf<String?>(null) }
+  var chatMenuOpen by remember { mutableStateOf(false) }
+  var chatDeleteConfirm by remember { mutableStateOf(false) }
+  var findInChatOpen by remember { mutableStateOf(false) }
+  var findInChatQuery by remember { mutableStateOf("") }
   DisposableEffect(Unit) {
     tts.onDone = { speakingMessageId = null }
     onDispose {
@@ -886,10 +892,10 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
               ComposeSquareIcon(modifier = Modifier.size(22.dp), tint = colorScheme.onBackground)
             }
             Box(
-              modifier = Modifier.size(40.dp).clickable(onClick = { viewModel.openAccount() }),
+              modifier = Modifier.size(40.dp).clickable(onClick = { chatMenuOpen = true }),
               contentAlignment = Alignment.Center
             ) {
-              Icon(Icons.Filled.MoreVert, contentDescription = "Account", tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
+              Icon(Icons.Filled.MoreVert, contentDescription = "Conversation menu", tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
             }
           }
         },
@@ -909,8 +915,59 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
         .navigationBarsPadding()
         .imePadding()
     ) {
-      if (viewModel.messages.isEmpty()) {
-        Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(top = padding.calculateTopPadding()))
+      // Reached via the top bar's "..." menu -- filters to matching
+      // messages instead of scroll-to-highlight, same approach the History
+      // and ChatGiZa Media search boxes already use elsewhere in the app.
+      if (findInChatOpen) {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = padding.calculateTopPadding())
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .height(38.dp)
+            .clip(RoundedCornerShape(19.dp))
+            .background(colorScheme.onBackground.copy(alpha = 0.08f))
+            .padding(horizontal = 12.dp)
+        ) {
+          Icon(Icons.Outlined.Search, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.size(16.dp))
+          Spacer(modifier = Modifier.width(6.dp))
+          Box(modifier = Modifier.weight(1f)) {
+            if (findInChatQuery.isEmpty()) {
+              Text("Find in chat", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 13.sp)
+            }
+            BasicTextField(
+              value = findInChatQuery,
+              onValueChange = { findInChatQuery = it },
+              singleLine = true,
+              textStyle = androidx.compose.ui.text.TextStyle(color = colorScheme.onBackground, fontSize = 13.sp),
+              cursorBrush = SolidColor(colorScheme.onBackground),
+              modifier = Modifier.fillMaxWidth()
+            )
+          }
+          Icon(
+            Icons.Outlined.Close,
+            contentDescription = "Close search",
+            tint = colorScheme.onBackground.copy(alpha = 0.6f),
+            modifier = Modifier.size(16.dp).clickable { findInChatOpen = false; findInChatQuery = "" }
+          )
+        }
+      }
+      val displayedMessages = remember(viewModel.messages, findInChatOpen, findInChatQuery) {
+        if (!findInChatOpen || findInChatQuery.isBlank()) viewModel.messages
+        else viewModel.messages.filter { it.content.contains(findInChatQuery, ignoreCase = true) }
+      }
+      if (displayedMessages.isEmpty()) {
+        Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(top = if (findInChatOpen) 0.dp else padding.calculateTopPadding())) {
+          if (findInChatOpen && findInChatQuery.isNotBlank()) {
+            Text(
+              "No matches.",
+              color = colorScheme.onBackground.copy(alpha = 0.5f),
+              fontSize = 14.sp,
+              modifier = Modifier.align(Alignment.Center)
+            )
+          }
+        }
       } else {
         LazyColumn(
           state = listState,
@@ -918,12 +975,12 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
           contentPadding = PaddingValues(
             start = 10.dp,
             end = 10.dp,
-            top = padding.calculateTopPadding() + 16.dp,
+            top = if (findInChatOpen) 12.dp else padding.calculateTopPadding() + 16.dp,
             bottom = 16.dp
           ),
           verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-          items(viewModel.messages, key = { it.id }) { message ->
+          items(displayedMessages, key = { it.id }) { message ->
             val isStreamingThis = viewModel.sending && message.id == viewModel.messages.lastOrNull()?.id
             MessageBubble(
               message = message,
@@ -955,6 +1012,121 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
 
       ChatComposerCard(viewModel)
     }
+  }
+
+  val activeConversation = viewModel.conversations.find { it.id == viewModel.activeConversationId }
+
+  if (chatMenuOpen) {
+    ChatConversationMenuSheet(
+      title = activeConversation?.title ?: "New chat",
+      pinned = activeConversation?.pinned ?: false,
+      onDismiss = { chatMenuOpen = false },
+      onShare = {
+        val transcript = viewModel.messages.joinToString("\n\n") { m -> "${if (m.role == "user") "You" else "ChatGiZa"}: ${m.content}" }
+        val intent = Intent(Intent.ACTION_SEND).apply {
+          type = "text/plain"
+          putExtra(Intent.EXTRA_TEXT, transcript)
+        }
+        context.startActivity(Intent.createChooser(intent, null))
+      },
+      onTogglePin = { activeConversation?.let { viewModel.togglePin(it.id) } },
+      onFindInChat = { findInChatOpen = true },
+      onDelete = { chatDeleteConfirm = true },
+      onComingSoon = { label -> Toast.makeText(context, "$label — coming soon", Toast.LENGTH_SHORT).show() }
+    )
+  }
+
+  if (chatDeleteConfirm) {
+    val target = activeConversation
+    AlertDialog(
+      onDismissRequest = { chatDeleteConfirm = false },
+      title = { Text("Delete conversation?") },
+      text = { Text("This conversation will be deleted from your account. This action can't be undone.") },
+      confirmButton = {
+        TextButton(onClick = {
+          target?.let { viewModel.deleteConversation(it.id) }
+          chatDeleteConfirm = false
+        }) {
+          Text("Delete", color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold)
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = { chatDeleteConfirm = false }) {
+          Text("Cancel", fontWeight = FontWeight.Bold)
+        }
+      }
+    )
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChatConversationMenuSheet(
+  title: String,
+  pinned: Boolean,
+  onDismiss: () -> Unit,
+  onShare: () -> Unit,
+  onTogglePin: () -> Unit,
+  onFindInChat: () -> Unit,
+  onDelete: () -> Unit,
+  onComingSoon: (String) -> Unit
+) {
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFF161616)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
+      Text(
+        title,
+        color = Color.White.copy(alpha = 0.5f),
+        fontSize = 13.sp,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.padding(vertical = 10.dp)
+      )
+      ChatMenuRow(icon = { Icon(Icons.Outlined.Share, contentDescription = null, tint = Color.White) }, label = "Share") {
+        onDismiss(); onShare()
+      }
+      ChatMenuRow(icon = { Icon(Icons.Outlined.PushPin, contentDescription = null, tint = Color.White) }, label = if (pinned) "Unpin" else "Pin") {
+        onDismiss(); onTogglePin()
+      }
+      ChatMenuRow(
+        icon = { Icon(Icons.Outlined.Folder, contentDescription = null, tint = Color.White) },
+        label = "Add to project",
+        trailing = { Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp)) }
+      ) { onDismiss(); onComingSoon("Add to project") }
+      ChatMenuRow(icon = { Icon(Icons.Outlined.AttachFile, contentDescription = null, tint = Color.White) }, label = "Uploaded files") {
+        onDismiss(); onComingSoon("Uploaded files")
+      }
+      ChatMenuRow(icon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = Color.White) }, label = "Find in chat") {
+        onDismiss(); onFindInChat()
+      }
+      ChatMenuRow(icon = { Icon(Icons.Filled.Home, contentDescription = null, tint = Color.White) }, label = "Add to home") {
+        onDismiss(); onComingSoon("Add to home")
+      }
+      ChatMenuRow(icon = { Icon(Icons.Outlined.Archive, contentDescription = null, tint = Color.White) }, label = "Archive") {
+        onDismiss(); onComingSoon("Archive")
+      }
+      ChatMenuRow(icon = { DeleteIcon(tint = Color(0xFFFF6B6B)) }, label = "Delete", tint = Color(0xFFFF6B6B)) {
+        onDismiss(); onDelete()
+      }
+    }
+  }
+}
+
+@Composable
+private fun ChatMenuRow(
+  icon: @Composable () -> Unit,
+  label: String,
+  tint: Color = Color.White,
+  trailing: (@Composable () -> Unit)? = null,
+  onClick: () -> Unit
+) {
+  Row(
+    verticalAlignment = Alignment.CenterVertically,
+    modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp)
+  ) {
+    icon()
+    Spacer(modifier = Modifier.size(16.dp))
+    Text(label, color = tint, fontSize = 16.sp, modifier = Modifier.weight(1f))
+    trailing?.invoke()
   }
 }
 
