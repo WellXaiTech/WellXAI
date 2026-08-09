@@ -615,35 +615,14 @@ private fun TwoLineMenuIcon(tint: Color) {
   }
 }
 
-/** A wide trash-can outline with two vertical lines inside — the classic
- * delete glyph, which isn't available under any name in the Material
- * icon set used here (DeleteOutline/DeleteForever draw different shapes). */
 @Composable
 private fun DeleteIcon(tint: Color, modifier: Modifier = Modifier) {
-  Canvas(modifier = modifier.size(22.dp)) {
-    val w = size.width
-    val h = size.height
-    val strokeW = w * 0.08f
-    drawLine(
-      color = tint,
-      start = Offset(w * 0.14f, h * 0.26f),
-      end = Offset(w * 0.86f, h * 0.26f),
-      strokeWidth = strokeW,
-      cap = StrokeCap.Round
-    )
-    drawLine(color = tint, start = Offset(w * 0.40f, h * 0.26f), end = Offset(w * 0.40f, h * 0.12f), strokeWidth = strokeW * 0.85f, cap = StrokeCap.Round)
-    drawLine(color = tint, start = Offset(w * 0.60f, h * 0.26f), end = Offset(w * 0.60f, h * 0.12f), strokeWidth = strokeW * 0.85f, cap = StrokeCap.Round)
-    drawLine(color = tint, start = Offset(w * 0.40f, h * 0.12f), end = Offset(w * 0.60f, h * 0.12f), strokeWidth = strokeW * 0.85f, cap = StrokeCap.Round)
-    drawRoundRect(
-      color = tint,
-      topLeft = Offset(w * 0.20f, h * 0.30f),
-      size = Size(w * 0.60f, h * 0.62f),
-      cornerRadius = CornerRadius(w * 0.08f, w * 0.08f),
-      style = Stroke(width = strokeW)
-    )
-    drawLine(color = tint, start = Offset(w * 0.40f, h * 0.42f), end = Offset(w * 0.40f, h * 0.80f), strokeWidth = strokeW, cap = StrokeCap.Round)
-    drawLine(color = tint, start = Offset(w * 0.60f, h * 0.42f), end = Offset(w * 0.60f, h * 0.80f), strokeWidth = strokeW, cap = StrokeCap.Round)
-  }
+  Icon(
+    painter = androidx.compose.ui.res.painterResource(R.drawable.ic_delete),
+    contentDescription = null,
+    tint = tint,
+    modifier = modifier.size(22.dp)
+  )
 }
 
 /** Matches the exact custom waveform glyph the user supplied (24x24
