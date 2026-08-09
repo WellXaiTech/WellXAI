@@ -990,7 +990,14 @@ private fun ChatConversationMenuSheet(
   // child's intrinsic width, and the only child without fillMaxWidth()
   // was the conversation title, so a short title opened a small menu
   // and a long one opened a much wider menu.
-  DropdownMenu(expanded = true, onDismissRequest = onDismiss, modifier = Modifier.width(240.dp)) {
+  DropdownMenu(
+    expanded = true,
+    onDismissRequest = onDismiss,
+    modifier = Modifier.width(240.dp),
+    shape = RoundedCornerShape(24.dp),
+    containerColor = Color(0xFF202020),
+    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A2A2A))
+  ) {
     Text(
       title,
       color = Color.White.copy(alpha = 0.5f),
