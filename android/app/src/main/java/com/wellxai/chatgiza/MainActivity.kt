@@ -52,6 +52,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -165,6 +166,7 @@ import androidx.compose.material.icons.outlined.AddBox
 import androidx.compose.material.icons.outlined.AlternateEmail
 import androidx.compose.material.icons.outlined.AttachMoney
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material.icons.outlined.Autorenew
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Bookmark
@@ -257,6 +259,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -1139,12 +1142,19 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
               .clip(RoundedCornerShape(12.dp))
               .background(Color.White)
           ) {
-            AsyncImage(
-              model = attachedFile.imageDataUrls.first(),
-              contentDescription = attachedFile.name,
-              modifier = Modifier.fillMaxSize(),
-              contentScale = ContentScale.Crop
-            )
+            // Coil's AsyncImage can't decode a data:...;base64 string
+            // directly (it needs a real content:// / http(s) source), so
+            // this uses the actual in-memory Bitmap from render time
+            // instead of the data URL meant for the API request.
+            val preview = attachedFile.previewBitmap
+            if (preview != null) {
+              Image(
+                bitmap = preview.asImageBitmap(),
+                contentDescription = attachedFile.name,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+              )
+            }
             Box(
               modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -1297,10 +1307,10 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
               .padding(horizontal = 10.dp)
           ) {
             if (viewModel.activeTool == null) {
-              // Matches the sparkle already used for the GiZa Pro banner
-              // elsewhere (see ChatGizaAnnouncement) instead of a plain
-              // lightning bolt -- reads as "AI-powered", not just "fast".
-              Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp))
+              // The sparkle (AutoAwesome) is the generic "AI" glyph every
+              // assistant app uses -- a premium/medal badge reads as "Pro"
+              // specifically, and is far less common as chrome elsewhere.
+              Icon(Icons.Outlined.WorkspacePremium, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp))
               Spacer(modifier = Modifier.size(4.dp))
             }
             Text(
@@ -3033,6 +3043,7 @@ private fun renderPdfPagesAsAttachment(context: android.content.Context, uri: Ur
     context.contentResolver.openFileDescriptor(uri, "r")?.use { descriptor ->
       android.graphics.pdf.PdfRenderer(descriptor).use { renderer ->
         val dataUrls = mutableListOf<String>()
+        var firstPageBitmap: Bitmap? = null
         val pageCount = minOf(renderer.pageCount, MAX_ATTACHED_FILE_PDF_PAGES)
         for (i in 0 until pageCount) {
           renderer.openPage(i).use { page ->
@@ -3047,9 +3058,10 @@ private fun renderPdfPagesAsAttachment(context: android.content.Context, uri: Ur
             val out = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.JPEG, 82, out)
             dataUrls.add("data:image/jpeg;base64,${Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)}")
+            if (i == 0) firstPageBitmap = bitmap
           }
         }
-        if (dataUrls.isEmpty()) null else AttachedFile(name = displayName, imageDataUrls = dataUrls)
+        if (dataUrls.isEmpty()) null else AttachedFile(name = displayName, imageDataUrls = dataUrls, previewBitmap = firstPageBitmap)
       }
     }
   } catch (e: Exception) {
