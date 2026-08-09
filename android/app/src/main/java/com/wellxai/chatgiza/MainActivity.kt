@@ -3468,7 +3468,12 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
             contentAlignment = Alignment.Center
           ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-              MediaVideoIcon(modifier = Modifier.size(20.dp), tint = Color(0xFFFFC94A))
+              Icon(
+                painter = androidx.compose.ui.res.painterResource(R.drawable.ic_video),
+                contentDescription = null,
+                tint = Color(0xFFFFC94A),
+                modifier = Modifier.size(20.dp)
+              )
               Spacer(modifier = Modifier.width(8.dp))
               Text("Video attached", color = Color.White, fontSize = 14.sp)
             }
@@ -3505,7 +3510,12 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
           Icon(Icons.Outlined.Image, contentDescription = "Add photo", tint = Color(0xFFA8A8A8), modifier = Modifier.size(22.dp))
         }
         IconButton(onClick = { videoPicker.launch("video/*") }, modifier = Modifier.size(30.dp)) {
-          MediaVideoIcon(modifier = Modifier.size(20.dp), tint = Color(0xFFA8A8A8))
+          Icon(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_video),
+            contentDescription = null,
+            tint = Color(0xFFA8A8A8),
+            modifier = Modifier.size(20.dp)
+          )
         }
         IconButton(onClick = { text += "#" }, modifier = Modifier.size(30.dp)) {
           Icon(Icons.Outlined.Tag, contentDescription = "Hashtag", tint = Color(0xFFA8A8A8), modifier = Modifier.size(22.dp))
@@ -3589,46 +3599,6 @@ private fun AttachMenuRow(iconRes: Int, label: String, onClick: () -> Unit) {
     )
     Spacer(modifier = Modifier.width(24.dp))
     Text(label, color = Color.White, fontSize = 15.sp)
-  }
-}
-
-// Hand-drawn to match the reference's clapperboard-with-play-triangle
-// glyph — no Material Icons entry has that exact silhouette.
-@Composable
-private fun MediaVideoIcon(modifier: Modifier = Modifier, tint: Color = Color.White) {
-  Canvas(modifier = modifier) {
-    val scale = size.width / 24f
-    val strokeW = 1.6f * scale
-    drawRoundRect(
-      color = tint,
-      topLeft = Offset(3f * scale, 5f * scale),
-      size = Size(18f * scale, 15f * scale),
-      cornerRadius = CornerRadius(3f * scale, 3f * scale),
-      style = Stroke(width = strokeW, cap = StrokeCap.Round)
-    )
-    drawLine(
-      color = tint,
-      start = Offset(3f * scale, 9.5f * scale),
-      end = Offset(21f * scale, 9.5f * scale),
-      strokeWidth = strokeW,
-      cap = StrokeCap.Round
-    )
-    listOf(6.5f, 10.5f, 14.5f, 18f).forEach { x ->
-      drawLine(
-        color = tint,
-        start = Offset(x * scale, 5f * scale),
-        end = Offset((x - 2f) * scale, 9.5f * scale),
-        strokeWidth = strokeW * 0.85f,
-        cap = StrokeCap.Round
-      )
-    }
-    val playTriangle = Path().apply {
-      moveTo(10f * scale, 12.2f * scale)
-      lineTo(16f * scale, 15.3f * scale)
-      lineTo(10f * scale, 18.4f * scale)
-      close()
-    }
-    drawPath(playTriangle, color = tint)
   }
 }
 
