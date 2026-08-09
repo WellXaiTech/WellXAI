@@ -389,7 +389,7 @@ class MainActivity : ComponentActivity() {
               }
             ) {
               when (screen) {
-                is AppScreen.Media -> ChatGizaMediaScreen(viewModel)
+                is AppScreen.Media -> com.wellxai.chatgiza.ui.media.ChatGiZaMediaScreen(viewModel)
                 is AppScreen.Account -> AccountScreen(viewModel)
                 is AppScreen.Settings -> SettingsScreen(viewModel)
                 is AppScreen.Projects -> ProjectsScreen(viewModel)
@@ -425,7 +425,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Projects -> ProjectsScreen(viewModel)
             is AppScreen.Scheduled -> ScheduledScreen(viewModel)
             is AppScreen.Billing -> BillingScreen(viewModel)
-            is AppScreen.Media -> ChatGizaMediaScreen(viewModel)
+            is AppScreen.Media -> com.wellxai.chatgiza.ui.media.ChatGiZaMediaScreen(viewModel)
             is AppScreen.LiveVision -> LiveVisionScreen(viewModel)
             is AppScreen.OpenSourceLicenses -> OpenSourceLicensesScreen(viewModel)
             is AppScreen.KidsMode -> KidsModeScreen(viewModel)
@@ -1264,193 +1264,10 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
   }
 }
 
-// ChatGiZa Media now lives here, under the "Extra" tab, instead of
-// behind the History screen's old drag handle -- a dedicated screen
-// with its own back/history navigation instead of a slide-up panel.
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ChatGizaMediaScreen(viewModel: ChatViewModel) {
-  BackHandler { viewModel.closeChatGizaMedia() }
-  var showCreate by remember { mutableStateOf(false) }
-  var showPostComposer by remember { mutableStateOf(false) }
-  var replyingToPost by remember { mutableStateOf<ApiMediaPost?>(null) }
-  var expandedCommentsPostId by remember { mutableStateOf<String?>(null) }
-  var searchOpen by remember { mutableStateOf(false) }
-  var searchQuery by remember { mutableStateOf("") }
-  val visiblePosts = remember(viewModel.mediaPosts, searchQuery) {
-    val q = searchQuery.trim()
-    if (q.isEmpty()) viewModel.mediaPosts
-    else viewModel.mediaPosts.filter { it.text.contains(q, ignoreCase = true) || it.authorName.contains(q, ignoreCase = true) }
-  }
-
-  Scaffold(
-    topBar = {
-      // Just the nav row now -- "+", ChatGiZa, balance spacer. No Stories
-      // row: the reference layout's header only has these two elements, and
-      // the row was permanently eating screen height above every
-      // photo/video. Back is still available via the system gesture/button
-      // (BackHandler above);
-      // this screen is reached from Chat's "Extra" tools menu, not a
-      // persistent tab, so a dedicated on-screen back affordance isn't
-      // needed here.
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .background(Color(0xFF161616))
-          .statusBarsPadding()
-          .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        IconButton(onClick = { showCreate = true }) {
-          Icon(Icons.Filled.Add, contentDescription = "New post", tint = Color.White, modifier = Modifier.size(24.dp))
-        }
-        Spacer(modifier = Modifier.weight(1f))
-        Text(
-          "ChatGiZa",
-          color = Color.White,
-          fontSize = 18.sp,
-          fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.weight(1f))
-        // Balances the "+" on the left so the title stays centered now
-        // that the search icon that used to sit here is gone.
-        Spacer(modifier = Modifier.size(48.dp))
-      }
-    },
-    bottomBar = {
-      // Icon-only bottom nav (Home / Reels / Explore / Search / Profile)
-      // replacing the old Discover/Following/Campaign/Smart text tabs.
-      // Reels, Explore, and Profile are visual-only for now -- same
-      // "ship the layout, wire it up later" precedent those text tabs
-      // set -- Home (always "active", this screen) and Search are real.
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .background(Color(0xFF161616))
-          .navigationBarsPadding()
-          .padding(horizontal = 20.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Box(
-          modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color.White.copy(alpha = 0.12f))
-            .padding(horizontal = 18.dp, vertical = 8.dp)
-        ) {
-          Icon(Icons.Filled.Home, contentDescription = "Home", tint = Color.White, modifier = Modifier.size(24.dp))
-        }
-        Icon(Icons.Outlined.Videocam, contentDescription = "Reels", tint = Color.White, modifier = Modifier.size(26.dp))
-        Icon(Icons.Filled.Send, contentDescription = "Explore", tint = Color.White, modifier = Modifier.size(24.dp))
-        IconButton(onClick = { searchOpen = !searchOpen }) {
-          Icon(Icons.Outlined.Search, contentDescription = "Search", tint = Color.White, modifier = Modifier.size(24.dp))
-        }
-        if (viewModel.userImage != null) {
-          AsyncImage(model = viewModel.userImage, contentDescription = "Profile", modifier = Modifier.size(28.dp).clip(CircleShape))
-        } else {
-          Icon(Icons.Outlined.AccountCircle, contentDescription = "Profile", tint = Color.White, modifier = Modifier.size(28.dp))
-        }
-      }
-    },
-    containerColor = Color(0xFF161616)
-  ) { padding ->
-    // Full top padding now (the header stopped being a transparent
-    // overlay once it grew a solid background + the Stories row's real
-    // tap targets) -- content used to scroll up underneath it, which
-    // read as posts "intruding" into the header on scroll.
-    Box(modifier = Modifier.fillMaxSize().padding(top = padding.calculateTopPadding(), bottom = padding.calculateBottomPadding())) {
-      LaunchedEffect(Unit) { viewModel.loadMediaPosts() }
-      LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-      ) {
-        if (searchOpen) {
-          item {
-            Row(
-              verticalAlignment = Alignment.CenterVertically,
-              modifier = Modifier
-                .fillMaxWidth()
-                .height(38.dp)
-                .clip(RoundedCornerShape(19.dp))
-                .background(Color.White.copy(alpha = 0.08f))
-                .padding(horizontal = 12.dp)
-            ) {
-              Icon(Icons.Outlined.Search, contentDescription = null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(16.dp))
-              Spacer(modifier = Modifier.width(6.dp))
-              Box(modifier = Modifier.weight(1f)) {
-                if (searchQuery.isEmpty()) {
-                  Text("Search posts", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
-                }
-                BasicTextField(
-                  value = searchQuery,
-                  onValueChange = { searchQuery = it },
-                  singleLine = true,
-                  textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 13.sp),
-                  cursorBrush = SolidColor(Color.White),
-                  modifier = Modifier.fillMaxWidth()
-                )
-              }
-            }
-          }
-        }
-        if (visiblePosts.isEmpty()) {
-          item {
-            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 60.dp), contentAlignment = Alignment.Center) {
-              if (viewModel.loadingMediaPosts) {
-                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(28.dp))
-              } else if (searchQuery.isNotEmpty()) {
-                Text("No matches.", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
-              }
-              // Otherwise left empty on purpose — no placeholder icon/text.
-            }
-          }
-        } else {
-          items(visiblePosts, key = { it.id }) { post ->
-            MediaPostRow(
-              post,
-              isOwnPost = post.authorId == viewModel.userId,
-              comments = viewModel.mediaComments[post.id],
-              commentsExpanded = expandedCommentsPostId == post.id,
-              onLikeClick = { viewModel.toggleMediaPostLike(post.id) },
-              onDismissClick = { viewModel.removeMediaPost(post.id) },
-              onToggleComments = {
-                if (expandedCommentsPostId == post.id) {
-                  expandedCommentsPostId = null
-                } else {
-                  expandedCommentsPostId = post.id
-                  viewModel.loadMediaComments(post.id)
-                }
-              },
-              onOpenComposer = { replyingToPost = post }
-            )
-          }
-        }
-      }
-      val replyTarget = replyingToPost
-      if (replyTarget != null) {
-        MediaCommentComposerSheet(
-          authorName = replyTarget.authorName,
-          onDismiss = { replyingToPost = null },
-          onSubmit = { text -> viewModel.addMediaComment(replyTarget.id, text) }
-        )
-      }
-    }
-  }
-  if (showCreate) {
-    ChatGizaMediaCreateSheet(
-      viewModel,
-      onDismiss = { showCreate = false },
-      onPostClick = {
-        showCreate = false
-        showPostComposer = true
-      }
-    )
-  }
-  if (showPostComposer) {
-    ChatGizaMediaPostComposerScreen(viewModel, onDismiss = { showPostComposer = false })
-  }
-}
+// ChatGiZa Media's feed screen itself now lives in
+// ui/media/ChatGiZaMediaScreen.kt (own file/package) -- these helpers
+// (composer, create sheet, comment sheet, video player) stay here and are
+// exposed as internal so that file can call them.
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -2694,7 +2511,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
 // posting, liking, and commenting all round-trip to the backend, so any
 // signed-in user sees any other user's posts here.
 
-private fun formatMediaPostTimeAgo(createdAt: Long): String {
+internal fun formatMediaPostTimeAgo(createdAt: Long): String {
   val minutes = (System.currentTimeMillis() - createdAt).coerceAtLeast(0) / 60000
   return when {
     minutes < 1 -> "now"
@@ -2707,7 +2524,7 @@ private fun formatMediaPostTimeAgo(createdAt: Long): String {
 // Long posts show only the first stretch of text with a tappable "... more"
 // tail instead of dumping the whole message into the feed -- matches how
 // every real social feed handles long text, and keeps the feed scannable.
-private const val MEDIA_POST_TEXT_PREVIEW_LENGTH = 180
+internal const val MEDIA_POST_TEXT_PREVIEW_LENGTH = 180
 
 // Matches the web composer's cap (ChatGizaMediaFeed.tsx) so both clients
 // enforce the same limit rather than one silently accepting more than the
@@ -2715,222 +2532,7 @@ private const val MEDIA_POST_TEXT_PREVIEW_LENGTH = 180
 private const val MEDIA_MAX_IMAGES_PER_POST = 10
 
 @Composable
-private fun MediaCarousel(postId: String, imageUrls: List<String>) {
-  if (imageUrls.size == 1) {
-    // Always shown at full width, uncropped -- no more tap-to-expand;
-    // the collapsed crop strip was hiding most of the picture by
-    // default, which read as broken/half-loaded rather than deliberate.
-    // A fixed tall aspect ratio (cropped to fill) instead of the
-    // source image's natural size -- a near-square upload was
-    // rendering small/short at full width, nothing like the large,
-    // immersive photo size the reference feed shows for every post.
-    AsyncImage(
-      model = imageUrls[0],
-      contentDescription = "Post photo",
-      modifier = Modifier.fillMaxWidth().aspectRatio(4f / 5f).clip(RoundedCornerShape(14.dp)).background(Color.White.copy(alpha = 0.06f)),
-      contentScale = ContentScale.Crop
-    )
-    return
-  }
-  var index by remember(postId) { mutableStateOf(0) }
-  Box(modifier = Modifier.fillMaxWidth().aspectRatio(4f / 5f).clip(RoundedCornerShape(14.dp)).background(Color.White.copy(alpha = 0.06f))) {
-    AsyncImage(
-      model = imageUrls[index],
-      contentDescription = "Post photo ${index + 1} of ${imageUrls.size}",
-      modifier = Modifier.fillMaxSize(),
-      contentScale = ContentScale.Crop
-    )
-    if (index > 0) {
-      IconButton(
-        onClick = { index -= 1 },
-        modifier = Modifier.align(Alignment.CenterStart).padding(4.dp).size(28.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.4f))
-      ) {
-        Icon(Icons.Filled.ChevronLeft, contentDescription = "Previous photo", tint = Color.White, modifier = Modifier.size(20.dp))
-      }
-    }
-    if (index < imageUrls.size - 1) {
-      IconButton(
-        onClick = { index += 1 },
-        modifier = Modifier.align(Alignment.CenterEnd).padding(4.dp).size(28.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.4f))
-      ) {
-        Icon(Icons.Filled.ChevronRight, contentDescription = "Next photo", tint = Color.White, modifier = Modifier.size(20.dp))
-      }
-    }
-    Text(
-      "${index + 1}/${imageUrls.size}",
-      color = Color.White,
-      fontSize = 11.sp,
-      fontWeight = FontWeight.SemiBold,
-      modifier = Modifier
-        .align(Alignment.TopEnd)
-        .padding(8.dp)
-        .clip(RoundedCornerShape(10.dp))
-        .background(Color.Black.copy(alpha = 0.5f))
-        .padding(horizontal = 8.dp, vertical = 3.dp)
-    )
-    Row(
-      modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
-      horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-      imageUrls.indices.forEach { dotIndex ->
-        Box(
-          modifier = Modifier
-            .size(if (dotIndex == index) 6.dp else 5.dp)
-            .clip(CircleShape)
-            .background(Color.White.copy(alpha = if (dotIndex == index) 0.95f else 0.45f))
-        )
-      }
-    }
-  }
-}
-
-@Composable
-private fun MediaPostRow(
-  post: ApiMediaPost,
-  isOwnPost: Boolean,
-  comments: List<ApiMediaComment>?,
-  commentsExpanded: Boolean,
-  onLikeClick: () -> Unit,
-  onDismissClick: () -> Unit,
-  onToggleComments: () -> Unit,
-  onOpenComposer: () -> Unit
-) {
-  val context = LocalContext.current
-  var textExpanded by remember(post.id) { mutableStateOf(false) }
-  var following by remember(post.id) { mutableStateOf(false) }
-  val isLongText = post.text.length > MEDIA_POST_TEXT_PREVIEW_LENGTH
-  // Every author shown here has, by definition, posted -- so the same
-  // Stories-row gradient ring applies unconditionally, not just for some
-  // posts, since there's no separate "story" concept behind the feed.
-  val ringBrush = Brush.sweepGradient(listOf(Color(0xFFFEDA75), Color(0xFFFA7E1E), Color(0xFFD62976), Color(0xFF962FBF), Color(0xFF4F5BD5), Color(0xFFFEDA75)))
-
-  Column(modifier = Modifier.fillMaxWidth()) {
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-      Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(ringBrush).padding(1.5.dp), contentAlignment = Alignment.Center) {
-        if (post.authorImage != null) {
-          AsyncImage(
-            model = post.authorImage,
-            contentDescription = "Profile",
-            modifier = Modifier.size(35.dp).clip(CircleShape).border(1.5.dp, Color(0xFF161616), CircleShape)
-          )
-        } else {
-          Box(modifier = Modifier.size(35.dp).clip(CircleShape).background(Color(0xFF23252B)).border(1.5.dp, Color(0xFF161616), CircleShape), contentAlignment = Alignment.Center) {
-            Icon(Icons.Outlined.AccountCircle, contentDescription = "Profile", tint = Color.White, modifier = Modifier.size(28.dp))
-          }
-        }
-      }
-      Spacer(modifier = Modifier.width(10.dp))
-      Column(modifier = Modifier.weight(1f)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Text(post.authorName, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-          Spacer(modifier = Modifier.width(6.dp))
-          Text("• ${formatMediaPostTimeAgo(post.createdAt)}", color = Color(0xFF8A8A8A), fontSize = 12.sp)
-          if (post.sentiment != null) {
-            Spacer(modifier = Modifier.width(8.dp))
-            val (tint, label) = when (post.sentiment) {
-              "bullish" -> Color(0xFF16C784) to "Bullish"
-              "bearish" -> Color(0xFFEA3943) to "Bearish"
-              else -> Color(0xFFA8A8A8) to "Neutral"
-            }
-            Text(label, color = tint, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-          }
-        }
-        if (post.text.isNotEmpty()) {
-          Spacer(modifier = Modifier.height(4.dp))
-          val shownText = if (isLongText && !textExpanded) post.text.take(MEDIA_POST_TEXT_PREVIEW_LENGTH) else post.text
-          Text(
-            buildAnnotatedString {
-              append(shownText)
-              if (isLongText && !textExpanded) {
-                withStyle(SpanStyle(color = Color(0xFFFFC94A), fontWeight = FontWeight.SemiBold)) {
-                  append(" ... more")
-                }
-              }
-            },
-            color = Color.White.copy(alpha = 0.92f),
-            fontSize = 15.sp,
-            lineHeight = 20.sp,
-            modifier = if (isLongText) Modifier.clickable { textExpanded = !textExpanded } else Modifier
-          )
-        }
-        if (post.imageUrls.isNotEmpty()) {
-          Spacer(modifier = Modifier.height(8.dp))
-          MediaCarousel(postId = post.id, imageUrls = post.imageUrls)
-        }
-        if (post.videoUrl != null) {
-          Spacer(modifier = Modifier.height(8.dp))
-          MediaPostVideoPlayer(
-            url = post.videoUrl,
-            modifier = Modifier.fillMaxWidth().aspectRatio(4f / 5f).clip(RoundedCornerShape(14.dp))
-          )
-        }
-        Spacer(modifier = Modifier.height(10.dp))
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-          MediaPostActionButton(
-            icon = Icons.Filled.Favorite,
-            count = post.likeCount,
-            tint = if (post.likedByMe) Color(0xFFEA3943) else Color(0xFF8A8A8A),
-            onClick = onLikeClick
-          )
-          Spacer(modifier = Modifier.width(18.dp))
-          MediaPostActionButton(
-            icon = Icons.Outlined.Comment,
-            count = post.commentCount,
-            tint = if (commentsExpanded) Color.White else Color(0xFF8A8A8A),
-            onClick = onToggleComments
-          )
-          Spacer(modifier = Modifier.width(18.dp))
-          MediaPostActionButton(icon = Icons.Outlined.Repeat, count = 0, tint = Color(0xFF8A8A8A), onClick = {})
-          Spacer(modifier = Modifier.width(18.dp))
-          MediaPostActionButton(
-            icon = Icons.Outlined.Share,
-            count = null,
-            tint = Color(0xFF8A8A8A),
-            onClick = {
-              val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, post.text)
-              }
-              context.startActivity(Intent.createChooser(sendIntent, "Share post"))
-            }
-          )
-          Spacer(modifier = Modifier.weight(1f))
-          // Visual-only for now -- no saved-posts list built yet.
-          Icon(Icons.Outlined.Bookmark, contentDescription = "Save", tint = Color(0xFF8A8A8A), modifier = Modifier.size(18.dp))
-        }
-        if (commentsExpanded) {
-          MediaPostComments(comments = comments, onOpenComposer = onOpenComposer)
-        }
-      }
-      if (isOwnPost) {
-        IconButton(onClick = onDismissClick, modifier = Modifier.size(22.dp)) {
-          Icon(Icons.Outlined.Close, contentDescription = "Dismiss", tint = Color(0xFF6E6E6E), modifier = Modifier.size(16.dp))
-        }
-      } else {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Text(
-            if (following) "Following" else "Follow",
-            color = if (following) Color.White.copy(alpha = 0.6f) else Color.Black,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier
-              .clip(RoundedCornerShape(14.dp))
-              .background(if (following) Color.White.copy(alpha = 0.12f) else Color.White)
-              .clickable { following = !following }
-              .padding(horizontal = 12.dp, vertical = 6.dp)
-          )
-          Spacer(modifier = Modifier.width(4.dp))
-          Icon(Icons.Filled.MoreVert, contentDescription = "More", tint = Color(0xFF8A8A8A), modifier = Modifier.size(18.dp))
-        }
-      }
-    }
-    Spacer(modifier = Modifier.height(14.dp))
-    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.08f)))
-  }
-}
-
-@Composable
-private fun MediaPostComments(comments: List<ApiMediaComment>?, onOpenComposer: () -> Unit) {
+internal fun MediaPostComments(comments: List<ApiMediaComment>?, onOpenComposer: () -> Unit) {
   Column(
     modifier = Modifier
       .fillMaxWidth()
@@ -3030,7 +2632,7 @@ private fun MediaExpandGlyph(modifier: Modifier = Modifier, tint: Color = Color.
 // Media's create menu) plus a working Reply button.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MediaCommentComposerSheet(authorName: String, onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
+internal fun MediaCommentComposerSheet(authorName: String, onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
   var text by remember { mutableStateOf("") }
   ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFF161616)) {
     Column(
@@ -3107,7 +2709,7 @@ private fun MediaCommentComposerSheet(authorName: String, onDismiss: () -> Unit,
 // at the end of the file with "Can't play this video", which ExoPlayer's
 // own MP4 extractor handles fine via range-request seeking.
 @Composable
-private fun MediaPostVideoPlayer(url: String, modifier: Modifier = Modifier) {
+internal fun MediaPostVideoPlayer(url: String, modifier: Modifier = Modifier) {
   val context = LocalContext.current
   val player = remember(url) {
     ExoPlayer.Builder(context).build().apply {
@@ -3129,20 +2731,9 @@ private fun MediaPostVideoPlayer(url: String, modifier: Modifier = Modifier) {
   )
 }
 
-@Composable
-private fun MediaPostActionButton(icon: ImageVector, count: Int?, tint: Color, onClick: () -> Unit) {
-  Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable(onClick = onClick)) {
-    Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(16.dp))
-    if (count != null) {
-      Spacer(modifier = Modifier.width(4.dp))
-      Text("$count", color = tint, fontSize = 12.sp)
-    }
-  }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ChatGizaMediaCreateSheet(viewModel: ChatViewModel, onDismiss: () -> Unit, onPostClick: () -> Unit) {
+internal fun ChatGizaMediaCreateSheet(viewModel: ChatViewModel, onDismiss: () -> Unit, onPostClick: () -> Unit) {
   ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFF161616)) {
     Column(
       modifier = Modifier
@@ -3246,7 +2837,7 @@ private fun uriToPostImageDataUrl(context: android.content.Context, uri: Uri): S
 // optional photo, and a bullish/neutral/bearish sentiment tag, submitted to
 // /api/media/posts so it shows up in anyone's feed, not just this device's.
 @Composable
-private fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss: () -> Unit) {
+internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss: () -> Unit) {
   BackHandler { onDismiss() }
   val context = LocalContext.current
   val composerScope = rememberCoroutineScope()
