@@ -81,9 +81,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.wellxai.chatgiza.ApiMediaPost
-import com.wellxai.chatgiza.ChatGizaMediaCreateSheet
-import com.wellxai.chatgiza.ChatGizaMediaPostComposerScreen
 import com.wellxai.chatgiza.ChatViewModel
+import com.wellxai.chatgiza.ConnectWithChatGizaSheet
 import com.wellxai.chatgiza.MEDIA_POST_TEXT_PREVIEW_LENGTH
 import com.wellxai.chatgiza.MediaCommentComposerSheet
 import com.wellxai.chatgiza.MediaPostComments
@@ -105,8 +104,7 @@ import com.wellxai.chatgiza.formatMediaPostTimeAgo
 fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeChatGizaMedia() }
 
-  var showCreate by remember { mutableStateOf(false) }
-  var showPostComposer by remember { mutableStateOf(false) }
+  var showConnectSheet by remember { mutableStateOf(false) }
   var replyingToPost by remember { mutableStateOf<ApiMediaPost?>(null) }
   var expandedCommentsPostId by remember { mutableStateOf<String?>(null) }
   var searchOpen by remember { mutableStateOf(false) }
@@ -151,7 +149,7 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
         MediaStoriesRow(
           myImage = viewModel.userImage,
           posts = viewModel.mediaPosts,
-          onMyStoryClick = { showCreate = true }
+          onMyStoryClick = { showConnectSheet = true }
         )
         androidx.compose.material3.HorizontalDivider(color = Color(0xFFEDEDED))
       }
@@ -242,7 +240,7 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
       exit = slideOutVertically(targetOffsetY = { -it }),
       modifier = Modifier.align(Alignment.TopCenter)
     ) {
-      ChatGiZaHeader(topInset = topInset, onAddClick = { showCreate = true })
+      ChatGiZaHeader(topInset = topInset, onAddClick = { showConnectSheet = true })
     }
 
     // =====================================================
@@ -253,22 +251,13 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
       viewModel = viewModel,
       searchOpen = searchOpen,
       onSearchClick = { searchOpen = !searchOpen },
-      onCreateClick = { showCreate = true },
+      onCreateClick = { showConnectSheet = true },
       modifier = Modifier.align(Alignment.BottomCenter)
     )
   }
 
-  if (showCreate) {
-    ChatGizaMediaCreateSheet(
-      onDismiss = { showCreate = false },
-      onPostClick = {
-        showCreate = false
-        showPostComposer = true
-      }
-    )
-  }
-  if (showPostComposer) {
-    ChatGizaMediaPostComposerScreen(viewModel, onDismiss = { showPostComposer = false })
+  if (showConnectSheet) {
+    ConnectWithChatGizaSheet(viewModel, onDismiss = { showConnectSheet = false })
   }
 }
 
