@@ -677,28 +677,6 @@ private fun FilterIconCustom(modifier: Modifier = Modifier, tint: Color = Color.
   }
 }
 
-@Composable
-private fun WaveformIconCustom(modifier: Modifier = Modifier, tint: Color = Color.Black) {
-  Canvas(modifier = modifier) {
-    val scale = size.width / 24f
-    val bars = listOf(
-      Triple(2f, 9f, 6f),
-      Triple(6.5f, 4f, 16f),
-      Triple(11f, 7f, 10f),
-      Triple(15.5f, 2f, 20f),
-      Triple(20f, 6f, 12f)
-    )
-    for ((x, y, h) in bars) {
-      drawRoundRect(
-        color = tint,
-        topLeft = Offset(x * scale, y * scale),
-        size = Size(2.5f * scale, h * scale),
-        cornerRadius = CornerRadius(1.25f * scale, 1.25f * scale)
-      )
-    }
-  }
-}
-
 /** Hand-drawn "new chat" glyph — a rounded-square note outline with a
  * pencil poking diagonally past its top-right corner. Not in the Material
  * icon set under any name (ModeEdit/EditNote/BorderColor all draw a
@@ -1551,7 +1529,12 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
               .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
           ) {
-            WaveformIconCustom(modifier = Modifier.size(16.dp), tint = Color.Black)
+            Icon(
+              painter = androidx.compose.ui.res.painterResource(R.drawable.ic_speaker),
+              contentDescription = null,
+              tint = Color.Black,
+              modifier = Modifier.size(16.dp)
+            )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
               text = "Speak",
