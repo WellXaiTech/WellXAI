@@ -166,7 +166,6 @@ import androidx.compose.material.icons.outlined.AddBox
 import androidx.compose.material.icons.outlined.AlternateEmail
 import androidx.compose.material.icons.outlined.AttachMoney
 import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Autorenew
@@ -1438,10 +1437,12 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
               .padding(horizontal = 10.dp)
           ) {
             if (viewModel.activeTool == null) {
-              // The sparkle (AutoAwesome) is the generic "AI" glyph every
-              // assistant app uses -- a premium/medal badge reads as "Pro"
-              // specifically, and is far less common as chrome elsewhere.
-              Icon(Icons.Outlined.WorkspacePremium, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp))
+              Icon(
+                painter = androidx.compose.ui.res.painterResource(R.drawable.ic_giza_pro),
+                contentDescription = null,
+                tint = colorScheme.onBackground,
+                modifier = Modifier.size(16.dp)
+              )
               Spacer(modifier = Modifier.size(4.dp))
             }
             Text(
