@@ -225,7 +225,6 @@ import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material.icons.outlined.Tag
 import androidx.compose.material.icons.outlined.TrendingDown
 import androidx.compose.material.icons.outlined.TrendingUp
-import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Vibration
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material.icons.outlined.Visibility
@@ -1313,7 +1312,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
       QuickActionChip(icon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_camera), contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp)) }, label = "Open Camera") {
         if (hasCameraPermission) launchCamera() else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
       }
-      QuickActionChip(icon = { Icon(Icons.Outlined.Tune, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp)) }, label = "Customize GiZa") {
+      QuickActionChip(icon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_customize_sparkle), contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp)) }, label = "Customize GiZa") {
         viewModel.openAccount()
       }
     }
@@ -5814,7 +5813,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
 
       SettingsSectionHeader("GiZa")
       SettingsSection {
-        SettingsMenuRow("Customize GiZa", icon = Icons.Outlined.Tune) { viewModel.openCustomize() }
+        SettingsMenuRow("Customize GiZa", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_customize_sparkle)) { viewModel.openCustomize() }
         SettingsDivider()
         SettingsMenuRow("Connectors", icon = Icons.Outlined.Hub) { viewModel.openConnectors() }
         SettingsDivider()
