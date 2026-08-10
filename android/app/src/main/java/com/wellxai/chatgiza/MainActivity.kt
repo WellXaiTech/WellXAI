@@ -2381,7 +2381,8 @@ private data class PersonalityOption(
   val label: String,
   val icon: ImageVector?,
   val tag: String? = null,
-  val adultOnly: Boolean = false
+  val adultOnly: Boolean = false,
+  val iconRes: Int? = null
 )
 
 // "sexy"/explicit personas are intentionally not offered — this app has no
@@ -2395,7 +2396,7 @@ private val PERSONALITY_OPTIONS = listOf(
   PersonalityOption("assistant", "Assistant", Icons.Outlined.SupportAgent),
   PersonalityOption("therapist", "Therapist", Icons.Outlined.Psychology),
   PersonalityOption("storyteller", "Storyteller", Icons.AutoMirrored.Outlined.MenuBook),
-  PersonalityOption("story_time", "Story Time", Icons.Outlined.AutoStories, tag = "Kids"),
+  PersonalityOption("story_time", "Story Time", null, tag = "Kids", iconRes = R.drawable.ic_story_time),
   PersonalityOption("trivia_game", "Trivia Game", Icons.Outlined.Quiz, tag = "Kids"),
   PersonalityOption("giza_doc", "GiZa Doc", Icons.Outlined.MedicalServices),
   PersonalityOption("unhinged", "Unhinged", Icons.Outlined.Whatshot, tag = "18+", adultOnly = true),
@@ -2415,7 +2416,10 @@ private fun PersonalityPill(option: PersonalityOption, selected: Boolean, onClic
       .clickable(onClick = onClick)
       .padding(horizontal = 18.dp, vertical = 14.dp)
   ) {
-    if (option.icon != null) {
+    if (option.iconRes != null) {
+      Icon(androidx.compose.ui.res.painterResource(option.iconRes), contentDescription = null, tint = if (selected) Color.Black else Color.White, modifier = Modifier.size(18.dp))
+      Spacer(modifier = Modifier.width(10.dp))
+    } else if (option.icon != null) {
       Icon(option.icon, contentDescription = null, tint = if (selected) Color.Black else Color.White, modifier = Modifier.size(18.dp))
       Spacer(modifier = Modifier.width(10.dp))
     } else {
