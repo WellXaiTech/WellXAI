@@ -258,10 +258,8 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -720,24 +718,6 @@ private fun GalleryIconCustom(modifier: Modifier = Modifier, tint: Color = Color
       close()
     }
     drawPath(mountain, color = tint)
-  }
-}
-
-// The gear's center hole is drawn by painting a circle in the
-// surrounding background color on top of a solid gear silhouette,
-// rather than relying on the path's own fillType -- same reasoning as
-// the Gallery and Delete icons above.
-private val GearOuterPathData = "M13.7529 2.19531C14.5841 3.44204 14.9507 3.84863 15.3105 4.0127C15.6318 4.15886 16.131 4.18453 17.5527 3.85645L18.0928 3.73242L20.2637 5.90332L20.1396 6.44336C19.8114 7.86565 19.8371 8.36431 19.9834 8.68555C20.1475 9.04537 20.5541 9.41204 21.8008 10.2432L22.2461 10.54V13.46L21.8008 13.7568C20.5541 14.588 20.1475 14.9546 19.9834 15.3145C19.8371 15.6357 19.8114 16.1344 20.1396 17.5566L20.2637 18.0967L18.0928 20.2676L17.5527 20.1436C16.131 19.8155 15.6318 19.8411 15.3105 19.9873C14.9507 20.1514 14.5841 20.558 13.7529 21.8047L13.4561 22.25H10.5361L10.2393 21.8047C9.4083 20.5582 9.0414 20.1515 8.68164 19.9873C8.36044 19.841 7.86139 19.8154 6.43945 20.1436L5.89941 20.2676L3.72852 18.0967L3.85254 17.5566C4.18067 16.1347 4.15503 15.6357 4.00879 15.3145C3.84473 14.9546 3.43805 14.5879 2.19141 13.7568L1.74609 13.46V10.54L2.19141 10.2432C3.43805 9.41205 3.84473 9.0454 4.00879 8.68555C4.15503 8.36431 4.18067 7.8653 3.85254 6.44336L3.72852 5.90332L5.89941 3.73242L6.43945 3.85645C7.86139 4.18455 8.36044 4.159 8.68164 4.0127C9.0414 3.8485 9.4083 3.44175 10.2393 2.19531L10.5361 1.75H13.4561L13.7529 2.19531Z"
-
-@Composable
-private fun GearIconCustom(modifier: Modifier = Modifier, tint: Color = Color.White, holeColor: Color) {
-  val path = remember { PathParser().parsePathString(GearOuterPathData).toPath() }
-  Canvas(modifier = modifier) {
-    val s = size.width / 24f
-    scale(s, s, pivot = Offset.Zero) {
-      drawPath(path, color = tint)
-    }
-    drawCircle(color = holeColor, radius = 3f * s, center = Offset(12f * s, 12f * s))
   }
 }
 
