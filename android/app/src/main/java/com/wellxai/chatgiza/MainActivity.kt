@@ -1028,6 +1028,16 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
             }
           }
         }
+        // A hard cut at the bar's edge read as content being swallowed --
+        // this fades it out smoothly instead, starting fully visible and
+        // reaching fully hidden by the time it's under the opaque bar.
+        Box(
+          modifier = Modifier
+            .align(Alignment.TopCenter)
+            .fillMaxWidth()
+            .height(70.dp)
+            .background(Brush.verticalGradient(listOf(colorScheme.background, Color.Transparent)))
+        )
         // The composer floats on top of this Box now instead of sitting
         // below the list as a separate sequential element -- the last
         // message scrolls up from underneath it, and the composer's own
