@@ -221,6 +221,7 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.SupportAgent
+import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material.icons.outlined.Tag
 import androidx.compose.material.icons.outlined.TrendingDown
 import androidx.compose.material.icons.outlined.TrendingUp
@@ -1413,12 +1414,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
               .padding(horizontal = 10.dp)
           ) {
             if (viewModel.activeTool == null) {
-              Icon(
-                painter = androidx.compose.ui.res.painterResource(R.drawable.ic_giza_pro),
-                contentDescription = null,
-                tint = colorScheme.onBackground,
-                modifier = Modifier.size(16.dp)
-              )
+              Icon(Icons.Outlined.WorkspacePremium, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp))
               Spacer(modifier = Modifier.size(4.dp))
             }
             Text(
