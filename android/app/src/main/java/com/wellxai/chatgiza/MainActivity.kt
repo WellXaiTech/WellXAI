@@ -159,7 +159,6 @@ import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Comment
-import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.automirrored.outlined.TrendingFlat
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.AddBox
@@ -638,8 +637,8 @@ private fun DeleteIcon(tint: Color, modifier: Modifier = Modifier) {
     )
     drawRoundRect(
       color = tint,
-      topLeft = Offset(5.3f * scale, 6f * scale),
-      size = Size(13.4f * scale, 15f * scale),
+      topLeft = Offset(6.25f * scale, 6f * scale),
+      size = Size(11.5f * scale, 15f * scale),
       cornerRadius = CornerRadius(2.2f * scale, 2.2f * scale),
       style = Stroke(width = strokeW)
     )
@@ -4192,7 +4191,7 @@ private fun EditProfileScreen(viewModel: ChatViewModel) {
         modifier = Modifier.padding(20.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = null, tint = Color(0xFFFF6B6B))
+        Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_logout), contentDescription = null, tint = Color(0xFFFF6B6B))
         Spacer(modifier = Modifier.width(16.dp))
         Text("Sign out", color = Color(0xFFFF6B6B), fontSize = 16.sp, fontWeight = FontWeight.Medium)
       }
