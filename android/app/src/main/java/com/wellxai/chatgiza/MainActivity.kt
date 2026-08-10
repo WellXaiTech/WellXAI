@@ -1012,7 +1012,7 @@ private fun ChatConversationMenuSheet(
       label = "Add to project",
       trailing = { Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp)) }
     ) { onDismiss(); onComingSoon("Add to project") }
-    ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_uploaded_files), contentDescription = null, tint = Color.White) }, label = "Uploaded files") {
+    ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_uploaded_files), contentDescription = null, tint = Color.White, modifier = Modifier.size(19.dp)) }, label = "Uploaded files") {
       onDismiss(); onComingSoon("Uploaded files")
     }
     ChatMenuRow(icon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = Color.White) }, label = "Find in chat") {
@@ -1042,10 +1042,10 @@ private fun ChatMenuRow(
     verticalAlignment = Alignment.CenterVertically,
     modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp)
   ) {
-    // Nudged down a few dp -- the row icons' glyphs sit visually high
-    // within their bounding box, so centering the box alone left them
-    // looking offset above the label instead of level with it.
-    Box(modifier = Modifier.padding(top = 3.dp)) { icon() }
+    // Pulled back toward the card's left edge (negative x) and nudged
+    // down a few dp -- the reference menu keeps its icon column flush
+    // against the edge with barely any inset, ours had drifted right.
+    Box(modifier = Modifier.offset(x = (-8).dp, y = 3.dp)) { icon() }
     Spacer(modifier = Modifier.size(16.dp))
     Text(label, color = tint, fontSize = 16.sp, modifier = Modifier.weight(1f))
     trailing?.invoke()
