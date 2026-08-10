@@ -5897,7 +5897,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
       SettingsSection {
         SettingsMenuRow("Edit Profile", icon = Icons.Outlined.ModeEdit) { viewModel.openEditProfile() }
         SettingsDivider()
-        SettingsMenuRow("Appearance", icon = Icons.Outlined.DarkMode) { viewModel.openAppearance() }
+        SettingsMenuRow("Appearance", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_appearance)) { viewModel.openAppearance() }
         SettingsDivider()
         SettingsMenuRow("Haptics", icon = Icons.Outlined.Vibration) { viewModel.openHaptics() }
         SettingsDivider()
