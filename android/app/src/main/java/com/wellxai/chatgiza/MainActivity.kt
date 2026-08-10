@@ -1981,8 +1981,44 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               controller.setMicMuted(micMuted)
             }
           }
-          VoiceControlPill(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_settings), contentDescription = "Settings", enabled = !isConnecting) {
-            voiceSettingsOpen = true
+          Box {
+            VoiceControlPill(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_settings), contentDescription = "Settings", enabled = !isConnecting) {
+              voiceSettingsOpen = true
+            }
+            // Small badge showing the active personality's own icon (e.g.
+            // Story Time) on top of the Settings pill, so which mode is
+            // live is visible without opening the sheet.
+            val activePersonality = remember(viewModel.personality) {
+              PERSONALITY_OPTIONS.find { it.id == viewModel.personality }
+            }
+            if (activePersonality != null && (activePersonality.iconRes != null || activePersonality.icon != null)) {
+              Box(
+                modifier = Modifier
+                  .align(Alignment.TopEnd)
+                  .offset(x = 4.dp, y = (-4).dp)
+                  .size(18.dp)
+                  .clip(CircleShape)
+                  .background(Color(0xFFFF9800))
+                  .border(width = 1.dp, color = Color.Black, shape = CircleShape),
+                contentAlignment = Alignment.Center
+              ) {
+                if (activePersonality.iconRes != null) {
+                  Icon(
+                    painter = androidx.compose.ui.res.painterResource(activePersonality.iconRes),
+                    contentDescription = activePersonality.label,
+                    tint = Color.Black,
+                    modifier = Modifier.size(11.dp)
+                  )
+                } else {
+                  Icon(
+                    activePersonality.icon!!,
+                    contentDescription = activePersonality.label,
+                    tint = Color.Black,
+                    modifier = Modifier.size(11.dp)
+                  )
+                }
+              }
+            }
           }
         }
 
