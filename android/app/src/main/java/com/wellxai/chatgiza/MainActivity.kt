@@ -247,9 +247,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
@@ -620,30 +618,6 @@ private fun DeleteIcon(tint: Color, modifier: Modifier = Modifier) {
     tint = tint,
     modifier = modifier.size(22.dp)
   )
-}
-
-/** 5 filled rounded bars of varying height -- the composer's Speak
- * button glyph, restored after briefly being swapped for ic_speaker.xml. */
-@Composable
-private fun WaveformIconCustom(modifier: Modifier = Modifier, tint: Color = Color.Black) {
-  Canvas(modifier = modifier) {
-    val scale = size.width / 24f
-    val bars = listOf(
-      Triple(2f, 9f, 6f),
-      Triple(6.5f, 4f, 16f),
-      Triple(11f, 7f, 10f),
-      Triple(15.5f, 2f, 20f),
-      Triple(20f, 6f, 12f)
-    )
-    for ((x, y, h) in bars) {
-      drawRoundRect(
-        color = tint,
-        topLeft = Offset(x * scale, y * scale),
-        size = Size(2.5f * scale, h * scale),
-        cornerRadius = CornerRadius(1.25f * scale, 1.25f * scale)
-      )
-    }
-  }
 }
 
 /** Matches the exact custom waveform glyph the user supplied (24x24
@@ -1510,7 +1484,12 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
               .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
           ) {
-            WaveformIconCustom(modifier = Modifier.size(16.dp), tint = Color.Black)
+            Icon(
+              painter = androidx.compose.ui.res.painterResource(R.drawable.ic_waveform_speak),
+              contentDescription = null,
+              tint = Color.Black,
+              modifier = Modifier.size(16.dp)
+            )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
               text = "Speak",
