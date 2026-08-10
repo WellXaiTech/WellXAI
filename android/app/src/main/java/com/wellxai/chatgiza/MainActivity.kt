@@ -956,7 +956,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
       )
     },
-    containerColor = colorScheme.background,
+    containerColor = Color(0xFF000000),
     contentWindowInsets = WindowInsets(0, 0, 0, 0)
   ) { padding ->
     // A transparent top bar used to let scrolled-up message text show
@@ -6456,10 +6456,6 @@ private fun MessageBubble(
     ) {
       Box(
         modifier = Modifier
-          .background(
-            color = Color(0xFF000000),
-            shape = RoundedCornerShape(16.dp)
-          )
           .padding(horizontal = 12.dp, vertical = 10.dp)
       ) {
         if (isUser) {
