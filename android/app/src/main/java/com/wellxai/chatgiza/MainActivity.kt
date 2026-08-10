@@ -248,17 +248,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.scale
-import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.draw.drawBehind
@@ -650,26 +649,36 @@ private fun FilterIconCustom(modifier: Modifier = Modifier, tint: Color = Color.
   }
 }
 
-// Drawn directly with an evenOdd Path instead of an XML vector resource --
-// the XML <path android:fillType="evenOdd"> version of this exact glyph
-// rendered as a solid filled square (the frame's interior, mountain cutout
-// and sun all filled in) instead of the intended hollow window, because the
-// vector-resource loader wasn't honoring fillType. Building the Path in
-// code and setting PathFillType.EvenOdd on it explicitly is unambiguous.
-private val GalleryIconPathData = "M14.0996 2.5C15.2032 2.5 16.0914 2.49903 16.8086 2.55762C17.5373 2.61716 18.1773 2.74327 18.7695 3.04492C19.7103 3.52429 20.4757 4.28966 20.9551 5.23047C21.2567 5.82266 21.3828 6.4627 21.4424 7.19141C21.501 7.90857 21.5 8.79681 21.5 9.90039V14.0996C21.5 15.2032 21.501 16.0914 21.4424 16.8086C21.3828 17.5373 21.2567 18.1773 20.9551 18.7695C20.4757 19.7103 19.7103 20.4757 18.7695 20.9551C18.1773 21.2567 17.5373 21.3828 16.8086 21.4424C16.0914 21.501 15.2032 21.5 14.0996 21.5H9.90039C8.79681 21.5 7.90857 21.501 7.19141 21.4424C6.4627 21.3828 5.82266 21.2567 5.23047 20.9551C4.28966 20.4757 3.52429 19.7103 3.04492 18.7695C2.74327 18.1773 2.61716 17.5373 2.55762 16.8086C2.49903 16.0914 2.5 15.2032 2.5 14.0996V9.90039C2.5 8.79681 2.49903 7.90857 2.55762 7.19141C2.61716 6.4627 2.74327 5.82266 3.04492 5.23047C3.52429 4.28966 4.28966 3.52429 5.23047 3.04492C5.82266 2.74327 6.4627 2.61716 7.19141 2.55762C7.90857 2.49903 8.79681 2.5 9.90039 2.5H14.0996ZM4.50586 14.4424C4.51159 14.915 4.52312 16.3068 4.55078 16.6455C4.60023 17.2507 4.69296 17.599 4.82715 17.8623C5.11472 18.4265 5.57347 18.8853 6.1377 19.1729C6.40105 19.307 6.74933 19.3998 7.35449 19.4492C7.97129 19.4996 8.76396 19.5 9.90039 19.5H14.0996C14.4595 19.5 15.7848 19.4968 16.0811 19.4951L7.95899 11.373L4.50586 14.4424ZM15 7C13.8954 7 13 7.89543 13 9C13 10.1046 13.8954 11 15 11C16.1046 11 17 10.1046 17 9C17 7.89543 16.1046 7 15 7Z"
-
+// A single evenOdd path (frame ring + mountain notch + sun, all one
+// <path>) doesn't actually work for this particular glyph -- the
+// mountain sub-path only traces the BOTTOM portion of the inner
+// boundary, not the full rect, so evenOdd counts the upper interior as
+// filled instead of a hollow window. Drawing the three shapes as
+// separate, unambiguous primitives (a stroked frame, a solid mountain
+// triangle, a solid circle) sidesteps that entirely and always renders
+// a clean hollow icon.
 @Composable
 private fun GalleryIconCustom(modifier: Modifier = Modifier, tint: Color = Color.White) {
-  val path = remember {
-    PathParser().parsePathString(GalleryIconPathData).toPath().apply {
-      fillType = PathFillType.EvenOdd
-    }
-  }
   Canvas(modifier = modifier) {
     val scale = size.width / 24f
-    scale(scale, scale, pivot = Offset.Zero) {
-      drawPath(path, color = tint)
+    val strokeW = 1.8f * scale
+    drawRoundRect(
+      color = tint,
+      topLeft = Offset(2.9f * scale, 2.9f * scale),
+      size = Size(18.2f * scale, 18.2f * scale),
+      cornerRadius = CornerRadius(4.4f * scale, 4.4f * scale),
+      style = Stroke(width = strokeW)
+    )
+    drawCircle(color = tint, radius = 1.9f * scale, center = Offset(15.3f * scale, 8.7f * scale))
+    val mountain = Path().apply {
+      moveTo(6f * scale, 17.3f * scale)
+      lineTo(9.9f * scale, 11.3f * scale)
+      lineTo(12.4f * scale, 14.3f * scale)
+      lineTo(14.7f * scale, 11.6f * scale)
+      lineTo(18.1f * scale, 17.3f * scale)
+      close()
     }
+    drawPath(mountain, color = tint)
   }
 }
 
