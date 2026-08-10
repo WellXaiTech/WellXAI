@@ -1879,11 +1879,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               .padding(horizontal = 14.dp)
           ) {
             if (isConnecting) {
-              CircularProgressIndicator(
-                color = Color.White,
-                strokeWidth = 2.dp,
-                modifier = Modifier.size(16.dp)
-              )
+              LiveDotsIndicator(dotColor = Color.White, animated = true)
               Spacer(modifier = Modifier.size(8.dp))
               Text("Connecting…", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             } else {
@@ -2070,7 +2066,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
             contentAlignment = Alignment.Center
           ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-              LiveDotsIndicator(dotColor = Color.Black)
+              LiveDotsIndicator(dotColor = Color.Black, animated = false)
               Spacer(modifier = Modifier.size(8.dp))
               Text("Stop", color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
             }
@@ -2295,23 +2291,29 @@ private fun PushToTalkPill(enabled: Boolean = true, onPress: () -> Unit, onRelea
   }
 }
 
-// Three dots pulsing out of phase, next to the Live Vision Stop button --
-// reads as "this call is live" the same way a recording indicator does.
+// Three dots -- static on the Stop button (just a "live" marker, not meant
+// to move), pulsing out of phase when used for the Connecting spinner
+// instead of a spinning ring.
 @Composable
-private fun LiveDotsIndicator(dotColor: Color) {
+private fun LiveDotsIndicator(dotColor: Color, animated: Boolean = true) {
   val transition = rememberInfiniteTransition(label = "liveDots")
   Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-    listOf(0, 150, 300).forEach { delayMs ->
-      val scale by transition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-          animation = tween(durationMillis = 500, easing = LinearEasing),
-          repeatMode = RepeatMode.Reverse,
-          initialStartOffset = StartOffset(delayMs, StartOffsetType.Delay)
-        ),
-        label = "dot"
-      )
+    listOf(0, 120, 240).forEach { delayMs ->
+      val scale = if (animated) {
+        val animatedScale by transition.animateFloat(
+          initialValue = 0.4f,
+          targetValue = 1f,
+          animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 360, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+            initialStartOffset = StartOffset(delayMs, StartOffsetType.Delay)
+          ),
+          label = "dot"
+        )
+        animatedScale
+      } else {
+        1f
+      }
       Box(
         modifier = Modifier
           .size(5.dp)
