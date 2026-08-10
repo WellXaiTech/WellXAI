@@ -2531,7 +2531,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
         ) {
           Box(
             modifier = Modifier
-              .clickable(onClick = { viewModel.openEditProfile() })
+              .clickable(onClick = { viewModel.openAccount() })
               .border(1.dp, colorScheme.onBackground.copy(alpha = 0.35f), CircleShape)
               .padding(2.dp)
           ) {
@@ -2579,14 +2579,6 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
                 cursorBrush = SolidColor(colorScheme.onBackground)
               )
             }
-          }
-          Spacer(modifier = Modifier.size(8.dp))
-          // The old bottom nav's "Settings" tab was the only way to reach
-          // Account/Billing/Data Controls -- removing that bar would have
-          // stranded the whole screen with no way in, so this keeps it
-          // reachable.
-          IconButton(onClick = { viewModel.openAccount() }, modifier = Modifier.size(38.dp)) {
-            Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = colorScheme.onBackground, modifier = Modifier.size(22.dp))
           }
         }
 
@@ -5662,12 +5654,13 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.4f))
       }
 
-      // No profile card and no GiZa Pro banner here anymore — the avatar in
-      // History now opens Edit Profile directly, so this screen is a plain
-      // settings list. Closing happens via the system back gesture
-      // (BackHandler above), not a dedicated close button.
+      // History's avatar now opens this screen directly (Settings), so
+      // Edit Profile needs its own row here instead -- previously it was
+      // only reachable by tapping that same avatar.
       SettingsSectionHeader("App")
       SettingsSection {
+        SettingsMenuRow("Edit Profile", icon = Icons.Outlined.ModeEdit) { viewModel.openEditProfile() }
+        SettingsDivider()
         SettingsMenuRow("Appearance", icon = Icons.Outlined.DarkMode) { viewModel.openAppearance() }
         SettingsDivider()
         SettingsMenuRow("Haptics", icon = Icons.Outlined.Vibration) { viewModel.openHaptics() }
