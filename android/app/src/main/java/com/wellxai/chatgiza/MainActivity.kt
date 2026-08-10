@@ -735,6 +735,7 @@ private fun AskImagineTab(label: String, selected: Boolean, onClick: () -> Unit)
   Box(
     modifier = Modifier
       .clip(RoundedCornerShape(16.dp))
+      .background(if (selected) colorScheme.background else Color.Transparent)
       .clickable(onClick = onClick)
       .padding(horizontal = 14.dp, vertical = 6.dp),
     contentAlignment = Alignment.Center
@@ -755,6 +756,7 @@ private fun AskImagineTabs(current: String, onAsk: () -> Unit, onImagine: () -> 
   Row(
     modifier = Modifier
       .clip(RoundedCornerShape(20.dp))
+      .background(colorScheme.onBackground.copy(alpha = 0.06f))
       .padding(4.dp),
     horizontalArrangement = Arrangement.spacedBy(2.dp)
   ) {
@@ -879,7 +881,8 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
             modifier = Modifier
               .padding(end = 12.dp)
               .height(40.dp)
-              .clip(RoundedCornerShape(percent = 50)),
+              .clip(RoundedCornerShape(percent = 50))
+              .background(colorScheme.onBackground.copy(alpha = 0.12f)),
             verticalAlignment = Alignment.CenterVertically
           ) {
             Box(
