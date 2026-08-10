@@ -1909,7 +1909,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               .padding(horizontal = 14.dp)
           ) {
             if (isConnecting) {
-              ConnectingDotsSpinner(dotColor = Color.White)
+              ConnectingDotsSpinner(dotColor = Color.White, size = 22.dp)
               Spacer(modifier = Modifier.size(8.dp))
               Text("Connecting…", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             } else {
@@ -2132,7 +2132,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
             contentAlignment = Alignment.Center
           ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-              ConnectingDotsSpinner(dotColor = Color.Black, size = 16.dp)
+              LiveDotsIndicator(dotColor = Color.Black, animated = false, count = 5, dotSize = 4.dp)
               Spacer(modifier = Modifier.size(8.dp))
               Text("Stop", color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
             }
@@ -2400,7 +2400,7 @@ private fun ConnectingDotsSpinner(dotColor: Color, size: Dp = 16.dp) {
   val rotation by transition.animateFloat(
     initialValue = 0f,
     targetValue = 360f,
-    animationSpec = infiniteRepeatable(animation = tween(durationMillis = 900, easing = LinearEasing)),
+    animationSpec = infiniteRepeatable(animation = tween(durationMillis = 550, easing = LinearEasing)),
     label = "spin"
   )
   val dotCount = 8
