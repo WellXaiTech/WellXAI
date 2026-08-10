@@ -869,7 +869,13 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
       CenterAlignedTopAppBar(
         modifier = Modifier.statusBarsPadding(),
         windowInsets = WindowInsets(0, 0, 0, 0),
-        title = { AskImagineTabs(current = "Ask", onAsk = {}, onImagine = { viewModel.openChatGizaMedia() }) },
+        title = {
+          // Blank home state has no tabs to switch between yet -- they
+          // only make sense once an actual conversation is underway.
+          if (viewModel.messages.isNotEmpty()) {
+            AskImagineTabs(current = "Ask", onAsk = {}, onImagine = { viewModel.openChatGizaMedia() })
+          }
+        },
         navigationIcon = {
           IconButton(onClick = { viewModel.openHistory() }) {
             TwoLineMenuIcon(tint = colorScheme.onBackground)
