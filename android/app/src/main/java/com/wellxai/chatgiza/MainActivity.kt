@@ -871,16 +871,16 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
             }
           }
         },
-        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
+        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = colorScheme.background)
       )
     },
     containerColor = colorScheme.background,
     contentWindowInsets = WindowInsets(0, 0, 0, 0)
   ) { padding ->
-    // No top padding here on purpose — the LazyColumn below spans the full
-    // screen (behind the transparent-background top bar) and gets its top
-    // inset via contentPadding instead, so scrolling carries the last
-    // message up underneath the bar instead of hard-clipping at its edge.
+    // A transparent top bar used to let scrolled-up message text show
+    // through the empty space around its icons before the text ever
+    // reached the bar's own edge -- an opaque bar (same solid color as
+    // the screen) hides content exactly at its boundary, every time.
     Column(
       modifier = Modifier
         .fillMaxSize()
