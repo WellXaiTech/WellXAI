@@ -2491,32 +2491,6 @@ private fun ChatGizaEventsCard() {
   }
 }
 
-@Composable
-private fun HistoryNavTab(icon: ImageVector, label: String, onClick: () -> Unit) {
-  HistoryNavTabShell(label, onClick) { tint ->
-    Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(24.dp))
-  }
-}
-
-@Composable
-private fun HistoryNavTab(painter: androidx.compose.ui.graphics.painter.Painter, label: String, onClick: () -> Unit) {
-  HistoryNavTabShell(label, onClick) { tint ->
-    Icon(painter, contentDescription = label, tint = tint, modifier = Modifier.size(24.dp))
-  }
-}
-
-@Composable
-private fun HistoryNavTabShell(label: String, onClick: () -> Unit, icon: @Composable (Color) -> Unit) {
-  Column(
-    horizontalAlignment = Alignment.CenterHorizontally,
-    modifier = Modifier.clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 2.dp)
-  ) {
-    icon(colorScheme.onBackground.copy(alpha = 0.85f))
-    Spacer(modifier = Modifier.height(2.dp))
-    Text(label, color = colorScheme.onBackground.copy(alpha = 0.85f), fontSize = 10.sp)
-  }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HistoryScreen(viewModel: ChatViewModel) {
@@ -2541,35 +2515,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   var selectedHistoryTab by remember { mutableStateOf("History") }
 
   Scaffold(
-    containerColor = Color.Transparent,
-    bottomBar = {
-      // Rounded top corners on its own background — "carved" into the
-      // screen rather than a flat full-width bar — matching the reference.
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
-          .background(Color(0xFF23252B))
-          .navigationBarsPadding()
-      ) {
-        // Five-tab bottom nav, same slot layout as the reference's
-        // Home/Markets/Trade/Earn/Assets bar, re-purposed for ChatGiZa.
-        Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 10.dp, bottom = 8.dp),
-          horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-          HistoryNavTab(androidx.compose.ui.res.painterResource(R.drawable.ic_settings), "Settings", onClick = { viewModel.openAccount() })
-          HistoryNavTab(androidx.compose.ui.res.painterResource(R.drawable.ic_projects), "Projects", onClick = { viewModel.openProjects() })
-          HistoryNavTab(Icons.Outlined.Schedule, "Scheduled", onClick = { viewModel.openScheduled() })
-          HistoryNavTab(Icons.Outlined.Business, "Business", onClick = {
-            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/business")))
-          })
-          HistoryNavTab(Icons.Filled.Home, "Home", onClick = { viewModel.closeHistory() })
-        }
-      }
-    }
+    containerColor = Color.Transparent
   ) { padding ->
     // Everything — search, Events, the History label, and the conversation
     // list — is one scrollable column now, so the top section scrolls away
@@ -2633,6 +2579,14 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
                 cursorBrush = SolidColor(colorScheme.onBackground)
               )
             }
+          }
+          Spacer(modifier = Modifier.size(8.dp))
+          // The old bottom nav's "Settings" tab was the only way to reach
+          // Account/Billing/Data Controls -- removing that bar would have
+          // stranded the whole screen with no way in, so this keeps it
+          // reachable.
+          IconButton(onClick = { viewModel.openAccount() }, modifier = Modifier.size(38.dp)) {
+            Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = colorScheme.onBackground, modifier = Modifier.size(22.dp))
           }
         }
 
