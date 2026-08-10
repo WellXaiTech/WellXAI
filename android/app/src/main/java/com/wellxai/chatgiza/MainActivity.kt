@@ -2141,7 +2141,7 @@ private fun VoiceGradientCard(option: VoiceOption, selected: Boolean, onClick: (
     Brush.linearGradient(colors = listOf(Color.White.copy(alpha = 0.08f), Color.White.copy(alpha = 0.08f)))
   }
 
-  Box(
+  Column(
     modifier = Modifier
       .width(cardWidth)
       .height(cardHeight)
@@ -2150,20 +2150,22 @@ private fun VoiceGradientCard(option: VoiceOption, selected: Boolean, onClick: (
       .clickable(onClick = onClick)
       .padding(16.dp)
   ) {
-    Column {
+    Row(verticalAlignment = Alignment.CenterVertically) {
       Text(option.name, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-      Spacer(modifier = Modifier.height(2.dp))
-      Text(option.description, color = Color.White.copy(alpha = if (selected) 0.85f else 0.55f), fontSize = 12.sp)
+      // Orin specifically, not every voice -- next to the name rather than
+      // a corner badge.
+      if (option.name == "Orin") {
+        Spacer(modifier = Modifier.width(6.dp))
+        Icon(
+          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_cloud),
+          contentDescription = "Cloud voice",
+          tint = Color.White.copy(alpha = if (selected) 0.9f else 0.5f),
+          modifier = Modifier.size(15.dp)
+        )
+      }
     }
-    // These are OpenAI's real-time voices -- always streamed live, never
-    // cached on-device -- so every card gets the same cloud badge rather
-    // than flagging only some of them.
-    Icon(
-      painter = androidx.compose.ui.res.painterResource(R.drawable.ic_cloud),
-      contentDescription = "Cloud voice",
-      tint = Color.White.copy(alpha = if (selected) 0.9f else 0.5f),
-      modifier = Modifier.align(Alignment.TopEnd).size(16.dp)
-    )
+    Spacer(modifier = Modifier.height(2.dp))
+    Text(option.description, color = Color.White.copy(alpha = if (selected) 0.85f else 0.55f), fontSize = 12.sp)
   }
 }
 
