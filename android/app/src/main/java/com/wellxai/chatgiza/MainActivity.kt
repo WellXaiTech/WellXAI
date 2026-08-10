@@ -1009,7 +1009,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
                   brush = Brush.verticalGradient(
                     colors = listOf(Color.Transparent, Color.Black),
                     startY = 0f,
-                    endY = 260.dp.toPx()
+                    endY = 420.dp.toPx()
                   ),
                   blendMode = BlendMode.DstIn
                 )
