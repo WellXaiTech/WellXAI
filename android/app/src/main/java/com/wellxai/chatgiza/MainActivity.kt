@@ -5900,7 +5900,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         SettingsDivider()
         SettingsMenuRow("App Language", icon = Icons.Outlined.Language) { viewModel.openAppLanguage() }
         SettingsDivider()
-        SettingsMenuRow("Advanced", icon = Icons.Outlined.AutoAwesome) { viewModel.openAdvanced() }
+        SettingsMenuRow("Advanced", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_advanced)) { viewModel.openAdvanced() }
       }
 
       SettingsSectionHeader("GiZa")
