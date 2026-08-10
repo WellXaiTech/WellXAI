@@ -997,7 +997,12 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
             // was covering the text (rejected) -- this instead masks the
             // list's own alpha with BlendMode.DstIn, so the text itself
             // becomes transparent as it nears the bar, with nothing
-            // painted over it.
+            // painted over it. The fade must not reach past the bar's own
+            // real footprint (statusBar + app bar height) -- a fixed 420dp
+            // faded a large chunk of visible chat content, reading as a
+            // dark smear over legible text instead of a soft edge hugging
+            // the transparent bar, so this now tracks the bar's actual
+            // measured height instead of a guessed constant.
             modifier = Modifier
               .fillMaxSize()
               .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
@@ -1007,7 +1012,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
                   brush = Brush.verticalGradient(
                     colors = listOf(Color.Transparent, Color.Black),
                     startY = 0f,
-                    endY = 420.dp.toPx()
+                    endY = padding.calculateTopPadding().toPx()
                   ),
                   blendMode = BlendMode.DstIn
                 )
