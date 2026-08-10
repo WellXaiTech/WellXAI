@@ -253,6 +253,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
@@ -1331,7 +1332,12 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
   Card(
     modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 10.dp),
     shape = RoundedCornerShape(24.dp),
-    colors = CardDefaults.cardColors(containerColor = colorScheme.onBackground.copy(alpha = 0.06f))
+    // Flattened to an opaque color instead of a low-alpha tint -- now
+    // that the composer floats over the scrolling message list, a
+    // translucent background let that content stay fully legible right
+    // through it. compositeOver bakes in the exact same tint the low
+    // alpha used to produce over a plain background, just opaque now.
+    colors = CardDefaults.cardColors(containerColor = colorScheme.onBackground.copy(alpha = 0.06f).compositeOver(colorScheme.background))
   ) {
     Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)) {
       if (viewModel.attachedImageUri != null) {
