@@ -1035,8 +1035,15 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
           modifier = Modifier
             .align(Alignment.TopCenter)
             .fillMaxWidth()
-            .height(70.dp)
-            .background(Brush.verticalGradient(listOf(colorScheme.background, Color.Transparent)))
+            .height(160.dp)
+            .background(
+              Brush.verticalGradient(
+                0f to colorScheme.background,
+                0.5f to colorScheme.background.copy(alpha = 0.7f),
+                0.8f to colorScheme.background.copy(alpha = 0.25f),
+                1f to Color.Transparent
+              )
+            )
         )
         // The composer floats on top of this Box now instead of sitting
         // below the list as a separate sequential element -- the last
