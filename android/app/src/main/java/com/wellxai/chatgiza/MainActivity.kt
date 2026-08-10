@@ -1177,7 +1177,7 @@ private fun ChatConversationMenuSheet(
       label = "Add to project",
       trailing = { Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp)) }
     ) { onDismiss(); onComingSoon("Add to project") }
-    ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_uploaded_files), contentDescription = null, tint = Color.White, modifier = Modifier.size(19.dp)) }, label = "Uploaded files") {
+    ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_uploaded_files), contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp)) }, label = "Uploaded files") {
       onDismiss(); onComingSoon("Uploaded files")
     }
     ChatMenuRow(icon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = Color.White) }, label = "Find in chat") {
