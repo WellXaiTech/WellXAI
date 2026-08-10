@@ -6457,7 +6457,7 @@ private fun MessageBubble(
       Box(
         modifier = Modifier
           .background(
-            color = if (isUser) colorScheme.onBackground.copy(alpha = 0.12f) else Color.Transparent,
+            color = Color(0xFF000000),
             shape = RoundedCornerShape(16.dp)
           )
           .padding(horizontal = 12.dp, vertical = 10.dp)
@@ -6465,13 +6465,13 @@ private fun MessageBubble(
         if (isUser) {
           Text(
             text = message.content.ifEmpty { "…" },
-            color = colorScheme.onBackground,
+            color = Color(0xFFA8A8A8),
             fontSize = 15.sp
           )
         } else {
           MarkdownText(
             text = message.content.ifEmpty { "…" },
-            baseColor = colorScheme.onBackground,
+            baseColor = Color(0xFFA8A8A8),
             fontSize = 15.sp
           )
         }
