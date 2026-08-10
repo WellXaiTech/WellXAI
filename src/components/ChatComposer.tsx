@@ -588,7 +588,7 @@ export default function ChatComposer({
           disabled={disabled}
           placeholder={isHero ? undefined : disabled ? "ChatGiZa is typing…" : "Ask anything"}
           autoComplete="off"
-          className="w-full bg-transparent px-1 py-1 text-sm outline-none disabled:cursor-not-allowed"
+          className={`w-full bg-transparent px-1 py-1 text-sm outline-none disabled:cursor-not-allowed ${isHero ? "text-pure-black" : ""}`}
         />
         {isHero && !value && (
           <div className="pointer-events-none absolute inset-0 flex items-center px-1 text-sm font-bold text-muted">
