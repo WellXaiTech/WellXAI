@@ -843,7 +843,16 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
 
   Scaffold(
     topBar = {
+      // The bar's own default windowInsets should already extend its
+      // background up under the status bar on an edge-to-edge screen, but
+      // that still left a sliver at the very top showing scrolled text
+      // through -- this outer Box paints the full region (status bar
+      // strip + bar row) itself, with the status bar inset applied only
+      // to the bar's own content, so the fill is never in question.
+      Box(modifier = Modifier.fillMaxWidth().background(colorScheme.background)) {
       CenterAlignedTopAppBar(
+        modifier = Modifier.statusBarsPadding(),
+        windowInsets = WindowInsets(0, 0, 0, 0),
         title = { AskImagineTabs(current = "Ask", onAsk = {}, onImagine = { viewModel.openChatGizaMedia() }) },
         navigationIcon = {
           IconButton(onClick = { viewModel.openHistory() }) {
@@ -900,8 +909,9 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
             }
           }
         },
-        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = colorScheme.background)
+        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
       )
+      }
     },
     containerColor = colorScheme.background,
     contentWindowInsets = WindowInsets(0, 0, 0, 0)
