@@ -1180,7 +1180,7 @@ private fun ChatConversationMenuSheet(
     ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_uploaded_files), contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp)) }, label = "Uploaded files") {
       onDismiss(); onComingSoon("Uploaded files")
     }
-    ChatMenuRow(icon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = Color.White) }, label = "Find in chat") {
+    ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_find_in_chat), contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp)) }, label = "Find in chat") {
       onDismiss(); onFindInChat()
     }
     ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_home), contentDescription = null, tint = Color.White) }, label = "Add to home") {
