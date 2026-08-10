@@ -6647,7 +6647,7 @@ private fun MessageActionBar(
           onClick = onSpeakToggle
         )
       }
-      ActionBarItem(Icons.Outlined.Autorenew, "Regenerate", onClick = onRegenerate)
+      ActionBarItem(androidx.compose.ui.res.painterResource(R.drawable.ic_regenerate), "Regenerate", onClick = onRegenerate)
       Box {
         ActionBarItem(Icons.Outlined.MoreHoriz, "More") { moreOpen = true }
         DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }) {
