@@ -1215,6 +1215,43 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
     }
   }
 
+  Column(modifier = Modifier.fillMaxWidth()) {
+  // Only shown on the blank home state (no messages yet, not mid-search) --
+  // matches the reference's quick-action chip row that sits above the
+  // input box and disappears once a conversation actually starts.
+  if (viewModel.messages.isEmpty()) {
+    Row(
+      modifier = Modifier
+        .fillMaxWidth()
+        .horizontalScroll(rememberScrollState())
+        .padding(horizontal = 6.dp, vertical = 6.dp),
+      horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+      QuickActionChip(icon = { Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp)) }, label = "GiZa Extra") {
+        viewModel.openChatGizaMedia()
+      }
+      QuickActionChip(icon = { Icon(Icons.Outlined.Videocam, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp)) }, label = "Create Video") {
+        viewModel.onInputChange("Create a video of ")
+        focusRequester.requestFocus()
+      }
+      QuickActionChip(icon = { Icon(Icons.Outlined.Image, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp)) }, label = "Create an image") {
+        viewModel.onInputChange("Create an image of ")
+        focusRequester.requestFocus()
+      }
+      QuickActionChip(icon = { Icon(Icons.Outlined.Description, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp)) }, label = "Analyze Doc") {
+        filePicker.launch("*/*")
+      }
+      QuickActionChip(icon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_waveform_speak), contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp)) }, label = "Voice Mode") {
+        viewModel.openLiveVision()
+      }
+      QuickActionChip(icon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_camera), contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp)) }, label = "Open Camera") {
+        if (hasCameraPermission) launchCamera() else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+      }
+      QuickActionChip(icon = { Icon(Icons.Outlined.Tune, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(16.dp)) }, label = "Customize GiZa") {
+        viewModel.openAccount()
+      }
+    }
+  }
   Card(
     modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 10.dp),
     shape = RoundedCornerShape(24.dp),
@@ -1528,6 +1565,24 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
         }
       }
     }
+  }
+  }
+}
+
+@Composable
+private fun QuickActionChip(icon: @Composable () -> Unit, label: String, onClick: () -> Unit) {
+  Row(
+    modifier = Modifier
+      .height(34.dp)
+      .clip(RoundedCornerShape(17.dp))
+      .background(colorScheme.onBackground.copy(alpha = 0.08f))
+      .clickable(onClick = onClick)
+      .padding(horizontal = 12.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    icon()
+    Spacer(modifier = Modifier.width(6.dp))
+    Text(label, color = colorScheme.onBackground, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
   }
 }
 
