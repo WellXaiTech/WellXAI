@@ -874,6 +874,27 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
           }
         },
         actions = {
+          if (viewModel.messages.isEmpty()) {
+            // Blank home state, before anything's been sent -- matches the
+            // reference's single standalone icon instead of the New Chat +
+            // menu pill, since there's no conversation yet to manage.
+            Box(
+              modifier = Modifier
+                .padding(end = 12.dp)
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(colorScheme.onBackground.copy(alpha = 0.12f))
+                .clickable(onClick = { viewModel.newChat() }),
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(
+                painter = androidx.compose.ui.res.painterResource(R.drawable.ic_new_chat_bubble),
+                contentDescription = "New chat",
+                tint = colorScheme.onBackground,
+                modifier = Modifier.size(20.dp)
+              )
+            }
+          } else {
           // Pill with two separate icons — new chat and account/more —
           // instead of one icon that was labeled "Account" but drew a
           // pencil and actually opened Account (New Chat had no icon here).
@@ -921,6 +942,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
                 )
               }
             }
+          }
           }
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
