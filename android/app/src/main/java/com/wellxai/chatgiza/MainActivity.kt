@@ -1177,7 +1177,7 @@ private fun ChatConversationMenuSheet(
     ChatMenuRow(icon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = Color.White) }, label = "Find in chat") {
       onDismiss(); onFindInChat()
     }
-    ChatMenuRow(icon = { Icon(Icons.Filled.Home, contentDescription = null, tint = Color.White) }, label = "Add to home") {
+    ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_home), contentDescription = null, tint = Color.White) }, label = "Add to home") {
       onDismiss(); onComingSoon("Add to home")
     }
     ChatMenuRow(icon = { Icon(Icons.Outlined.Archive, contentDescription = null, tint = Color.White) }, label = "Archive") {
