@@ -61,6 +61,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
@@ -816,9 +817,17 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
     }
   }
 
-  LaunchedEffect(viewModel.messages.size) {
+  // Keyed on the last message's own length too, not just the list size --
+  // scrolling only on size change meant a streaming reply that grew past
+  // the viewport stayed pinned to where it scrolled when the message was
+  // still short, leaving its later lines below the fold looking like they
+  // were being hidden behind the composer. scrollBy with a large value is
+  // clamped to the true end of content, so it's a safe way to always
+  // reach the real bottom regardless of how tall the message has grown.
+  LaunchedEffect(viewModel.messages.size, viewModel.messages.lastOrNull()?.content?.length) {
     if (viewModel.messages.isNotEmpty()) {
-      listState.animateScrollToItem(viewModel.messages.size - 1)
+      listState.scrollToItem(viewModel.messages.size - 1)
+      listState.scrollBy(100000f)
     }
   }
 
