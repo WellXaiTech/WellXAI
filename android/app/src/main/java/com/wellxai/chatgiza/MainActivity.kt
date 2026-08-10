@@ -5802,8 +5802,6 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        GearIconCustom(modifier = Modifier.size(18.dp), tint = colorScheme.onBackground, holeColor = colorScheme.background)
-        Spacer(modifier = Modifier.width(8.dp))
         Text("Settings", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
       }
 
