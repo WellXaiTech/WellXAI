@@ -253,16 +253,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -616,20 +613,50 @@ private fun TwoLineMenuIcon(tint: Color) {
   }
 }
 
-private val DeleteIconPathData = "M13.1143 2C14.6768 2.00001 16.0501 3.03574 16.4795 4.53809L16.8975 6H20.9961V8H19.9307L19.1631 18.749C19.0323 20.5806 17.5081 22 15.6719 22H8.32812C6.49189 22 4.96774 20.5806 4.83691 18.749L4.06934 8H2.99609V6H7.10254L7.52051 4.53809C7.94993 3.03574 9.3232 2.00001 10.8857 2H13.1143ZM8.99609 11V17H10.9961V11H8.99609ZM12.9961 11V17H14.9961V11H12.9961ZM10.8857 4C10.216 4.00001 9.62734 4.44394 9.44336 5.08789L9.18262 6H14.8174L14.5566 5.08789C14.3727 4.44394 13.784 4.00001 13.1143 4H10.8857Z"
-
+// Same lesson as the Gallery icon -- an evenOdd Path (even one built and
+// typed correctly in code, not XML) doesn't reliably render its holes in
+// this Compose version. Drawn as separate stroke/fill primitives instead:
+// a lid line, a handle outline, a body outline, and two solid bars.
 @Composable
 private fun DeleteIcon(tint: Color, modifier: Modifier = Modifier) {
-  val path = remember {
-    PathParser().parsePathString(DeleteIconPathData).toPath().apply {
-      fillType = PathFillType.EvenOdd
-    }
-  }
   Canvas(modifier = modifier.size(22.dp)) {
-    val s = size.width / 24f
-    scale(s, s, pivot = Offset.Zero) {
-      drawPath(path, color = tint)
-    }
+    val scale = size.width / 24f
+    val strokeW = 1.6f * scale
+    drawLine(
+      color = tint,
+      start = Offset(4f * scale, 6f * scale),
+      end = Offset(20f * scale, 6f * scale),
+      strokeWidth = strokeW,
+      cap = StrokeCap.Round
+    )
+    drawRoundRect(
+      color = tint,
+      topLeft = Offset(9f * scale, 2.6f * scale),
+      size = Size(6f * scale, 3.4f * scale),
+      cornerRadius = CornerRadius(1.4f * scale, 1.4f * scale),
+      style = Stroke(width = strokeW)
+    )
+    drawRoundRect(
+      color = tint,
+      topLeft = Offset(5.3f * scale, 6f * scale),
+      size = Size(13.4f * scale, 15f * scale),
+      cornerRadius = CornerRadius(2.2f * scale, 2.2f * scale),
+      style = Stroke(width = strokeW)
+    )
+    drawLine(
+      color = tint,
+      start = Offset(10f * scale, 10.5f * scale),
+      end = Offset(10f * scale, 17.5f * scale),
+      strokeWidth = strokeW,
+      cap = StrokeCap.Round
+    )
+    drawLine(
+      color = tint,
+      start = Offset(14f * scale, 10.5f * scale),
+      end = Offset(14f * scale, 17.5f * scale),
+      strokeWidth = strokeW,
+      cap = StrokeCap.Round
+    )
   }
 }
 
