@@ -74,6 +74,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -855,13 +856,19 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
 
   Scaffold(
     topBar = {
-      // Translucent, not solid -- a fully opaque bar next to the New Chat
-      // pill's own translucent background (alpha 0.12f) made scrolled
-      // message text look like it "collided" right at the pill instead of
-      // passing smoothly underneath. A uniform translucency across the
-      // whole bar (status bar strip + row) lets scrolled content ghost
-      // through consistently everywhere instead of just at that one spot.
-      Box(modifier = Modifier.fillMaxWidth().background(colorScheme.background.copy(alpha = 0.85f))) {
+      // Solid fill only for the true status-bar strip (clock/battery) --
+      // scrolled text should never show through there. The bar row itself
+      // (hamburger/Ask-Extra/New Chat/dots) stays fully transparent below
+      // that, so scrolled messages read crisply through it, matching the
+      // reference: text visible and legible right up to the New Chat
+      // icon, with the dark strip starting only above that row.
+      Box(modifier = Modifier.fillMaxWidth()) {
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .windowInsetsTopHeight(WindowInsets.statusBars)
+          .background(colorScheme.background)
+      )
       CenterAlignedTopAppBar(
         modifier = Modifier.statusBarsPadding(),
         windowInsets = WindowInsets(0, 0, 0, 0),
