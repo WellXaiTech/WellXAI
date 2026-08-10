@@ -1186,7 +1186,7 @@ private fun ChatConversationMenuSheet(
     ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_home), contentDescription = null, tint = Color.White) }, label = "Add to home") {
       onDismiss(); onComingSoon("Add to home")
     }
-    ChatMenuRow(icon = { Icon(Icons.Outlined.Archive, contentDescription = null, tint = Color.White) }, label = "Archive") {
+    ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_archive), contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp)) }, label = "Archive") {
       onDismiss(); onComingSoon("Archive")
     }
     ChatMenuRow(icon = { DeleteIcon(tint = Color(0xFFFF6B6B)) }, label = "Delete", tint = Color(0xFFFF6B6B)) {
