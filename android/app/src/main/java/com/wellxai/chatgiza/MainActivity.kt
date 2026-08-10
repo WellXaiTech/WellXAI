@@ -831,6 +831,25 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
               contentAlignment = Alignment.Center
             ) {
               Icon(Icons.Filled.MoreVert, contentDescription = "Conversation menu", tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
+              if (chatMenuOpen) {
+                ChatConversationMenuSheet(
+                  title = activeConversation?.title ?: "New chat",
+                  pinned = activeConversation?.pinned ?: false,
+                  onDismiss = { chatMenuOpen = false },
+                  onShare = {
+                    val transcript = viewModel.messages.joinToString("\n\n") { m -> "${if (m.role == "user") "You" else "ChatGiZa"}: ${m.content}" }
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                      type = "text/plain"
+                      putExtra(Intent.EXTRA_TEXT, transcript)
+                    }
+                    context.startActivity(Intent.createChooser(intent, null))
+                  },
+                  onTogglePin = { activeConversation?.let { viewModel.togglePin(it.id) } },
+                  onFindInChat = { findInChatOpen = true },
+                  onDelete = { chatDeleteConfirm = true },
+                  onComingSoon = { label -> Toast.makeText(context, "$label — coming soon", Toast.LENGTH_SHORT).show() }
+                )
+              }
             }
           }
         },
@@ -947,30 +966,6 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
 
       ChatComposerCard(viewModel)
     }
-  }
-
-  // Was nested inside the "..." button's own small Box in the top bar,
-  // which pinned the sheet's content to that anchor's narrow width instead
-  // of it spanning the full screen like a real ModalBottomSheet should --
-  // moved out to the screen's top level, a plain sibling of the Scaffold.
-  if (chatMenuOpen) {
-    ChatConversationMenuSheet(
-      title = activeConversation?.title ?: "New chat",
-      pinned = activeConversation?.pinned ?: false,
-      onDismiss = { chatMenuOpen = false },
-      onShare = {
-        val transcript = viewModel.messages.joinToString("\n\n") { m -> "${if (m.role == "user") "You" else "ChatGiZa"}: ${m.content}" }
-        val intent = Intent(Intent.ACTION_SEND).apply {
-          type = "text/plain"
-          putExtra(Intent.EXTRA_TEXT, transcript)
-        }
-        context.startActivity(Intent.createChooser(intent, null))
-      },
-      onTogglePin = { activeConversation?.let { viewModel.togglePin(it.id) } },
-      onFindInChat = { findInChatOpen = true },
-      onDelete = { chatDeleteConfirm = true },
-      onComingSoon = { label -> Toast.makeText(context, "$label — coming soon", Toast.LENGTH_SHORT).show() }
-    )
   }
 
   if (chatDeleteConfirm) {
