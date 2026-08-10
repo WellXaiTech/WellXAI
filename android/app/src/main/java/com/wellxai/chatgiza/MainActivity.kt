@@ -253,13 +253,16 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -613,14 +616,21 @@ private fun TwoLineMenuIcon(tint: Color) {
   }
 }
 
+private val DeleteIconPathData = "M13.1143 2C14.6768 2.00001 16.0501 3.03574 16.4795 4.53809L16.8975 6H20.9961V8H19.9307L19.1631 18.749C19.0323 20.5806 17.5081 22 15.6719 22H8.32812C6.49189 22 4.96774 20.5806 4.83691 18.749L4.06934 8H2.99609V6H7.10254L7.52051 4.53809C7.94993 3.03574 9.3232 2.00001 10.8857 2H13.1143ZM8.99609 11V17H10.9961V11H8.99609ZM12.9961 11V17H14.9961V11H12.9961ZM10.8857 4C10.216 4.00001 9.62734 4.44394 9.44336 5.08789L9.18262 6H14.8174L14.5566 5.08789C14.3727 4.44394 13.784 4.00001 13.1143 4H10.8857Z"
+
 @Composable
 private fun DeleteIcon(tint: Color, modifier: Modifier = Modifier) {
-  Icon(
-    painter = androidx.compose.ui.res.painterResource(R.drawable.ic_delete),
-    contentDescription = null,
-    tint = tint,
-    modifier = modifier.size(22.dp)
-  )
+  val path = remember {
+    PathParser().parsePathString(DeleteIconPathData).toPath().apply {
+      fillType = PathFillType.EvenOdd
+    }
+  }
+  Canvas(modifier = modifier.size(22.dp)) {
+    val s = size.width / 24f
+    scale(s, s, pivot = Offset.Zero) {
+      drawPath(path, color = tint)
+    }
+  }
 }
 
 /** Matches the exact custom waveform glyph the user supplied (24x24
