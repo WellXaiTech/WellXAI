@@ -855,13 +855,13 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
 
   Scaffold(
     topBar = {
-      // The bar's own default windowInsets should already extend its
-      // background up under the status bar on an edge-to-edge screen, but
-      // that still left a sliver at the very top showing scrolled text
-      // through -- this outer Box paints the full region (status bar
-      // strip + bar row) itself, with the status bar inset applied only
-      // to the bar's own content, so the fill is never in question.
-      Box(modifier = Modifier.fillMaxWidth().background(colorScheme.background)) {
+      // Translucent, not solid -- a fully opaque bar next to the New Chat
+      // pill's own translucent background (alpha 0.12f) made scrolled
+      // message text look like it "collided" right at the pill instead of
+      // passing smoothly underneath. A uniform translucency across the
+      // whole bar (status bar strip + row) lets scrolled content ghost
+      // through consistently everywhere instead of just at that one spot.
+      Box(modifier = Modifier.fillMaxWidth().background(colorScheme.background.copy(alpha = 0.85f))) {
       CenterAlignedTopAppBar(
         modifier = Modifier.statusBarsPadding(),
         windowInsets = WindowInsets(0, 0, 0, 0),
