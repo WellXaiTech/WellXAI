@@ -258,9 +258,13 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.draw.shadow
@@ -991,7 +995,25 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
         } else {
           LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize(),
+            // A colored box painted on top made it look like a background
+            // was covering the text (rejected) -- this instead masks the
+            // list's own alpha with BlendMode.DstIn, so the text itself
+            // becomes transparent as it nears the bar, with nothing
+            // painted over it.
+            modifier = Modifier
+              .fillMaxSize()
+              .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+              .drawWithContent {
+                drawContent()
+                drawRect(
+                  brush = Brush.verticalGradient(
+                    colors = listOf(Color.Transparent, Color.Black),
+                    startY = 0f,
+                    endY = 260.dp.toPx()
+                  ),
+                  blendMode = BlendMode.DstIn
+                )
+              },
             contentPadding = PaddingValues(
               start = 4.dp,
               end = 4.dp,
