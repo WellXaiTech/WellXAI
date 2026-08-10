@@ -1068,12 +1068,12 @@ private fun ChatMenuRow(
 ) {
   Row(
     verticalAlignment = Alignment.CenterVertically,
-    modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp)
+    modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp)
   ) {
-    // Pulled back toward the card's left edge (negative x) and nudged
-    // down a few dp -- the reference menu keeps its icon column flush
-    // against the edge with barely any inset, ours had drifted right.
-    Box(modifier = Modifier.offset(x = (-8).dp, y = 3.dp)) { icon() }
+    // 16dp matches the title row's own inset above -- the reference
+    // menu keeps a small, consistent gap between the card edge and the
+    // icon column, not flush against it.
+    Box(modifier = Modifier.offset(y = 3.dp)) { icon() }
     Spacer(modifier = Modifier.size(16.dp))
     Text(label, color = tint, fontSize = 16.sp, modifier = Modifier.weight(1f))
     trailing?.invoke()
