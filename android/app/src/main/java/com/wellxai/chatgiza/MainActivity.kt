@@ -1013,8 +1013,8 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
             state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
-              start = 10.dp,
-              end = 10.dp,
+              start = 4.dp,
+              end = 4.dp,
               // No extra buffer here -- same reasoning as the composer's
               // own bottom padding: content should scroll all the way up
               // to the bar's true edge, with the opaque bar itself (not
