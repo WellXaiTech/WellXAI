@@ -1041,7 +1041,10 @@ private fun ChatMenuRow(
     verticalAlignment = Alignment.CenterVertically,
     modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp)
   ) {
-    icon()
+    // Nudged down a few dp -- the row icons' glyphs sit visually high
+    // within their bounding box, so centering the box alone left them
+    // looking offset above the label instead of level with it.
+    Box(modifier = Modifier.padding(top = 3.dp)) { icon() }
     Spacer(modifier = Modifier.size(16.dp))
     Text(label, color = tint, fontSize = 16.sp, modifier = Modifier.weight(1f))
     trailing?.invoke()
