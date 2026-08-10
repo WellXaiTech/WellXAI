@@ -2131,8 +2131,8 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               }),
             contentAlignment = Alignment.Center
           ) {
-            Row(verticalAlignment = Alignment.Bottom) {
-              LiveDotsIndicator(dotColor = Color.Black, animated = false, count = 5, dotSize = 4.dp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              ConnectingDotsSpinner(dotColor = Color.Black, size = 16.dp)
               Spacer(modifier = Modifier.size(8.dp))
               Text("Stop", color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
             }
