@@ -707,12 +707,14 @@ private fun GalleryIconCustom(modifier: Modifier = Modifier, tint: Color = Color
       style = Stroke(width = strokeW)
     )
     drawCircle(color = tint, radius = 1.9f * scale, center = Offset(15.3f * scale, 8.7f * scale))
+    // A single small, sharp triangle -- the earlier wide two-peak shape
+    // spanned almost the whole frame width with a shallow valley, so it
+    // read as a bulky filled block sitting in the window rather than a
+    // recognizable mountain glyph.
     val mountain = Path().apply {
-      moveTo(6f * scale, 17.3f * scale)
-      lineTo(9.9f * scale, 11.3f * scale)
-      lineTo(12.4f * scale, 14.3f * scale)
-      lineTo(14.7f * scale, 11.6f * scale)
-      lineTo(18.1f * scale, 17.3f * scale)
+      moveTo(7.5f * scale, 17.3f * scale)
+      lineTo(12.3f * scale, 11.8f * scale)
+      lineTo(17f * scale, 17.3f * scale)
       close()
     }
     drawPath(mountain, color = tint)
