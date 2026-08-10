@@ -17,6 +17,7 @@
   --placeholder: var(--muted);
   --glow-rgb: 0, 0, 0;
   --box-rgb: 255, 255, 255;
+  --pure-black: #000000;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -232,6 +233,7 @@ textarea:-webkit-autofill:focus {
   --color-composer-border: var(--composer-border);
   --color-border: var(--border);
   --color-muted: var(--muted);
+  --color-pure-black: var(--pure-black);
   --font-sans: var(--font-plus-jakarta-sans);
   --font-mono: var(--font-geist-mono);
 }
