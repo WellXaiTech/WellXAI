@@ -252,7 +252,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
-import androidx.compose.ui.graphics.addPathNodes
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Brush
@@ -662,8 +661,7 @@ private val GalleryIconPathData = "M14.0996 2.5C15.2032 2.5 16.0914 2.49903 16.8
 @Composable
 private fun GalleryIconCustom(modifier: Modifier = Modifier, tint: Color = Color.White) {
   val path = remember {
-    Path().apply {
-      addPathNodes(PathParser().parsePathString(GalleryIconPathData).toNodes())
+    PathParser().parsePathString(GalleryIconPathData).toPath().apply {
       fillType = PathFillType.EvenOdd
     }
   }
