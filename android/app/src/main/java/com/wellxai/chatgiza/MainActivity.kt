@@ -735,7 +735,6 @@ private fun AskImagineTab(label: String, selected: Boolean, onClick: () -> Unit)
   Box(
     modifier = Modifier
       .clip(RoundedCornerShape(16.dp))
-      .background(if (selected) colorScheme.background else Color.Transparent)
       .clickable(onClick = onClick)
       .padding(horizontal = 14.dp, vertical = 6.dp),
     contentAlignment = Alignment.Center
@@ -756,7 +755,6 @@ private fun AskImagineTabs(current: String, onAsk: () -> Unit, onImagine: () -> 
   Row(
     modifier = Modifier
       .clip(RoundedCornerShape(20.dp))
-      .background(colorScheme.onBackground.copy(alpha = 0.06f))
       .padding(4.dp),
     horizontalArrangement = Arrangement.spacedBy(2.dp)
   ) {
@@ -860,19 +858,10 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
 
   Scaffold(
     topBar = {
-      // Solid fill only for the true status-bar strip (clock/battery) --
-      // scrolled text should never show through there. The bar row itself
-      // (hamburger/Ask-Extra/New Chat/dots) stays fully transparent below
-      // that, so scrolled messages read crisply through it, matching the
-      // reference: text visible and legible right up to the New Chat
-      // icon, with the dark strip starting only above that row.
-      Box(modifier = Modifier.fillMaxWidth()) {
-      Box(
-        modifier = Modifier
-          .fillMaxWidth()
-          .windowInsetsTopHeight(WindowInsets.statusBars)
-          .background(colorScheme.background)
-      )
+      // Fully transparent all the way up, including the true status-bar
+      // strip (clock/battery) -- scrolled messages read crisply through
+      // the entire top bar, with only the hamburger/Ask-Extra/New Chat/
+      // dots icons and text sitting visibly on top of the passing content.
       CenterAlignedTopAppBar(
         modifier = Modifier.statusBarsPadding(),
         windowInsets = WindowInsets(0, 0, 0, 0),
@@ -890,8 +879,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
             modifier = Modifier
               .padding(end = 12.dp)
               .height(40.dp)
-              .clip(RoundedCornerShape(percent = 50))
-              .background(colorScheme.onBackground.copy(alpha = 0.12f)),
+              .clip(RoundedCornerShape(percent = 50)),
             verticalAlignment = Alignment.CenterVertically
           ) {
             Box(
@@ -934,7 +922,6 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
       )
-      }
     },
     containerColor = colorScheme.background,
     contentWindowInsets = WindowInsets(0, 0, 0, 0)
