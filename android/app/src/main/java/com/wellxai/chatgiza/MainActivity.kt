@@ -1015,7 +1015,11 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
             contentPadding = PaddingValues(
               start = 10.dp,
               end = 10.dp,
-              top = if (findInChatOpen) 12.dp else padding.calculateTopPadding() + 16.dp,
+              // No extra buffer here -- same reasoning as the composer's
+              // own bottom padding: content should scroll all the way up
+              // to the bar's true edge, with the opaque bar itself (not
+              // a padding gap) being what hides it from there.
+              top = if (findInChatOpen) 12.dp else padding.calculateTopPadding(),
               // The composer now floats on top of this list instead of
               // sitting below it -- this reserves enough room for the
               // last message to scroll up from underneath it, the same
