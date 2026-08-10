@@ -1708,7 +1708,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               painter = androidx.compose.ui.res.painterResource(R.drawable.ic_talking),
               contentDescription = null,
               tint = Color.White,
-              modifier = Modifier.size(14.dp)
+              modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.size(6.dp))
             Text(statusText, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
