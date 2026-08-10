@@ -975,60 +975,71 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
         if (!findInChatOpen || findInChatQuery.isBlank()) viewModel.messages
         else viewModel.messages.filter { it.content.contains(findInChatQuery, ignoreCase = true) }
       }
-      if (displayedMessages.isEmpty()) {
-        Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(top = if (findInChatOpen) 0.dp else padding.calculateTopPadding())) {
-          if (findInChatOpen && findInChatQuery.isNotBlank()) {
+      Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+        if (displayedMessages.isEmpty()) {
+          Box(modifier = Modifier.fillMaxSize().padding(top = if (findInChatOpen) 0.dp else padding.calculateTopPadding())) {
+            if (findInChatOpen && findInChatQuery.isNotBlank()) {
+              Text(
+                "No matches.",
+                color = colorScheme.onBackground.copy(alpha = 0.5f),
+                fontSize = 14.sp,
+                modifier = Modifier.align(Alignment.Center)
+              )
+            }
+          }
+        } else {
+          LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+              start = 10.dp,
+              end = 10.dp,
+              top = if (findInChatOpen) 12.dp else padding.calculateTopPadding() + 16.dp,
+              // The composer now floats on top of this list instead of
+              // sitting below it -- this reserves enough room for the
+              // last message to scroll up from underneath it, the same
+              // way the reference app's chat does.
+              bottom = 110.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+          ) {
+            items(displayedMessages, key = { it.id }) { message ->
+              val isStreamingThis = viewModel.sending && message.id == viewModel.messages.lastOrNull()?.id
+              MessageBubble(
+                message = message,
+                showActions = !isStreamingThis,
+                isSpeaking = speakingMessageId == message.id,
+                chatGizaMediaConnected = viewModel.chatGizaMediaConnected,
+                extraAuthorName = viewModel.userName ?: "You",
+                extraAuthorImage = viewModel.userImage,
+                onSpeakToggle = { toggleSpeak(message) },
+                onRegenerate = { viewModel.regenerateMessage(message.id) },
+                onDelete = { viewModel.deleteMessage(message.id) },
+                onPushToExtra = { caption, destination, onDone ->
+                  val finalText = if (caption.isNullOrBlank()) message.content else "${message.content}\n\n$caption"
+                  viewModel.pushReplyToExtraMedia(finalText, destination, onDone)
+                }
+              )
+            }
+          }
+        }
+        // The composer floats on top of this Box now instead of sitting
+        // below the list as a separate sequential element -- the last
+        // message scrolls up from underneath it, and the composer's own
+        // low-alpha background lets that content show through rather than
+        // stopping short in a gap above it.
+        Column(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
+          if (viewModel.errorMessage != null) {
             Text(
-              "No matches.",
-              color = colorScheme.onBackground.copy(alpha = 0.5f),
-              fontSize = 14.sp,
-              modifier = Modifier.align(Alignment.Center)
+              viewModel.errorMessage ?: "",
+              color = Color(0xFFFF6B6B),
+              fontSize = 12.sp,
+              modifier = Modifier.padding(horizontal = 16.dp)
             )
           }
-        }
-      } else {
-        LazyColumn(
-          state = listState,
-          modifier = Modifier.weight(1f).fillMaxWidth(),
-          contentPadding = PaddingValues(
-            start = 10.dp,
-            end = 10.dp,
-            top = if (findInChatOpen) 12.dp else padding.calculateTopPadding() + 16.dp,
-            bottom = 16.dp
-          ),
-          verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-          items(displayedMessages, key = { it.id }) { message ->
-            val isStreamingThis = viewModel.sending && message.id == viewModel.messages.lastOrNull()?.id
-            MessageBubble(
-              message = message,
-              showActions = !isStreamingThis,
-              isSpeaking = speakingMessageId == message.id,
-              chatGizaMediaConnected = viewModel.chatGizaMediaConnected,
-              extraAuthorName = viewModel.userName ?: "You",
-              extraAuthorImage = viewModel.userImage,
-              onSpeakToggle = { toggleSpeak(message) },
-              onRegenerate = { viewModel.regenerateMessage(message.id) },
-              onDelete = { viewModel.deleteMessage(message.id) },
-              onPushToExtra = { caption, destination, onDone ->
-                val finalText = if (caption.isNullOrBlank()) message.content else "${message.content}\n\n$caption"
-                viewModel.pushReplyToExtraMedia(finalText, destination, onDone)
-              }
-            )
-          }
+          ChatComposerCard(viewModel)
         }
       }
-
-      if (viewModel.errorMessage != null) {
-        Text(
-          viewModel.errorMessage ?: "",
-          color = Color(0xFFFF6B6B),
-          fontSize = 12.sp,
-          modifier = Modifier.padding(horizontal = 16.dp)
-        )
-      }
-
-      ChatComposerCard(viewModel)
     }
   }
 
