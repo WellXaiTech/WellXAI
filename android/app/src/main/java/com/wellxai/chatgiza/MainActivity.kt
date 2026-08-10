@@ -304,6 +304,8 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.Locale
 import kotlin.math.roundToInt
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -1901,7 +1903,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               .padding(horizontal = 14.dp)
           ) {
             if (isConnecting) {
-              LiveDotsIndicator(dotColor = Color.White, animated = true)
+              ConnectingDotsSpinner(dotColor = Color.White)
               Spacer(modifier = Modifier.size(8.dp))
               Text("Connecting…", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             } else {
@@ -2123,8 +2125,8 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               }),
             contentAlignment = Alignment.Center
           ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              LiveDotsIndicator(dotColor = Color.Black, animated = false)
+            Row(verticalAlignment = Alignment.Bottom) {
+              LiveDotsIndicator(dotColor = Color.Black, animated = false, count = 5, dotSize = 4.dp)
               Spacer(modifier = Modifier.size(8.dp))
               Text("Stop", color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
             }
@@ -2353,10 +2355,11 @@ private fun PushToTalkPill(enabled: Boolean = true, onPress: () -> Unit, onRelea
 // to move), pulsing out of phase when used for the Connecting spinner
 // instead of a spinning ring.
 @Composable
-private fun LiveDotsIndicator(dotColor: Color, animated: Boolean = true) {
+private fun LiveDotsIndicator(dotColor: Color, animated: Boolean = true, count: Int = 3, dotSize: Dp = 5.dp) {
   val transition = rememberInfiniteTransition(label = "liveDots")
-  Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-    listOf(0, 120, 240).forEach { delayMs ->
+  Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+    (0 until count).forEach { i ->
+      val delayMs = i * 120
       val scale = if (animated) {
         val animatedScale by transition.animateFloat(
           initialValue = 0.4f,
@@ -2374,10 +2377,43 @@ private fun LiveDotsIndicator(dotColor: Color, animated: Boolean = true) {
       }
       Box(
         modifier = Modifier
-          .size(5.dp)
+          .size(dotSize)
           .scale(scale)
           .clip(CircleShape)
           .background(dotColor)
+      )
+    }
+  }
+}
+
+// Dots arranged in a ring with a rotating "comet" brightness sweep, used
+// for the Connecting status instead of a plain spinning circle.
+@Composable
+private fun ConnectingDotsSpinner(dotColor: Color, size: Dp = 16.dp) {
+  val transition = rememberInfiniteTransition(label = "connectingSpin")
+  val rotation by transition.animateFloat(
+    initialValue = 0f,
+    targetValue = 360f,
+    animationSpec = infiniteRepeatable(animation = tween(durationMillis = 900, easing = LinearEasing)),
+    label = "spin"
+  )
+  val dotCount = 8
+  Box(modifier = Modifier.size(size)) {
+    for (i in 0 until dotCount) {
+      val angleDeg = i * (360f / dotCount)
+      val diff = ((angleDeg - rotation) % 360f + 360f) % 360f
+      val alpha = (1f - diff / 360f).coerceIn(0.15f, 1f)
+      Box(
+        modifier = Modifier
+          .align(Alignment.Center)
+          .offset {
+            val radiusPx = size.toPx() / 2f * 0.78f
+            val rad = Math.toRadians(angleDeg.toDouble())
+            IntOffset((radiusPx * cos(rad)).roundToInt(), (radiusPx * sin(rad)).roundToInt())
+          }
+          .size(size * 0.2f)
+          .clip(CircleShape)
+          .background(dotColor.copy(alpha = alpha))
       )
     }
   }
