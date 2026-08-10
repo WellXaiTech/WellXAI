@@ -46,6 +46,8 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.StartOffset
+import androidx.compose.animation.core.StartOffsetType
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -247,6 +249,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
@@ -1841,6 +1844,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
       // socket exception message isn't something a user should ever see,
       // so the status now always reads "Go ahead" outside of the
       // AI-speaking state, regardless of what controller.errorMessage says.
+      val isConnecting = controller.connectionState == RealtimeVisionController.ConnectionState.Connecting
       val statusText = if (controller.isAiSpeaking) "ChatGiZa is speaking…" else "Go ahead"
 
       // No back arrow here by design — exiting Live Vision happens via the
@@ -1879,14 +1883,24 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               .background(Color.White.copy(alpha = 0.12f))
               .padding(horizontal = 14.dp)
           ) {
-            Icon(
-              painter = androidx.compose.ui.res.painterResource(R.drawable.ic_talking),
-              contentDescription = null,
-              tint = Color.White,
-              modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.size(6.dp))
-            Text(statusText, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            if (isConnecting) {
+              CircularProgressIndicator(
+                color = Color.White,
+                strokeWidth = 2.dp,
+                modifier = Modifier.size(16.dp)
+              )
+              Spacer(modifier = Modifier.size(8.dp))
+              Text("Connecting…", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            } else {
+              Icon(
+                painter = androidx.compose.ui.res.painterResource(R.drawable.ic_talking),
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(20.dp)
+              )
+              Spacer(modifier = Modifier.size(6.dp))
+              Text(statusText, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            }
           }
           if (cameraEnabled) {
             LiveCornerButton(
@@ -1919,7 +1933,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
           Box {
-            VoiceControlPill(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_video), contentDescription = "Camera", active = cameraEnabled) {
+            VoiceControlPill(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_video), contentDescription = "Camera", active = cameraEnabled, enabled = !isConnecting) {
               cameraMenuOpen = true
             }
             DropdownMenu(
@@ -1960,22 +1974,23 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               }
             }
           }
-          VoiceControlPill(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_speaker), contentDescription = "Speaker", active = speakerEnabled) {
+          VoiceControlPill(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_speaker), contentDescription = "Speaker", active = speakerEnabled, enabled = !isConnecting) {
             speakerEnabled = !speakerEnabled
             controller.setSpeakerEnabled(speakerEnabled)
           }
           if (viewModel.voiceActivationMode == "push_to_talk") {
             PushToTalkPill(
+              enabled = !isConnecting,
               onPress = { controller.beginPushToTalk() },
               onRelease = { controller.endPushToTalk() }
             )
           } else {
-            VoiceControlPill(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mic), contentDescription = "Microphone", active = !micMuted) {
+            VoiceControlPill(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mic), contentDescription = "Microphone", active = !micMuted, enabled = !isConnecting) {
               micMuted = !micMuted
               controller.setMicMuted(micMuted)
             }
           }
-          VoiceControlPill(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_settings), contentDescription = "Settings") {
+          VoiceControlPill(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_settings), contentDescription = "Settings", enabled = !isConnecting) {
             voiceSettingsOpen = true
           }
         }
@@ -2059,7 +2074,11 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               }),
             contentAlignment = Alignment.Center
           ) {
-            Text("Stop", color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              LiveDotsIndicator(dotColor = Color.Black)
+              Spacer(modifier = Modifier.size(8.dp))
+              Text("Stop", color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+            }
           }
         }
       }
@@ -2186,28 +2205,29 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
 }
 
 @Composable
-private fun VoiceControlPill(icon: ImageVector, contentDescription: String, active: Boolean = true, onClick: () -> Unit) {
-  VoiceControlPillShell(contentDescription, active, onClick) { tint ->
+private fun VoiceControlPill(icon: ImageVector, contentDescription: String, active: Boolean = true, enabled: Boolean = true, onClick: () -> Unit) {
+  VoiceControlPillShell(contentDescription, active, enabled, onClick) { tint ->
     Icon(icon, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(20.dp))
   }
 }
 
 @Composable
-private fun VoiceControlPill(painter: androidx.compose.ui.graphics.painter.Painter, contentDescription: String, active: Boolean = true, onClick: () -> Unit) {
-  VoiceControlPillShell(contentDescription, active, onClick) { tint ->
+private fun VoiceControlPill(painter: androidx.compose.ui.graphics.painter.Painter, contentDescription: String, active: Boolean = true, enabled: Boolean = true, onClick: () -> Unit) {
+  VoiceControlPillShell(contentDescription, active, enabled, onClick) { tint ->
     Icon(painter, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(20.dp))
   }
 }
 
 @Composable
-private fun VoiceControlPillShell(contentDescription: String, active: Boolean, onClick: () -> Unit, icon: @Composable (Color) -> Unit) {
+private fun VoiceControlPillShell(contentDescription: String, active: Boolean, enabled: Boolean = true, onClick: () -> Unit, icon: @Composable (Color) -> Unit) {
   Box(
     modifier = Modifier
       .size(width = 84.dp, height = 46.dp)
+      .alpha(if (enabled) 1f else 0.4f)
       .clip(RoundedCornerShape(percent = 50))
       .background(Color(0xFF1F1F1F))
       .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(percent = 50))
-      .clickable(onClick = onClick),
+      .clickable(enabled = enabled, onClick = onClick),
     contentAlignment = Alignment.Center
   ) {
     // 0.35 read as "the icon vanished into the dark pill" when a control
@@ -2249,15 +2269,17 @@ private fun LiveCornerButton(
 /** Press-and-hold mic control for push-to-talk mode: streams audio only
  * while the user's finger is down, unlike [VoiceControlPill]'s tap-toggle. */
 @Composable
-private fun PushToTalkPill(onPress: () -> Unit, onRelease: () -> Unit) {
+private fun PushToTalkPill(enabled: Boolean = true, onPress: () -> Unit, onRelease: () -> Unit) {
   var pressed by remember { mutableStateOf(false) }
   Box(
     modifier = Modifier
       .size(72.dp)
+      .alpha(if (enabled) 1f else 0.4f)
       .clip(CircleShape)
       .background(if (pressed) Color.White else Color(0xFF1F1F1F))
       .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = CircleShape)
-      .pointerInput(Unit) {
+      .pointerInput(enabled) {
+        if (!enabled) return@pointerInput
         awaitEachGesture {
           awaitFirstDown(requireUnconsumed = false)
           pressed = true
@@ -2275,6 +2297,34 @@ private fun PushToTalkPill(onPress: () -> Unit, onRelease: () -> Unit) {
       tint = if (pressed) Color.Black else Color.White,
       modifier = Modifier.size(26.dp)
     )
+  }
+}
+
+// Three dots pulsing out of phase, next to the Live Vision Stop button --
+// reads as "this call is live" the same way a recording indicator does.
+@Composable
+private fun LiveDotsIndicator(dotColor: Color) {
+  val transition = rememberInfiniteTransition(label = "liveDots")
+  Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+    listOf(0, 150, 300).forEach { delayMs ->
+      val scale by transition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+          animation = tween(durationMillis = 500, easing = LinearEasing),
+          repeatMode = RepeatMode.Reverse,
+          initialStartOffset = StartOffset(delayMs, StartOffsetType.Delay)
+        ),
+        label = "dot"
+      )
+      Box(
+        modifier = Modifier
+          .size(5.dp)
+          .scale(scale)
+          .clip(CircleShape)
+          .background(dotColor)
+      )
+    }
   }
 }
 
