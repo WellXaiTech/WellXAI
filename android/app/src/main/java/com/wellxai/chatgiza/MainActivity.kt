@@ -1035,7 +1035,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
           modifier = Modifier
             .align(Alignment.TopCenter)
             .fillMaxWidth()
-            .height(160.dp)
+            .height(260.dp)
             .background(
               Brush.verticalGradient(
                 0f to colorScheme.background,
