@@ -127,6 +127,26 @@ class TokenStore(context: Context) {
     prefs.edit().putBoolean(KEY_CHATGIZA_MEDIA_CONNECTED, value).apply()
   }
 
+  fun getPersonalizeChatGiza(): Boolean = prefs.getBoolean(KEY_PERSONALIZE_CHATGIZA, true)
+  fun setPersonalizeChatGiza(value: Boolean) {
+    prefs.edit().putBoolean(KEY_PERSONALIZE_CHATGIZA, value).apply()
+  }
+
+  fun getChatLinkSharing(): Boolean = prefs.getBoolean(KEY_CHAT_LINK_SHARING, true)
+  fun setChatLinkSharing(value: Boolean) {
+    prefs.edit().putBoolean(KEY_CHAT_LINK_SHARING, value).apply()
+  }
+
+  fun getKidsModeEnabled(): Boolean = prefs.getBoolean(KEY_KIDS_MODE_ENABLED, false)
+  fun setKidsModeEnabled(value: Boolean) {
+    prefs.edit().putBoolean(KEY_KIDS_MODE_ENABLED, value).apply()
+  }
+
+  fun getBlurMatureContentEnabled(): Boolean = prefs.getBoolean(KEY_BLUR_MATURE_CONTENT_ENABLED, true)
+  fun setBlurMatureContentEnabled(value: Boolean) {
+    prefs.edit().putBoolean(KEY_BLUR_MATURE_CONTENT_ENABLED, value).apply()
+  }
+
   /** Wipes the session but keeps device-level prefs (haptics, voice) that
    * aren't tied to any particular account. Deliberately does NOT preserve
    * the active personality — a new sign-in on a shared device should land
@@ -145,6 +165,10 @@ class TokenStore(context: Context) {
     val voiceOutputDevice = getVoiceOutputDevice()
     val premiumChatVoiceEnabled = getPremiumChatVoiceEnabled()
     val ageConfirmed18Plus = getAgeConfirmed18Plus()
+    val personalizeChatGiza = getPersonalizeChatGiza()
+    val chatLinkSharing = getChatLinkSharing()
+    val kidsModeEnabled = getKidsModeEnabled()
+    val blurMatureContentEnabled = getBlurMatureContentEnabled()
     prefs.edit().clear().apply()
     setHapticsEnabled(hapticsEnabled)
     setHapticsOnPress(hapticsOnPress)
@@ -157,6 +181,10 @@ class TokenStore(context: Context) {
     setVoiceOutputDevice(voiceOutputDevice)
     setPremiumChatVoiceEnabled(premiumChatVoiceEnabled)
     setAgeConfirmed18Plus(ageConfirmed18Plus)
+    setPersonalizeChatGiza(personalizeChatGiza)
+    setChatLinkSharing(chatLinkSharing)
+    setKidsModeEnabled(kidsModeEnabled)
+    setBlurMatureContentEnabled(blurMatureContentEnabled)
   }
 
   companion object {
@@ -179,5 +207,9 @@ class TokenStore(context: Context) {
     private const val KEY_CUSTOM_PERSONALITY_TEXT = "custom_personality_text"
     private const val KEY_AGE_CONFIRMED_18PLUS = "age_confirmed_18plus"
     private const val KEY_CHATGIZA_MEDIA_CONNECTED = "chatgiza_media_connected"
+    private const val KEY_PERSONALIZE_CHATGIZA = "personalize_chatgiza_enabled"
+    private const val KEY_CHAT_LINK_SHARING = "chat_link_sharing_enabled"
+    private const val KEY_KIDS_MODE_ENABLED = "kids_mode_enabled"
+    private const val KEY_BLUR_MATURE_CONTENT_ENABLED = "blur_mature_content_enabled"
   }
 }
