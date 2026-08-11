@@ -3352,6 +3352,20 @@ internal fun MediaPostVideoPlayer(url: String, modifier: Modifier = Modifier) {
 // posted automatically just from connecting.
 @Composable
 private fun ConnectFeatureRow(icon: ImageVector, title: String, body: String) {
+  ConnectFeatureRowShell(title, body) {
+    Icon(icon, contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.size(18.dp))
+  }
+}
+
+@Composable
+private fun ConnectFeatureRow(painter: androidx.compose.ui.graphics.painter.Painter, title: String, body: String) {
+  ConnectFeatureRowShell(title, body) {
+    Icon(painter, contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.size(18.dp))
+  }
+}
+
+@Composable
+private fun ConnectFeatureRowShell(title: String, body: String, icon: @Composable () -> Unit) {
   Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
     Box(
       modifier = Modifier
@@ -3360,7 +3374,7 @@ private fun ConnectFeatureRow(icon: ImageVector, title: String, body: String) {
         .background(Color(0xFFFFC94A).copy(alpha = 0.14f)),
       contentAlignment = Alignment.Center
     ) {
-      Icon(icon, contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.size(18.dp))
+      icon()
     }
     Spacer(modifier = Modifier.width(12.dp))
     Column {
@@ -3408,7 +3422,7 @@ internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () ->
       Spacer(modifier = Modifier.height(6.dp))
       Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.08f)))
       ConnectFeatureRow(
-        icon = Icons.Filled.Send,
+        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_extra_send),
         title = "Post",
         body = "Tuma barua, makala, au maandishi marefu moja kwa moja kwenye Extra Media -- ukitaka tu."
       )
@@ -6694,7 +6708,7 @@ private fun ActionBarExtraItem(label: String, tint: Color, connected: Boolean, o
       .clickable { if (connected) onOpen() else onNotConnected() },
     contentAlignment = Alignment.Center
   ) {
-    Icon(Icons.Filled.Send, contentDescription = label, tint = tint, modifier = Modifier.size(20.dp))
+    Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_extra_send), contentDescription = label, tint = tint, modifier = Modifier.size(20.dp))
     Box(
       modifier = Modifier
         .align(Alignment.BottomEnd)
@@ -6716,6 +6730,20 @@ private fun ActionBarExtraItem(label: String, tint: Color, connected: Boolean, o
 // first, then also lands on the preview.
 @Composable
 private fun ExtraOptionRow(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
+  ExtraOptionRowShell(title, subtitle, onClick) {
+    Icon(icon, contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.size(20.dp))
+  }
+}
+
+@Composable
+private fun ExtraOptionRow(painter: androidx.compose.ui.graphics.painter.Painter, title: String, subtitle: String, onClick: () -> Unit) {
+  ExtraOptionRowShell(title, subtitle, onClick) {
+    Icon(painter, contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.size(20.dp))
+  }
+}
+
+@Composable
+private fun ExtraOptionRowShell(title: String, subtitle: String, onClick: () -> Unit, icon: @Composable () -> Unit) {
   Row(
     modifier = Modifier
       .fillMaxWidth()
@@ -6729,7 +6757,7 @@ private fun ExtraOptionRow(icon: ImageVector, title: String, subtitle: String, o
       modifier = Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).background(Color(0xFFFFC94A).copy(alpha = 0.14f)),
       contentAlignment = Alignment.Center
     ) {
-      Icon(icon, contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.size(20.dp))
+      icon()
     }
     Spacer(modifier = Modifier.width(14.dp))
     Column(modifier = Modifier.weight(1f)) {
@@ -6761,7 +6789,7 @@ private fun ExtraOptionsSheet(onDismiss: () -> Unit, onPost: () -> Unit, onCapti
       )
       Spacer(modifier = Modifier.height(20.dp))
       ExtraOptionRow(
-        icon = Icons.Filled.Send,
+        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_extra_send),
         title = "Post",
         subtitle = "Send this reply to Extra Media as-is.",
         onClick = onPost
@@ -6939,7 +6967,7 @@ private fun CaptionComposerSheet(onDismiss: () -> Unit, onSubmit: (String) -> Un
           .background(Color(0xFFFFC94A).copy(alpha = 0.14f)),
         contentAlignment = Alignment.Center
       ) {
-        Icon(Icons.Filled.Send, contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.size(24.dp))
+        Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_extra_send), contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.size(24.dp))
       }
       Spacer(modifier = Modifier.height(16.dp))
       Text("Add a caption", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
@@ -6979,7 +7007,7 @@ private fun CaptionComposerSheet(onDismiss: () -> Unit, onSubmit: (String) -> Un
             .clip(CircleShape)
             .background(if (text.isNotBlank()) Color(0xFFFFC94A) else Color(0xFFFFC94A).copy(alpha = 0.35f))
         ) {
-          Icon(Icons.Filled.Send, contentDescription = "Send", tint = Color.Black, modifier = Modifier.size(22.dp))
+          Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_extra_send), contentDescription = "Send", tint = Color.Black, modifier = Modifier.size(22.dp))
         }
       }
       Spacer(modifier = Modifier.height(14.dp))
