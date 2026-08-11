@@ -8,13 +8,35 @@ import androidx.security.crypto.MasterKey
 /** Encrypted on-device storage for the mobile bearer token — this is the
  * app's whole session; nothing else identifies the signed-in user locally. */
 class TokenStore(context: Context) {
-  private val prefs: SharedPreferences by lazy {
+  // The Keystore-backed encryption key behind this can go bad on its own
+  // (OS restore to a new device, a ROM/OS update that invalidates it) --
+  // without this, that throws inside `by lazy` and crashes the app on
+  // every single launch from then on, with no way for the user to recover
+  // short of a reinstall. Self-healing here (wipe + recreate, and fall
+  // back to a plain unencrypted store as a last resort) trades "signed
+  // out once" for "app permanently unusable".
+  private val prefs: SharedPreferences by lazy { buildPrefs(context) }
+
+  private fun buildPrefs(context: Context): SharedPreferences {
+    return try {
+      buildEncryptedPrefs(context)
+    } catch (e: Exception) {
+      context.deleteSharedPreferences(PREFS_NAME)
+      try {
+        buildEncryptedPrefs(context)
+      } catch (e2: Exception) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+      }
+    }
+  }
+
+  private fun buildEncryptedPrefs(context: Context): SharedPreferences {
     val masterKey = MasterKey.Builder(context)
       .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
       .build()
-    EncryptedSharedPreferences.create(
+    return EncryptedSharedPreferences.create(
       context,
-      "chatgiza_secure_prefs",
+      PREFS_NAME,
       masterKey,
       EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
       EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
@@ -188,6 +210,7 @@ class TokenStore(context: Context) {
   }
 
   companion object {
+    private const val PREFS_NAME = "chatgiza_secure_prefs"
     private const val KEY_TOKEN = "mobile_token"
     private const val KEY_ID = "user_id"
     private const val KEY_NAME = "user_name"
