@@ -1745,6 +1745,11 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
   val lifecycleOwner = LocalLifecycleOwner.current
   val coroutineScope = rememberCoroutineScope()
 
+  // Lets the voice picker actually speak a sample when a card is tapped,
+  // instead of only changing the selection silently.
+  val previewTts = remember { PremiumTtsPlayer(context) }
+  DisposableEffect(Unit) { onDispose { previewTts.stop() } }
+
   var hasMicPermission by remember {
     mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
   }
@@ -2149,6 +2154,14 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           viewModel.selectVoice(id)
           controller.stop()
           startLiveSession()
+        },
+        onPreviewVoice = { id ->
+          previewTts.stop()
+          viewModel.fetchVoicePreview(id, "Hi, this is how I sound.") { bytes ->
+            if (bytes != null) {
+              previewTts.play(bytes, onDone = {}, onError = {})
+            }
+          }
         },
         personality = viewModel.personality,
         onPersonalityRequest = { option ->
@@ -2603,6 +2616,7 @@ private fun PersonalityPill(option: PersonalityOption, selected: Boolean, onClic
 private fun LiveVoiceSettingsSheet(
   selectedVoiceId: String,
   onVoiceChange: (String) -> Unit,
+  onPreviewVoice: (String) -> Unit,
   personality: String,
   onPersonalityRequest: (PersonalityOption) -> Unit,
   activationMode: String,
@@ -2640,7 +2654,10 @@ private fun LiveVoiceSettingsSheet(
           VoiceGradientCard(
             option = option,
             selected = selectedVoiceId == option.id,
-            onClick = { onVoiceChange(option.id) }
+            onClick = {
+              onVoiceChange(option.id)
+              onPreviewVoice(option.id)
+            }
           )
         }
       }
