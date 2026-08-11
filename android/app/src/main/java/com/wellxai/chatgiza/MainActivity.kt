@@ -394,7 +394,7 @@ class MainActivity : ComponentActivity() {
               // drag needs to cover to fully open) is built around; overriding
               // it made the swipe stop short of fully open.
               drawerContent = {
-                DismissibleDrawerSheet(drawerContainerColor = colorScheme.background) {
+                DismissibleDrawerSheet(drawerContainerColor = Color.Black) {
                   HistoryScreen(viewModel)
                 }
               }
@@ -1592,27 +1592,27 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
         .padding(horizontal = 6.dp, vertical = 8.dp),
       horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-      QuickActionChip(icon = { Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(19.dp)) }, label = "GiZa Extra") {
+      QuickActionChip(icon = { Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(22.dp)) }, label = "GiZa Extra") {
         viewModel.openChatGizaMedia()
       }
-      QuickActionChip(icon = { Icon(Icons.Outlined.Videocam, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(19.dp)) }, label = "Create Video") {
+      QuickActionChip(icon = { Icon(Icons.Outlined.Videocam, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(22.dp)) }, label = "Create Video") {
         viewModel.onInputChange("Create a video of ")
         focusRequester.requestFocus()
       }
-      QuickActionChip(icon = { Icon(Icons.Outlined.Image, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(19.dp)) }, label = "Create an image") {
+      QuickActionChip(icon = { Icon(Icons.Outlined.Image, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(22.dp)) }, label = "Create an image") {
         viewModel.onInputChange("Create an image of ")
         focusRequester.requestFocus()
       }
-      QuickActionChip(icon = { Icon(Icons.Outlined.Description, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(19.dp)) }, label = "Analyze Doc") {
+      QuickActionChip(icon = { Icon(Icons.Outlined.Description, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(22.dp)) }, label = "Analyze Doc") {
         filePicker.launch("*/*")
       }
-      QuickActionChip(icon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_waveform_speak), contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(19.dp)) }, label = "Voice Mode") {
+      QuickActionChip(icon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_waveform_speak), contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(22.dp)) }, label = "Voice Mode") {
         viewModel.openLiveVision()
       }
-      QuickActionChip(icon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_camera), contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(19.dp)) }, label = "Open Camera") {
+      QuickActionChip(icon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_camera), contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(22.dp)) }, label = "Open Camera") {
         if (hasCameraPermission) launchCamera() else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
       }
-      QuickActionChip(icon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_customize_sparkle), contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(19.dp)) }, label = "Customize GiZa") {
+      QuickActionChip(icon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_customize_sparkle), contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(22.dp)) }, label = "Customize GiZa") {
         viewModel.openAccount()
       }
     }
@@ -1998,16 +1998,16 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
 private fun QuickActionChip(icon: @Composable () -> Unit, label: String, onClick: () -> Unit) {
   Row(
     modifier = Modifier
-      .height(44.dp)
-      .clip(RoundedCornerShape(22.dp))
+      .height(52.dp)
+      .clip(RoundedCornerShape(26.dp))
       .background(colorScheme.onBackground.copy(alpha = 0.08f))
       .clickable(onClick = onClick)
-      .padding(horizontal = 16.dp),
+      .padding(horizontal = 20.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
     icon()
-    Spacer(modifier = Modifier.width(8.dp))
-    Text(label, color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
+    Spacer(modifier = Modifier.width(9.dp))
+    Text(label, color = colorScheme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
   }
 }
 
