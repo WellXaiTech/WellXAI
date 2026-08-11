@@ -1648,13 +1648,21 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
         }
         Spacer(modifier = Modifier.weight(1f))
 
-        // MIC BUTTON
+        // MIC BUTTON -- focuses the text field and raises the keyboard so
+        // the user's own keyboard mic (its inline voice-typing row) is one
+        // tap away, instead of launching Android's separate speech-recognition
+        // dialog. Per explicit request: the dialog didn't match what was
+        // wanted, and no app can trigger the keyboard's own voice UI directly.
         Box(
           modifier = Modifier
             .size(36.dp)
             .clip(CircleShape)
             .background(Color(0xFF333333))
-            .clickable { launchSpeech(autoSend = false) },
+            .clickable {
+              focusRequester.requestFocus()
+              keyboardController?.show()
+              keyboardVisible = true
+            },
           contentAlignment = Alignment.Center
         ) {
           Icon(
