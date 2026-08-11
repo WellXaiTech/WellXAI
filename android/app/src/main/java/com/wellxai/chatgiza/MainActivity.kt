@@ -394,7 +394,7 @@ class MainActivity : ComponentActivity() {
               // drag needs to cover to fully open) is built around; overriding
               // it made the swipe stop short of fully open.
               drawerContent = {
-                DismissibleDrawerSheet(drawerContainerColor = Color(0xFF111113)) {
+                DismissibleDrawerSheet(drawerContainerColor = colorScheme.background) {
                   HistoryScreen(viewModel)
                 }
               }
