@@ -821,12 +821,16 @@ private fun MediaBottomNavigation(
       tint = Color.Black
     )
 
-    // Visual-only for now -- no saved-media library screen built yet.
-    Icon(
-      androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_add_photo),
-      contentDescription = "Media",
-      tint = Color.DarkGray
-    )
+    // Opens your own profile grid -- the same real posts/images grid
+    // MediaProfileScreen already builds for any profile, just aimed at
+    // yourself, instead of a separate not-yet-built gallery screen.
+    IconButton(onClick = onProfileClick) {
+      Icon(
+        androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_add_photo),
+        contentDescription = "Media",
+        tint = Color.DarkGray
+      )
+    }
 
     IconButton(onClick = onCreateClick) {
       Icon(
