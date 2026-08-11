@@ -642,11 +642,15 @@ private fun MediaPost(
       verticalAlignment = Alignment.CenterVertically
     ) {
       IconButton(onClick = onLikeClick) {
-        Icon(
-          imageVector = if (post.likedByMe) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-          contentDescription = "Like",
-          tint = if (post.likedByMe) Color.Red else Color.Black
-        )
+        if (post.likedByMe) {
+          Icon(imageVector = Icons.Filled.Favorite, contentDescription = "Like", tint = Color.Red)
+        } else {
+          Icon(
+            painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_heart),
+            contentDescription = "Like",
+            tint = Color.Black
+          )
+        }
       }
       Text(text = post.likeCount.toString(), fontSize = 13.sp, color = Color.Black)
 
