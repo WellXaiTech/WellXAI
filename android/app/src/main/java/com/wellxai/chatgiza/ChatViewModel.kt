@@ -615,35 +615,39 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     tokenStore.setPasteAsFileMode(value)
   }
 
-  var personalizeChatGizaEnabled by mutableStateOf(true)
+  var personalizeChatGizaEnabled by mutableStateOf(tokenStore.getPersonalizeChatGiza())
     private set
 
   fun setPersonalizeChatGiza(value: Boolean) {
     personalizeChatGizaEnabled = value
+    tokenStore.setPersonalizeChatGiza(value)
   }
 
-  var chatLinkSharingEnabled by mutableStateOf(true)
+  var chatLinkSharingEnabled by mutableStateOf(tokenStore.getChatLinkSharing())
     private set
 
   fun setChatLinkSharing(value: Boolean) {
     chatLinkSharingEnabled = value
+    tokenStore.setChatLinkSharing(value)
   }
 
   // Named update*/not set* -- a same-named fun collides with the
   // auto-generated property setter's JVM signature and fails the build
   // (bit this exact session twice already for other prefs).
-  var kidsModeEnabled by mutableStateOf(false)
+  var kidsModeEnabled by mutableStateOf(tokenStore.getKidsModeEnabled())
     private set
 
   fun updateKidsModeEnabled(value: Boolean) {
     kidsModeEnabled = value
+    tokenStore.setKidsModeEnabled(value)
   }
 
-  var blurMatureContentEnabled by mutableStateOf(true)
+  var blurMatureContentEnabled by mutableStateOf(tokenStore.getBlurMatureContentEnabled())
     private set
 
   fun updateBlurMatureContentEnabled(value: Boolean) {
     blurMatureContentEnabled = value
+    tokenStore.setBlurMatureContentEnabled(value)
   }
 
   fun saveProfile() {
@@ -670,7 +674,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     viewModelScope.launch {
       when (val result = ChatGizaApi.getSettings(token)) {
         is ApiResult.Success -> settingsData = result.value
-        is ApiResult.Failure -> {}
+        is ApiResult.Failure -> errorMessage = result.message
       }
     }
   }
@@ -903,8 +907,10 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     projects = emptyList()
     scheduledTasks = emptyList()
     billingSummary = null
-    personalizeChatGizaEnabled = true
-    chatLinkSharingEnabled = true
+    personalizeChatGizaEnabled = tokenStore.getPersonalizeChatGiza()
+    chatLinkSharingEnabled = tokenStore.getChatLinkSharing()
+    kidsModeEnabled = tokenStore.getKidsModeEnabled()
+    blurMatureContentEnabled = tokenStore.getBlurMatureContentEnabled()
     selectedVoiceId = tokenStore.getVoiceName()
     personality = tokenStore.getPersonality()
     customPersonalityText = tokenStore.getCustomPersonalityText()
@@ -1149,7 +1155,10 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
       activeConversationId = null
       messages = emptyList()
     }
-    viewModelScope.launch { ChatGizaApi.saveHistory(token, updated, updatedDeleted) }
+    viewModelScope.launch {
+      val result = ChatGizaApi.saveHistory(token, updated, updatedDeleted)
+      if (result is ApiResult.Failure) errorMessage = result.message
+    }
   }
 
   fun deleteAllConversations() {
@@ -1160,7 +1169,10 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     deletedIds = updatedDeleted
     activeConversationId = null
     messages = emptyList()
-    viewModelScope.launch { ChatGizaApi.saveHistory(token, emptyList(), updatedDeleted) }
+    viewModelScope.launch {
+      val result = ChatGizaApi.saveHistory(token, emptyList(), updatedDeleted)
+      if (result is ApiResult.Failure) errorMessage = result.message
+    }
   }
 
   var deletingAccount by mutableStateOf(false)
@@ -1189,14 +1201,20 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     if (trimmed.isEmpty()) return
     val updated = conversations.map { if (it.id == id) it.copy(title = trimmed) else it }
     conversations = updated
-    viewModelScope.launch { ChatGizaApi.saveHistory(token, updated, deletedIds) }
+    viewModelScope.launch {
+      val result = ChatGizaApi.saveHistory(token, updated, deletedIds)
+      if (result is ApiResult.Failure) errorMessage = result.message
+    }
   }
 
   fun togglePin(id: String) {
     val token = tokenStore.getToken() ?: return
     val updated = sortConversations(conversations.map { if (it.id == id) it.copy(pinned = !it.pinned) else it })
     conversations = updated
-    viewModelScope.launch { ChatGizaApi.saveHistory(token, updated, deletedIds) }
+    viewModelScope.launch {
+      val result = ChatGizaApi.saveHistory(token, updated, deletedIds)
+      if (result is ApiResult.Failure) errorMessage = result.message
+    }
   }
 
   fun selectConversation(id: String) {
@@ -1299,7 +1317,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
       } else {
         conversations.map { if (it.id == conversationId) updated else it }
       }
-      ChatGizaApi.saveHistory(token, conversations, deletedIds)
+      val saveResult = ChatGizaApi.saveHistory(token, conversations, deletedIds)
+      if (saveResult is ApiResult.Failure) errorMessage = saveResult.message
     }
   }
 
@@ -1347,7 +1366,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         pinned = conversations.find { it.id == conversationId }?.pinned ?: false
       )
       conversations = conversations.map { if (it.id == conversationId) updated else it }
-      ChatGizaApi.saveHistory(token, conversations, deletedIds)
+      val saveResult = ChatGizaApi.saveHistory(token, conversations, deletedIds)
+      if (saveResult is ApiResult.Failure) errorMessage = saveResult.message
     }
   }
 
@@ -1364,7 +1384,10 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
       pinned = conversations.find { it.id == conversationId }?.pinned ?: false
     )
     conversations = conversations.map { if (it.id == conversationId) updated else it }
-    viewModelScope.launch { ChatGizaApi.saveHistory(token, conversations, deletedIds) }
+    viewModelScope.launch {
+      val saveResult = ChatGizaApi.saveHistory(token, conversations, deletedIds)
+      if (saveResult is ApiResult.Failure) errorMessage = saveResult.message
+    }
   }
 }
 

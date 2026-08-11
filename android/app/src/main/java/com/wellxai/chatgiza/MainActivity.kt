@@ -6024,6 +6024,9 @@ private fun ConnectorsScreen(viewModel: ChatViewModel) {
     }
     Spacer(Modifier.height(24.dp))
     Text(text = "Featured", color = Color(0xFFA8A8A8), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp), contentAlignment = Alignment.Center) {
+      Text("Coming soon", color = Color(0xFFA8A8A8), fontSize = 14.sp)
+    }
   }
 }
 
