@@ -2427,8 +2427,8 @@ private fun ConnectingDotsSpinner(dotColor: Color, size: Dp = 16.dp) {
 
 @Composable
 private fun VoiceGradientCard(option: VoiceOption, selected: Boolean, onClick: () -> Unit) {
-  val cardWidth = 140.dp
-  val cardHeight = 96.dp
+  val cardWidth = 210.dp
+  val cardHeight = 64.dp
   val density = LocalDensity.current
   val widthPx = with(density) { cardWidth.toPx() }
   val heightPx = with(density) { cardHeight.toPx() }
@@ -2465,7 +2465,7 @@ private fun VoiceGradientCard(option: VoiceOption, selected: Boolean, onClick: (
       .clip(RoundedCornerShape(20.dp))
       .background(brush)
       .clickable(onClick = onClick)
-      .padding(16.dp)
+      .padding(horizontal = 16.dp, vertical = 10.dp)
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
       Text(option.name, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
