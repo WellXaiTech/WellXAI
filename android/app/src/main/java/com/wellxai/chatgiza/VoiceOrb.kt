@@ -15,18 +15,18 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.shape.CircleShape
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 
 // Bakes the static part of the galaxy (dust, lanes, wisps, pockets, grain)
 // into an equirect texture once per (seed, archetype), then the live
