@@ -225,7 +225,6 @@ import androidx.compose.material.icons.outlined.ScreenShare
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.SupportAgent
 import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material.icons.outlined.Tag
@@ -6233,7 +6232,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
       SettingsSection {
         SettingsMenuRow("Shared Conversations", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_share_link)) { viewModel.openSharedConversations() }
         SettingsDivider()
-        SettingsMenuRow("Data Controls", icon = Icons.Outlined.Storage) { viewModel.openDataControls() }
+        SettingsMenuRow("Data Controls", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_data_controls)) { viewModel.openDataControls() }
         SettingsDivider()
         SettingsMenuRow("Open Source Licenses", icon = Icons.Outlined.Description) { viewModel.openOpenSourceLicenses() }
         SettingsDivider()
