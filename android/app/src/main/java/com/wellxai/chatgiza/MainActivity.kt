@@ -6216,7 +6216,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         SettingsDivider()
         SettingsMenuRow("Connectors", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connectors)) { viewModel.openConnectors() }
         SettingsDivider()
-        SettingsMenuRow("Kids Mode", icon = Icons.Outlined.ChildCare) { viewModel.openKidsMode() }
+        SettingsMenuRow("Kids Mode", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_kids_mode)) { viewModel.openKidsMode() }
         SettingsDivider()
         SettingsMenuRow("NSFW Preferences", icon = Icons.Outlined.NoAdultContent) { viewModel.openNsfwPreferences() }
       }
@@ -6232,7 +6232,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         SettingsDivider()
         SettingsMenuRow("Data Controls", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_data_controls)) { viewModel.openDataControls() }
         SettingsDivider()
-        SettingsMenuRow("Open Source Licenses", icon = Icons.Outlined.Description) { viewModel.openOpenSourceLicenses() }
+        SettingsMenuRow("Open Source Licenses", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_uploaded_files)) { viewModel.openOpenSourceLicenses() }
         SettingsDivider()
         SettingsMenuRow("Terms of Use", icon = Icons.AutoMirrored.Outlined.Article) {
           context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/terms")))
