@@ -6201,7 +6201,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
       SettingsSection {
         SettingsMenuRow("Appearance", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_appearance)) { viewModel.openAppearance() }
         SettingsDivider()
-        SettingsMenuRow("Haptics", icon = Icons.Outlined.Vibration) { viewModel.openHaptics() }
+        SettingsMenuRow("Haptics", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_haptics)) { viewModel.openHaptics() }
         SettingsDivider()
         SettingsMenuRow("Widgets", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_widgets)) { viewModel.openWidgets() }
         SettingsDivider()
