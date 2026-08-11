@@ -376,6 +376,23 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     }
   }
 
+  /** Same as [fetchPremiumSpeech] but for previewing a specific voice in
+   * the picker -- doesn't touch selectedVoiceId, so tapping a card to hear
+   * it doesn't change what's actually selected. */
+  fun fetchVoicePreview(voice: String, text: String, onResult: (ByteArray?) -> Unit) {
+    val token = tokenStore.getToken()
+    if (token == null) {
+      onResult(null)
+      return
+    }
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.getSpeechAudio(token, text, voice)) {
+        is ApiResult.Success -> onResult(result.value)
+        is ApiResult.Failure -> onResult(null)
+      }
+    }
+  }
+
   var personality by mutableStateOf(tokenStore.getPersonality())
     private set
 
