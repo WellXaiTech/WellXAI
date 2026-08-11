@@ -913,7 +913,7 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
           Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = null, tint = onBg, modifier = Modifier.size(18.dp))
         }
         if (isOwnProfile) {
-          IconButton(onClick = { viewModel.openAccount() }, modifier = Modifier.size(40.dp)) {
+          IconButton(onClick = { viewModel.openSettings() }, modifier = Modifier.size(40.dp)) {
             MediaMenuIcon(modifier = Modifier.size(20.dp), tint = onBg)
           }
         } else {
