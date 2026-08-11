@@ -6482,7 +6482,7 @@ private fun MessageBubble(
         } else {
           MarkdownText(
             text = message.content.ifEmpty { "…" },
-            baseColor = Color(0xFFA8A8A8),
+            baseColor = Color.White,
             fontSize = 15.sp
           )
         }
