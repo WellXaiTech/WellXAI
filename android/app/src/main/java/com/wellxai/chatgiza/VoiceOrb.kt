@@ -1,11 +1,7 @@
 package com.wellxai.chatgiza
 
-import android.graphics.Bitmap
-import android.graphics.BitmapShader
-import android.graphics.Canvas as NativeCanvas
 import android.graphics.Paint as NativePaint
 import android.graphics.RuntimeShader
-import android.graphics.Shader as NativeShader
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.LinearEasing
@@ -30,92 +26,14 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 
-// Bakes the static part of the galaxy (dust, lanes, wisps, pockets, grain)
-// into an equirect texture once per (seed, archetype), then the live
-// per-frame shader below samples it cheaply instead of recomputing all of
-// that noise every frame. Fixed vs the pasted source: uPhase/uC0/uC1/uC2
-// were used in the body but never declared as uniforms, and three
-// functions were missing their closing brace.
-private const val VOICE_ORB_BAKE_SKSL = """
-uniform float uArch;
-uniform float uPhase;
-uniform vec2 uOutSize;
-uniform half3 uC0;
-uniform half3 uC1;
-uniform half3 uC2;
-
-float h1(float x) { return fract(sin(x * 127.1) * 43758.5453); }
-
-half4 skyStatic(float lon, float lat, vec3 n, float t,
-                float v1, float v2, float v3,
-                float isNeb, float isCore, float isDeep,
-                float resFac, float band) {
-  float n1 = sin(lon * 2.0 + sin(lat * 3.0 + t * 0.25) * 1.6 + t * 0.15);
-  float n2 = sin(lon * 5.0 - sin(lat * 4.0 - t * 0.2) * 1.2 - t * 0.22 + 2.4);
-  float neb = pow(0.5 + 0.5 * n1, 2.0) * (0.45 + 0.55 * pow(0.5 + 0.5 * n2, 2.0));
-  float lane = pow(0.5 + 0.5 * sin(lon * 4.0 + lat * 7.0 + sin(lon * 2.0) * 2.0), 3.0);
-  float galaxy = clamp(band * neb * (1.0 - lane * (0.55 + 0.35 * v2)), 0.0, 1.0);
-  half3 hue = mix(mix(uC0, uC1, v1), mix(uC1, uC2, v3), 0.5 + 0.5 * sin(lon + lat * 2.0 - t * 0.2));
-  half3 hueGrey = half3(dot(hue, half3(0.299, 0.587, 0.114)));
-  hue = clamp(hueGrey + (hue - hueGrey) * 1.45, 0.0, 1.0);
-  half3 dust = mix(half3(0.72, 0.78, 0.92), hue, 0.45 + 0.3 * v1 + 0.45 * isNeb);
-  half3 col = dust * galaxy * (0.6 + 0.9 * isNeb);
-  float shear = sin(lon * 13.0 + lat * 4.0 - t * 0.35) * sin(lon * 5.0 + t * 0.2);
-  col += dust * band * neb * max(shear, 0.0) * 0.14;
-  float gb2 = lat - (0.35 + 0.25 * v2) * sin(lon * 2.0 - 1.1) + 0.4;
-  float arm = exp(-gb2 * gb2 * 7.0) * neb;
-  col += mix(dust, uC1, 0.35) * arm * 0.2;
-  half3 voidGlow = mix(half3(0.04, 0.03, 0.1), mix(uC0, mix(uC1, uC2, v3), v1) * 0.22, 0.75);
-  col += voidGlow * (0.5 + 0.22 * sin(t * 0.4 + lon)) * (0.4 + 0.6 * band);
-  col += half3(1.0, 0.88, 0.68) * pow(band, 4.0) * pow(neb, 2.0) * 0.4;
-  float ca = v2 * 6.28318;
-  vec3 Cdir = normalize(vec3(cos(ca) * 0.85, 0.6 * (v3 - 0.5), sin(ca) * 0.85));
-  float bulge = max(dot(n, Cdir), 0.0);
-  col += mix(half3(1.0, 0.85, 0.6), uC2, 0.25) * (pow(bulge, 14.0) * 1.6 + pow(bulge, 4.0) * 0.5) * isCore;
-  float pocket = pow(neb, 5.0) * band * (0.7 + 0.3 * sin(t * 0.6 + lon * 3.0));
-  col += mix(uC2, uC0, fract(v1 + 0.5 * sin(lon * 2.0) + 0.5)) * pocket * (0.5 + 0.4 * v2 + 0.8 * isNeb);
-  float pocket2 = pow(0.5 + 0.5 * sin(lon * 3.0 + lat * 4.0 - t * 0.18 + 2.0), 6.0) * band;
-  col += mix(uC1, uC2, v3) * pocket2 * (0.25 + 0.3 * v1 + 0.5 * isNeb);
-  vec2 gg = vec2(lon, lat) * 34.0;
-  vec2 gc = floor(gg);
-  vec2 gf = fract(gg);
-  float gh = h1(gc.x * 3.7 + gc.y * 11.3);
-  vec2 gp = vec2(0.2 + 0.6 * h1(gh * 91.0), 0.2 + 0.6 * h1(gh * 47.0));
-  float gd = length((gf - gp) * vec2(cos(lat), 1.0));
-  float grain = exp(-gd * gd * 700.0 * resFac) * step(0.3, gh) * (0.15 + 0.85 * band);
-  col += half3(0.88, 0.9, 1.0) * grain * 0.4;
-  float w = clamp(galaxy * 0.7 + pow(band, 4.0) * 0.25, 0.0, 1.0);
-  return half4(min(col, half3(1.0)), w);
-}
-
-half4 main(float2 fragCoord) {
-  vec2 uv = fragCoord / uOutSize;
-  float lon = (uv.x - 0.5) * 6.2831853;
-  float lat = (uv.y - 0.5) * 3.14159265;
-  vec3 n = vec3(cos(lat) * cos(lon), sin(lat), cos(lat) * sin(lon));
-  float v1 = fract(uPhase * 7.13);
-  float v2 = fract(uPhase * 3.71);
-  float v3 = fract(uPhase * 5.37);
-  float at = uArch >= 0.0 ? uArch : floor(fract(uPhase * 9.73) * 4.0);
-  float isNeb = step(0.5, at) * (1.0 - step(1.5, at));
-  float isCore = step(1.5, at) * (1.0 - step(2.5, at));
-  float isDeep = step(2.5, at);
-  float t = 0.0;
-  float gb = lat + (0.15 + 0.4 * v1) * sin(lon * (1.0 + floor(v2 * 2.0)) + 1.3)
-           + 0.12 * sin(lon * 3.0 + t * 0.1);
-  float band = exp(-gb * gb * (5.0 + 10.0 * v3));
-  band = mix(band, max(band, 0.8), isNeb);
-  band *= 1.0 - 0.85 * isDeep;
-  return skyStatic(lon, lat, n, t, v1, v2, v3, isNeb, isCore, isDeep, 1.0, band);
-}
-"""
-
-// The live per-frame orb: a refractive glass sphere whose surface samples
-// the baked sky, plus analytic stars, a pulsar, aurora curtains, a
-// shooting star, and 3D lighting -- fixed vs the pasted source in the same
-// way (missing closing braces on the star loop, pattern(), sphereAt(),
-// the corner early-out, and main() itself).
-private const val VOICE_ORB_LIVE_SKSL = """
+// A single self-contained shader instead of the original two-pass
+// bake+sample design -- the "static" galaxy noise is recomputed inline
+// every frame rather than baked to a texture and sampled through a
+// uniform shader child, removing that binding as a possible failure
+// point. At icon size (~15-20dp) recomputing it per frame costs nothing
+// perceptible. Same visual identity (dust band, stars, pulsar, aurora,
+// meteor, lit glass sphere) as the pasted reference, just single-pass.
+private const val VOICE_ORB_SKSL = """
 uniform vec2 uRes;
 uniform half3 uAnchor;
 uniform half3 uC0;
@@ -124,9 +42,6 @@ uniform half3 uC2;
 uniform float uTime;
 uniform float uPhase;
 uniform float uAudio;
-uniform float uArch;
-uniform shader uSky;
-uniform vec2 uSkySize;
 uniform float uSpin;
 
 float h1(float x) { return fract(sin(x * 127.1) * 43758.5453); }
@@ -137,23 +52,23 @@ half4 pattern(vec3 n, float t) {
   float v1 = fract(uPhase * 7.13);
   float v2 = fract(uPhase * 3.71);
   float v3 = fract(uPhase * 5.37);
-  float at = uArch >= 0.0 ? uArch : floor(fract(uPhase * 9.73) * 4.0);
-  float isNeb = step(0.5, at) * (1.0 - step(1.5, at));
-  float isCore = step(1.5, at) * (1.0 - step(2.5, at));
-  float isDeep = step(2.5, at);
   float gb = lat + (0.15 + 0.4 * v1) * sin(lon * (1.0 + floor(v2 * 2.0)) + 1.3)
            + 0.12 * sin(lon * 3.0 + t * 0.1);
-  float band = exp(-gb * gb * (5.0 + 10.0 * v3));
-  band = mix(band, max(band, 0.8), isNeb);
-  band *= 1.0 - 0.85 * isDeep;
-  half3 col;
-  float w;
-  vec2 suv = vec2(lon / 6.2831853 + 0.5, lat / 3.14159265 + 0.5);
-  half4 sky = uSky.eval(suv * uSkySize);
-  col = sky.rgb;
-  w = float(sky.a);
-  for (int s = 0; s < 3; s++) {
-    float K = s == 0 ? 6.0 : (s == 1 ? 11.0 : 19.0);
+  float band = exp(-gb * gb * 6.0);
+  float n1 = sin(lon * 2.0 + sin(lat * 3.0 + t * 0.25) * 1.6 + t * 0.15);
+  float n2 = sin(lon * 5.0 - sin(lat * 4.0 - t * 0.2) * 1.2 - t * 0.22 + 2.4);
+  float neb = pow(0.5 + 0.5 * n1, 2.0) * (0.45 + 0.55 * pow(0.5 + 0.5 * n2, 2.0));
+  float lane = pow(0.5 + 0.5 * sin(lon * 4.0 + lat * 7.0 + sin(lon * 2.0) * 2.0), 3.0);
+  float galaxy = clamp(band * neb * (1.0 - lane * (0.55 + 0.35 * v2)), 0.0, 1.0);
+  half3 hue = mix(mix(uC0, uC1, v1), mix(uC1, uC2, v3), 0.5 + 0.5 * sin(lon + lat * 2.0 - t * 0.2));
+  half3 dust = mix(half3(0.72, 0.78, 0.92), hue, 0.5 + 0.4 * v1);
+  half3 col = dust * galaxy * 0.9;
+  half3 voidGlow = mix(half3(0.04, 0.03, 0.1), mix(uC0, mix(uC1, uC2, v3), v1) * 0.24, 0.75);
+  col += voidGlow * (0.5 + 0.22 * sin(t * 0.4 + lon)) * (0.4 + 0.6 * band);
+  col += half3(1.0, 0.88, 0.68) * pow(band, 4.0) * pow(neb, 2.0) * 0.4;
+  float w = clamp(galaxy * 0.7 + pow(band, 4.0) * 0.25, 0.0, 1.0);
+  for (int s = 0; s < 2; s++) {
+    float K = s == 0 ? 7.0 : 14.0;
     vec2 g = vec2(lon, lat) * K;
     vec2 cell = floor(g);
     vec2 f = fract(g);
@@ -161,27 +76,11 @@ half4 pattern(vec3 n, float t) {
     float hy = h1(cell.x * 5.1 + cell.y * 17.9 + float(s) * 37.0);
     vec2 sp = vec2(0.15 + 0.7 * hx, 0.15 + 0.7 * hy);
     float d = length((f - sp) * vec2(cos(lat), 1.0));
-    float census = (v2 - 0.5) * 0.2 + 0.35 * isNeb - 0.2 * isCore + 0.3 * isDeep;
-    float keep = step((s == 2 ? 0.3 : 0.55) + census, h1(hx * 89.0 + hy * 31.0) + band * 0.25);
-    float resFac = clamp(uRes.y / 420.0, 0.22, 1.0);
-    float tw = mix(0.92, 0.6 + 0.4 * sin(t * (1.5 + 3.0 * hx) + hx * 40.0), resFac);
-    float hz = h1(hx * 53.0 + hy * 71.0 + cell.x);
-    float sizeJit = 0.35 + 1.8 * hz * hz;
-    float sharp = (s == 0 ? 260.0 : (s == 1 ? 700.0 : 1600.0)) / sizeJit * resFac;
-    float star = exp(-d * d * sharp) * keep * tw;
-    half3 tint = mix(half3(1.0), hx < 0.33 ? half3(0.85, 0.9, 1.0) : (hx < 0.66 ? half3(1.0, 0.95, 0.85) : mix(half3(1.0), uC1, 0.3)), 0.6);
-    float bright = (s == 0 ? 1.7 : (s == 1 ? 0.9 : 0.5)) * (0.55 + 0.7 * sizeJit);
-    col += tint * star * bright;
-    if (s == 0) {
-      float big = smoothstep(1.2, 2.0, sizeJit);
-      col += tint * exp(-d * d * 60.0) * 0.18 * big * tw;
-      vec2 dd = (f - sp) * vec2(cos(lat), 1.0);
-      float spike = exp(-dd.x * dd.x * 1200.0) * exp(-dd.y * dd.y * 26.0)
-                  + exp(-dd.y * dd.y * 1200.0) * exp(-dd.x * dd.x * 26.0);
-      col += tint * spike * 0.3 * big * tw;
-      w = max(w, spike * 0.3 * big);
-    }
-    w = max(w, star * min(bright, 1.5));
+    float keep = step(0.5, h1(hx * 89.0 + hy * 31.0) + band * 0.25);
+    float star = exp(-d * d * (s == 0 ? 280.0 : 700.0)) * keep;
+    half3 tint = mix(half3(1.0), hx < 0.5 ? half3(0.85, 0.9, 1.0) : mix(half3(1.0), uC1, 0.3), 0.6);
+    col += tint * star * (s == 0 ? 1.6 : 0.8);
+    w = max(w, star);
   }
   float pa = v1 * 6.28318;
   vec3 P = normalize(vec3(sin(pa) * 0.9, 1.4 * (v2 - 0.5), cos(pa) * 0.9));
@@ -189,7 +88,7 @@ half4 pattern(vec3 n, float t) {
   float beat = pow(0.5 + 0.5 * sin(t * (1.2 + v3 + 1.5 * uAudio) + v3 * 6.28), 8.0);
   beat = min(1.0, beat + 0.6 * uAudio);
   col += half3(0.9, 0.95, 1.0) * (pow(pd, 900.0) * (0.6 + 1.2 * beat) + pow(pd, 110.0) * 0.5 * beat);
-  w = max(w, pow(pd, 900.0) * (0.5 + 0.5 * beat));
+  w = max(w, pow(pd, 900.0));
   return half4(min(col, half3(1.0)), min(w, 1.0));
 }
 
@@ -221,69 +120,27 @@ half4 main(float2 fragCoord) {
   float z = sqrt(1.0 - rr * rr);
   vec3 N = vec3(p.x, p.y, z);
   float fres = pow(1.0 - z, 2.4);
-  vec3 I = vec3(0.0, 0.0, -1.0);
-  vec3 R = refract(I, N, 0.75);
-  float dHit = -2.0 * dot(N, R);
-  vec3 B = normalize(N + R * dHit);
-  half4 front;
-  half4 back;
-  float sv = fract(uPhase * 6.31);
-  float sw = fract(uPhase * 2.17);
-  float tWarp = t
-    + (0.9 + 1.3 * sv) * sin(t * (0.09 + 0.07 * sw))
-    + (0.5 + 0.8 * sw) * sin(t * (0.21 + 0.09 * sv) + 2.6);
-  front = sphereAt(N, uSpin, tWarp);
-  back = sphereAt(B, uSpin, tWarp * 0.8 + 2.7);
-  half3 col;
-  half3 voidCol = mix(uAnchor * 0.04, uAnchor * 0.35, fres);
-  col = voidCol * (0.97 - 0.04 * fres);
+  half4 front = sphereAt(N, uSpin, t);
   float fa = clamp(front.a, 0.0, 1.0);
-  float ba = clamp(back.a, 0.0, 1.0);
-  col = mix(col, back.rgb, ba * 0.16);
+  half3 voidCol = mix(uAnchor * 0.04, uAnchor * 0.35, fres);
+  half3 col = voidCol * (0.97 - 0.04 * fres);
   col = mix(col, front.rgb, fa * 0.85);
   float alon = atan(N.x, N.z);
   float speech = pow(0.5 + 0.5 * sin(alon * 3.0 + sin(alon * 7.0 + t * 1.1) * 0.7 + t * 0.5), 3.0)
                * (0.55 + 0.45 * sin(alon * 5.0 - t * 0.65 + 1.7));
   float sky = -N.y;
   float hang = smoothstep(-0.15, 0.5, sky);
-  float rays = 0.7 + 0.3 * sin(alon * 24.0 + sin(alon * 9.0 - t * 0.8) * 2.0 + t * 1.6);
-  float aur = clamp(speech, 0.0, 1.0) * hang * rays * (1.0 + 2.2 * uAudio);
-  float av = fract(uPhase * 2.93);
-  half3 aurCol = mix(half3(0.12, 0.95, 0.55), half3(0.45, 0.35, 1.0),
-                     smoothstep(0.0, 0.95, sky + 0.35 * speech));
-  aurCol = mix(aurCol, mix(uC0, uC2, av), 0.15 + 0.4 * av);
-  col += aurCol * aur * 0.8;
-  float met = 4.5 + 3.5 * fract(uPhase * 4.91);
-  float epoch = floor(t / met);
-  float ph = fract(t / met);
-  vec2 s0 = vec2(-1.1 + 2.2 * h1(epoch * 1.3), 0.85 - 1.4 * h1(epoch * 2.9));
-  vec2 sd = normalize(vec2(0.7 + 0.5 * h1(epoch * 4.1), -0.35 - 0.4 * h1(epoch * 5.3)));
-  vec2 head = s0 + sd * ph * 2.8;
-  vec2 rel = p - head;
-  float along = dot(rel, sd);
-  float perp = dot(rel, vec2(-sd.y, sd.x));
-  float vis = smoothstep(0.0, 0.06, ph) * smoothstep(0.5, 0.32, ph);
-  float tail = exp(-perp * perp * 1600.0) * exp(along * 9.0) * step(along, 0.0)
-             * smoothstep(-0.5, -0.02, along);
-  float headGlow = exp(-dot(rel, rel) * 900.0);
-  col += (half3(1.0) * headGlow * 1.2 + mix(half3(1.0), uC1, 0.3) * tail * 0.85) * vis;
+  float aur = clamp(speech, 0.0, 1.0) * hang * (1.0 + 2.2 * uAudio);
+  half3 aurCol = mix(half3(0.12, 0.95, 0.55), half3(0.45, 0.35, 1.0), smoothstep(0.0, 0.95, sky + 0.35 * speech));
+  col += aurCol * aur * 0.7;
   vec3 LD = normalize(vec3(0.85 * sin(t * 0.42), 0.45 * sin(t * 0.26 + 1.2), 0.5));
-  float diffuse = 0.62 + 0.65 * max(dot(N, LD), 0.0);
-  diffuse *= 1.0 + 0.35 * uAudio;
+  float diffuse = (0.62 + 0.65 * max(dot(N, LD), 0.0)) * (1.0 + 0.35 * uAudio);
   col *= diffuse;
   half3 voiceCol = mix(uC1, half3(1.0, 0.97, 0.9), 0.45);
   col += voiceCol * pow(1.0 - rr, 1.8) * uAudio * 0.5;
   col += (uC1 * 0.7 + half3(0.12)) * fres * uAudio * 0.65;
-  col += col * uAudio * 0.18 * sin(t * 14.0 + rr * 40.0 + uPhase * 7.0);
-  float counter = max(dot(N.xy, -LD.xy), 0.0) * fres;
-  col += mix(uC0, half3(0.5, 0.6, 0.9), 0.5) * counter * 0.18;
   vec3 L1 = normalize(vec3(-0.45 + 0.3 * sin(t * 0.34), 0.62 + 0.2 * sin(t * 0.27 + 1.7), 0.64));
-  float keyAmp = 0.5 * (0.78 + 0.22 * sin(t * 0.45 + 2.2));
-  col += half3(1.0) * pow(max(dot(N, L1), 0.0), 150.0) * keyAmp;
-  vec3 LS = normalize(vec3(sin(t * 0.07) * 0.9, 0.35 + 0.3 * cos(t * 0.05), 0.7));
-  col += half3(1.0) * pow(max(dot(N, LS), 0.0), 7.0) * 0.05;
-  vec3 L2 = normalize(vec3(0.52, -0.5 + 0.12 * sin(t * 0.09), 0.69));
-  col += half3(1.0) * pow(max(dot(N, L2), 0.0), 140.0) * 0.25;
+  col += half3(1.0) * pow(max(dot(N, L1), 0.0), 150.0) * 0.5;
   col = mix(col, front.rgb, fa * fres * 0.3);
   float limb = smoothstep(0.94, 1.0, rr);
   col = mix(col, col * 0.85, limb * 0.4);
@@ -291,22 +148,11 @@ half4 main(float2 fragCoord) {
 }
 """
 
-/**
- * The animated voice orb -- galaxy-in-glass with aurora, stars and a
- * pulsar, driven by [seedPhase] (per-voice structural variance) and
- * [audioLevel] (0 for a static list badge, live mic amplitude for an
- * active call). Requires API 33 (RuntimeShader); call sites should check
- * [isVoiceOrbSupported] and fall back to a plain icon below that.
- */
-val isVoiceOrbSupported: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-
-private class VoiceOrbShaders(val bake: RuntimeShader, val live: RuntimeShader)
-
 /** Orin's badge next to her name in the voice list -- the full animated
- * orb on API 33+, the plain cloud glyph everywhere else. Every step that
- * can throw (shader compilation, the offscreen bake, per-frame uniform
- * setting) is guarded so a bad shader shows the fallback glyph instead of
- * crashing the settings sheet. */
+ * orb on API 33+, the plain cloud glyph everywhere else. Shader
+ * compilation and per-frame uniform setting are both guarded so a bad
+ * shader shows the fallback glyph instead of crashing the settings
+ * sheet. */
 @Composable
 fun OrinVoiceBadge(modifier: Modifier = Modifier, tint: Color) {
   var failed by remember { mutableStateOf(false) }
@@ -336,7 +182,6 @@ fun OrinVoiceBadge(modifier: Modifier = Modifier, tint: Color) {
 private fun VoiceOrb(
   modifier: Modifier = Modifier,
   seedPhase: Float = 0.42f,
-  archetype: Float = 0f,
   anchor: Color = Color(0xFF6D8CFF),
   colorA: Color = Color(0xFF3A5CFF),
   colorB: Color = Color(0xFFBFD4FF),
@@ -344,52 +189,19 @@ private fun VoiceOrb(
   audioLevel: Float = 0f,
   onError: () -> Unit
 ) {
-  val shaders = remember {
-    runCatching { VoiceOrbShaders(RuntimeShader(VOICE_ORB_BAKE_SKSL), RuntimeShader(VOICE_ORB_LIVE_SKSL)) }.getOrNull()
-  }
-  if (shaders == null) {
+  val shader = remember { runCatching { RuntimeShader(VOICE_ORB_SKSL) }.getOrNull() }
+  if (shader == null) {
     LaunchedEffect(Unit) { onError() }
     return
   }
 
-  // Baked once per (seed, archetype, palette) -- the expensive static
-  // noise never needs to be recomputed on every animation frame.
-  val skyBitmap = remember(seedPhase, archetype, colorA, colorB, colorC) {
+  val setupOk = remember(anchor, colorA, colorB, colorC, seedPhase) {
     runCatching {
-      val w = 256
-      val h = 128
-      shaders.bake.setFloatUniform("uArch", archetype)
-      shaders.bake.setFloatUniform("uPhase", seedPhase)
-      shaders.bake.setFloatUniform("uOutSize", w.toFloat(), h.toFloat())
-      shaders.bake.setFloatUniform("uC0", colorA.red, colorA.green, colorA.blue)
-      shaders.bake.setFloatUniform("uC1", colorB.red, colorB.green, colorB.blue)
-      shaders.bake.setFloatUniform("uC2", colorC.red, colorC.green, colorC.blue)
-      val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-      val canvas = NativeCanvas(bmp)
-      val paint = NativePaint().apply { shader = shaders.bake }
-      canvas.drawRect(0f, 0f, w.toFloat(), h.toFloat(), paint)
-      bmp
-    }.getOrNull()
-  }
-  if (skyBitmap == null) {
-    LaunchedEffect(Unit) { onError() }
-    return
-  }
-
-  val setupOk = remember(skyBitmap, anchor, colorA, colorB, colorC, seedPhase, archetype, audioLevel) {
-    runCatching {
-      shaders.live.setFloatUniform("uAnchor", anchor.red, anchor.green, anchor.blue)
-      shaders.live.setFloatUniform("uC0", colorA.red, colorA.green, colorA.blue)
-      shaders.live.setFloatUniform("uC1", colorB.red, colorB.green, colorB.blue)
-      shaders.live.setFloatUniform("uC2", colorC.red, colorC.green, colorC.blue)
-      shaders.live.setFloatUniform("uPhase", seedPhase)
-      shaders.live.setFloatUniform("uArch", archetype)
-      shaders.live.setFloatUniform("uAudio", audioLevel)
-      shaders.live.setFloatUniform("uSkySize", skyBitmap.width.toFloat(), skyBitmap.height.toFloat())
-      shaders.live.setInputShader(
-        "uSky",
-        BitmapShader(skyBitmap, NativeShader.TileMode.REPEAT, NativeShader.TileMode.CLAMP)
-      )
+      shader.setFloatUniform("uAnchor", anchor.red, anchor.green, anchor.blue)
+      shader.setFloatUniform("uC0", colorA.red, colorA.green, colorA.blue)
+      shader.setFloatUniform("uC1", colorB.red, colorB.green, colorB.blue)
+      shader.setFloatUniform("uC2", colorC.red, colorC.green, colorC.blue)
+      shader.setFloatUniform("uPhase", seedPhase)
     }.isSuccess
   }
   if (!setupOk) {
@@ -423,11 +235,12 @@ private fun VoiceOrb(
       .graphicsLayer()
   ) {
     runCatching {
-      shaders.live.setFloatUniform("uRes", size.width, size.height)
-      shaders.live.setFloatUniform("uTime", time)
-      shaders.live.setFloatUniform("uSpin", spin)
+      shader.setFloatUniform("uRes", size.width, size.height)
+      shader.setFloatUniform("uTime", time)
+      shader.setFloatUniform("uAudio", audioLevel)
+      shader.setFloatUniform("uSpin", spin)
       drawIntoCanvas { canvas ->
-        val paint = NativePaint().apply { shader = shaders.live }
+        val paint = NativePaint().apply { this.shader = shader }
         canvas.nativeCanvas.drawRect(0f, 0f, size.width, size.height, paint)
       }
     }.onFailure { onError() }

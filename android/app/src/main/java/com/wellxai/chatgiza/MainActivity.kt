@@ -2581,7 +2581,7 @@ private val VOICE_CLOUD_PUFFS = listOf(
 
 @Composable
 private fun VoiceGradientCard(option: VoiceOption, selected: Boolean, onClick: () -> Unit) {
-  val cardWidth = 210.dp
+  val cardWidth = 188.dp
   val cardHeight = 64.dp
   val density = LocalDensity.current
   val widthPx = with(density) { cardWidth.toPx() }
