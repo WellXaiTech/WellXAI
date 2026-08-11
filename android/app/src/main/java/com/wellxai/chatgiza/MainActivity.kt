@@ -169,6 +169,10 @@ import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.AddBox
 import androidx.compose.material.icons.outlined.AlternateEmail
 import androidx.compose.material.icons.outlined.AttachMoney
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.Movie
+import androidx.compose.material.icons.automirrored.outlined.ListAlt
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.Autorenew
@@ -6041,6 +6045,31 @@ private fun AccountScreen(viewModel: ChatViewModel) {
       SettingsSectionHeader("Voice")
       SettingsSection {
         SettingsMenuRow("Voice", icon = Icons.Outlined.GraphicEq) { viewModel.openVoice() }
+      }
+
+      SettingsSectionHeader("Extra")
+      SettingsSection {
+        SettingsMenuRow("Profile", icon = Icons.Outlined.AccountCircle) { viewModel.openChatGizaMedia() }
+        SettingsDivider()
+        SettingsMenuRow("Premium", icon = Icons.Outlined.WorkspacePremium) {
+          Toast.makeText(context, "Premium — coming soon", Toast.LENGTH_SHORT).show()
+        }
+        SettingsDivider()
+        SettingsMenuRow("Communities", icon = Icons.Outlined.Groups) {
+          Toast.makeText(context, "Communities — coming soon", Toast.LENGTH_SHORT).show()
+        }
+        SettingsDivider()
+        SettingsMenuRow("Bookmarks", icon = Icons.Outlined.BookmarkBorder) {
+          Toast.makeText(context, "Bookmarks — coming soon", Toast.LENGTH_SHORT).show()
+        }
+        SettingsDivider()
+        SettingsMenuRow("Lists", icon = Icons.AutoMirrored.Outlined.ListAlt) {
+          Toast.makeText(context, "Lists — coming soon", Toast.LENGTH_SHORT).show()
+        }
+        SettingsDivider()
+        SettingsMenuRow("Creator Studio", icon = Icons.Outlined.Movie) {
+          Toast.makeText(context, "Creator Studio — coming soon", Toast.LENGTH_SHORT).show()
+        }
       }
 
       SettingsSectionHeader("Data & Information")
