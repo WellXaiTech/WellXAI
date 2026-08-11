@@ -1915,7 +1915,12 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               .padding(horizontal = 14.dp)
           ) {
             if (isConnecting) {
-              SpinningIcon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connecting_spinner), tint = Color.White, size = 22.dp)
+              Icon(
+                painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connecting_spinner),
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(22.dp)
+              )
               Spacer(modifier = Modifier.size(8.dp))
               Text("Connecting…", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             } else {
