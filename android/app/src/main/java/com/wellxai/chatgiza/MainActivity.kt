@@ -1640,7 +1640,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
       QuickActionChip(icon = { Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(22.dp)) }, label = "GiZa Extra") {
         viewModel.openChatGizaMedia()
       }
-      QuickActionChip(icon = { Icon(Icons.Outlined.Videocam, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(22.dp)) }, label = "Create Video") {
+      QuickActionChip(icon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_create_video), contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(22.dp)) }, label = "Create Video") {
         viewModel.onInputChange("Create a video of ")
         focusRequester.requestFocus()
       }
