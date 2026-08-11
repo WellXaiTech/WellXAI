@@ -1915,7 +1915,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               .padding(horizontal = 14.dp)
           ) {
             if (isConnecting) {
-              ConnectingDotsSpinner(dotColor = Color.White, size = 22.dp)
+              SpinningIcon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connecting_spinner), tint = Color.White, size = 22.dp)
               Spacer(modifier = Modifier.size(8.dp))
               Text("Connecting…", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             } else {
@@ -2437,6 +2437,23 @@ private fun ConnectingDotsSpinner(dotColor: Color, size: Dp = 16.dp) {
       )
     }
   }
+}
+
+@Composable
+private fun SpinningIcon(painter: androidx.compose.ui.graphics.painter.Painter, tint: Color, size: Dp) {
+  val transition = rememberInfiniteTransition(label = "iconSpin")
+  val rotation by transition.animateFloat(
+    initialValue = 0f,
+    targetValue = 360f,
+    animationSpec = infiniteRepeatable(animation = tween(durationMillis = 900, easing = LinearEasing)),
+    label = "iconSpinAngle"
+  )
+  Icon(
+    painter = painter,
+    contentDescription = null,
+    tint = tint,
+    modifier = Modifier.size(size).graphicsLayer { rotationZ = rotation }
+  )
 }
 
 // Fixed cumulus-style puff layout (position/size/opacity as fractions of
