@@ -234,7 +234,6 @@ import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.Whatshot
-import androidx.compose.material.icons.outlined.Widgets
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -6204,7 +6203,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         SettingsDivider()
         SettingsMenuRow("Haptics", icon = Icons.Outlined.Vibration) { viewModel.openHaptics() }
         SettingsDivider()
-        SettingsMenuRow("Widgets", icon = Icons.Outlined.Widgets) { viewModel.openWidgets() }
+        SettingsMenuRow("Widgets", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_widgets)) { viewModel.openWidgets() }
         SettingsDivider()
         SettingsMenuRow("App Language", icon = Icons.Outlined.Language) { viewModel.openAppLanguage() }
         SettingsDivider()
