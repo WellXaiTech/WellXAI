@@ -665,7 +665,7 @@ private fun MediaPost(
 
       // Visual-only for now -- no repost backend built yet.
       IconButton(onClick = {}) {
-        Icon(imageVector = Icons.Filled.Refresh, contentDescription = "Repost", tint = Color.DarkGray)
+        Icon(painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_repost), contentDescription = "Repost", tint = Color.DarkGray)
       }
       Text(text = "0", fontSize = 13.sp, color = Color.Black)
 
