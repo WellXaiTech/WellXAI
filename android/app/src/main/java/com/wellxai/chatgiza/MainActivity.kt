@@ -193,7 +193,6 @@ import androidx.compose.material.icons.outlined.Feedback
 import androidx.compose.material.icons.outlined.GraphicEq
 import androidx.compose.material.icons.outlined.Headset
 import androidx.compose.material.icons.outlined.Hearing
-import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Language
@@ -6216,7 +6215,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
       SettingsSection {
         SettingsMenuRow("Customize GiZa", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_customize_sparkle)) { viewModel.openCustomize() }
         SettingsDivider()
-        SettingsMenuRow("Connectors", icon = Icons.Outlined.Hub) { viewModel.openConnectors() }
+        SettingsMenuRow("Connectors", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connectors)) { viewModel.openConnectors() }
         SettingsDivider()
         SettingsMenuRow("Kids Mode", icon = Icons.Outlined.ChildCare) { viewModel.openKidsMode() }
         SettingsDivider()
