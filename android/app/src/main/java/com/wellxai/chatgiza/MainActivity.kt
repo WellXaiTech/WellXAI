@@ -189,6 +189,7 @@ import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.EventNote
 import androidx.compose.material.icons.outlined.Feedback
 import androidx.compose.material.icons.outlined.GraphicEq
 import androidx.compose.material.icons.outlined.Headset
@@ -3304,6 +3305,42 @@ private fun ChatGizaEventsCard() {
   }
 }
 
+// A second, static promo tile below Events -- same card language (rounded,
+// dark, icon swatch + label + headline) but its own background and no
+// rotation, linking straight to the existing Scheduled feature.
+@Composable
+private fun ChatGizaArrangedCard(onClick: () -> Unit) {
+  Box(
+    modifier = Modifier
+      .fillMaxWidth()
+      .padding(horizontal = 10.dp, vertical = 4.dp)
+      .clip(RoundedCornerShape(20.dp))
+      .background(Color(0xFF1E2B26))
+      .clickable(onClick = onClick)
+      .padding(horizontal = 16.dp, vertical = 10.dp)
+  ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      Box(
+        modifier = Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFF1EBE7E)),
+        contentAlignment = Alignment.Center
+      ) {
+        Icon(Icons.Outlined.EventNote, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+      }
+      Spacer(modifier = Modifier.size(14.dp))
+      Column {
+        Text("Arranged", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 11.sp)
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+          "See what GiZa has scheduled for you",
+          color = colorScheme.onBackground,
+          fontSize = 16.sp,
+          fontWeight = FontWeight.Bold
+        )
+      }
+    }
+  }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HistoryScreen(viewModel: ChatViewModel) {
@@ -3404,6 +3441,9 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
         // has its own dedicated tab in the bottom nav below, so nothing is
         // lost by decoupling this card from it.
         ChatGizaEventsCard()
+
+        Spacer(modifier = Modifier.height(10.dp))
+        ChatGizaArrangedCard(onClick = { viewModel.openScheduled() })
 
         Spacer(modifier = Modifier.height(14.dp))
       }
