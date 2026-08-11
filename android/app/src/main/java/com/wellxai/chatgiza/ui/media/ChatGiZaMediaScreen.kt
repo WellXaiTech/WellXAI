@@ -10,6 +10,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,6 +56,7 @@ import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Comment
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -72,6 +74,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -81,14 +84,17 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 import coil.compose.AsyncImage
 import com.wellxai.chatgiza.ApiMediaPost
 import com.wellxai.chatgiza.ChatViewModel
@@ -327,10 +333,55 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
         onBack = { viewingProfile = null }
       )
     }
+
+    // Draggable floating shortcut into the AI Agent tool, styled after
+    // Binance's floating assistant button -- Extra Media only, per request.
+    GizaProFloatingAgent(
+      modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = navHeight + 24.dp),
+      onClick = {
+        viewModel.selectTool("ai_agent")
+        viewModel.closeChatGizaMedia()
+      }
+    )
   }
 
   if (showConnectSheet) {
     ConnectWithChatGizaSheet(viewModel, onDismiss = { showConnectSheet = false })
+  }
+}
+
+// Draggable floating shortcut to GiZa Pro's AI Agent, shaped like Binance's
+// floating assistant button -- a rotated rounded square, freely draggable
+// around the screen. Position resets to the default corner each time this
+// screen (Extra Media) is re-entered, since it isn't meant to persist.
+@Composable
+private fun GizaProFloatingAgent(onClick: () -> Unit, modifier: Modifier = Modifier) {
+  var offsetX by remember { mutableStateOf(0f) }
+  var offsetY by remember { mutableStateOf(0f) }
+  Box(
+    modifier = modifier
+      .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
+      .size(52.dp)
+      .pointerInput(Unit) {
+        detectDragGestures { change, dragAmount ->
+          change.consume()
+          offsetX += dragAmount.x
+          offsetY += dragAmount.y
+        }
+      }
+      .rotate(45f)
+      .clip(RoundedCornerShape(16.dp))
+      .background(Color(0xFFFFC94A))
+      .border(width = 1.dp, color = Color.Black.copy(alpha = 0.15f), shape = RoundedCornerShape(16.dp))
+      .clickable(onClick = onClick),
+    contentAlignment = Alignment.Center
+  ) {
+    Icon(
+      Icons.Outlined.WorkspacePremium,
+      contentDescription = "GiZa Pro",
+      tint = Color.Black,
+      modifier = Modifier.rotate(-45f).size(24.dp)
+    )
   }
 }
 
