@@ -756,7 +756,11 @@ private fun MediaBottomNavigation(
     verticalAlignment = Alignment.CenterVertically
   ) {
     // Home -- this screen itself, so it's always shown "active".
-    Icon(Icons.Filled.Home, contentDescription = "Home", tint = Color.Black)
+    Icon(
+      androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_home),
+      contentDescription = "Home",
+      tint = Color.Black
+    )
 
     // Visual-only for now -- no saved-media library screen built yet.
     Icon(Icons.Filled.PhotoLibrary, contentDescription = "Media", tint = Color.DarkGray)
