@@ -3831,7 +3831,7 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
           Icon(Icons.Outlined.EmojiEmotions, contentDescription = "Emoji", tint = Color(0xFFA8A8A8), modifier = Modifier.size(22.dp))
         }
         IconButton(onClick = { imagePicker.launch("image/*") }, modifier = Modifier.size(30.dp)) {
-          Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_add_photo), contentDescription = "Add photo", tint = Color(0xFFA8A8A8), modifier = Modifier.size(22.dp))
+          Icon(Icons.Outlined.Image, contentDescription = "Add photo", tint = Color(0xFFA8A8A8), modifier = Modifier.size(22.dp))
         }
         IconButton(onClick = { videoPicker.launch("video/*") }, modifier = Modifier.size(30.dp)) {
           Icon(
