@@ -2566,9 +2566,7 @@ private fun VoiceGradientCard(option: VoiceOption, selected: Boolean, onClick: (
         // a corner badge.
         if (isOrin) {
           Spacer(modifier = Modifier.width(6.dp))
-          Icon(
-            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_cloud),
-            contentDescription = "Cloud voice",
+          OrinVoiceBadge(
             tint = Color.White.copy(alpha = if (selected) 0.9f else 0.5f),
             modifier = Modifier.size(15.dp)
           )
