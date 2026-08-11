@@ -17,8 +17,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -297,9 +300,40 @@ half4 main(float2 fragCoord) {
  */
 val isVoiceOrbSupported: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
 
+private class VoiceOrbShaders(val bake: RuntimeShader, val live: RuntimeShader)
+
+/** Orin's badge next to her name in the voice list -- the full animated
+ * orb on API 33+, the plain cloud glyph everywhere else. Every step that
+ * can throw (shader compilation, the offscreen bake, per-frame uniform
+ * setting) is guarded so a bad shader shows the fallback glyph instead of
+ * crashing the settings sheet. */
+@Composable
+fun OrinVoiceBadge(modifier: Modifier = Modifier, tint: Color) {
+  var failed by remember { mutableStateOf(false) }
+
+  if (!failed && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    VoiceOrb(
+      modifier = modifier,
+      seedPhase = 0.42f,
+      anchor = Color(0xFF6D8CFF),
+      colorA = Color(0xFF3A5CFF),
+      colorB = Color(0xFFBFD4FF),
+      colorC = Color(0xFF8E6DFF),
+      onError = { failed = true }
+    )
+  } else {
+    androidx.compose.material3.Icon(
+      painter = painterResource(R.drawable.ic_cloud),
+      contentDescription = "Cloud voice",
+      tint = tint,
+      modifier = modifier
+    )
+  }
+}
+
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
-fun VoiceOrb(
+private fun VoiceOrb(
   modifier: Modifier = Modifier,
   seedPhase: Float = 0.42f,
   archetype: Float = 0f,
@@ -307,41 +341,61 @@ fun VoiceOrb(
   colorA: Color = Color(0xFF3A5CFF),
   colorB: Color = Color(0xFFBFD4FF),
   colorC: Color = Color(0xFF8E6DFF),
-  audioLevel: Float = 0f
+  audioLevel: Float = 0f,
+  onError: () -> Unit
 ) {
-  val bakeShader = remember { RuntimeShader(VOICE_ORB_BAKE_SKSL) }
-  val liveShader = remember { RuntimeShader(VOICE_ORB_LIVE_SKSL) }
+  val shaders = remember {
+    runCatching { VoiceOrbShaders(RuntimeShader(VOICE_ORB_BAKE_SKSL), RuntimeShader(VOICE_ORB_LIVE_SKSL)) }.getOrNull()
+  }
+  if (shaders == null) {
+    LaunchedEffect(Unit) { onError() }
+    return
+  }
 
   // Baked once per (seed, archetype, palette) -- the expensive static
   // noise never needs to be recomputed on every animation frame.
   val skyBitmap = remember(seedPhase, archetype, colorA, colorB, colorC) {
-    val w = 256
-    val h = 128
-    bakeShader.setFloatUniform("uArch", archetype)
-    bakeShader.setFloatUniform("uPhase", seedPhase)
-    bakeShader.setFloatUniform("uOutSize", w.toFloat(), h.toFloat())
-    bakeShader.setFloatUniform("uC0", colorA.red, colorA.green, colorA.blue)
-    bakeShader.setFloatUniform("uC1", colorB.red, colorB.green, colorB.blue)
-    bakeShader.setFloatUniform("uC2", colorC.red, colorC.green, colorC.blue)
-    val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-    val canvas = NativeCanvas(bmp)
-    val paint = NativePaint().apply { shader = bakeShader }
-    canvas.drawRect(0f, 0f, w.toFloat(), h.toFloat(), paint)
-    bmp
+    runCatching {
+      val w = 256
+      val h = 128
+      shaders.bake.setFloatUniform("uArch", archetype)
+      shaders.bake.setFloatUniform("uPhase", seedPhase)
+      shaders.bake.setFloatUniform("uOutSize", w.toFloat(), h.toFloat())
+      shaders.bake.setFloatUniform("uC0", colorA.red, colorA.green, colorA.blue)
+      shaders.bake.setFloatUniform("uC1", colorB.red, colorB.green, colorB.blue)
+      shaders.bake.setFloatUniform("uC2", colorC.red, colorC.green, colorC.blue)
+      val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+      val canvas = NativeCanvas(bmp)
+      val paint = NativePaint().apply { shader = shaders.bake }
+      canvas.drawRect(0f, 0f, w.toFloat(), h.toFloat(), paint)
+      bmp
+    }.getOrNull()
+  }
+  if (skyBitmap == null) {
+    LaunchedEffect(Unit) { onError() }
+    return
   }
 
-  liveShader.setFloatUniform("uAnchor", anchor.red, anchor.green, anchor.blue)
-  liveShader.setFloatUniform("uC0", colorA.red, colorA.green, colorA.blue)
-  liveShader.setFloatUniform("uC1", colorB.red, colorB.green, colorB.blue)
-  liveShader.setFloatUniform("uC2", colorC.red, colorC.green, colorC.blue)
-  liveShader.setFloatUniform("uPhase", seedPhase)
-  liveShader.setFloatUniform("uArch", archetype)
-  liveShader.setFloatUniform("uAudio", audioLevel)
-  liveShader.setFloatUniform("uSkySize", skyBitmap.width.toFloat(), skyBitmap.height.toFloat())
-  liveShader.setInputShader(
-    "uSky",
-    BitmapShader(skyBitmap, NativeShader.TileMode.REPEAT, NativeShader.TileMode.CLAMP)
-  )
+  val setupOk = remember(skyBitmap, anchor, colorA, colorB, colorC, seedPhase, archetype, audioLevel) {
+    runCatching {
+      shaders.live.setFloatUniform("uAnchor", anchor.red, anchor.green, anchor.blue)
+      shaders.live.setFloatUniform("uC0", colorA.red, colorA.green, colorA.blue)
+      shaders.live.setFloatUniform("uC1", colorB.red, colorB.green, colorB.blue)
+      shaders.live.setFloatUniform("uC2", colorC.red, colorC.green, colorC.blue)
+      shaders.live.setFloatUniform("uPhase", seedPhase)
+      shaders.live.setFloatUniform("uArch", archetype)
+      shaders.live.setFloatUniform("uAudio", audioLevel)
+      shaders.live.setFloatUniform("uSkySize", skyBitmap.width.toFloat(), skyBitmap.height.toFloat())
+      shaders.live.setInputShader(
+        "uSky",
+        BitmapShader(skyBitmap, NativeShader.TileMode.REPEAT, NativeShader.TileMode.CLAMP)
+      )
+    }.isSuccess
+  }
+  if (!setupOk) {
+    LaunchedEffect(Unit) { onError() }
+    return
+  }
 
   val infiniteTransition = rememberInfiniteTransition(label = "voiceOrbTime")
   val time by infiniteTransition.animateFloat(
@@ -368,35 +422,14 @@ fun VoiceOrb(
       .clip(CircleShape)
       .graphicsLayer()
   ) {
-    liveShader.setFloatUniform("uRes", size.width, size.height)
-    liveShader.setFloatUniform("uTime", time)
-    liveShader.setFloatUniform("uSpin", spin)
-    drawIntoCanvas { canvas ->
-      val paint = NativePaint().apply { shader = liveShader }
-      canvas.nativeCanvas.drawRect(0f, 0f, size.width, size.height, paint)
-    }
-  }
-}
-
-/** Orin's badge next to her name in the voice list -- the full animated
- * orb on API 33+, the plain cloud glyph on everything older. */
-@Composable
-fun OrinVoiceBadge(modifier: Modifier = Modifier, tint: Color) {
-  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-    VoiceOrb(
-      modifier = modifier,
-      seedPhase = 0.42f,
-      anchor = Color(0xFF6D8CFF),
-      colorA = Color(0xFF3A5CFF),
-      colorB = Color(0xFFBFD4FF),
-      colorC = Color(0xFF8E6DFF)
-    )
-  } else {
-    androidx.compose.material3.Icon(
-      painter = painterResource(R.drawable.ic_cloud),
-      contentDescription = "Cloud voice",
-      tint = tint,
-      modifier = modifier
-    )
+    runCatching {
+      shaders.live.setFloatUniform("uRes", size.width, size.height)
+      shaders.live.setFloatUniform("uTime", time)
+      shaders.live.setFloatUniform("uSpin", spin)
+      drawIntoCanvas { canvas ->
+        val paint = NativePaint().apply { shader = shaders.live }
+        canvas.nativeCanvas.drawRect(0f, 0f, size.width, size.height, paint)
+      }
+    }.onFailure { onError() }
   }
 }
