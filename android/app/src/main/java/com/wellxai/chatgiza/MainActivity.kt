@@ -256,6 +256,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.compositeOver
@@ -2435,59 +2436,49 @@ private fun VoiceGradientCard(option: VoiceOption, selected: Boolean, onClick: (
 
   val isOrin = option.name == "Orin"
 
-  // A slow angle sweep on the gradient so the selected card reads as
-  // "alive" (evoking a waveform) rather than a flat color swatch. Orin
-  // spins much faster through a wider, multi-color sweep instead of the
-  // plain 2-color linear gradient every other card gets -- a visibly
-  // busier, more eye-catching glow (like a swirling planet), not just a
-  // quicker version of the same effect.
-  val infiniteTransition = rememberInfiniteTransition(label = "voiceGradient")
-  val angle by infiniteTransition.animateFloat(
+  // Reference design: the selected card becomes a full pill and its
+  // background reads as a soft, shifting cloud of color rather than a flat
+  // swatch or a crisp geometric gradient -- three overlapping, independently
+  // drifting radial blobs (each a color fading to transparent) blended over
+  // a dark base, instead of one hard-edged brush.
+  val infiniteTransition = rememberInfiniteTransition(label = "voiceCloud")
+  val t by infiniteTransition.animateFloat(
     initialValue = 0f,
     targetValue = 360f,
-    animationSpec = infiniteRepeatable(animation = tween(if (isOrin) 1400 else 6000, easing = LinearEasing), repeatMode = RepeatMode.Restart),
-    label = "voiceGradientAngle"
+    animationSpec = infiniteRepeatable(animation = tween(5000, easing = LinearEasing), repeatMode = RepeatMode.Restart),
+    label = "voiceCloudAngle"
   )
-  val diagonalDp = with(density) { kotlin.math.sqrt(widthPx * widthPx + heightPx * heightPx).toDp() }
-  val orinBrush = Brush.sweepGradient(
-    listOf(
-      Color(0xFFF59E0B), Color(0xFFEF4444), Color(0xFF8B5CF6),
-      Color(0xFF3B82F6), Color(0xFF10B981), Color(0xFFF59E0B)
-    )
-  )
-  val brush = if (selected) {
-    val radians = Math.toRadians(angle.toDouble())
-    val dx = kotlin.math.cos(radians).toFloat()
-    val dy = kotlin.math.sin(radians).toFloat()
-    val cx = widthPx / 2f
-    val cy = heightPx / 2f
-    val radius = kotlin.math.max(widthPx, heightPx) / 2f
-    Brush.linearGradient(
-      colors = listOf(option.gradientStart, option.gradientEnd),
-      start = Offset(cx - dx * radius, cy - dy * radius),
-      end = Offset(cx + dx * radius, cy + dy * radius)
-    )
-  } else {
-    Brush.linearGradient(colors = listOf(Color.White.copy(alpha = 0.08f), Color.White.copy(alpha = 0.08f)))
-  }
+  val blobSize = with(density) { (kotlin.math.max(widthPx, heightPx) * 0.95f).toDp() }
+  val midColor = lerp(option.gradientStart, option.gradientEnd, 0.5f)
 
   Box(
     modifier = Modifier
       .width(cardWidth)
       .height(cardHeight)
-      .clip(RoundedCornerShape(20.dp))
+      .clip(RoundedCornerShape(percent = 50))
       .clickable(onClick = onClick)
   ) {
-    if (selected && isOrin) {
-      Box(
-        modifier = Modifier
-          .size(diagonalDp)
-          .align(Alignment.Center)
-          .graphicsLayer { rotationZ = angle }
-          .background(orinBrush)
-      )
+    if (selected) {
+      Box(modifier = Modifier.matchParentSize().background(Color(0xFF1C1C1C)))
+      listOf(
+        Triple(option.gradientStart, 0f, 0.85f),
+        Triple(option.gradientEnd, 130f, 0.8f),
+        Triple(midColor, 250f, 0.7f)
+      ).forEach { (color, phase, alpha) ->
+        val rad = Math.toRadians((t + phase).toDouble())
+        val ox = (kotlin.math.cos(rad) * widthPx * 0.2f).toFloat()
+        val oy = (kotlin.math.sin(rad) * heightPx * 0.35f).toFloat()
+        Box(
+          modifier = Modifier
+            .size(blobSize)
+            .align(Alignment.Center)
+            .offset { IntOffset(ox.roundToInt(), oy.roundToInt()) }
+            .graphicsLayer { this.alpha = alpha }
+            .background(Brush.radialGradient(listOf(color, Color.Transparent)))
+        )
+      }
     } else {
-      Box(modifier = Modifier.matchParentSize().background(brush))
+      Box(modifier = Modifier.matchParentSize().background(Color.White.copy(alpha = 0.08f)))
     }
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
