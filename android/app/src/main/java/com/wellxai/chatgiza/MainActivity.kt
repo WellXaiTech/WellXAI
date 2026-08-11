@@ -15,7 +15,9 @@ import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import android.os.Bundle
+import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import android.util.Base64
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -1221,7 +1223,6 @@ private fun ChatMenuRow(
 @Composable
 private fun ChatComposerCard(viewModel: ChatViewModel) {
   var toolMenuOpen by remember { mutableStateOf(false) }
-  var pendingAutoSend by remember { mutableStateOf(false) }
   val haptic = LocalHapticFeedback.current
   fun tapHaptic() {
     if (viewModel.hapticsEnabled && viewModel.hapticsOnPress) {
@@ -1289,29 +1290,76 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
     if (granted) launchCamera()
   }
 
-  val speechLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-    val autoSend = pendingAutoSend
-    pendingAutoSend = false
-    if (result.resultCode == Activity.RESULT_OK) {
-      val transcript = result.data
-        ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-        ?.firstOrNull()
-      if (!transcript.isNullOrBlank()) {
-        val combined = if (viewModel.input.isBlank()) transcript else "${viewModel.input} $transcript"
-        viewModel.onInputChange(combined)
-        if (autoSend) {
-          viewModel.sendMessage(viaVoice = true)
-        }
-      }
+  // In-app voice typing -- SpeechRecognizer.startListening(), not the
+  // ACTION_RECOGNIZE_SPEECH Activity (a separate full-screen dialog that
+  // didn't match what was wanted). Live partial results stream into the
+  // composer as the user talks, with an X to cancel and a check to stop
+  // and keep what was heard -- the same shape as the keyboard's own
+  // inline voice row, just driven by the app's own mic button.
+  var isListening by remember { mutableStateOf(false) }
+  var listeningPreview by remember { mutableStateOf("") }
+  val inputBeforeListening = remember { mutableStateOf("") }
+  var hasMicPermission by remember {
+    mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
+  }
+  val speechRecognizer = remember {
+    if (SpeechRecognizer.isRecognitionAvailable(context)) SpeechRecognizer.createSpeechRecognizer(context) else null
+  }
+  DisposableEffect(speechRecognizer) {
+    onDispose { speechRecognizer?.destroy() }
+  }
+
+  fun applyTranscript(text: String) {
+    if (text.isNotBlank()) {
+      val base = inputBeforeListening.value
+      viewModel.onInputChange(if (base.isBlank()) text else "$base $text")
     }
   }
 
-  fun launchSpeech(autoSend: Boolean) {
-    pendingAutoSend = autoSend
+  fun stopListening(keepResult: Boolean) {
+    isListening = false
+    listeningPreview = ""
+    runCatching { if (keepResult) speechRecognizer?.stopListening() else speechRecognizer?.cancel() }
+  }
+
+  fun startListening() {
+    val recognizer = speechRecognizer ?: return
+    inputBeforeListening.value = viewModel.input
+    listeningPreview = ""
+    recognizer.setRecognitionListener(object : RecognitionListener {
+      override fun onReadyForSpeech(params: Bundle?) {}
+      override fun onBeginningOfSpeech() {}
+      override fun onRmsChanged(rmsdB: Float) {}
+      override fun onBufferReceived(buffer: ByteArray?) {}
+      override fun onEndOfSpeech() {}
+      override fun onError(error: Int) { isListening = false; listeningPreview = "" }
+      override fun onPartialResults(partialResults: Bundle?) {
+        val text = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
+        if (text != null) listeningPreview = text
+      }
+      override fun onResults(results: Bundle?) {
+        val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
+        if (text != null) applyTranscript(text)
+        isListening = false
+        listeningPreview = ""
+      }
+      override fun onEvent(eventType: Int, params: Bundle?) {}
+    })
     val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
       putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+      putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
     }
-    runCatching { speechLauncher.launch(intent) }
+    isListening = true
+    runCatching { recognizer.startListening(intent) }.onFailure { isListening = false }
+  }
+
+  val micPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+    hasMicPermission = granted
+    if (granted) startListening()
+  }
+
+  fun launchSpeech() {
+    if (hasMicPermission) startListening() else micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
   }
 
   val focusRequester = remember { FocusRequester() }
@@ -1545,6 +1593,58 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
           focusedIndicatorColor = Color.Transparent
         )
       )
+      if (isListening) {
+        // Replaces the whole button row while recording -- live partial
+        // transcript in place of the input, X cancels without keeping
+        // anything heard, the check stops and keeps the transcript.
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 6.dp)
+        ) {
+          Box(
+            modifier = Modifier.size(36.dp).clip(CircleShape).background(Color(0xFFFF6B6B)),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(
+              painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mic),
+              contentDescription = "Listening",
+              tint = Color.White,
+              modifier = Modifier.size(18.dp)
+            )
+          }
+          Spacer(modifier = Modifier.width(10.dp))
+          Text(
+            text = listeningPreview.ifBlank { "Listening…" },
+            color = colorScheme.onBackground.copy(alpha = if (listeningPreview.isBlank()) 0.5f else 1f),
+            fontSize = 15.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+          )
+          Spacer(modifier = Modifier.width(8.dp))
+          Box(
+            modifier = Modifier
+              .size(36.dp)
+              .clip(CircleShape)
+              .background(colorScheme.onBackground.copy(alpha = 0.1f))
+              .clickable { stopListening(keepResult = false) },
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(Icons.Outlined.Close, contentDescription = "Cancel", tint = colorScheme.onBackground, modifier = Modifier.size(18.dp))
+          }
+          Spacer(modifier = Modifier.width(8.dp))
+          Box(
+            modifier = Modifier
+              .size(36.dp)
+              .clip(CircleShape)
+              .background(Color(0xFFE0E0E0))
+              .clickable { stopListening(keepResult = true) },
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(Icons.Filled.Check, contentDescription = "Done", tint = Color.Black, modifier = Modifier.size(18.dp))
+          }
+        }
+      } else {
       Row(
         verticalAlignment = Alignment.CenterVertically,
         // A touch of breathing room off the very bottom edge of the card --
@@ -1648,21 +1748,15 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
         }
         Spacer(modifier = Modifier.weight(1f))
 
-        // MIC BUTTON -- focuses the text field and raises the keyboard so
-        // the user's own keyboard mic (its inline voice-typing row) is one
-        // tap away, instead of launching Android's separate speech-recognition
-        // dialog. Per explicit request: the dialog didn't match what was
-        // wanted, and no app can trigger the keyboard's own voice UI directly.
+        // MIC BUTTON -- starts real in-app voice typing (SpeechRecognizer),
+        // replacing this whole row with a listening bar until the user
+        // cancels or confirms.
         Box(
           modifier = Modifier
             .size(36.dp)
             .clip(CircleShape)
             .background(Color(0xFF333333))
-            .clickable {
-              focusRequester.requestFocus()
-              keyboardController?.show()
-              keyboardVisible = true
-            },
+            .clickable { launchSpeech() },
           contentAlignment = Alignment.Center
         ) {
           Icon(
@@ -1716,6 +1810,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             )
           }
         }
+      }
       }
     }
   }
