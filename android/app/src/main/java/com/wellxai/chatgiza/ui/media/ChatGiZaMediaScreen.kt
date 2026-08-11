@@ -654,7 +654,7 @@ private fun MediaPost(
 
       IconButton(onClick = onToggleComments) {
         Icon(
-          imageVector = Icons.Outlined.Comment,
+          painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_comment),
           contentDescription = "Comment",
           tint = if (commentsExpanded) Color.Black else Color.DarkGray
         )
