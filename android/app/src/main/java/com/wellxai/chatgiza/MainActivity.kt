@@ -875,28 +875,30 @@ private fun CreateImageIconCustom(tint: Color, modifier: Modifier = Modifier) {
       cornerRadius = CornerRadius(3.6f * scale, 3.6f * scale),
       style = Stroke(width = strokeW)
     )
-    drawCircle(color = tint, radius = 1.5f * scale, center = Offset(14.6f * scale, 8.6f * scale))
+    drawCircle(color = tint, radius = 1.6f * scale, center = Offset(14.3f * scale, 8.3f * scale))
     val mountain = Path().apply {
-      moveTo(5f * scale, 15.8f * scale)
-      lineTo(8.8f * scale, 11.6f * scale)
-      lineTo(12.6f * scale, 15.8f * scale)
+      moveTo(5f * scale, 16f * scale)
+      lineTo(9f * scale, 11.5f * scale)
+      lineTo(13f * scale, 16f * scale)
       close()
     }
     drawPath(mountain, color = tint)
+    // Thicker, round-capped -- the reference pencil is a rounded capsule
+    // body, not a thin line; the earlier pass read as a bare stick.
     drawLine(
       color = tint,
-      start = Offset(14f * scale, 14.5f * scale),
-      end = Offset(20.5f * scale, 8f * scale),
-      strokeWidth = 2f * scale,
+      start = Offset(15f * scale, 15f * scale),
+      end = Offset(21f * scale, 9f * scale),
+      strokeWidth = 3.2f * scale,
       cap = StrokeCap.Round
     )
-    val tip2 = Path().apply {
-      moveTo(12f * scale, 16.5f * scale)
-      lineTo(13.2f * scale, 13.3f * scale)
-      lineTo(15.2f * scale, 15.3f * scale)
+    val tip = Path().apply {
+      moveTo(12.6f * scale, 17.4f * scale)
+      lineTo(14f * scale, 13.8f * scale)
+      lineTo(16.6f * scale, 16.4f * scale)
       close()
     }
-    drawPath(tip2, color = tint)
+    drawPath(tip, color = tint)
   }
 }
 
