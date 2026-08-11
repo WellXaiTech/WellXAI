@@ -770,7 +770,12 @@ private fun MediaBottomNavigation(
     )
 
     IconButton(onClick = onCreateClick) {
-      Icon(Icons.Filled.AddCircle, contentDescription = "Create", tint = Color.Black, modifier = Modifier.size(30.dp))
+      Icon(
+        androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_send),
+        contentDescription = "Create",
+        tint = Color.Black,
+        modifier = Modifier.size(26.dp)
+      )
     }
 
     IconButton(onClick = onSearchClick) {
