@@ -763,7 +763,11 @@ private fun MediaBottomNavigation(
     )
 
     // Visual-only for now -- no saved-media library screen built yet.
-    Icon(Icons.Filled.PhotoLibrary, contentDescription = "Media", tint = Color.DarkGray)
+    Icon(
+      androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_add_photo),
+      contentDescription = "Media",
+      tint = Color.DarkGray
+    )
 
     IconButton(onClick = onCreateClick) {
       Icon(Icons.Filled.AddCircle, contentDescription = "Create", tint = Color.Black, modifier = Modifier.size(30.dp))
