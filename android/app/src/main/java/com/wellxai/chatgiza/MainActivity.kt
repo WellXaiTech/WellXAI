@@ -857,6 +857,48 @@ private fun RenameIconCustom(tint: Color, modifier: Modifier = Modifier) {
   }
 }
 
+// Photo frame (sun + mountain, like GalleryIconCustom) with a pencil
+// signing the top-right corner (like RenameIconCustom's pencil) -- the
+// pasted reference SVG's pathData was cut off mid-coordinate with no
+// closing Z, so this redraws the same "edit image" concept as primitives
+// instead of using the broken/truncated path.
+@Composable
+private fun CreateImageIconCustom(tint: Color, modifier: Modifier = Modifier) {
+  Canvas(modifier = modifier) {
+    val scale = size.width / 24f
+    val strokeW = 1.6f * scale
+    drawRoundRect(
+      color = tint,
+      topLeft = Offset(2.5f * scale, 4.5f * scale),
+      size = Size(15.5f * scale, 15.5f * scale),
+      cornerRadius = CornerRadius(3.6f * scale, 3.6f * scale),
+      style = Stroke(width = strokeW)
+    )
+    drawCircle(color = tint, radius = 1.5f * scale, center = Offset(14.6f * scale, 8.6f * scale))
+    val mountain = Path().apply {
+      moveTo(5f * scale, 15.8f * scale)
+      lineTo(8.8f * scale, 11.6f * scale)
+      lineTo(12.6f * scale, 15.8f * scale)
+      close()
+    }
+    drawPath(mountain, color = tint)
+    drawLine(
+      color = tint,
+      start = Offset(14f * scale, 14.5f * scale),
+      end = Offset(20.5f * scale, 8f * scale),
+      strokeWidth = 2f * scale,
+      cap = StrokeCap.Round
+    )
+    val tip2 = Path().apply {
+      moveTo(12f * scale, 16.5f * scale)
+      lineTo(13.2f * scale, 13.3f * scale)
+      lineTo(15.2f * scale, 15.3f * scale)
+      close()
+    }
+    drawPath(tip2, color = tint)
+  }
+}
+
 @Composable
 private fun SkillsIconCustom(tint: Color, modifier: Modifier = Modifier) {
   Canvas(modifier = modifier) {
@@ -1602,7 +1644,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
         viewModel.onInputChange("Create a video of ")
         focusRequester.requestFocus()
       }
-      QuickActionChip(icon = { Icon(Icons.Outlined.Image, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(22.dp)) }, label = "Create an image") {
+      QuickActionChip(icon = { CreateImageIconCustom(tint = colorScheme.onBackground, modifier = Modifier.size(22.dp)) }, label = "Create an image") {
         viewModel.onInputChange("Create an image of ")
         focusRequester.requestFocus()
       }
