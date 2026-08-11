@@ -838,10 +838,9 @@ private fun MediaBottomNavigation(
     }
 
     IconButton(onClick = onSearchClick) {
-      Icon(
-        androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_search),
-        contentDescription = "Search",
-        tint = if (searchOpen) Color.Black else Color.DarkGray
+      com.wellxai.chatgiza.SearchIconCustom(
+        tint = if (searchOpen) Color.Black else Color.DarkGray,
+        modifier = Modifier.size(24.dp)
       )
     }
 
