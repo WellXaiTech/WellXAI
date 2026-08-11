@@ -803,7 +803,6 @@ fun SearchIconCustom(tint: Color, modifier: Modifier = Modifier) {
   }
 }
 
-@Composable
 // A single continuous folder outline (tab + body as one loop, filled
 // solid) instead of two separate stacked rounded rects -- those had a
 // visible seam between them and didn't read as a folder at a glance.
@@ -6437,7 +6436,22 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         SettingsMenuRow("Report a Problem", icon = Icons.Outlined.ReportProblem) { viewModel.openReportProblem() }
       }
 
-      // Sign out moved to the Edit Profile screen, below "Connect with X".
+      Spacer(modifier = Modifier.height(16.dp))
+      Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = { viewModel.signOut() }),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.onBackground.copy(alpha = 0.06f))
+      ) {
+        Row(
+          modifier = Modifier.padding(16.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_logout), contentDescription = null, tint = Color(0xFFFF6B6B))
+          Spacer(modifier = Modifier.width(14.dp))
+          Text("Sign out", color = Color(0xFFFF6B6B), fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        }
+      }
+
       Spacer(modifier = Modifier.height(24.dp))
     }
   }
