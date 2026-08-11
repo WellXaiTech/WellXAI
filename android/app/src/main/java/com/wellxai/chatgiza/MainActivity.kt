@@ -804,50 +804,57 @@ fun SearchIconCustom(tint: Color, modifier: Modifier = Modifier) {
 }
 
 @Composable
+// A single continuous folder outline (tab + body as one loop, filled
+// solid) instead of two separate stacked rounded rects -- those had a
+// visible seam between them and didn't read as a folder at a glance.
+@Composable
 private fun ProjectsIconCustom(tint: Color, modifier: Modifier = Modifier) {
   Canvas(modifier = modifier) {
     val scale = size.width / 24f
-    drawRoundRect(
-      color = tint,
-      topLeft = Offset(3f * scale, 4.5f * scale),
-      size = Size(8f * scale, 4f * scale),
-      cornerRadius = CornerRadius(1.6f * scale, 1.6f * scale)
-    )
-    drawRoundRect(
-      color = tint,
-      topLeft = Offset(3f * scale, 7.5f * scale),
-      size = Size(18f * scale, 12f * scale),
-      cornerRadius = CornerRadius(2.4f * scale, 2.4f * scale)
-    )
+    val folder = Path().apply {
+      moveTo(3f * scale, 6.5f * scale)
+      lineTo(9.5f * scale, 6.5f * scale)
+      lineTo(11.2f * scale, 8.5f * scale)
+      lineTo(21f * scale, 8.5f * scale)
+      lineTo(21f * scale, 19f * scale)
+      lineTo(3f * scale, 19f * scale)
+      close()
+    }
+    drawPath(folder, color = tint)
   }
 }
 
+// Closer to the original two-path reference (a rounded-square document
+// frame with a pencil signing across its top-right corner) than the
+// first pass, which dropped the frame entirely down to a bare underline
+// and read as unrecognizable.
 @Composable
 private fun RenameIconCustom(tint: Color, modifier: Modifier = Modifier) {
   Canvas(modifier = modifier) {
     val scale = size.width / 24f
-    val strokeW = 1.7f * scale
+    val strokeW = 1.6f * scale
+    drawRoundRect(
+      color = tint,
+      topLeft = Offset(2.5f * scale, 2.5f * scale),
+      size = Size(16f * scale, 16f * scale),
+      cornerRadius = CornerRadius(4f * scale, 4f * scale),
+      style = Stroke(width = strokeW)
+    )
     drawLine(
       color = tint,
-      start = Offset(9.5f * scale, 12.5f * scale),
-      end = Offset(15.5f * scale, 6.5f * scale),
-      strokeWidth = 2.2f * scale,
+      start = Offset(10.5f * scale, 13.5f * scale),
+      end = Offset(18.6f * scale, 5.4f * scale),
+      strokeWidth = 2.1f * scale,
       cap = StrokeCap.Round
     )
     val tip = Path().apply {
-      moveTo(7f * scale, 15f * scale)
-      lineTo(8.6f * scale, 11.6f * scale)
-      lineTo(10.4f * scale, 13.4f * scale)
+      moveTo(8.3f * scale, 15.7f * scale)
+      lineTo(9.7f * scale, 11.9f * scale)
+      lineTo(12.1f * scale, 14.3f * scale)
       close()
     }
     drawPath(tip, color = tint)
-    drawLine(
-      color = tint,
-      start = Offset(2.5f * scale, 17.5f * scale),
-      end = Offset(11.5f * scale, 17.5f * scale),
-      strokeWidth = strokeW,
-      cap = StrokeCap.Round
-    )
+    drawCircle(color = tint, radius = 1.5f * scale, center = Offset(19.6f * scale, 4.4f * scale))
   }
 }
 
@@ -1357,9 +1364,6 @@ private fun ChatConversationMenuSheet(
       label = "Add to project",
       trailing = { Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp)) }
     ) { onDismiss(); onComingSoon("Add to project") }
-    ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_uploaded_files), contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp)) }, label = "Uploaded files") {
-      onDismiss(); onComingSoon("Uploaded files")
-    }
     ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_find_in_chat), contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp)) }, label = "Find in chat") {
       onDismiss(); onFindInChat()
     }
@@ -6417,7 +6421,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         SettingsDivider()
         SettingsMenuRow("Data Controls", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_data_controls)) { viewModel.openDataControls() }
         SettingsDivider()
-        SettingsMenuRow("Open Source Licenses", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_uploaded_files)) { viewModel.openOpenSourceLicenses() }
+        SettingsMenuRow("Open Source Licenses", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_files)) { viewModel.openOpenSourceLicenses() }
         SettingsDivider()
         SettingsMenuRow("Terms of Use", icon = Icons.AutoMirrored.Outlined.Article) {
           context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/terms")))
