@@ -341,12 +341,11 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
 
     // Draggable floating shortcut into the AI Agent tool, styled after
     // Binance's floating assistant button -- Extra Media only, per request.
+    // Selecting the tool no longer leaves Extra: it used to close straight
+    // back to Ask, which read as the button unexpectedly kicking you out.
     GizaProFloatingAgent(
       modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = navHeight + 24.dp),
-      onClick = {
-        viewModel.selectTool("ai_agent")
-        viewModel.closeChatGizaMedia()
-      }
+      onClick = { viewModel.selectTool("ai_agent") }
     )
   }
 

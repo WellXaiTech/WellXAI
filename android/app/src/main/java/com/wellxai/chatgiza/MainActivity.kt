@@ -5980,15 +5980,15 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         Text("Settings", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
       }
 
-      // A way into the ChatGiZa Media profile view (avatar, real post
-      // count, grid of your posts) from Account -- separate from Edit
-      // Profile, which is still reached from History's avatar and only
-      // edits account fields rather than showing your posts.
+      // The Extra Media profile view (avatar, real post count, grid of
+      // your posts) now lives only in Extra's own bottom nav -- this top
+      // row goes back to being Edit Profile, its original destination,
+      // instead of duplicating what Extra already has.
       Row(
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(14.dp))
-          .clickable(onClick = { viewModel.openMediaProfile() })
+          .clickable(onClick = { viewModel.openEditProfile() })
           .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
@@ -6004,18 +6004,13 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
           Text(viewModel.userName ?: "You", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-          Text("View Profile", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 13.sp)
+          Text("Edit Profile", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 13.sp)
         }
         Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.4f))
       }
 
-      // History's avatar now opens this screen directly (Settings), so
-      // Edit Profile needs its own row here instead -- previously it was
-      // only reachable by tapping that same avatar.
       SettingsSectionHeader("App")
       SettingsSection {
-        SettingsMenuRow("Edit Profile", icon = Icons.Outlined.ModeEdit) { viewModel.openEditProfile() }
-        SettingsDivider()
         SettingsMenuRow("Appearance", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_appearance)) { viewModel.openAppearance() }
         SettingsDivider()
         SettingsMenuRow("Haptics", icon = Icons.Outlined.Vibration) { viewModel.openHaptics() }
