@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Replaces the old leftover blue "WellX" splash bitmaps (from before the
+     native Compose rewrite) with the real ChatGiZa mark -- the same white
+     triangle used in the launcher icon's foreground layer, centered on the
+     app's actual black background (colors.xml / styles.xml both pin this
+     app to black, never the system's light default). A layer-list with a
+     fixed-size, center-gravity item keeps the mark from stretching to fit
+     the screen the way a plain full-bleed vector background would. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/colorPrimary" />
+    <item
+        android:width="132dp"
+        android:height="132dp"
+        android:gravity="center">
+        <vector
+            android:width="132dp"
+            android:height="132dp"
+            android:viewportWidth="512"
+            android:viewportHeight="512">
+            <path
+                android:fillColor="#FFFFFF"
+                android:pathData="M256,156 L346,356 L166,356 Z" />
+        </vector>
+    </item>
+</layer-list>
