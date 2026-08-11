@@ -960,6 +960,63 @@ private fun SpeakerIconCustom(tint: Color, modifier: Modifier = Modifier) {
   }
 }
 
+// ic_widgets.xml and ic_kids_mode.xml (both pasted by the user, both never
+// visually confirmed) relied on a second subpath inside the same <path> to
+// punch a hole -- the exact pattern that silently rendered solid instead of
+// hollow for every other icon in this file that tried it, evenOdd or not.
+// Redrawn as primitives so there's nothing left to trust blindly.
+@Composable
+private fun WidgetsIconCustom(tint: Color, modifier: Modifier = Modifier) {
+  Canvas(modifier = modifier) {
+    val scale = size.width / 24f
+    val strokeW = 1.8f * scale
+    drawRoundRect(
+      color = tint,
+      topLeft = Offset(2.5f * scale, 2.5f * scale),
+      size = Size(19f * scale, 19f * scale),
+      cornerRadius = CornerRadius(5.5f * scale, 5.5f * scale),
+      style = Stroke(width = strokeW)
+    )
+    drawRoundRect(
+      color = tint,
+      topLeft = Offset(8f * scale, 8f * scale),
+      size = Size(3.5f * scale, 3.5f * scale),
+      cornerRadius = CornerRadius(1f * scale, 1f * scale)
+    )
+    drawRoundRect(
+      color = tint,
+      topLeft = Offset(8f * scale, 13.5f * scale),
+      size = Size(8f * scale, 2.5f * scale),
+      cornerRadius = CornerRadius(1f * scale, 1f * scale)
+    )
+  }
+}
+
+@Composable
+private fun KidsModeIconCustom(tint: Color, modifier: Modifier = Modifier) {
+  Canvas(modifier = modifier) {
+    val scale = size.width / 24f
+    val strokeW = 1.7f * scale
+    drawCircle(
+      color = tint,
+      radius = 9f * scale,
+      center = Offset(12f * scale, 11.5f * scale),
+      style = Stroke(width = strokeW)
+    )
+    drawCircle(color = tint, radius = 1.1f * scale, center = Offset(8.6f * scale, 10.5f * scale))
+    drawCircle(color = tint, radius = 1.1f * scale, center = Offset(15.4f * scale, 10.5f * scale))
+    drawArc(
+      color = tint,
+      startAngle = 20f,
+      sweepAngle = 140f,
+      useCenter = false,
+      topLeft = Offset(7.5f * scale, 11.5f * scale),
+      size = Size(9f * scale, 7f * scale),
+      style = Stroke(width = strokeW, cap = StrokeCap.Round)
+    )
+  }
+}
+
 @Composable
 private fun AskImagineTab(label: String, selected: Boolean, onClick: () -> Unit) {
   Box(
@@ -6433,7 +6490,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         SettingsDivider()
         SettingsMenuRow("Haptics", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_haptics)) { viewModel.openHaptics() }
         SettingsDivider()
-        SettingsMenuRow("Widgets", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_widgets)) { viewModel.openWidgets() }
+        SettingsMenuRow("Widgets", iconContent = { c -> WidgetsIconCustom(tint = c, modifier = Modifier.size(22.dp)) }) { viewModel.openWidgets() }
         SettingsDivider()
         SettingsMenuRow("App Language", icon = Icons.Outlined.Language) { viewModel.openAppLanguage() }
         SettingsDivider()
@@ -6446,7 +6503,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         SettingsDivider()
         SettingsMenuRow("Connectors", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connectors)) { viewModel.openConnectors() }
         SettingsDivider()
-        SettingsMenuRow("Kids Mode", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_kids_mode)) { viewModel.openKidsMode() }
+        SettingsMenuRow("Kids Mode", iconContent = { c -> KidsModeIconCustom(tint = c, modifier = Modifier.size(22.dp)) }) { viewModel.openKidsMode() }
         SettingsDivider()
         SettingsMenuRow("NSFW Preferences", icon = Icons.Outlined.NoAdultContent) { viewModel.openNsfwPreferences() }
       }
@@ -6537,6 +6594,7 @@ private fun SettingsMenuRow(
   title: String,
   icon: ImageVector? = null,
   painter: androidx.compose.ui.graphics.painter.Painter? = null,
+  iconContent: (@Composable (Color) -> Unit)? = null,
   textColor: Color? = null,
   onClick: (() -> Unit)? = null
 ) {
@@ -6548,7 +6606,10 @@ private fun SettingsMenuRow(
       .padding(vertical = 14.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    if (painter != null) {
+    if (iconContent != null) {
+      iconContent(contentColor)
+      Spacer(modifier = Modifier.width(16.dp))
+    } else if (painter != null) {
       Icon(painter, contentDescription = null, tint = contentColor, modifier = Modifier.size(22.dp))
       Spacer(modifier = Modifier.width(16.dp))
     } else if (icon != null) {
