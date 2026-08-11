@@ -1,6 +1,7 @@
 package com.wellxai.chatgiza.ui.media
 
 import android.content.Intent
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
@@ -48,6 +49,9 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.Movie
+import androidx.compose.material.icons.automirrored.outlined.ListAlt
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Refresh
@@ -868,8 +872,9 @@ private fun MediaBottomNavigation(
 @Composable
 internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget, onBack: () -> Unit) {
   var fullscreenImage by remember { mutableStateOf<String?>(null) }
+  var showExtraSettings by remember { mutableStateOf(false) }
   BackHandler(enabled = fullscreenImage != null) { fullscreenImage = null }
-  BackHandler(enabled = fullscreenImage == null) { onBack() }
+  BackHandler(enabled = fullscreenImage == null && !showExtraSettings) { onBack() }
   val context = LocalContext.current
   val isOwnProfile = target.authorId == viewModel.userId
   val authorPosts = remember(viewModel.mediaPosts, target.authorId) {
@@ -913,7 +918,7 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
           Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = null, tint = onBg, modifier = Modifier.size(18.dp))
         }
         if (isOwnProfile) {
-          IconButton(onClick = { viewModel.openSettings() }, modifier = Modifier.size(40.dp)) {
+          IconButton(onClick = { showExtraSettings = true }, modifier = Modifier.size(40.dp)) {
             MediaMenuIcon(modifier = Modifier.size(20.dp), tint = onBg)
           }
         } else {
@@ -1115,5 +1120,75 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
         }
       }
     }
+
+    if (showExtraSettings) {
+      ExtraSettingsScreen(viewModel = viewModel, onBack = { showExtraSettings = false })
+    }
+  }
+}
+
+// Reached only from the menu icon on your own profile inside Extra Media --
+// scoped to Extra's own features rather than mixed into the main app's
+// Settings list, per explicit correction after an earlier attempt put
+// these rows there instead.
+@Composable
+private fun ExtraSettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
+  BackHandler { onBack() }
+  val context = LocalContext.current
+  val bg = Color(0xFF161616)
+  val onBg = Color.White
+  val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+
+  Box(modifier = Modifier.fillMaxSize().background(bg)) {
+    Column(modifier = Modifier.fillMaxSize()) {
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(top = topInset)
+          .height(56.dp)
+          .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
+          Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = onBg, modifier = Modifier.size(20.dp))
+        }
+        Spacer(modifier = Modifier.width(4.dp))
+        Text("Extra Settings", color = onBg, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+      }
+      Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+        ExtraSettingsRow(Icons.Outlined.AccountCircle, "Profile", onBg) { viewModel.openCustomize() }
+        ExtraSettingsRow(Icons.Outlined.WorkspacePremium, "Premium", onBg) {
+          Toast.makeText(context, "Premium — coming soon", Toast.LENGTH_SHORT).show()
+        }
+        ExtraSettingsRow(Icons.Outlined.Groups, "Communities", onBg) {
+          Toast.makeText(context, "Communities — coming soon", Toast.LENGTH_SHORT).show()
+        }
+        ExtraSettingsRow(Icons.Outlined.BookmarkBorder, "Bookmarks", onBg) {
+          Toast.makeText(context, "Bookmarks — coming soon", Toast.LENGTH_SHORT).show()
+        }
+        ExtraSettingsRow(Icons.AutoMirrored.Outlined.ListAlt, "Lists", onBg) {
+          Toast.makeText(context, "Lists — coming soon", Toast.LENGTH_SHORT).show()
+        }
+        ExtraSettingsRow(Icons.Outlined.Movie, "Creator Studio", onBg) {
+          Toast.makeText(context, "Creator Studio — coming soon", Toast.LENGTH_SHORT).show()
+        }
+      }
+    }
+  }
+}
+
+@Composable
+private fun ExtraSettingsRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, tint: Color, onClick: () -> Unit) {
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .clip(RoundedCornerShape(12.dp))
+      .clickable(onClick = onClick)
+      .padding(vertical = 14.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
+    Spacer(modifier = Modifier.width(18.dp))
+    Text(label, color = tint, fontSize = 16.sp, fontWeight = FontWeight.Medium)
   }
 }
