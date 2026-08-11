@@ -1,4 +1,4 @@
-package com.wellxai.chatgiza
+﻿package com.wellxai.chatgiza
 
 import android.Manifest
 import android.app.Activity
@@ -732,6 +732,186 @@ private fun GalleryIconCustom(modifier: Modifier = Modifier, tint: Color = Color
   }
 }
 
+// Same evenOdd-hole bug as the other icons below: ic_settings.xml, ic_copy.xml,
+// ic_extra_search.xml, ic_projects.xml, ic_rename.xml, ic_skills.xml and
+// ic_speaker.xml all used fillType="evenOdd" to punch a hole/ring out of a
+// filled shape, which doesn't reliably render on this Compose version.
+// Redrawn here as Canvas primitives (strokes/separate shapes, no evenOdd).
+@Composable
+private fun SettingsIconCustom(tint: Color, modifier: Modifier = Modifier) {
+  Canvas(modifier = modifier) {
+    val scale = size.width / 24f
+    val center = Offset(12f * scale, 12f * scale)
+    val strokeW = 1.7f * scale
+    for (i in 0 until 8) {
+      val angle = Math.toRadians((i * 45).toDouble())
+      val innerR = 7.1f * scale
+      val outerR = 9.3f * scale
+      drawLine(
+        color = tint,
+        start = Offset(center.x + (innerR * cos(angle)).toFloat(), center.y + (innerR * sin(angle)).toFloat()),
+        end = Offset(center.x + (outerR * cos(angle)).toFloat(), center.y + (outerR * sin(angle)).toFloat()),
+        strokeWidth = strokeW * 1.4f,
+        cap = StrokeCap.Round
+      )
+    }
+    drawCircle(color = tint, radius = 6.2f * scale, center = center, style = Stroke(width = strokeW * 1.6f))
+    drawCircle(color = tint, radius = 2f * scale, center = center, style = Stroke(width = strokeW))
+  }
+}
+
+@Composable
+private fun CopyIconCustom(tint: Color, modifier: Modifier = Modifier) {
+  Canvas(modifier = modifier) {
+    val scale = size.width / 24f
+    val strokeW = 1.7f * scale
+    drawRoundRect(
+      color = tint,
+      topLeft = Offset(7.5f * scale, 2.5f * scale),
+      size = Size(13f * scale, 13f * scale),
+      cornerRadius = CornerRadius(3.5f * scale, 3.5f * scale),
+      style = Stroke(width = strokeW)
+    )
+    drawRoundRect(
+      color = tint,
+      topLeft = Offset(3.5f * scale, 8.5f * scale),
+      size = Size(13f * scale, 13f * scale),
+      cornerRadius = CornerRadius(3.5f * scale, 3.5f * scale),
+      style = Stroke(width = strokeW)
+    )
+  }
+}
+
+@Composable
+fun SearchIconCustom(tint: Color, modifier: Modifier = Modifier) {
+  Canvas(modifier = modifier) {
+    val scale = size.width / 24f
+    val strokeW = 1.8f * scale
+    drawCircle(
+      color = tint,
+      radius = 6f * scale,
+      center = Offset(10f * scale, 10f * scale),
+      style = Stroke(width = strokeW)
+    )
+    drawLine(
+      color = tint,
+      start = Offset(14.6f * scale, 14.6f * scale),
+      end = Offset(20f * scale, 20f * scale),
+      strokeWidth = strokeW,
+      cap = StrokeCap.Round
+    )
+  }
+}
+
+@Composable
+private fun ProjectsIconCustom(tint: Color, modifier: Modifier = Modifier) {
+  Canvas(modifier = modifier) {
+    val scale = size.width / 24f
+    drawRoundRect(
+      color = tint,
+      topLeft = Offset(3f * scale, 4.5f * scale),
+      size = Size(8f * scale, 4f * scale),
+      cornerRadius = CornerRadius(1.6f * scale, 1.6f * scale)
+    )
+    drawRoundRect(
+      color = tint,
+      topLeft = Offset(3f * scale, 7.5f * scale),
+      size = Size(18f * scale, 12f * scale),
+      cornerRadius = CornerRadius(2.4f * scale, 2.4f * scale)
+    )
+  }
+}
+
+@Composable
+private fun RenameIconCustom(tint: Color, modifier: Modifier = Modifier) {
+  Canvas(modifier = modifier) {
+    val scale = size.width / 24f
+    val strokeW = 1.7f * scale
+    drawLine(
+      color = tint,
+      start = Offset(9.5f * scale, 12.5f * scale),
+      end = Offset(15.5f * scale, 6.5f * scale),
+      strokeWidth = 2.2f * scale,
+      cap = StrokeCap.Round
+    )
+    val tip = Path().apply {
+      moveTo(7f * scale, 15f * scale)
+      lineTo(8.6f * scale, 11.6f * scale)
+      lineTo(10.4f * scale, 13.4f * scale)
+      close()
+    }
+    drawPath(tip, color = tint)
+    drawLine(
+      color = tint,
+      start = Offset(2.5f * scale, 17.5f * scale),
+      end = Offset(11.5f * scale, 17.5f * scale),
+      strokeWidth = strokeW,
+      cap = StrokeCap.Round
+    )
+  }
+}
+
+@Composable
+private fun SkillsIconCustom(tint: Color, modifier: Modifier = Modifier) {
+  Canvas(modifier = modifier) {
+    val scale = size.width / 24f
+    val strokeW = 1.7f * scale
+    val r = 4.3f * scale
+    drawCircle(color = tint, radius = r, center = Offset(7.2f * scale, 7.2f * scale), style = Stroke(width = strokeW))
+    drawRoundRect(
+      color = tint,
+      topLeft = Offset(3f * scale, 12.8f * scale),
+      size = Size(8.4f * scale, 8.4f * scale),
+      cornerRadius = CornerRadius(2.2f * scale, 2.2f * scale),
+      style = Stroke(width = strokeW)
+    )
+    val tri = Path().apply {
+      moveTo(17.3f * scale, 3.2f * scale)
+      lineTo(21.4f * scale, 10.8f * scale)
+      lineTo(13.2f * scale, 10.8f * scale)
+      close()
+    }
+    drawPath(tri, color = tint, style = Stroke(width = strokeW))
+    drawCircle(color = tint, radius = r, center = Offset(17.3f * scale, 17.1f * scale), style = Stroke(width = strokeW))
+  }
+}
+
+@Composable
+private fun SpeakerIconCustom(tint: Color, modifier: Modifier = Modifier) {
+  Canvas(modifier = modifier) {
+    val scale = size.width / 24f
+    val strokeW = 1.6f * scale
+    val speaker = Path().apply {
+      moveTo(1f * scale, 9f * scale)
+      lineTo(4.5f * scale, 9f * scale)
+      lineTo(9.5f * scale, 4.5f * scale)
+      lineTo(9.5f * scale, 19.5f * scale)
+      lineTo(4.5f * scale, 15f * scale)
+      lineTo(1f * scale, 15f * scale)
+      close()
+    }
+    drawPath(speaker, color = tint)
+    drawArc(
+      color = tint,
+      startAngle = -40f,
+      sweepAngle = 80f,
+      useCenter = false,
+      topLeft = Offset(11f * scale, 7f * scale),
+      size = Size(8f * scale, 10f * scale),
+      style = Stroke(width = strokeW, cap = StrokeCap.Round)
+    )
+    drawArc(
+      color = tint,
+      startAngle = -40f,
+      sweepAngle = 80f,
+      useCenter = false,
+      topLeft = Offset(14f * scale, 4f * scale),
+      size = Size(11f * scale, 16f * scale),
+      style = Stroke(width = strokeW, cap = StrokeCap.Round)
+    )
+  }
+}
+
 @Composable
 private fun AskImagineTab(label: String, selected: Boolean, onClick: () -> Unit) {
   Box(
@@ -1173,7 +1353,7 @@ private fun ChatConversationMenuSheet(
       onDismiss(); onTogglePin()
     }
     ChatMenuRow(
-      icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_projects), contentDescription = null, tint = Color.White) },
+      icon = { ProjectsIconCustom(tint = Color.White, modifier = Modifier.size(20.dp)) },
       label = "Add to project",
       trailing = { Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp)) }
     ) { onDismiss(); onComingSoon("Add to project") }
@@ -1696,7 +1876,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             )
             HorizontalDivider(color = Color(0xFF262626), thickness = 1.dp)
             AttachMenuRow(
-              iconRes = R.drawable.ic_skills,
+              icon = { SkillsIconCustom(tint = Color.White, modifier = Modifier.size(24.dp)) },
               label = "Skills",
               onClick = { attachMenuOpen = false }
             )
@@ -2106,10 +2286,15 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               }
             }
           }
-          VoiceControlPill(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_speaker), contentDescription = "Speaker", active = speakerEnabled, enabled = !isConnecting) {
-            speakerEnabled = !speakerEnabled
-            controller.setSpeakerEnabled(speakerEnabled)
-          }
+          VoiceControlPillShell(
+            contentDescription = "Speaker",
+            active = speakerEnabled,
+            enabled = !isConnecting,
+            onClick = {
+              speakerEnabled = !speakerEnabled
+              controller.setSpeakerEnabled(speakerEnabled)
+            }
+          ) { tint -> SpeakerIconCustom(tint = tint, modifier = Modifier.size(20.dp)) }
           if (viewModel.voiceActivationMode == "push_to_talk") {
             PushToTalkPill(
               enabled = !isConnecting,
@@ -2123,9 +2308,12 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
             }
           }
           Box {
-            VoiceControlPill(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_settings), contentDescription = "Settings", enabled = !isConnecting) {
-              voiceSettingsOpen = true
-            }
+            VoiceControlPillShell(
+              contentDescription = "Settings",
+              active = true,
+              enabled = !isConnecting,
+              onClick = { voiceSettingsOpen = true }
+            ) { tint -> SettingsIconCustom(tint = tint, modifier = Modifier.size(20.dp)) }
             // Small badge showing the active personality's own icon (e.g.
             // Story Time) on top of the Settings pill, so which mode is
             // live is visible without opening the sheet.
@@ -2867,9 +3055,7 @@ private fun LiveVoiceSettingsSheet(
               .padding(vertical = 10.dp)
           ) {
             if (id == "speaker") {
-              Icon(
-                painter = androidx.compose.ui.res.painterResource(R.drawable.ic_speaker),
-                contentDescription = null,
+              SpeakerIconCustom(
                 tint = if (selected) Color.Black else Color.White,
                 modifier = Modifier.size(18.dp)
               )
@@ -3227,11 +3413,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             })
             .padding(vertical = 14.dp)
         ) {
-          Icon(
-            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_rename),
-            contentDescription = null,
-            tint = colorScheme.onBackground
-          )
+          RenameIconCustom(tint = colorScheme.onBackground, modifier = Modifier.size(20.dp))
           Spacer(modifier = Modifier.size(16.dp))
           Text("Rename", color = colorScheme.onBackground, fontSize = 16.sp)
         }
@@ -6777,9 +6959,9 @@ private fun MessageActionBar(
     modifier = Modifier.horizontalScroll(rememberScrollState()),
     horizontalArrangement = Arrangement.spacedBy(8.dp)
   ) {
-    ActionBarItem(androidx.compose.ui.res.painterResource(R.drawable.ic_copy), "Copy") {
+    ActionBarItemShell("Copy", Color(0xFFA8A8A8), onClick = {
       clipboard.setText(AnnotatedString(message.content))
-    }
+    }) { tint -> CopyIconCustom(tint = tint, modifier = Modifier.size(20.dp)) }
     if (message.content.length >= MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH) {
       ActionBarExtraItem(
         label = if (pushState == "pushed") "Sent" else "Extra",
@@ -6834,12 +7016,9 @@ private fun MessageActionBar(
           onClick = onSpeakToggle
         )
       } else {
-        ActionBarItem(
-          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_speaker),
-          label = "Read Aloud",
-          tint = Color(0xFFA8A8A8),
-          onClick = onSpeakToggle
-        )
+        ActionBarItemShell("Read Aloud", Color(0xFFA8A8A8), onClick = onSpeakToggle) { tint ->
+          SpeakerIconCustom(tint = tint, modifier = Modifier.size(20.dp))
+        }
       }
       ActionBarItem(androidx.compose.ui.res.painterResource(R.drawable.ic_regenerate), "Regenerate", onClick = onRegenerate)
       Box {
