@@ -2426,6 +2426,21 @@ private fun ConnectingDotsSpinner(dotColor: Color, size: Dp = 16.dp) {
   }
 }
 
+// Fixed cumulus-style puff layout (position/size/opacity as fractions of
+// the card) -- a hand-placed cluster reads as one coherent cloud shape
+// instead of random circles.
+private data class VoiceCloudPuff(val cx: Float, val cy: Float, val scale: Float, val alpha: Float, val phase: Float)
+
+private val VOICE_CLOUD_PUFFS = listOf(
+  VoiceCloudPuff(0.30f, 0.55f, 0.85f, 0.55f, 0f),
+  VoiceCloudPuff(0.42f, 0.35f, 1.05f, 0.6f, 45f),
+  VoiceCloudPuff(0.55f, 0.50f, 0.95f, 0.5f, 90f),
+  VoiceCloudPuff(0.66f, 0.32f, 0.8f, 0.55f, 135f),
+  VoiceCloudPuff(0.75f, 0.55f, 0.9f, 0.45f, 180f),
+  VoiceCloudPuff(0.48f, 0.68f, 0.75f, 0.4f, 225f),
+  VoiceCloudPuff(0.62f, 0.68f, 0.7f, 0.4f, 270f)
+)
+
 @Composable
 private fun VoiceGradientCard(option: VoiceOption, selected: Boolean, onClick: () -> Unit) {
   val cardWidth = 210.dp
@@ -2475,6 +2490,27 @@ private fun VoiceGradientCard(option: VoiceOption, selected: Boolean, onClick: (
             .offset { IntOffset(ox.roundToInt(), oy.roundToInt()) }
             .graphicsLayer { this.alpha = alpha }
             .background(Brush.radialGradient(listOf(color, Color.Transparent)))
+        )
+      }
+      // A cluster of small white puffs drifting over the color blobs --
+      // reads as an actual fluffy cloud silhouette (per the literal cloud
+      // photo reference) rather than smooth color blur alone.
+      VOICE_CLOUD_PUFFS.forEach { puff ->
+        val rad = Math.toRadians((t * 0.6f + puff.phase).toDouble())
+        val ox = (kotlin.math.cos(rad) * widthPx * 0.03f).toFloat()
+        val oy = (kotlin.math.sin(rad) * heightPx * 0.06f).toFloat()
+        val puffSizeDp = with(density) { (heightPx * puff.scale).toDp() }
+        Box(
+          modifier = Modifier
+            .size(puffSizeDp)
+            .offset {
+              IntOffset(
+                (widthPx * puff.cx - heightPx * puff.scale / 2f + ox).roundToInt(),
+                (heightPx * puff.cy - heightPx * puff.scale / 2f + oy).roundToInt()
+              )
+            }
+            .graphicsLayer { this.alpha = puff.alpha }
+            .background(Brush.radialGradient(listOf(Color.White, Color.White.copy(alpha = 0f))))
         )
       }
     } else {
