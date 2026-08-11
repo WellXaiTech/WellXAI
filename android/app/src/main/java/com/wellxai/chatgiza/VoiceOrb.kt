@@ -23,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
@@ -321,9 +320,9 @@ fun VoiceOrb(
     bakeShader.setFloatUniform("uArch", archetype)
     bakeShader.setFloatUniform("uPhase", seedPhase)
     bakeShader.setFloatUniform("uOutSize", w.toFloat(), h.toFloat())
-    bakeShader.setColorUniform("uC0", colorA.toArgb())
-    bakeShader.setColorUniform("uC1", colorB.toArgb())
-    bakeShader.setColorUniform("uC2", colorC.toArgb())
+    bakeShader.setFloatUniform("uC0", colorA.red, colorA.green, colorA.blue)
+    bakeShader.setFloatUniform("uC1", colorB.red, colorB.green, colorB.blue)
+    bakeShader.setFloatUniform("uC2", colorC.red, colorC.green, colorC.blue)
     val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
     val canvas = NativeCanvas(bmp)
     val paint = NativePaint().apply { shader = bakeShader }
@@ -331,10 +330,10 @@ fun VoiceOrb(
     bmp
   }
 
-  liveShader.setColorUniform("uAnchor", anchor.toArgb())
-  liveShader.setColorUniform("uC0", colorA.toArgb())
-  liveShader.setColorUniform("uC1", colorB.toArgb())
-  liveShader.setColorUniform("uC2", colorC.toArgb())
+  liveShader.setFloatUniform("uAnchor", anchor.red, anchor.green, anchor.blue)
+  liveShader.setFloatUniform("uC0", colorA.red, colorA.green, colorA.blue)
+  liveShader.setFloatUniform("uC1", colorB.red, colorB.green, colorB.blue)
+  liveShader.setFloatUniform("uC2", colorC.red, colorC.green, colorC.blue)
   liveShader.setFloatUniform("uPhase", seedPhase)
   liveShader.setFloatUniform("uArch", archetype)
   liveShader.setFloatUniform("uAudio", audioLevel)
