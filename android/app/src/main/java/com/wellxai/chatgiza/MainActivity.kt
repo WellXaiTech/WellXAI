@@ -2433,14 +2433,27 @@ private fun VoiceGradientCard(option: VoiceOption, selected: Boolean, onClick: (
   val widthPx = with(density) { cardWidth.toPx() }
   val heightPx = with(density) { cardHeight.toPx() }
 
+  val isOrin = option.name == "Orin"
+
   // A slow angle sweep on the gradient so the selected card reads as
-  // "alive" (evoking a waveform) rather than a flat color swatch.
+  // "alive" (evoking a waveform) rather than a flat color swatch. Orin
+  // spins much faster through a wider, multi-color sweep instead of the
+  // plain 2-color linear gradient every other card gets -- a visibly
+  // busier, more eye-catching glow (like a swirling planet), not just a
+  // quicker version of the same effect.
   val infiniteTransition = rememberInfiniteTransition(label = "voiceGradient")
   val angle by infiniteTransition.animateFloat(
     initialValue = 0f,
     targetValue = 360f,
-    animationSpec = infiniteRepeatable(animation = tween(6000, easing = LinearEasing), repeatMode = RepeatMode.Restart),
+    animationSpec = infiniteRepeatable(animation = tween(if (isOrin) 1400 else 6000, easing = LinearEasing), repeatMode = RepeatMode.Restart),
     label = "voiceGradientAngle"
+  )
+  val diagonalDp = with(density) { kotlin.math.sqrt(widthPx * widthPx + heightPx * heightPx).toDp() }
+  val orinBrush = Brush.sweepGradient(
+    listOf(
+      Color(0xFFF59E0B), Color(0xFFEF4444), Color(0xFF8B5CF6),
+      Color(0xFF3B82F6), Color(0xFF10B981), Color(0xFFF59E0B)
+    )
   )
   val brush = if (selected) {
     val radians = Math.toRadians(angle.toDouble())
@@ -2458,31 +2471,42 @@ private fun VoiceGradientCard(option: VoiceOption, selected: Boolean, onClick: (
     Brush.linearGradient(colors = listOf(Color.White.copy(alpha = 0.08f), Color.White.copy(alpha = 0.08f)))
   }
 
-  Column(
+  Box(
     modifier = Modifier
       .width(cardWidth)
       .height(cardHeight)
       .clip(RoundedCornerShape(20.dp))
-      .background(brush)
       .clickable(onClick = onClick)
-      .padding(horizontal = 16.dp, vertical = 10.dp)
   ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-      Text(option.name, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-      // Orin specifically, not every voice -- next to the name rather than
-      // a corner badge.
-      if (option.name == "Orin") {
-        Spacer(modifier = Modifier.width(6.dp))
-        Icon(
-          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_cloud),
-          contentDescription = "Cloud voice",
-          tint = Color.White.copy(alpha = if (selected) 0.9f else 0.5f),
-          modifier = Modifier.size(15.dp)
-        )
-      }
+    if (selected && isOrin) {
+      Box(
+        modifier = Modifier
+          .size(diagonalDp)
+          .align(Alignment.Center)
+          .graphicsLayer { rotationZ = angle }
+          .background(orinBrush)
+      )
+    } else {
+      Box(modifier = Modifier.matchParentSize().background(brush))
     }
-    Spacer(modifier = Modifier.height(2.dp))
-    Text(option.description, color = Color.White.copy(alpha = if (selected) 0.85f else 0.55f), fontSize = 12.sp)
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(option.name, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+        // Orin specifically, not every voice -- next to the name rather than
+        // a corner badge.
+        if (isOrin) {
+          Spacer(modifier = Modifier.width(6.dp))
+          Icon(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_cloud),
+            contentDescription = "Cloud voice",
+            tint = Color.White.copy(alpha = if (selected) 0.9f else 0.5f),
+            modifier = Modifier.size(15.dp)
+          )
+        }
+      }
+      Spacer(modifier = Modifier.height(2.dp))
+      Text(option.description, color = Color.White.copy(alpha = if (selected) 0.85f else 0.55f), fontSize = 12.sp)
+    }
   }
 }
 
