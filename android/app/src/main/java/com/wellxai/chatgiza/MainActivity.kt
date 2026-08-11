@@ -6462,7 +6462,8 @@ private fun MessageBubble(
           Text(
             text = message.content.ifEmpty { "…" },
             color = Color(0xFFA8A8A8),
-            fontSize = 15.sp
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Medium
           )
         } else {
           MarkdownText(
@@ -6494,7 +6495,7 @@ private fun MessageBubble(
 }
 
 @Composable
-private fun ActionBarItem(icon: ImageVector, label: String, tint: Color = colorScheme.onBackground, onClick: () -> Unit) {
+private fun ActionBarItem(icon: ImageVector, label: String, tint: Color = Color(0xFFA8A8A8), onClick: () -> Unit) {
   ActionBarItemShell(label, tint, onClick) { iconTint ->
     Icon(icon, contentDescription = label, tint = iconTint, modifier = Modifier.size(20.dp))
   }
@@ -6504,7 +6505,7 @@ private fun ActionBarItem(icon: ImageVector, label: String, tint: Color = colorS
 private fun ActionBarItem(
   painter: androidx.compose.ui.graphics.painter.Painter,
   label: String,
-  tint: Color = colorScheme.onBackground,
+  tint: Color = Color(0xFFA8A8A8),
   rotation: Float = 0f,
   onClick: () -> Unit
 ) {
@@ -6585,7 +6586,7 @@ private fun MessageActionBar(
     if (message.content.length >= MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH) {
       ActionBarExtraItem(
         label = if (pushState == "pushed") "Sent" else "Extra",
-        tint = if (pushState == "pushed") accent else colorScheme.onBackground,
+        tint = if (pushState == "pushed") accent else Color(0xFFA8A8A8),
         connected = chatGizaMediaConnected,
         onNotConnected = {
           Toast.makeText(
@@ -6601,12 +6602,12 @@ private fun MessageActionBar(
       ActionBarItem(
         painter = androidx.compose.ui.res.painterResource(R.drawable.ic_thumbs_up),
         label = "Like",
-        tint = if (reaction == "up") accent else colorScheme.onBackground
+        tint = if (reaction == "up") accent else Color(0xFFA8A8A8)
       ) { reaction = if (reaction == "up") null else "up" }
       ActionBarItem(
         painter = androidx.compose.ui.res.painterResource(R.drawable.ic_thumbs_up),
         label = "Dislike",
-        tint = if (reaction == "down") accent else colorScheme.onBackground,
+        tint = if (reaction == "down") accent else Color(0xFFA8A8A8),
         rotation = 180f
       ) { reaction = if (reaction == "down") null else "down" }
       ActionBarItem(androidx.compose.ui.res.painterResource(R.drawable.ic_share), "Share") {
@@ -6639,7 +6640,7 @@ private fun MessageActionBar(
         ActionBarItem(
           painter = androidx.compose.ui.res.painterResource(R.drawable.ic_speaker),
           label = "Read Aloud",
-          tint = colorScheme.onBackground,
+          tint = Color(0xFFA8A8A8),
           onClick = onSpeakToggle
         )
       }
@@ -7111,14 +7112,14 @@ private fun MarkdownText(
             else -> fontSize * 1.1f
           }
         )
-        is MdBlock.Paragraph -> Text(text = inlineMarkdown(block.text), color = baseColor, fontSize = fontSize)
+        is MdBlock.Paragraph -> Text(text = inlineMarkdown(block.text), color = baseColor, fontSize = fontSize, fontWeight = FontWeight.Medium)
         is MdBlock.Bullet -> Row {
-          Text("•  ", color = baseColor, fontSize = fontSize)
-          Text(inlineMarkdown(block.text), color = baseColor, fontSize = fontSize, modifier = Modifier.weight(1f))
+          Text("•  ", color = baseColor, fontSize = fontSize, fontWeight = FontWeight.Medium)
+          Text(inlineMarkdown(block.text), color = baseColor, fontSize = fontSize, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
         }
         is MdBlock.Numbered -> Row {
-          Text("${block.index}.  ", color = baseColor, fontSize = fontSize)
-          Text(inlineMarkdown(block.text), color = baseColor, fontSize = fontSize, modifier = Modifier.weight(1f))
+          Text("${block.index}.  ", color = baseColor, fontSize = fontSize, fontWeight = FontWeight.Medium)
+          Text(inlineMarkdown(block.text), color = baseColor, fontSize = fontSize, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
         }
         is MdBlock.CodeBlock -> Box(
           modifier = Modifier
