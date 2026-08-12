@@ -1274,6 +1274,34 @@ private fun SpeakerIconCustom(tint: Color, modifier: Modifier = Modifier) {
   }
 }
 
+// Rewards gift-box icon (pasted stroke SVG, viewBox 24x24) -- a rounded
+// rect for the lid band, a vertical stem, a U-shaped box body, and two
+// curved ribbon loops, all stroked instead of filled.
+private val REWARDS_STEM_PATH = PathParser().parsePathString("M12 8v13").toPath()
+private val REWARDS_BODY_PATH = PathParser().parsePathString("M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7").toPath()
+private val REWARDS_RIBBON_LEFT_PATH = PathParser().parsePathString("M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8").toPath()
+private val REWARDS_RIBBON_RIGHT_PATH = PathParser().parsePathString("M16.5 8a2.5 2.5 0 0 0 0-5C13 3 12 8 12 8").toPath()
+
+@Composable
+private fun RewardsIconCustom(tint: Color, modifier: Modifier = Modifier) {
+  Canvas(modifier = modifier) {
+    scale(size.width / 24f, pivot = Offset.Zero) {
+      val stroke = Stroke(width = 1.5f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+      drawRoundRect(
+        color = tint,
+        topLeft = Offset(3f, 8f),
+        size = Size(18f, 4f),
+        cornerRadius = CornerRadius(1f, 1f),
+        style = stroke
+      )
+      drawPath(REWARDS_STEM_PATH, color = tint, style = stroke)
+      drawPath(REWARDS_BODY_PATH, color = tint, style = stroke)
+      drawPath(REWARDS_RIBBON_LEFT_PATH, color = tint, style = stroke)
+      drawPath(REWARDS_RIBBON_RIGHT_PATH, color = tint, style = stroke)
+    }
+  }
+}
+
 // ic_widgets.xml and ic_kids_mode.xml (both pasted by the user, both never
 // visually confirmed) relied on a second subpath inside the same <path> to
 // punch a hole -- the exact pattern that silently rendered solid instead of
@@ -4256,7 +4284,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
         Icon(Icons.Outlined.WorkspacePremium, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
       }
       ProfileHubQuickCard(title = "Rewards", subtitle = "Check now", modifier = Modifier.weight(1f), onClick = { comingSoon("Rewards") }) { tint ->
-        Icon(Icons.Outlined.CardGiftcard, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+        RewardsIconCustom(tint = tint, modifier = Modifier.size(20.dp))
       }
     }
     Spacer(modifier = Modifier.height(10.dp))
