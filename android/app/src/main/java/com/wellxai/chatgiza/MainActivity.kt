@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
+import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.YuvImage
 import android.media.MediaMetadataRetriever
@@ -280,6 +281,8 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -1298,6 +1301,59 @@ private fun RewardsIconCustom(tint: Color, modifier: Modifier = Modifier) {
       drawPath(REWARDS_BODY_PATH, color = tint, style = stroke)
       drawPath(REWARDS_RIBBON_LEFT_PATH, color = tint, style = stroke)
       drawPath(REWARDS_RIBBON_RIGHT_PATH, color = tint, style = stroke)
+    }
+  }
+}
+
+// Profile Hub's own top-bar settings icon (pasted stroke SVG, viewBox
+// 24x24) -- a hexagon "nut" outline with a center circle. Deliberately
+// only used at this one call site, not a global replacement of every
+// gear/settings icon elsewhere in the app.
+private val SETTINGS_HEX_PATH = PathParser().parsePathString("M12 2l8.66 5v10L12 22l-8.66-5V7z").toPath()
+
+@Composable
+private fun SettingsHexIconCustom(tint: Color, modifier: Modifier = Modifier) {
+  Canvas(modifier = modifier) {
+    scale(size.width / 24f, pivot = Offset.Zero) {
+      val stroke = Stroke(width = 1.5f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+      drawPath(SETTINGS_HEX_PATH, color = tint, style = stroke)
+      drawCircle(color = tint, radius = 3f, center = Offset(12f, 12f), style = stroke)
+    }
+  }
+}
+
+// Invite Friends icon (pasted stroke SVG, viewBox 24x24) -- one person
+// (head circle + open shoulder arc) with a "+" cross and a "$" glyph
+// near the bottom-right, matching the user's corrected reference (a
+// single person, not two).
+private val INVITE_BODY_PATH = PathParser().parsePathString("M2 21v-1a6 6 0 0 1 6-6h2").toPath()
+private val INVITE_PLUS_V_PATH = PathParser().parsePathString("M20 15v6").toPath()
+private val INVITE_PLUS_H_PATH = PathParser().parsePathString("M17 18h6").toPath()
+
+@Composable
+private fun InviteFriendsIconCustom(tint: Color, modifier: Modifier = Modifier) {
+  Canvas(modifier = modifier) {
+    scale(size.width / 24f, pivot = Offset.Zero) {
+      val stroke = Stroke(width = 1.5f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+      drawCircle(color = tint, radius = 4f, center = Offset(10f, 7f), style = stroke)
+      drawPath(INVITE_BODY_PATH, color = tint, style = stroke)
+      drawPath(INVITE_PLUS_V_PATH, color = tint, style = stroke)
+      drawPath(INVITE_PLUS_H_PATH, color = tint, style = stroke)
+      // The original SVG's "$" is a <text> glyph, not a path -- drawn
+      // the same way here via the underlying native Canvas, at the
+      // same raw viewBox coordinates, inside this same scale() block
+      // so it scales together with everything else.
+      drawContext.canvas.nativeCanvas.drawText(
+        "$",
+        17f,
+        21f,
+        Paint().apply {
+          color = tint.toArgb()
+          textSize = 8f
+          isFakeBoldText = true
+          isAntiAlias = true
+        }
+      )
     }
   }
 }
@@ -4150,7 +4206,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
         Icon(Icons.Outlined.Headset, contentDescription = "Support", tint = Color.White)
       }
       IconButton(onClick = { viewModel.openAccount() }, modifier = Modifier.size(36.dp)) {
-        Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = Color.White)
+        SettingsHexIconCustom(tint = Color.White, modifier = Modifier.size(24.dp))
       }
       IconButton(onClick = { comingSoon("Share profile") }, modifier = Modifier.size(36.dp)) {
         Icon(Icons.Outlined.Share, contentDescription = null, tint = Color.White)
@@ -4297,7 +4353,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
     }
     Spacer(modifier = Modifier.height(10.dp))
     ProfileHubQuickCard(title = "Invite Friends", subtitle = "Invite now", modifier = Modifier.fillMaxWidth(), onClick = { comingSoon("Invite Friends") }) { tint ->
-      Icon(Icons.Filled.Person, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+      InviteFriendsIconCustom(tint = tint, modifier = Modifier.size(20.dp))
     }
 
     Spacer(modifier = Modifier.height(14.dp))
