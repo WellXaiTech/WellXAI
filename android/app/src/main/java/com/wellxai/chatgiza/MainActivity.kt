@@ -594,34 +594,75 @@ private fun BoxScope.ScreenshotShareOverlay(viewModel: ChatViewModel) {
   }
 }
 
-// The 3-step preference wizard shown after sending the "Weekend ideas"
-// task example -- collects activity types, budget, and distance so the
-// follow-up message the AI sees is actually informed by real answers
-// instead of the assistant just guessing. Each step can be answered or
-// skipped; finishing (or skipping) the last step sends one summary
-// message and closes the wizard.
-private val WIZARD_ACTIVITY_OPTIONS = listOf(
-  "Burudani & nightlife",
-  "Michezo & outdoor",
-  "Migahawa & food",
-  "Matukio, concerts & shows"
-)
-private val WIZARD_BUDGET_OPTIONS = listOf(
-  "Chini ya TSh 20,000",
-  "TSh 20,000–50,000",
-  "TSh 50,000–100,000",
-  "TSh 100,000+"
-)
-private val WIZARD_DISTANCE_OPTIONS = listOf(
-  "Karibu sana (≤5 km)",
-  "Hadi 10 km",
-  "Hadi 25 km",
-  "Popote jijini"
+// A short multi-select preference wizard, specific to whichever task
+// example was tapped -- each task has its own questions (matching the
+// reference: Sale monitor asks about stores/discount type, Concert
+// alerts asks about artists/locations/tickets, Weekend ideas asks about
+// activities/budget/distance). Finishing or skipping the last step turns
+// the answers into a real scheduled task via the existing Scheduled
+// backend, not just a one-off chat message.
+private data class WizardStepDef(val question: String, val options: List<String>, val otherLabel: String)
+private data class TaskWizardDef(val steps: List<WizardStepDef>)
+
+private val TASK_WIZARDS: Map<String, TaskWizardDef> = mapOf(
+  "Weekend ideas" to TaskWizardDef(
+    listOf(
+      WizardStepDef(
+        "Ni shughuli gani ungependa nipendekeze zaidi?",
+        listOf("Burudani & nightlife", "Michezo & outdoor", "Migahawa & food", "Matukio, concerts & shows"),
+        "Ongeza aina nyingine ya shughuli"
+      ),
+      WizardStepDef(
+        "Bajeti yako kwa shughuli ya weekend ni kiasi gani?",
+        listOf("Chini ya TSh 20,000", "TSh 20,000–50,000", "TSh 50,000–100,000", "TSh 100,000+"),
+        "Andika bajeti yako"
+      ),
+      WizardStepDef(
+        "Unapendelea umbali gani kutoka ulipo?",
+        listOf("Karibu sana (≤5 km)", "Hadi 10 km", "Hadi 25 km", "Popote jijini"),
+        "Taja eneo unalopendelea"
+      )
+    )
+  ),
+  "Sale monitor" to TaskWizardDef(
+    listOf(
+      WizardStepDef(
+        "Which stores should I watch for sales?",
+        listOf("Amazon", "AliExpress", "Jumia", "Apple / Google / tech stores"),
+        "Add your favorite stores"
+      ),
+      WizardStepDef(
+        "What kind of sale should trigger an alert?",
+        listOf("30%+ discount", "50%+ discount", "Lowest price in recent months", "Specific items only"),
+        "Describe your sale standard"
+      )
+    )
+  ),
+  "Concert alerts" to TaskWizardDef(
+    listOf(
+      WizardStepDef(
+        "Which artists or music genres should I watch for?",
+        listOf("Specific artists", "A few favorite genres", "Any popular artists in my area"),
+        "Add artist names or genres"
+      ),
+      WizardStepDef(
+        "Which locations should count as nearby shows?",
+        listOf("Dar es Salaam", "All Tanzania", "East Africa", "Other locations"),
+        "Add cities or countries"
+      ),
+      WizardStepDef(
+        "What ticket and show preferences should I use?",
+        listOf("Any venue and date", "Only certain venues", "Budget limit matters"),
+        "Add venues, dates, or budget"
+      )
+    )
+  )
 )
 
 @Composable
 private fun BoxScope.PreferenceWizardOverlay(viewModel: ChatViewModel) {
   val step = viewModel.preferenceWizardStep
+  val wizard = TASK_WIZARDS[viewModel.wizardTaskTitle]
   // The wizard has no text field of its own, but it opens right after
   // sendMessage() while the composer below it may still hold focus with
   // the keyboard up -- without dismissing that, the keyboard sits on top
@@ -635,7 +676,7 @@ private fun BoxScope.PreferenceWizardOverlay(viewModel: ChatViewModel) {
     }
   }
   AnimatedVisibility(
-    visible = step >= 0,
+    visible = step >= 0 && wizard != null,
     enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
     exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
     modifier = Modifier
@@ -644,6 +685,9 @@ private fun BoxScope.PreferenceWizardOverlay(viewModel: ChatViewModel) {
       .navigationBarsPadding()
       .padding(16.dp)
   ) {
+    if (wizard == null) return@AnimatedVisibility
+    val lastStep = wizard.steps.size - 1
+    val current = wizard.steps.getOrNull(step)
     Column(
       modifier = Modifier
         .fillMaxWidth()
@@ -661,17 +705,17 @@ private fun BoxScope.PreferenceWizardOverlay(viewModel: ChatViewModel) {
           )
         }
         Text(
-          "${step + 1} of 3",
+          "${step + 1} of ${wizard.steps.size}",
           color = Color.White.copy(alpha = 0.6f),
           fontSize = 13.sp,
           modifier = Modifier.weight(1f),
           textAlign = TextAlign.Center
         )
-        IconButton(onClick = { viewModel.wizardNext() }, enabled = step < 2, modifier = Modifier.size(28.dp)) {
+        IconButton(onClick = { viewModel.wizardNext(lastStep) }, enabled = step < lastStep, modifier = Modifier.size(28.dp)) {
           Icon(
             Icons.Filled.ArrowForwardIos,
             contentDescription = "Mbele",
-            tint = Color.White.copy(alpha = if (step < 2) 0.7f else 0.2f),
+            tint = Color.White.copy(alpha = if (step < lastStep) 0.7f else 0.2f),
             modifier = Modifier.size(14.dp)
           )
         }
@@ -681,45 +725,20 @@ private fun BoxScope.PreferenceWizardOverlay(viewModel: ChatViewModel) {
         }
       }
       Spacer(modifier = Modifier.height(14.dp))
-      when (step) {
-        0 -> {
-          Text("Ni shughuli gani ungependa nipendekeze zaidi?", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-          Spacer(modifier = Modifier.height(4.dp))
-          Text("Select all that apply", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
-          Spacer(modifier = Modifier.height(10.dp))
-          WIZARD_ACTIVITY_OPTIONS.forEach { option ->
-            WizardCheckboxRow(
-              label = option,
-              checked = option in viewModel.wizardActivities,
-              onClick = { viewModel.toggleWizardActivity(option) }
-            )
-          }
-          WizardSkipRow(label = "Ongeza aina nyingine ya shughuli", onSkip = { viewModel.wizardNext() })
+      if (current != null) {
+        Text(current.question, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text("Select all that apply", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+        Spacer(modifier = Modifier.height(10.dp))
+        val selections = viewModel.wizardSelections.getOrElse(step) { emptySet() }
+        current.options.forEach { option ->
+          WizardCheckboxRow(
+            label = option,
+            checked = option in selections,
+            onClick = { viewModel.toggleWizardOption(step, option) }
+          )
         }
-        1 -> {
-          Text("Bajeti yako kwa shughuli ya weekend ni kiasi gani?", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-          Spacer(modifier = Modifier.height(10.dp))
-          WIZARD_BUDGET_OPTIONS.forEach { option ->
-            WizardRadioRow(
-              label = option,
-              selected = option == viewModel.wizardBudget,
-              onClick = { viewModel.updateWizardBudget(option); viewModel.wizardNext() }
-            )
-          }
-          WizardSkipRow(label = "Andika bajeti yako", onSkip = { viewModel.wizardNext() })
-        }
-        2 -> {
-          Text("Unapendelea umbali gani kutoka ulipo?", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-          Spacer(modifier = Modifier.height(10.dp))
-          WIZARD_DISTANCE_OPTIONS.forEach { option ->
-            WizardRadioRow(
-              label = option,
-              selected = option == viewModel.wizardDistance,
-              onClick = { viewModel.updateWizardDistance(option); viewModel.wizardNext() }
-            )
-          }
-          WizardSkipRow(label = "Taja eneo unalopendelea", onSkip = { viewModel.wizardNext() })
-        }
+        WizardSkipRow(label = current.otherLabel, onSkip = { viewModel.wizardNext(lastStep) })
       }
     }
   }
@@ -738,9 +757,8 @@ private fun WizardCheckboxRow(label: String, checked: Boolean, onClick: () -> Un
   HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
 }
 
-// Same round indicator for both single-select (radio) and multi-select
-// (checkbox) rows -- the reference design uses plain circles for every
-// step, not squares for the multi-select one.
+// Plain circle indicator, matching the reference design used for every
+// step regardless of task.
 @Composable
 private fun WizardOptionCircle(filled: Boolean) {
   Box(
@@ -750,19 +768,6 @@ private fun WizardOptionCircle(filled: Boolean) {
       .background(if (filled) Color.White else Color.Transparent)
       .border(1.5.dp, Color.White.copy(alpha = 0.5f), CircleShape)
   )
-}
-
-@Composable
-private fun WizardRadioRow(label: String, selected: Boolean, onClick: () -> Unit) {
-  Row(
-    modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
-    verticalAlignment = Alignment.CenterVertically
-  ) {
-    WizardOptionCircle(filled = selected)
-    Spacer(modifier = Modifier.width(12.dp))
-    Text(label, color = Color.White, fontSize = 15.sp)
-  }
-  HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
 }
 
 // The "write your own" row is really just one more option in the same
@@ -7145,10 +7150,11 @@ private fun Modifier.dashedBorder(color: Color, cornerRadius: Dp, strokeWidth: D
   )
 }
 
-// Static mockup matching the reference screenshot exactly (top bar with
-// back/title/"Chat" subtitle/filter, dashed task cards, bottom "Create a
-// task" bar) -- wiring the cards, filter, and task creation to real data
-// is a separate follow-up, not done here on purpose.
+// Top bar (back/title/"Chat" subtitle/filter) and bottom "Create a task"
+// bar still match the reference as a static shell -- the filter icon and
+// the bottom bar's own task-creation flow aren't wired up yet -- but the
+// task cards themselves are real now: finishing one's wizard creates an
+// actual entry in the Scheduled-tasks list shown above "Get started".
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ScheduledScreen(viewModel: ChatViewModel) {
@@ -7208,12 +7214,29 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
       }
     }
   ) { padding ->
+    LaunchedEffect(Unit) { viewModel.loadScheduled() }
+    val visibleMockTasks = remember(viewModel.activatedTaskTitles) {
+      MOCK_TASK_CARDS.filter { it.title !in viewModel.activatedTaskTitles }
+    }
     LazyColumn(
       modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp),
       contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)
     ) {
-      items(MOCK_TASK_CARDS) { task ->
+      items(viewModel.scheduledTasks, key = { it.id }) { task ->
+        ActiveTaskCard(task = task, onDelete = { viewModel.deleteScheduledTask(task.id) })
+      }
+      if (visibleMockTasks.isNotEmpty()) {
+        item {
+          Text(
+            "Get started",
+            color = colorScheme.onBackground.copy(alpha = 0.5f),
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold
+          )
+        }
+      }
+      items(visibleMockTasks) { task ->
         // The whole card is clickable, not just the small "+" -- a
         // much easier target to hit than a 28dp icon button alone.
         Column(
@@ -7223,7 +7246,7 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
             .dashedBorder(colorScheme.onBackground.copy(alpha = 0.25f), cornerRadius = 20.dp)
             .clickable {
               viewModel.closeScheduled()
-              viewModel.startTaskExample(task.description, withPreferenceWizard = task.title == "Weekend ideas")
+              viewModel.startTaskExample(task.title, task.description, hasWizard = task.title in TASK_WIZARDS)
             }
             .padding(16.dp)
         ) {
@@ -7249,6 +7272,52 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
         }
       }
     }
+  }
+}
+
+// A real scheduled task (created by finishing a task's preference
+// wizard, or via the plain "Create a task" bar), shown at the top of the
+// list above the "Get started" examples. The prompt is stored as
+// "TaskTitle: description" so this can recover a friendly title without
+// needing a schema change on the backend.
+@Composable
+private fun ActiveTaskCard(task: ApiScheduledTask, onDelete: () -> Unit) {
+  val separatorIndex = task.prompt.indexOf(": ")
+  val title = if (separatorIndex > 0) task.prompt.substring(0, separatorIndex) else "Task"
+  val description = if (separatorIndex > 0) task.prompt.substring(separatorIndex + 2) else task.prompt
+  Column(
+    modifier = Modifier
+      .fillMaxWidth()
+      .clip(RoundedCornerShape(20.dp))
+      .background(colorScheme.onBackground.copy(alpha = 0.06f))
+      .padding(16.dp)
+  ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      Text(
+        "DAILY",
+        color = Color(0xFF5B8DEF),
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.weight(1f)
+      )
+      IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
+        DeleteIcon(tint = colorScheme.onBackground.copy(alpha = 0.5f))
+      }
+    }
+    Text(title, color = colorScheme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+    Spacer(modifier = Modifier.height(6.dp))
+    Text(
+      description,
+      color = colorScheme.onBackground.copy(alpha = 0.6f),
+      fontSize = 14.sp,
+      lineHeight = 20.sp,
+      maxLines = 3,
+      overflow = TextOverflow.Ellipsis
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    HorizontalDivider(color = colorScheme.onBackground.copy(alpha = 0.08f), thickness = 1.dp)
+    Spacer(modifier = Modifier.height(8.dp))
+    Text("Morning", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 13.sp)
   }
 }
 
