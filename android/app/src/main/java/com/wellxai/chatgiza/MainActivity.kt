@@ -505,6 +505,7 @@ class MainActivity : ComponentActivity() {
         }
         ScreenshotShareOverlay(viewModel)
         PreferenceWizardOverlay(viewModel)
+        MemorySuggestionOverlay(viewModel)
         }
       }
     }
@@ -607,6 +608,72 @@ private fun BoxScope.ScreenshotShareOverlay(viewModel: ChatViewModel) {
         modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.White)
       ) {
         Icon(Icons.Filled.Share, contentDescription = "Share", tint = Color.Black, modifier = Modifier.size(18.dp))
+      }
+    }
+  }
+}
+
+// Floats over whichever screen is showing when the AI has picked up
+// something durable worth remembering from the conversation -- shown
+// one at a time (checked every few exchanges, not per message) so the
+// user can accept or dismiss it; nothing is ever saved to memory
+// without this explicit confirmation. Auto-dismisses if ignored, same
+// as the screenshot-share prompt.
+@Composable
+private fun BoxScope.MemorySuggestionOverlay(viewModel: ChatViewModel) {
+  val suggestion = viewModel.memorySuggestions.firstOrNull()
+  val visible = suggestion != null
+  LaunchedEffect(suggestion) {
+    if (suggestion != null) {
+      delay(8000)
+      viewModel.dismissMemorySuggestion(suggestion)
+    }
+  }
+  AnimatedVisibility(
+    visible = visible,
+    enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+    exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+    modifier = Modifier
+      .align(Alignment.TopCenter)
+      .statusBarsPadding()
+      .padding(top = 8.dp, start = 16.dp, end = 16.dp)
+  ) {
+    if (suggestion != null) {
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(18.dp))
+          .background(Color(0xFF1C1C1C))
+          .padding(16.dp)
+      ) {
+        Text("Remember this?", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text("\"$suggestion\"", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+          Box(
+            modifier = Modifier
+              .weight(1f)
+              .clip(RoundedCornerShape(12.dp))
+              .background(Color.White.copy(alpha = 0.1f))
+              .clickable { viewModel.dismissMemorySuggestion(suggestion) }
+              .padding(vertical = 10.dp),
+            contentAlignment = Alignment.Center
+          ) {
+            Text("Not now", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+          }
+          Box(
+            modifier = Modifier
+              .weight(1f)
+              .clip(RoundedCornerShape(12.dp))
+              .background(Color.White)
+              .clickable { viewModel.acceptMemorySuggestion(suggestion) }
+              .padding(vertical = 10.dp),
+            contentAlignment = Alignment.Center
+          ) {
+            Text("Remember", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+          }
+        }
       }
     }
   }

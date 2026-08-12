@@ -686,6 +686,47 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun setMemoryEnabled(value: Boolean) = persistProfile(profileData.copy(memoryEnabled = value))
 
+  // Suggestions the AI thinks are worth remembering long-term, pulled
+  // from the conversation in the background -- shown to the user to
+  // accept/dismiss, never saved automatically. Checked every few
+  // exchanges (not per message; an extra model call on every single
+  // reply isn't worth the cost/latency), and only when nothing is
+  // already pending so suggestions don't pile up.
+  var memorySuggestions by mutableStateOf<List<String>>(emptyList())
+    private set
+  private var lastMemoryCheckMessageCount = 0
+
+  private fun maybeCheckForMemorySuggestions() {
+    if (!profileData.memoryEnabled) return
+    if (memorySuggestions.isNotEmpty()) return
+    val count = messages.size
+    if (count < 6 || count - lastMemoryCheckMessageCount < 6) return
+    lastMemoryCheckMessageCount = count
+    val token = tokenStore.getToken() ?: return
+    val snapshot = messages.map { ChatMessage(it.role, it.content) }
+    val existing = profileData.memory
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.suggestMemory(token, snapshot, existing)) {
+        is ApiResult.Success -> {
+          val fresh = result.value.filter { it.isNotBlank() && it !in existing }
+          if (fresh.isNotEmpty()) memorySuggestions = fresh
+        }
+        is ApiResult.Failure -> {}
+      }
+    }
+  }
+
+  fun acceptMemorySuggestion(text: String) {
+    memorySuggestions = memorySuggestions.filter { it != text }
+    if (text !in profileData.memory) {
+      persistProfile(profileData.copy(memory = profileData.memory + text))
+    }
+  }
+
+  fun dismissMemorySuggestion(text: String) {
+    memorySuggestions = memorySuggestions.filter { it != text }
+  }
+
   fun setAppLanguage(value: String) = persistProfile(profileData.copy(language = value))
 
   // Remembers wherever AppLanguage was opened from (Settings, the
@@ -1475,6 +1516,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         messages = messages.map { m ->
           if (m.id == assistantId && m.content.isEmpty()) m.copy(content = "(failed to respond)") else m
         }
+      } else {
+        maybeCheckForMemorySuggestions()
       }
 
       val titleFallback = text.take(60).ifEmpty { fileToSend?.name ?: "Photo" }
