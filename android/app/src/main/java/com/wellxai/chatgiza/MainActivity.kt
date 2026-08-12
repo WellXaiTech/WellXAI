@@ -277,8 +277,11 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
@@ -818,31 +821,33 @@ private fun GalleryIconCustom(modifier: Modifier = Modifier, tint: Color = Color
   }
 }
 
-// Same evenOdd-hole bug as the other icons below: ic_settings.xml, ic_copy.xml,
-// ic_extra_search.xml, ic_projects.xml, ic_rename.xml, ic_skills.xml and
-// ic_speaker.xml all used fillType="evenOdd" to punch a hole/ring out of a
-// filled shape, which doesn't reliably render on this Compose version.
-// Redrawn here as Canvas primitives (strokes/separate shapes, no evenOdd).
+// ic_settings.xml, ic_copy.xml, ic_extra_search.xml, ic_projects.xml,
+// ic_rename.xml, ic_skills.xml and ic_speaker.xml all used
+// fillType="evenOdd" to punch a hole/ring out of a filled shape, which
+// doesn't reliably render as an Android VectorDrawable XML resource. The
+// first pass here replaced the shapes with rough hand-drawn primitives
+// instead, which lost too much fidelity to the original pasted icon and
+// read as "a different icon" rather than a fix. This version instead
+// parses the EXACT original path data with PathParser and draws it with
+// Compose's own Path.fillType = EvenOdd -- a different rendering path
+// (Skia via Canvas.drawPath) than the broken VectorDrawable XML resource
+// pipeline, so it isn't guaranteed to inherit the same bug, and even if
+// it does, the outer silhouette is still pixel-exact instead of guessed.
+private val SETTINGS_RING_PATH = PathParser().parsePathString(
+  "M11.9961,8.5C13.9289,8.5002 15.4961,10.0671 15.4961,12C15.4961,13.9329 13.9289,15.4998 11.9961,15.5C10.0631,15.5 8.49609,13.933 8.49609,12C8.49609,10.067 10.0631,8.5 11.9961,8.5ZM11.9961,10.5C11.1677,10.5 10.4961,11.1716 10.4961,12C10.4961,12.8284 11.1677,13.5 11.9961,13.5C12.8244,13.4998 13.4961,12.8283 13.4961,12C13.4961,11.1717 12.8244,10.5002 11.9961,10.5Z"
+).toPath().apply { fillType = PathFillType.EvenOdd }
+
+private val SETTINGS_GEAR_PATH = PathParser().parsePathString(
+  "M13.7529,2.19531C14.5841,3.44209 14.9507,3.84863 15.3105,4.0127C15.6318,4.1589 16.1309,4.18456 17.5527,3.85645L18.0928,3.73242L20.2637,5.90332L20.1396,6.44336C19.8114,7.86565 19.8371,8.36431 19.9834,8.68555C20.1475,9.04539 20.554,9.412 21.8008,10.2432L22.2461,10.54V13.46L21.8008,13.7568C20.554,14.588 20.1475,14.9546 19.9834,15.3145C19.8371,15.6357 19.8114,16.1344 20.1396,17.5566L20.2637,18.0967L18.0928,20.2676L17.5527,20.1436C16.1309,19.8154 15.6318,19.8411 15.3105,19.9873C14.9507,20.1514 14.5841,20.5579 13.7529,21.8047L13.4561,22.25H10.5361L10.2393,21.8047C9.40822,20.5581 9.04143,20.1515 8.68164,19.9873C8.36043,19.841 7.86148,19.8154 6.43945,20.1436L5.89941,20.2676L3.72852,18.0967L3.85254,17.5566C4.18069,16.1346 4.15505,15.6357 4.00879,15.3145C3.84473,14.9546 3.43811,14.588 2.19141,13.7568L1.74609,13.46V10.54L2.19141,10.2432C3.43811,9.41201 3.84473,9.04541 4.00879,8.68555C4.15505,8.36431 4.18069,7.86538 3.85254,6.44336L3.72852,5.90332L5.89941,3.73242L6.43945,3.85645C7.86148,4.18458 8.36043,4.15901 8.68164,4.0127C9.04143,3.84853 9.40822,3.44187 10.2393,2.19531L10.5361,1.75H13.4561L13.7529,2.19531ZM11.6035,3.75C10.967,4.68033 10.3546,5.44862 9.51172,5.83301C8.63612,6.23214 7.66631,6.15676 6.53418,5.9248L5.9209,6.53809C6.15289,7.67028 6.22819,8.63999 5.8291,9.51562C5.44486,10.3585 4.67622,10.97 3.74609,11.6064V12.3926C4.67643,13.0291 5.44479,13.6414 5.8291,14.4844C6.22808,15.3598 6.15274,16.3291 5.9209,17.4609L6.53418,18.0742C7.66623,17.8423 8.63617,17.7679 9.51172,18.167C10.3546,18.5514 10.967,19.3197 11.6035,20.25H12.3887C13.0252,19.3196 13.6375,18.5513 14.4805,18.167C15.3558,17.7681 16.3254,17.8424 17.457,18.0742L18.0703,17.4609C17.8385,16.3291 17.764,15.3598 18.1631,14.4844C18.5474,13.6414 19.3157,13.0291 20.2461,12.3926V11.6064C19.3159,10.97 18.5474,10.3585 18.1631,9.51562C17.7639,8.63999 17.8383,7.67029 18.0703,6.53809L17.457,5.9248C16.3253,6.15664 15.3558,6.23191 14.4805,5.83301C13.6375,5.44869 13.0252,4.68037 12.3887,3.75H11.6035Z"
+).toPath().apply { fillType = PathFillType.EvenOdd }
+
 @Composable
 private fun SettingsIconCustom(tint: Color, modifier: Modifier = Modifier) {
   Canvas(modifier = modifier) {
-    val scale = size.width / 24f
-    val center = Offset(12f * scale, 12f * scale)
-    val strokeW = 1.7f * scale
-    for (i in 0 until 8) {
-      val angle = Math.toRadians((i * 45).toDouble())
-      val innerR = 7.1f * scale
-      val outerR = 9.3f * scale
-      drawLine(
-        color = tint,
-        start = Offset(center.x + (innerR * cos(angle)).toFloat(), center.y + (innerR * sin(angle)).toFloat()),
-        end = Offset(center.x + (outerR * cos(angle)).toFloat(), center.y + (outerR * sin(angle)).toFloat()),
-        strokeWidth = strokeW * 1.4f,
-        cap = StrokeCap.Round
-      )
+    scale(size.width / 24f, pivot = Offset.Zero) {
+      drawPath(SETTINGS_GEAR_PATH, color = tint)
+      drawPath(SETTINGS_RING_PATH, color = tint)
     }
-    drawCircle(color = tint, radius = 6.2f * scale, center = center, style = Stroke(width = strokeW * 1.6f))
-    drawCircle(color = tint, radius = 2f * scale, center = center, style = Stroke(width = strokeW))
   }
 }
 
@@ -990,28 +995,34 @@ private fun CreateImageIconCustom(tint: Color, modifier: Modifier = Modifier) {
   }
 }
 
+// Exact original 92x92-viewport paths (2x2 grid: circle, rounded-square,
+// triangle, circle, each a filled ring/donut via evenOdd) -- see the note
+// above SETTINGS_RING_PATH for why this replaced the hand-drawn version.
+private val SKILLS_CIRCLE_TL_PATH = PathParser().parsePathString(
+  "M25.8834,10.5417C34.8811,10.5417 42.1751,17.8357 42.1751,26.8333C42.1751,35.831 34.8811,43.125 25.8834,43.125C16.8858,43.125 9.5918,35.831 9.5918,26.8333C9.5918,17.8357 16.8858,10.5417 25.8834,10.5417ZM25.8834,18.2083C21.12,18.2083 17.2584,22.0699 17.2584,26.8333C17.2584,31.5968 21.12,35.4583 25.8834,35.4583C30.6469,35.4583 34.5084,31.5968 34.5084,26.8333C34.5084,22.0699 30.6469,18.2083 25.8834,18.2083Z"
+).toPath().apply { fillType = PathFillType.EvenOdd }
+
+private val SKILLS_SQUARE_BL_PATH = PathParser().parsePathString(
+  "M30.0948,48.875C36.4458,48.8754 41.5948,54.024 41.5948,60.375V68.8091C41.5944,75.1598 36.4455,80.3087 30.0948,80.3091H21.6608C15.3097,80.3091 10.1612,75.16 10.1608,68.8091V60.375C10.1608,54.0237 15.3095,48.875 21.6608,48.875H30.0948ZM21.6608,56.5417C19.5437,56.5417 17.8274,58.2579 17.8274,60.375V68.8091C17.8278,70.9258 19.5439,72.6424 21.6608,72.6424H30.0948C32.2113,72.642 33.9278,70.9256 33.9282,68.8091V60.375C33.9282,58.2582 32.2116,56.5421 30.0948,56.5417Z"
+).toPath().apply { fillType = PathFillType.EvenOdd }
+
+private val SKILLS_TRIANGLE_TR_PATH = PathParser().parsePathString(
+  "M59.4101,14.8242C62.3208,9.5189 69.9461,9.5189 72.8567,14.8242L82.1481,31.771C84.9503,36.88 81.2554,43.1244 75.4285,43.125H56.8383C51.0115,43.1244 47.3165,36.88 50.1188,31.771L59.4101,14.8242ZM56.8383,35.4583H75.4285L66.1334,18.5116L56.8383,35.4583Z"
+).toPath().apply { fillType = PathFillType.EvenOdd }
+
+private val SKILLS_CIRCLE_BR_PATH = PathParser().parsePathString(
+  "M66.1334,48.875C75.1311,48.875 82.4251,56.169 82.4251,65.1667C82.4251,74.1643 75.1311,81.4583 66.1334,81.4583C57.1358,81.4583 49.8418,74.1643 49.8418,65.1667C49.8418,56.169 57.1358,48.875 66.1334,48.875ZM66.1334,56.5417C61.37,56.5417 57.5084,60.4032 57.5084,65.1667C57.5084,69.9301 61.37,73.7917 66.1334,73.7917C70.8969,73.7917 74.7584,69.9301 74.7584,65.1667C74.7584,60.4032 70.8969,56.5417 66.1334,56.5417Z"
+).toPath().apply { fillType = PathFillType.EvenOdd }
+
 @Composable
 private fun SkillsIconCustom(tint: Color, modifier: Modifier = Modifier) {
   Canvas(modifier = modifier) {
-    val scale = size.width / 24f
-    val strokeW = 1.7f * scale
-    val r = 4.3f * scale
-    drawCircle(color = tint, radius = r, center = Offset(7.2f * scale, 7.2f * scale), style = Stroke(width = strokeW))
-    drawRoundRect(
-      color = tint,
-      topLeft = Offset(3f * scale, 12.8f * scale),
-      size = Size(8.4f * scale, 8.4f * scale),
-      cornerRadius = CornerRadius(2.2f * scale, 2.2f * scale),
-      style = Stroke(width = strokeW)
-    )
-    val tri = Path().apply {
-      moveTo(17.3f * scale, 3.2f * scale)
-      lineTo(21.4f * scale, 10.8f * scale)
-      lineTo(13.2f * scale, 10.8f * scale)
-      close()
+    scale(size.width / 92f, pivot = Offset.Zero) {
+      drawPath(SKILLS_CIRCLE_TL_PATH, color = tint)
+      drawPath(SKILLS_SQUARE_BL_PATH, color = tint)
+      drawPath(SKILLS_TRIANGLE_TR_PATH, color = tint)
+      drawPath(SKILLS_CIRCLE_BR_PATH, color = tint)
     }
-    drawPath(tri, color = tint, style = Stroke(width = strokeW))
-    drawCircle(color = tint, radius = r, center = Offset(17.3f * scale, 17.1f * scale), style = Stroke(width = strokeW))
   }
 }
 
