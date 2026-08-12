@@ -2031,7 +2031,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
     // navigationBarsPadding()/imePadding(), so extra padding here just
     // left a gap between the card and the keyboard/nav bar with the
     // message list visible (and readable) through it.
-    modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, top = 10.dp),
+    modifier = Modifier.fillMaxWidth().padding(start = 6.dp, end = 6.dp, top = 10.dp),
     shape = RoundedCornerShape(24.dp),
     // Flattened to an opaque color instead of a low-alpha tint -- now
     // that the composer floats over the scrolling message list, a
