@@ -678,7 +678,7 @@ private fun BoxScope.PreferenceWizardOverlay(viewModel: ChatViewModel) {
             WizardRadioRow(
               label = option,
               selected = option == viewModel.wizardBudget,
-              onClick = { viewModel.setWizardBudget(option); viewModel.wizardNext() }
+              onClick = { viewModel.updateWizardBudget(option); viewModel.wizardNext() }
             )
           }
           WizardSkipRow(label = "Andika bajeti yako", onSkip = { viewModel.wizardNext() })
@@ -690,7 +690,7 @@ private fun BoxScope.PreferenceWizardOverlay(viewModel: ChatViewModel) {
             WizardRadioRow(
               label = option,
               selected = option == viewModel.wizardDistance,
-              onClick = { viewModel.setWizardDistance(option); viewModel.wizardNext() }
+              onClick = { viewModel.updateWizardDistance(option); viewModel.wizardNext() }
             )
           }
           WizardSkipRow(label = "Taja eneo unalopendelea", onSkip = { viewModel.wizardNext() })

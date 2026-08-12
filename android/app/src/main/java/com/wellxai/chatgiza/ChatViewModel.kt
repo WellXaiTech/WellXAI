@@ -835,11 +835,13 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     wizardActivities = if (activity in wizardActivities) wizardActivities - activity else wizardActivities + activity
   }
 
-  fun setWizardBudget(budget: String) {
+  // Named update*/not set* -- a same-named fun collides with the
+  // auto-generated property setter's JVM signature and fails the build.
+  fun updateWizardBudget(budget: String) {
     wizardBudget = budget
   }
 
-  fun setWizardDistance(distance: String) {
+  fun updateWizardDistance(distance: String) {
     wizardDistance = distance
   }
 
