@@ -4903,14 +4903,28 @@ private fun HistoryRow(
   }
 }
 
+// A "Your Agents" list (matches the reference screenshot: back/title,
+// section label, a rounded "GiZa" row with an enable toggle, and a
+// "Create" row below it). Deliberately just the outer shell for now --
+// tapping either row is a stub (no per-agent editor screen yet, that's
+// a later pass) -- the old nickname/display name/bio/about form that
+// used to live on this screen is meant to move into that future
+// per-agent editor; its ViewModel/API plumbing (nicknameInput,
+// saveProfile(), etc.) is left untouched so nothing is lost, it's just
+// not shown here anymore.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CustomizeScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeCustomize() }
+  val context = LocalContext.current
+  var giZaAgentEnabled by remember { mutableStateOf(true) }
+  fun comingSoon(label: String) {
+    Toast.makeText(context, "$label — coming soon", Toast.LENGTH_SHORT).show()
+  }
   Scaffold(
     topBar = {
       TopAppBar(
-        title = { Text("Customize ChatGiZa", fontWeight = FontWeight.Bold) },
+        title = { Text("Customize", fontWeight = FontWeight.Bold) },
         navigationIcon = {
           IconButton(onClick = { viewModel.closeCustomize() }) {
             Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
@@ -4927,93 +4941,56 @@ private fun CustomizeScreen(viewModel: ChatViewModel) {
         .padding(20.dp)
     ) {
       Text(
-        "What should ChatGiZa call you?",
-        fontSize = 13.sp,
-        color = colorScheme.onBackground.copy(alpha = 0.6f)
-      )
-      Spacer(modifier = Modifier.height(6.dp))
-      OutlinedTextField(
-        value = viewModel.nicknameInput,
-        onValueChange = viewModel::onNicknameChange,
-        modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text("Nickname") },
-        shape = RoundedCornerShape(12.dp)
+        "Your Agents",
+        fontSize = 15.sp,
+        color = colorScheme.onBackground.copy(alpha = 0.55f),
+        modifier = Modifier.padding(bottom = 10.dp)
       )
 
-      Spacer(modifier = Modifier.height(20.dp))
-
-      // The bold public display name shown on the Media profile (e.g.
-      // "QUANTARA") -- distinct from the nickname above, which only
-      // personalizes how the AI addresses you in chat.
-      Text(
-        "Account name (shown on your public profile)",
-        fontSize = 13.sp,
-        color = colorScheme.onBackground.copy(alpha = 0.6f)
-      )
-      Spacer(modifier = Modifier.height(6.dp))
-      OutlinedTextField(
-        value = viewModel.displayNameInput,
-        onValueChange = { if (it.length <= 60) viewModel.onDisplayNameChange(it) },
-        modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text("e.g. QUANTARA") },
-        shape = RoundedCornerShape(12.dp)
-      )
-
-      Spacer(modifier = Modifier.height(20.dp))
-
-      // Public-facing -- shown on the ChatGiZa Media profile page, unlike
-      // the private "about" field below which is only ever fed to the AI
-      // and must never be shown to other users.
-      Text(
-        "Bio (shown on your public profile)",
-        fontSize = 13.sp,
-        color = colorScheme.onBackground.copy(alpha = 0.6f)
-      )
-      Spacer(modifier = Modifier.height(6.dp))
-      OutlinedTextField(
-        value = viewModel.bioInput,
-        onValueChange = { if (it.length <= 150) viewModel.onBioChange(it) },
-        modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text("e.g. Digital creator sharing ideas on ChatGiZa") },
-        shape = RoundedCornerShape(12.dp)
-      )
-      Text(
-        "${viewModel.bioInput.length}/150",
-        fontSize = 11.sp,
-        color = colorScheme.onBackground.copy(alpha = 0.4f),
-        modifier = Modifier.align(Alignment.End).padding(top = 2.dp)
-      )
-
-      Spacer(modifier = Modifier.height(20.dp))
-
-      Text(
-        "Anything ChatGiZa should know about you?",
-        fontSize = 13.sp,
-        color = colorScheme.onBackground.copy(alpha = 0.6f)
-      )
-      Spacer(modifier = Modifier.height(6.dp))
-      OutlinedTextField(
-        value = viewModel.aboutInput,
-        onValueChange = viewModel::onAboutChange,
-        modifier = Modifier.fillMaxWidth().height(140.dp),
-        placeholder = { Text("e.g. I run a bakery and prefer short, direct answers.") },
-        shape = RoundedCornerShape(12.dp)
-      )
-
-      if (viewModel.errorMessage != null) {
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(viewModel.errorMessage ?: "", color = Color(0xFFFF6B6B), fontSize = 13.sp)
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(18.dp))
+          .background(colorScheme.onBackground.copy(alpha = 0.06f))
+          .clickable { comingSoon("GiZa") }
+          .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Box(
+          modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(
+              Brush.linearGradient(
+                listOf(Color(0xFFB8452F), Color(0xFFE0A93A), Color(0xFF7A3B8A))
+              )
+            )
+        )
+        Spacer(modifier = Modifier.width(14.dp))
+        Text(
+          "GiZa",
+          color = colorScheme.onBackground,
+          fontSize = 16.sp,
+          fontWeight = FontWeight.SemiBold,
+          modifier = Modifier.weight(1f)
+        )
+        Switch(checked = giZaAgentEnabled, onCheckedChange = { giZaAgentEnabled = it })
       }
 
-      Spacer(modifier = Modifier.height(20.dp))
+      Spacer(modifier = Modifier.height(12.dp))
 
-      Button(
-        onClick = { viewModel.saveProfile() },
-        enabled = !viewModel.savingProfile,
-        shape = RoundedCornerShape(24.dp),
-        modifier = Modifier.fillMaxWidth().height(48.dp)
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(18.dp))
+          .background(colorScheme.onBackground.copy(alpha = 0.06f))
+          .clickable { comingSoon("Create agent") }
+          .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
       ) {
-        Text(if (viewModel.savingProfile) "Saving…" else "Save")
+        Icon(Icons.Filled.Add, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(24.dp))
+        Spacer(modifier = Modifier.width(14.dp))
+        Text("Create", color = colorScheme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
       }
     }
   }
