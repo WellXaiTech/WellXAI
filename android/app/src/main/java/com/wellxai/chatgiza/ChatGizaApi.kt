@@ -216,6 +216,11 @@ object ChatGizaApi {
     // of a directly picked photo -- both are just image_url parts to the
     // backend, which doesn't distinguish their origin.
     imageDataUrls: List<String> = emptyList(),
+    // (title, snippet) for the user's other saved conversations -- a
+    // lightweight index, not full content, so the model can answer "how
+    // many chats do I have" / reference past topics by name without
+    // every past conversation's full text being sent on every request.
+    historyIndex: List<Pair<String, String>> = emptyList(),
     onChunk: (String) -> Unit
   ): ApiResult<Unit> =
     withContext(Dispatchers.IO) {
@@ -263,6 +268,13 @@ object ChatGizaApi {
           .put("company", companyJson)
         if (tool != null) payloadObj.put("tool", tool)
         if (conversationId != null) payloadObj.put("conversationId", conversationId)
+        if (historyIndex.isNotEmpty()) {
+          val historyIndexJson = JSONArray()
+          for ((title, snippet) in historyIndex) {
+            historyIndexJson.put(JSONObject().put("title", title).put("snippet", snippet))
+          }
+          payloadObj.put("historyIndex", historyIndexJson)
+        }
 
         val payload = payloadObj.toString().toRequestBody(JSON)
         val request = Request.Builder()

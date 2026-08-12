@@ -996,7 +996,8 @@ private val TOOL_LABELS = mapOf(
   "sql_helper" to "SQL Helper",
   "python_helper" to "Python Helper",
   "business_assistant" to "Business Assistant",
-  "ai_agent" to "AI Agent"
+  "ai_agent" to "AI Agent",
+  "agent_team" to "Agent Team"
 )
 
 @Composable
@@ -2573,6 +2574,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             DropdownMenuItem(text = { Text("Python Helper") }, onClick = { viewModel.selectTool("python_helper"); toolMenuOpen = false })
             DropdownMenuItem(text = { Text("Business Assistant") }, onClick = { viewModel.selectTool("business_assistant"); toolMenuOpen = false })
             DropdownMenuItem(text = { Text("AI Agent") }, onClick = { viewModel.selectTool("ai_agent"); toolMenuOpen = false })
+            DropdownMenuItem(text = { Text("Agent Team") }, onClick = { viewModel.selectTool("agent_team"); toolMenuOpen = false })
           }
         }
         Spacer(modifier = Modifier.weight(1f))
@@ -3043,6 +3045,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
                   DropdownMenuItem(text = { Text("Python Helper") }, onClick = { viewModel.selectTool("python_helper"); toolMenuOpen = false })
                   DropdownMenuItem(text = { Text("Business Assistant") }, onClick = { viewModel.selectTool("business_assistant"); toolMenuOpen = false })
                   DropdownMenuItem(text = { Text("AI Agent") }, onClick = { viewModel.selectTool("ai_agent"); toolMenuOpen = false })
+                  DropdownMenuItem(text = { Text("Agent Team") }, onClick = { viewModel.selectTool("agent_team"); toolMenuOpen = false })
                 }
               }
               // Material3 TextField's own vertical padding is sized for a

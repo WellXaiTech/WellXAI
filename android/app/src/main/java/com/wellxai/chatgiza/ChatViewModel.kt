@@ -716,6 +716,21 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     }
   }
 
+  // A lightweight (title, opening-message snippet) index of the user's
+  // other saved conversations -- not full content, just enough for the
+  // model to answer "how many chats do I have" or reference past
+  // topics by name. Excludes whichever conversation is currently being
+  // sent to, so it isn't listed as its own "other" conversation.
+  private fun buildHistoryIndex(excludeConversationId: String?): List<Pair<String, String>> {
+    return conversations
+      .filter { it.id != excludeConversationId }
+      .take(40)
+      .map { convo ->
+        val opening = convo.messages.firstOrNull { it.role == "user" }?.content.orEmpty()
+        convo.title to opening.take(120)
+      }
+  }
+
   fun acceptMemorySuggestion(text: String) {
     memorySuggestions = memorySuggestions.filter { it != text }
     if (text !in profileData.memory) {
@@ -1504,7 +1519,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         language = profileData.language,
         location = settingsData.location,
         company = settingsData.company,
-        imageDataUrls = imagesToSend
+        imageDataUrls = imagesToSend,
+        historyIndex = buildHistoryIndex(conversationId)
       ) { chunk ->
         messages = messages.map { m ->
           if (m.id == assistantId) m.copy(content = m.content + chunk) else m
@@ -1563,7 +1579,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         memory = if (profileData.memoryEnabled) profileData.memory else emptyList(),
         language = profileData.language,
         location = settingsData.location,
-        company = settingsData.company
+        company = settingsData.company,
+        historyIndex = buildHistoryIndex(conversationId)
       ) { chunk ->
         messages = messages.map { m -> if (m.id == assistantId) m.copy(content = m.content + chunk) else m }
       }
