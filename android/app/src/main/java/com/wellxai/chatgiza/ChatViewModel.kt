@@ -807,66 +807,86 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   // Tapping "+" on a Tasks example (e.g. "Weekend ideas") sends its prompt
-  // as a real chat message and, for the ones that make sense to refine,
-  // opens a short preference wizard so the follow-up reply can actually
-  // use the answers instead of guessing.
+  // as a real chat message and, for tasks with a wizard, opens a short
+  // multi-step preference wizard specific to that task. Finishing (or
+  // skipping) the wizard turns it into a real entry in the existing
+  // Scheduled-tasks list -- the same backend "Create a task" already
+  // uses -- instead of just sending one more chat message.
   var preferenceWizardStep by mutableStateOf(-1)
     private set
-  var wizardActivities by mutableStateOf(setOf<String>())
+  var wizardTaskTitle by mutableStateOf<String?>(null)
     private set
-  var wizardBudget by mutableStateOf<String?>(null)
+  var wizardSelections by mutableStateOf<List<Set<String>>>(emptyList())
     private set
-  var wizardDistance by mutableStateOf<String?>(null)
+  var activatedTaskTitles by mutableStateOf(setOf<String>())
     private set
 
-  fun startTaskExample(prompt: String, withPreferenceWizard: Boolean) {
+  private var wizardBaseDescription: String = ""
+
+  fun startTaskExample(taskTitle: String, description: String, hasWizard: Boolean) {
     screen = AppScreen.Chat
-    onInputChange(prompt)
+    onInputChange(description)
     sendMessage()
-    if (withPreferenceWizard) {
-      wizardActivities = emptySet()
-      wizardBudget = null
-      wizardDistance = null
+    if (hasWizard) {
+      wizardTaskTitle = taskTitle
+      wizardBaseDescription = description
+      wizardSelections = emptyList()
       preferenceWizardStep = 0
     }
   }
 
-  fun toggleWizardActivity(activity: String) {
-    wizardActivities = if (activity in wizardActivities) wizardActivities - activity else wizardActivities + activity
-  }
-
-  // Named update*/not set* -- a same-named fun collides with the
-  // auto-generated property setter's JVM signature and fails the build.
-  fun updateWizardBudget(budget: String) {
-    wizardBudget = budget
-  }
-
-  fun updateWizardDistance(distance: String) {
-    wizardDistance = distance
+  fun toggleWizardOption(step: Int, option: String) {
+    val updated = wizardSelections.toMutableList()
+    while (updated.size <= step) updated.add(emptySet())
+    val current = updated[step]
+    updated[step] = if (option in current) current - option else current + option
+    wizardSelections = updated
   }
 
   fun wizardBack() {
     if (preferenceWizardStep > 0) preferenceWizardStep--
   }
 
-  fun wizardNext() {
-    if (preferenceWizardStep < 2) preferenceWizardStep++ else finishPreferenceWizard()
+  fun wizardNext(lastStep: Int) {
+    if (preferenceWizardStep < lastStep) preferenceWizardStep++ else finishPreferenceWizard()
   }
 
   fun dismissPreferenceWizard() {
     preferenceWizardStep = -1
+    wizardTaskTitle = null
   }
 
   private fun finishPreferenceWizard() {
-    val parts = mutableListOf<String>()
-    if (wizardActivities.isNotEmpty()) parts += "activities: ${wizardActivities.joinToString(", ")}"
-    if (wizardBudget != null) parts += "budget: $wizardBudget"
-    if (wizardDistance != null) parts += "preferred distance: $wizardDistance"
+    val taskTitle = wizardTaskTitle
+    val allSelected = wizardSelections.flatten().distinct()
+    val description = wizardBaseDescription
     preferenceWizardStep = -1
-    if (parts.isNotEmpty()) {
-      onInputChange("My preferences — ${parts.joinToString("; ")}")
-      sendMessage()
+    wizardTaskTitle = null
+    if (taskTitle != null) {
+      activatedTaskTitles = activatedTaskTitles + taskTitle
+      val combinedPrompt = if (allSelected.isEmpty()) description else "$description\n\nPreferences: ${allSelected.joinToString(", ")}"
+      createScheduledTaskFromWizard(taskTitle, combinedPrompt)
     }
+  }
+
+  // Tomorrow at 08:00 local time -- a reasonable default "daily morning"
+  // slot matching the reference's "Morning" schedule label. There's no
+  // real recurrence field in the backend yet, so this seeds a real task
+  // the user can already see, rename, and delete from the same list as
+  // "Create a task", rather than a fake/decorative entry.
+  private fun createScheduledTaskFromWizard(taskTitle: String, prompt: String) {
+    val token = tokenStore.getToken() ?: return
+    val calendar = java.util.Calendar.getInstance().apply {
+      add(java.util.Calendar.DAY_OF_YEAR, 1)
+      set(java.util.Calendar.HOUR_OF_DAY, 8)
+      set(java.util.Calendar.MINUTE, 0)
+      set(java.util.Calendar.SECOND, 0)
+      set(java.util.Calendar.MILLISECOND, 0)
+    }
+    val runAt = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm", java.util.Locale.US).format(calendar.time)
+    val updated = listOf(ApiScheduledTask(UUID.randomUUID().toString(), "$taskTitle: $prompt", runAt, false)) + scheduledTasks
+    scheduledTasks = updated
+    viewModelScope.launch { ChatGizaApi.saveScheduled(token, updated) }
   }
 
   fun onNewTaskPromptChange(value: String) {
