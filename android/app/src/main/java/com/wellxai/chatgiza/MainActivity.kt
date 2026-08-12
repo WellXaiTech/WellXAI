@@ -310,6 +310,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.items
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
@@ -3725,7 +3729,10 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
               .border(1.dp, colorScheme.onBackground.copy(alpha = 0.35f), CircleShape)
               .padding(2.dp)
           ) {
-            if (viewModel.userImage != null) {
+            val selectedPreset = AVATAR_PRESETS.find { it.id == viewModel.avatarPresetId }
+            if (selectedPreset != null) {
+              AvatarPresetThumbnail(selectedPreset, 36.dp)
+            } else if (viewModel.userImage != null) {
               AsyncImage(
                 model = viewModel.userImage,
                 contentDescription = "Profile",
@@ -4116,14 +4123,19 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
     Spacer(modifier = Modifier.height(10.dp))
 
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-      if (viewModel.userImage != null) {
-        AsyncImage(
-          model = viewModel.userImage,
-          contentDescription = "Profile",
-          modifier = Modifier.size(56.dp).clip(CircleShape)
-        )
-      } else {
-        Icon(Icons.Outlined.AccountCircle, contentDescription = "Profile", tint = Color.White, modifier = Modifier.size(56.dp))
+      val selectedPreset = AVATAR_PRESETS.find { it.id == viewModel.avatarPresetId }
+      Box(modifier = Modifier.clickable { viewModel.openAvatarPicker() }) {
+        if (selectedPreset != null) {
+          AvatarPresetThumbnail(selectedPreset, 56.dp)
+        } else if (viewModel.userImage != null) {
+          AsyncImage(
+            model = viewModel.userImage,
+            contentDescription = "Profile",
+            modifier = Modifier.size(56.dp).clip(CircleShape)
+          )
+        } else {
+          Icon(Icons.Outlined.AccountCircle, contentDescription = "Profile", tint = Color.White, modifier = Modifier.size(56.dp))
+        }
       }
       Spacer(modifier = Modifier.width(14.dp))
       Column(modifier = Modifier.weight(1f)) {
@@ -4197,26 +4209,26 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
         .fillMaxWidth()
         .clip(RoundedCornerShape(20.dp))
         .background(Color.White.copy(alpha = 0.06f))
-        .padding(18.dp)
+        .padding(horizontal = 18.dp, vertical = 12.dp)
     ) {
-      Text("Unlock GiZa Pro Perks", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-      Spacer(modifier = Modifier.height(8.dp))
+      Text("Unlock GiZa Pro Perks", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+      Spacer(modifier = Modifier.height(6.dp))
       Text(
         "Upgrade to GiZa Pro for unlimited chats, priority responses, and exclusive perks!",
         color = Color.White.copy(alpha = 0.5f),
-        fontSize = 13.sp,
-        lineHeight = 18.sp
+        fontSize = 12.sp,
+        lineHeight = 16.sp
       )
-      Spacer(modifier = Modifier.height(14.dp))
-      HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
       Spacer(modifier = Modifier.height(10.dp))
-      Text("Current plan: Free", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
-      Spacer(modifier = Modifier.height(14.dp))
+      HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+      Spacer(modifier = Modifier.height(8.dp))
+      Text("Current plan: Free", color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp)
+      Spacer(modifier = Modifier.height(10.dp))
       Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
           "Pro Benefits ›",
           color = Color.White.copy(alpha = 0.6f),
-          fontSize = 13.sp,
+          fontSize = 12.sp,
           fontWeight = FontWeight.Medium,
           modifier = Modifier.weight(1f).clickable { comingSoon("Pro Benefits") }
         )
@@ -4225,9 +4237,9 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
             .clip(RoundedCornerShape(50))
             .background(Color(0xFFFF9800))
             .clickable { comingSoon("Get Extra Plan") }
-            .padding(horizontal = 20.dp, vertical = 12.dp)
+            .padding(horizontal = 18.dp, vertical = 10.dp)
         ) {
-          Text("Get Extra Plan", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+          Text("Get Extra Plan", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
       }
     }
@@ -4270,9 +4282,9 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
           .clip(RoundedCornerShape(50))
           .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(50))
           .clickable { comingSoon("All Services") }
-          .padding(horizontal = 24.dp, vertical = 10.dp)
+          .padding(horizontal = 20.dp, vertical = 8.dp)
       ) {
-        Text("All Services", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Text("All Services", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
       }
     }
 
@@ -4287,6 +4299,165 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
       }
     }
     Spacer(modifier = Modifier.height(24.dp))
+  }
+
+  if (viewModel.showAvatarPicker) {
+    AvatarPickerDialog(viewModel)
+  }
+}
+
+// A curated set of simple gradient-circle + emoji avatars, standing in
+// for full custom illustrations -- there's no art pipeline for those in
+// this project, so this is a real (if visually simpler) equivalent: a
+// genuinely pickable, saved-per-device set of distinct avatars rather
+// than a single fixed photo.
+private data class AvatarPreset(val id: String, val emoji: String, val colors: List<Color>)
+
+private val AVATAR_PRESETS = listOf(
+  AvatarPreset("shades", "😎", listOf(Color(0xFFB8452F), Color(0xFF2A2A2A))),
+  AvatarPreset("cap", "🧢", listOf(Color(0xFFE0A93A), Color(0xFF2A2A2A))),
+  AvatarPreset("coder", "🧑‍💻", listOf(Color(0xFF3A6EA5), Color(0xFF1A1A1A))),
+  AvatarPreset("robot", "🤖", listOf(Color(0xFF5B8DEF), Color(0xFF1A1A1A))),
+  AvatarPreset("alien", "👽", listOf(Color(0xFF4CAF50), Color(0xFF1A1A1A))),
+  AvatarPreset("fox", "🦊", listOf(Color(0xFFE0762A), Color(0xFF2A1A0A))),
+  AvatarPreset("wolf", "🐺", listOf(Color(0xFF616161), Color(0xFF1A1A1A))),
+  AvatarPreset("lion", "🦁", listOf(Color(0xFFE0A93A), Color(0xFF3A1A0A))),
+  AvatarPreset("tiger", "🐯", listOf(Color(0xFFE0762A), Color(0xFF1A1A1A))),
+  AvatarPreset("owl", "🦉", listOf(Color(0xFF7A5C3A), Color(0xFF1A1A1A))),
+  AvatarPreset("hero", "🦸", listOf(Color(0xFF7A3B8A), Color(0xFF1A1A1A))),
+  AvatarPreset("ninja", "🥷", listOf(Color(0xFF2A2A2A), Color(0xFF000000))),
+  AvatarPreset("astronaut", "🧑‍🚀", listOf(Color(0xFF3A6EA5), Color(0xFF0A0A2A))),
+  AvatarPreset("wizard", "🧙", listOf(Color(0xFF5B3A8A), Color(0xFF1A1A1A))),
+  AvatarPreset("cat", "🐱", listOf(Color(0xFFE0A93A), Color(0xFF2A1A0A))),
+  AvatarPreset("panda", "🐼", listOf(Color(0xFF616161), Color(0xFF1A1A1A)))
+)
+
+@Composable
+private fun AvatarPresetThumbnail(preset: AvatarPreset, size: Dp, modifier: Modifier = Modifier) {
+  Box(
+    modifier = modifier
+      .size(size)
+      .clip(CircleShape)
+      .background(Brush.linearGradient(preset.colors)),
+    contentAlignment = Alignment.Center
+  ) {
+    Text(preset.emoji, fontSize = (size.value * 0.5f).sp)
+  }
+}
+
+@Composable
+private fun AvatarPickerDialog(viewModel: ChatViewModel) {
+  var selected by remember { mutableStateOf(viewModel.avatarPresetId ?: AVATAR_PRESETS.first().id) }
+  var activeTab by remember { mutableStateOf("Default") }
+  val context = LocalContext.current
+  Dialog(
+    onDismissRequest = { viewModel.closeAvatarPicker() },
+    properties = DialogProperties(usePlatformDefaultWidth = false)
+  ) {
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
+        .background(Color(0xFF000000))
+        .statusBarsPadding()
+        .padding(horizontal = 16.dp)
+    ) {
+      Spacer(modifier = Modifier.height(12.dp))
+      Box(modifier = Modifier.fillMaxWidth()) {
+        IconButton(onClick = { viewModel.closeAvatarPicker() }, modifier = Modifier.align(Alignment.CenterStart).size(32.dp)) {
+          Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+        }
+        Text("Profile Picture", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
+      }
+
+      Spacer(modifier = Modifier.height(20.dp))
+      val previewPreset = AVATAR_PRESETS.find { it.id == selected }
+      Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        if (previewPreset != null) {
+          AvatarPresetThumbnail(previewPreset, 88.dp)
+        } else if (viewModel.userImage != null) {
+          AsyncImage(model = viewModel.userImage, contentDescription = null, modifier = Modifier.size(88.dp).clip(CircleShape))
+        } else {
+          Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(88.dp))
+        }
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+      Row(
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(24.dp)
+      ) {
+        // Only "Default" is real -- the rest are shown for the same
+        // reason a reference tab row would have them, but there are no
+        // extra preset sets behind them yet.
+        listOf("Default", "Animated 🔥", "Animal Avatar").forEach { tab ->
+          Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.clickable {
+              if (tab == "Default") activeTab = tab
+              else Toast.makeText(context, "$tab — coming soon", Toast.LENGTH_SHORT).show()
+            }
+          ) {
+            Text(
+              tab,
+              color = if (activeTab == tab) Color.White else Color.White.copy(alpha = 0.4f),
+              fontSize = 15.sp,
+              fontWeight = if (activeTab == tab) FontWeight.Bold else FontWeight.Normal
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            if (activeTab == tab) {
+              Box(modifier = Modifier.width(28.dp).height(2.dp).background(Color.White))
+            }
+          }
+        }
+      }
+
+      Spacer(modifier = Modifier.height(20.dp))
+
+      LazyVerticalGrid(
+        columns = GridCells.Fixed(4),
+        modifier = Modifier.weight(1f).fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+      ) {
+        items(AVATAR_PRESETS, key = { it.id }) { preset ->
+          Box(contentAlignment = Alignment.BottomEnd) {
+            AvatarPresetThumbnail(
+              preset,
+              64.dp,
+              modifier = (
+                if (selected == preset.id) Modifier.border(2.dp, Color(0xFFFF9800), CircleShape).padding(3.dp)
+                else Modifier
+              ).clickable { selected = preset.id }
+            )
+            if (selected == preset.id) {
+              Box(
+                modifier = Modifier.size(20.dp).clip(CircleShape).background(Color(0xFFFF9800)),
+                contentAlignment = Alignment.Center
+              ) {
+                Icon(Icons.Filled.Check, contentDescription = null, tint = Color.Black, modifier = Modifier.size(12.dp))
+              }
+            }
+          }
+        }
+      }
+
+      Spacer(modifier = Modifier.height(12.dp))
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(50))
+          .background(Color(0xFFB8862E))
+          .clickable {
+            viewModel.updateAvatarPreset(selected)
+            viewModel.closeAvatarPicker()
+          }
+          .padding(vertical = 16.dp),
+        contentAlignment = Alignment.Center
+      ) {
+        Text("Save", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+      }
+      Spacer(modifier = Modifier.height(20.dp))
+    }
   }
 }
 
