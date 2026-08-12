@@ -332,6 +332,11 @@ private const val GOOGLE_WEB_CLIENT_ID =
 class MainActivity : ComponentActivity() {
   private lateinit var viewModel: ChatViewModel
 
+  // Screenshot -> "Share a link to chat?" prompt (Android 14+ only).
+  // Registered in onStart/unregistered in onStop per Android's own
+  // guidance, rather than once in onCreate.
+  private var screenCaptureCallback: Activity.ScreenCaptureCallback? = null
+
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge(
       statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
@@ -340,20 +345,9 @@ class MainActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     viewModel = ChatViewModel(TokenStore(applicationContext))
 
-    // Screenshot -> "Share a link to chat?" prompt. Uses the official
-    // Android 14+ callback (no permissions needed) instead of watching
-    // MediaStore for new screenshots, which would need broad photo-library
-    // read access just for this. Devices below Android 14 simply don't get
-    // the prompt.
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-      // Defensive on purpose -- this is a brand-new (Android 14) system
-      // API being called without a way to test it on-device here, so it
-      // must never be able to take the whole app down if it misbehaves
-      // on some manufacturer's build.
-      runCatching {
-        registerScreenCaptureCallback(mainExecutor) {
-          viewModel.onScreenshotTaken()
-        }
+      screenCaptureCallback = Activity.ScreenCaptureCallback {
+        viewModel.onScreenshotTaken()
       }
     }
 
@@ -498,6 +492,24 @@ class MainActivity : ComponentActivity() {
     }
   }
 
+  override fun onStart() {
+    super.onStart()
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+      screenCaptureCallback?.let { callback ->
+        runCatching { registerScreenCaptureCallback(mainExecutor, callback) }
+      }
+    }
+  }
+
+  override fun onStop() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+      screenCaptureCallback?.let { callback ->
+        runCatching { unregisterScreenCaptureCallback(callback) }
+      }
+    }
+    super.onStop()
+  }
+
   private fun startGoogleSignIn() {
     viewModel.onSignInStart()
     val googleIdOption = GetGoogleIdOption.Builder()
@@ -610,12 +622,25 @@ private val WIZARD_DISTANCE_OPTIONS = listOf(
 @Composable
 private fun BoxScope.PreferenceWizardOverlay(viewModel: ChatViewModel) {
   val step = viewModel.preferenceWizardStep
+  // The wizard has no text field of its own, but it opens right after
+  // sendMessage() while the composer below it may still hold focus with
+  // the keyboard up -- without dismissing that, the keyboard sits on top
+  // of (and hides) this bottom-anchored card.
+  val keyboardController = LocalSoftwareKeyboardController.current
+  val focusManager = LocalFocusManager.current
+  LaunchedEffect(step >= 0) {
+    if (step >= 0) {
+      focusManager.clearFocus()
+      keyboardController?.hide()
+    }
+  }
   AnimatedVisibility(
     visible = step >= 0,
     enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
     exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
     modifier = Modifier
       .align(Alignment.BottomCenter)
+      .imePadding()
       .navigationBarsPadding()
       .padding(16.dp)
   ) {
@@ -706,20 +731,25 @@ private fun WizardCheckboxRow(label: String, checked: Boolean, onClick: () -> Un
     modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    Box(
-      modifier = Modifier
-        .size(20.dp)
-        .clip(RoundedCornerShape(5.dp))
-        .background(if (checked) Color.White else Color.Transparent)
-        .border(1.5.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(5.dp)),
-      contentAlignment = Alignment.Center
-    ) {
-      if (checked) Icon(Icons.Filled.Check, contentDescription = null, tint = Color.Black, modifier = Modifier.size(14.dp))
-    }
+    WizardOptionCircle(filled = checked)
     Spacer(modifier = Modifier.width(12.dp))
     Text(label, color = Color.White, fontSize = 15.sp)
   }
   HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+}
+
+// Same round indicator for both single-select (radio) and multi-select
+// (checkbox) rows -- the reference design uses plain circles for every
+// step, not squares for the multi-select one.
+@Composable
+private fun WizardOptionCircle(filled: Boolean) {
+  Box(
+    modifier = Modifier
+      .size(20.dp)
+      .clip(CircleShape)
+      .background(if (filled) Color.White else Color.Transparent)
+      .border(1.5.dp, Color.White.copy(alpha = 0.5f), CircleShape)
+  )
 }
 
 @Composable
@@ -728,26 +758,25 @@ private fun WizardRadioRow(label: String, selected: Boolean, onClick: () -> Unit
     modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    Box(
-      modifier = Modifier
-        .size(20.dp)
-        .clip(CircleShape)
-        .background(if (selected) Color.White else Color.Transparent)
-        .border(1.5.dp, Color.White.copy(alpha = 0.5f), CircleShape)
-    )
+    WizardOptionCircle(filled = selected)
     Spacer(modifier = Modifier.width(12.dp))
     Text(label, color = Color.White, fontSize = 15.sp)
   }
   HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
 }
 
+// The "write your own" row is really just one more option in the same
+// list -- it gets the same leading circle as every other row, plus a
+// trailing Skip button since there's no real text field wired up yet.
 @Composable
 private fun WizardSkipRow(label: String, onSkip: () -> Unit) {
   Row(
-    modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
+    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    Text(label, color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp, modifier = Modifier.weight(1f))
+    WizardOptionCircle(filled = false)
+    Spacer(modifier = Modifier.width(12.dp))
+    Text(label, color = Color.White.copy(alpha = 0.7f), fontSize = 15.sp, modifier = Modifier.weight(1f))
     OutlinedButton(
       onClick = onSkip,
       colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
