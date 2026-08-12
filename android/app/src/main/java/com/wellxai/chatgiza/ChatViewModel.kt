@@ -292,12 +292,17 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     birthYearInput = value
   }
 
+  // Remembers wherever EditProfile was opened from (Account, the
+  // Profile Hub's Account tabs sheet) instead of hardcoding Account.
+  private var editProfileReturnScreen: AppScreen = AppScreen.Account
+
   fun openEditProfile() {
+    editProfileReturnScreen = screen
     screen = AppScreen.EditProfile
   }
 
   fun closeEditProfile() {
-    screen = AppScreen.Account
+    screen = editProfileReturnScreen
   }
 
   fun saveEditProfile() {
@@ -598,6 +603,16 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     tokenStore.setAvatarPresetId(id)
   }
 
+  // A custom name for the chosen avatar, shown as a small label over it
+  // wherever it renders.
+  var avatarName by mutableStateOf(tokenStore.getAvatarName())
+    private set
+
+  fun updateAvatarName(name: String?) {
+    avatarName = name
+    tokenStore.setAvatarName(name)
+  }
+
   var showAvatarPicker by mutableStateOf(false)
     private set
 
@@ -618,6 +633,17 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeAboutUs() {
     showAboutUs = false
+  }
+
+  var showAccountTabs by mutableStateOf(false)
+    private set
+
+  fun openAccountTabs() {
+    showAccountTabs = true
+  }
+
+  fun closeAccountTabs() {
+    showAccountTabs = false
   }
 
   fun openDataControls() {
