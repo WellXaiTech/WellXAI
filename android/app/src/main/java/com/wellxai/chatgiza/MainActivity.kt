@@ -4236,10 +4236,10 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
           modifier = Modifier
             .clip(RoundedCornerShape(50))
             .background(Color(0xFFFF9800))
-            .clickable { comingSoon("Get Extra Plan") }
-            .padding(horizontal = 18.dp, vertical = 10.dp)
+            .clickable { comingSoon("Enter GiZa Max") }
+            .padding(horizontal = 26.dp, vertical = 8.dp)
         ) {
-          Text("Get Extra Plan", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+          Text("Enter GiZa Max", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
       }
     }
