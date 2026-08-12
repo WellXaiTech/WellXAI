@@ -8605,7 +8605,6 @@ private fun formatHistoryRowDate(millis: Long): String {
   return fmt.format(java.util.Date(millis))
 }
 
-@Composable
 private data class QuickAction(val type: String, val value: String, val label: String)
 
 // android.util.Patterns' regexes are the same ones Android's own Linkify
@@ -8723,6 +8722,24 @@ private fun MessageBubble(
     // Browser) with the target already filled in -- the AI takes the
     // real action of finding and preparing it, the human still presses
     // the final call/send/confirm in that app.
+    // Idea #6: a short, shared, copyable ID for this question/answer pair
+    // -- falls back to deriving one from the message's own id for
+    // messages saved before this existed, so every message shows one.
+    val displayPairId = message.pairId.ifBlank { "Q-" + message.id.replace("-", "").take(6).uppercase() }
+    val pairIdClipboard = LocalClipboardManager.current
+    val pairIdContext = LocalContext.current
+    Text(
+      "ID: $displayPairId",
+      color = colorScheme.onBackground.copy(alpha = 0.3f),
+      fontSize = 10.sp,
+      fontFamily = FontFamily.Monospace,
+      modifier = Modifier
+        .padding(horizontal = 12.dp)
+        .clickable {
+          pairIdClipboard.setText(AnnotatedString(displayPairId))
+          Toast.makeText(pairIdContext, "Copied $displayPairId", Toast.LENGTH_SHORT).show()
+        }
+    )
     val quickActions = remember(message.content) { extractQuickActions(message.content) }
     if (quickActions.isNotEmpty()) {
       Row(

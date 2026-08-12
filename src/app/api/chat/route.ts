@@ -36,6 +36,13 @@ export async function POST(request: Request) {
           )
         : [],
     },
+    referencedPair:
+      body.referencedPair &&
+      typeof body.referencedPair === "object" &&
+      typeof body.referencedPair.question === "string" &&
+      typeof body.referencedPair.answer === "string"
+        ? { question: body.referencedPair.question, answer: body.referencedPair.answer }
+        : undefined,
   };
 
   if (!Array.isArray(messages) || messages.length === 0) {

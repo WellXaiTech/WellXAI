@@ -43,6 +43,11 @@ export type Personalization = {
   // name, without shipping every past conversation's full text on
   // every single request.
   historyIndex?: HistoryIndexEntry[];
+  // Idea #6: every question/answer pair has a short shared ID (e.g.
+  // "Q-4F2A19"). When the user's new message references one, the app
+  // looks it up locally (across all saved history, no matter how old)
+  // and sends the exact pair here -- real content, not a guess.
+  referencedPair?: { question: string; answer: string };
 };
 
 type Provider = "openai" | "anthropic" | "mock";
@@ -96,6 +101,9 @@ const CAPABILITIES_PROMPT =
   "Never wrap the marked section in a markdown code fence (```) — write it as normal formatted prose, since it's a document, not code.\n" +
   "- You CAN search the web for current information (\"Web search\" mode) and produce structured, cited research reports " +
   "(\"Deep research\" mode) — both selectable from the \"+\" menu.\n" +
+  "- Every question you answer and its reply share a short ID (shown in the app, e.g. \"Q-4F2A19\"). The user can bring that " +
+  "exact exchange back up later, no matter how old, just by mentioning its ID — if you're given a specific past Q/A pair below " +
+  "because the user referenced one, treat it as exact ground truth and engage with its real content, not a vague summary.\n" +
   "If a user asks what you can do, describe these capabilities plainly and specifically instead of a generic disclaimer.\n\n" +
   "Depth and quality: for practical creation tasks — CVs/resumes, cover letters, business plans, brainstorms, names, taglines, " +
   "study plans, and similar — never hand back a thin, generic first draft. Produce something genuinely strong and ready to use: " +
@@ -263,6 +271,14 @@ function buildSystemPrompt(base: string, personalization?: Personalization): str
         `chats do I have" or "what have we talked about before" and reference past topics by name when relevant. ` +
         `You only have this short index, not the full text of those conversations -- if the user wants the actual ` +
         `content, tell them to reopen that chat from History rather than guessing at details you don't have:\n${lines}`
+    );
+  }
+  if (personalization?.referencedPair) {
+    const { question, answer } = personalization.referencedPair;
+    parts.push(
+      `The user's new message references a specific past question by its ID. Here is that exact exchange -- use ` +
+        `it as real, precise context (don't just summarize vaguely, engage with the actual content):\n` +
+        `Q: ${question}\nA: ${answer}`
     );
   }
   if (personalization?.workspaceInstructions?.trim()) {
