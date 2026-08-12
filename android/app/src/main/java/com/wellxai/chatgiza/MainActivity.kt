@@ -156,6 +156,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
@@ -268,6 +269,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
@@ -6828,71 +6830,120 @@ private fun ProjectsScreen(viewModel: ChatViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+private data class MockTaskCard(val emoji: String, val title: String, val description: String)
+
+private val MOCK_TASK_CARDS = listOf(
+  MockTaskCard("📖", "Weekend long read", "Every Saturday, find me an exceptional recent long read based on my interests"),
+  MockTaskCard("🏷️", "Sale monitor", "Watch my favorite stores and let me know when there's a good sale"),
+  MockTaskCard("🎵", "Concert alerts", "Let me know when artists I like announce concerts near me"),
+  MockTaskCard("🎉", "Weekend ideas", "Every Thursday, send me ideas for things to do nearby this weekend")
+)
+
+private fun Modifier.dashedBorder(color: Color, cornerRadius: Dp, strokeWidth: Dp = 1.dp): Modifier = this.drawBehind {
+  drawRoundRect(
+    color = color,
+    cornerRadius = CornerRadius(cornerRadius.toPx(), cornerRadius.toPx()),
+    style = Stroke(
+      width = strokeWidth.toPx(),
+      pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 7f), 0f)
+    )
+  )
+}
+
+// Static mockup matching the reference screenshot exactly (top bar with
+// back/title/"Chat" subtitle/filter, dashed task cards, bottom "Create a
+// task" bar) -- wiring the cards, filter, and task creation to real data
+// is a separate follow-up, not done here on purpose.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 private fun ScheduledScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeScheduled() }
   Scaffold(
+    containerColor = Color.Transparent,
     topBar = {
-      TopAppBar(
-        title = { Text("Automations", fontWeight = FontWeight.Bold) },
-        navigationIcon = {
-          IconButton(onClick = { viewModel.closeScheduled() }) {
-            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
+      Row(
+        modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        IconButton(
+          onClick = { viewModel.closeScheduled() },
+          modifier = Modifier.size(44.dp).clip(CircleShape).background(colorScheme.onBackground.copy(alpha = 0.08f))
+        ) {
+          Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
+        }
+        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+          Text("Tasks", color = colorScheme.onBackground, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Chat", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 13.sp)
+            Icon(
+              Icons.Outlined.KeyboardArrowDown,
+              contentDescription = null,
+              tint = colorScheme.onBackground.copy(alpha = 0.5f),
+              modifier = Modifier.size(16.dp)
+            )
           }
         }
-      )
-    },
-    containerColor = Color.Transparent
-  ) { padding ->
-    Column(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp, vertical = 12.dp)) {
-      OutlinedTextField(
-        value = viewModel.newTaskPrompt,
-        onValueChange = viewModel::onNewTaskPromptChange,
-        modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text("What should ChatGiZa do?") },
-        shape = RoundedCornerShape(12.dp)
-      )
-      Spacer(modifier = Modifier.height(8.dp))
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        OutlinedTextField(
-          value = viewModel.newTaskRunAt,
-          onValueChange = viewModel::onNewTaskRunAtChange,
-          modifier = Modifier.weight(1f),
-          placeholder = { Text("YYYY-MM-DD HH:mm") },
-          shape = RoundedCornerShape(12.dp)
-        )
-        Spacer(modifier = Modifier.size(8.dp))
-        IconButton(onClick = { viewModel.addScheduledTask() }) {
-          Icon(Icons.Filled.Add, contentDescription = "Add task", tint = colorScheme.onBackground)
+        IconButton(
+          onClick = {},
+          modifier = Modifier.size(44.dp).clip(CircleShape).background(colorScheme.onBackground.copy(alpha = 0.08f))
+        ) {
+          FilterIconCustom(tint = colorScheme.onBackground, modifier = Modifier.size(18.dp))
         }
       }
-      Spacer(modifier = Modifier.height(16.dp))
-      if (viewModel.loadingScheduled) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-          CircularProgressIndicator(color = colorScheme.onBackground)
-        }
-      } else if (viewModel.scheduledTasks.isEmpty()) {
-        Text("No scheduled tasks yet.", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 14.sp)
-      } else {
-        LazyColumn {
-          items(viewModel.scheduledTasks, key = { it.id }) { task ->
-            Row(
-              modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Column(modifier = Modifier.weight(1f)) {
-                Text(task.prompt, color = colorScheme.onBackground, fontSize = 15.sp)
-                Text(
-                  if (task.fired) "${task.runAt} · done" else task.runAt,
-                  color = colorScheme.onBackground.copy(alpha = 0.5f),
-                  fontSize = 12.sp
-                )
-              }
-              IconButton(onClick = { viewModel.deleteScheduledTask(task.id) }) {
-                DeleteIcon(tint = colorScheme.onBackground.copy(alpha = 0.6f))
-              }
-            }
+    },
+    bottomBar = {
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .navigationBarsPadding()
+          .padding(16.dp)
+          .height(52.dp)
+          .clip(RoundedCornerShape(26.dp))
+          .background(colorScheme.onBackground.copy(alpha = 0.08f))
+          .padding(horizontal = 18.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Text(
+          "Create a task",
+          color = colorScheme.onBackground.copy(alpha = 0.5f),
+          fontSize = 15.sp,
+          modifier = Modifier.weight(1f)
+        )
+        Icon(Icons.Filled.Mic, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.6f))
+      }
+    }
+  ) { padding ->
+    LazyColumn(
+      modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
+      verticalArrangement = Arrangement.spacedBy(14.dp),
+      contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)
+    ) {
+      items(MOCK_TASK_CARDS) { task ->
+        Column(
+          modifier = Modifier
+            .fillMaxWidth()
+            .dashedBorder(colorScheme.onBackground.copy(alpha = 0.25f), cornerRadius = 20.dp)
+            .padding(16.dp)
+        ) {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(task.emoji, fontSize = 17.sp)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+              task.title,
+              color = colorScheme.onBackground,
+              fontSize = 16.sp,
+              fontWeight = FontWeight.SemiBold,
+              modifier = Modifier.weight(1f)
+            )
+            Icon(Icons.Filled.Add, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
           }
+          Spacer(modifier = Modifier.height(6.dp))
+          Text(
+            task.description,
+            color = colorScheme.onBackground.copy(alpha = 0.6f),
+            fontSize = 14.sp,
+            lineHeight = 20.sp
+          )
         }
       }
     }
