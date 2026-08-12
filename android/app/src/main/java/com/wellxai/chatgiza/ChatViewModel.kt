@@ -11,7 +11,15 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.util.UUID
 
-data class UiMessage(val id: String, val role: String, val content: String, val createdAt: Long? = null)
+// pairId links a question to its answer with a short, stable, shareable
+// code (e.g. "Q-4F2A19") -- both the user's message and the assistant's
+// reply to it carry the same one, so either can be looked up and traced
+// back to the other no matter how old the conversation is. Blank for
+// messages saved before this existed; the UI falls back to deriving a
+// display id from the message's own [id] for those.
+data class UiMessage(val id: String, val role: String, val content: String, val createdAt: Long? = null, val pairId: String = "")
+
+fun newPairId(): String = "Q-" + UUID.randomUUID().toString().replace("-", "").take(6).uppercase()
 
 // `text` is folded into the outgoing message text (PDF/plain-text files);
 // `imageDataUrls` are sent as vision image parts alongside it (a rendered
@@ -729,6 +737,25 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         val opening = convo.messages.firstOrNull { it.role == "user" }?.content.orEmpty()
         convo.title to opening.take(120)
       }
+  }
+
+  // Idea #6: if this new message references a pair ID (e.g. "Q-4F2A19"),
+  // find that exact question+answer -- checked against every saved
+  // conversation, not just the open one, and against the live in-memory
+  // messages too in case the pair hasn't been saved yet -- and hand it to
+  // the model as real, exact context instead of leaving it to guess.
+  private fun findReferencedPair(text: String): Pair<String, String>? {
+    val match = Regex("Q-[A-Za-z0-9]{6}").find(text) ?: return null
+    val targetId = match.value.uppercase()
+    val liveQuestion = messages.firstOrNull { it.pairId.equals(targetId, ignoreCase = true) && it.role == "user" }
+    val liveAnswer = messages.firstOrNull { it.pairId.equals(targetId, ignoreCase = true) && it.role == "assistant" }
+    if (liveQuestion != null && liveAnswer != null) return liveQuestion.content to liveAnswer.content
+    for (convo in conversations) {
+      val question = convo.messages.firstOrNull { it.pairId.equals(targetId, ignoreCase = true) && it.role == "user" }
+      val answer = convo.messages.firstOrNull { it.pairId.equals(targetId, ignoreCase = true) && it.role == "assistant" }
+      if (question != null && answer != null) return question.content to answer.content
+    }
+    return null
   }
 
   fun acceptMemorySuggestion(text: String) {
@@ -1449,7 +1476,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   fun selectConversation(id: String) {
     val convo = conversations.find { it.id == id } ?: return
     activeConversationId = id
-    messages = convo.messages.map { UiMessage(it.id, it.role, it.content, it.createdAt) }
+    messages = convo.messages.map { UiMessage(it.id, it.role, it.content, it.createdAt, it.pairId) }
     screen = AppScreen.Chat
   }
 
@@ -1487,9 +1514,17 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     // visible conversation.
     val displayText = if (fileToSend != null) "$text\n\n📎 ${fileToSend.name}".trim() else text
     val apiText = if (fileToSend?.text != null) "$text\n\n[Attached file: ${fileToSend.name}]\n${fileToSend.text}" else text
-    val userMsg = UiMessage(UUID.randomUUID().toString(), "user", displayText, now)
+    // Idea #6: every question/answer pair gets a short shared ID, so
+    // either side can be looked up and traced back to the other no
+    // matter how old the conversation is. If this new message itself
+    // references an ID (e.g. "what did you say about Q-4F2A19"), find
+    // that exact past pair and hand it to the model as real context
+    // instead of hoping it remembers or guesses.
+    val pairId = newPairId()
+    val referencedPair = findReferencedPair(text)
+    val userMsg = UiMessage(UUID.randomUUID().toString(), "user", displayText, now, pairId)
     val assistantId = UUID.randomUUID().toString()
-    messages = messages + userMsg + UiMessage(assistantId, "assistant", "", now)
+    messages = messages + userMsg + UiMessage(assistantId, "assistant", "", now, pairId)
     input = ""
     clearAttachedImage()
     clearAttachedFile()
@@ -1520,7 +1555,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         location = settingsData.location,
         company = settingsData.company,
         imageDataUrls = imagesToSend,
-        historyIndex = buildHistoryIndex(conversationId)
+        historyIndex = buildHistoryIndex(conversationId),
+        referencedPair = referencedPair
       ) { chunk ->
         messages = messages.map { m ->
           if (m.id == assistantId) m.copy(content = m.content + chunk) else m
@@ -1541,7 +1577,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
       val updated = ApiConversation(
         id = conversationId,
         title = title,
-        messages = messages.map { ApiMessage(it.id, it.role, it.content, it.createdAt ?: System.currentTimeMillis()) },
+        messages = messages.map { ApiMessage(it.id, it.role, it.content, it.createdAt ?: System.currentTimeMillis(), it.pairId) },
         pinned = conversations.find { it.id == conversationId }?.pinned ?: false
       )
       conversations = if (isNewConversation) {
@@ -1565,7 +1601,10 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     if (idx <= 0) return
 
     val history = messages.take(idx).map { ChatMessage(it.role, it.content) }
-    messages = messages.take(idx) + UiMessage(assistantId, "assistant", "", System.currentTimeMillis())
+    // Same question, so it keeps the same pairId -- a fresh answer, not a
+    // new question needing a new one.
+    val existingPairId = messages.getOrNull(idx)?.pairId.orEmpty()
+    messages = messages.take(idx) + UiMessage(assistantId, "assistant", "", System.currentTimeMillis(), existingPairId)
     sending = true
     errorMessage = null
 
@@ -1595,7 +1634,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
       val updated = ApiConversation(
         id = conversationId,
         title = conversations.find { it.id == conversationId }?.title ?: "Chat",
-        messages = messages.map { ApiMessage(it.id, it.role, it.content, it.createdAt ?: System.currentTimeMillis()) },
+        messages = messages.map { ApiMessage(it.id, it.role, it.content, it.createdAt ?: System.currentTimeMillis(), it.pairId) },
         pinned = conversations.find { it.id == conversationId }?.pinned ?: false
       )
       conversations = conversations.map { if (it.id == conversationId) updated else it }
@@ -1613,7 +1652,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     val updated = ApiConversation(
       id = conversationId,
       title = conversations.find { it.id == conversationId }?.title ?: "Chat",
-      messages = messages.map { ApiMessage(it.id, it.role, it.content, it.createdAt ?: System.currentTimeMillis()) },
+      messages = messages.map { ApiMessage(it.id, it.role, it.content, it.createdAt ?: System.currentTimeMillis(), it.pairId) },
       pinned = conversations.find { it.id == conversationId }?.pinned ?: false
     )
     conversations = conversations.map { if (it.id == conversationId) updated else it }

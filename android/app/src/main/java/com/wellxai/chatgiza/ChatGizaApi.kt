@@ -17,7 +17,7 @@ data class MobileUser(val id: String, val name: String?, val email: String?, val
 
 data class AuthResult(val token: String, val user: MobileUser)
 
-data class ApiMessage(val id: String, val role: String, val content: String, val createdAt: Long?)
+data class ApiMessage(val id: String, val role: String, val content: String, val createdAt: Long?, val pairId: String = "")
 
 data class ApiConversation(
   val id: String,
@@ -221,6 +221,10 @@ object ChatGizaApi {
     // many chats do I have" / reference past topics by name without
     // every past conversation's full text being sent on every request.
     historyIndex: List<Pair<String, String>> = emptyList(),
+    // (question, answer) -- set when this new message itself references a
+    // pair ID (e.g. "Q-4F2A19") and that exact past exchange was found
+    // locally, so the model gets the real content instead of guessing.
+    referencedPair: Pair<String, String>? = null,
     onChunk: (String) -> Unit
   ): ApiResult<Unit> =
     withContext(Dispatchers.IO) {
@@ -274,6 +278,12 @@ object ChatGizaApi {
             historyIndexJson.put(JSONObject().put("title", title).put("snippet", snippet))
           }
           payloadObj.put("historyIndex", historyIndexJson)
+        }
+        if (referencedPair != null) {
+          payloadObj.put(
+            "referencedPair",
+            JSONObject().put("question", referencedPair.first).put("answer", referencedPair.second)
+          )
         }
 
         val payload = payloadObj.toString().toRequestBody(JSON)
@@ -1133,7 +1143,8 @@ object ChatGizaApi {
         id = m.optString("id", java.util.UUID.randomUUID().toString()),
         role = m.optString("role", "user"),
         content = m.optString("content", ""),
-        createdAt = if (m.has("createdAt") && !m.isNull("createdAt")) m.optLong("createdAt") else null
+        createdAt = if (m.has("createdAt") && !m.isNull("createdAt")) m.optLong("createdAt") else null,
+        pairId = m.optString("pairId", "")
       )
     }
     return ApiConversation(
@@ -1149,6 +1160,7 @@ object ChatGizaApi {
     for (m in c.messages) {
       val mj = JSONObject().put("id", m.id).put("role", m.role).put("content", m.content)
       if (m.createdAt != null) mj.put("createdAt", m.createdAt)
+      if (m.pairId.isNotBlank()) mj.put("pairId", m.pairId)
       messagesArr.put(mj)
     }
     return JSONObject()
