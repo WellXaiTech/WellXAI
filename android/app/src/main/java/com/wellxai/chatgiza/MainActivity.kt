@@ -4094,6 +4094,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
   fun comingSoon(label: String) {
     Toast.makeText(context, "$label — coming soon", Toast.LENGTH_SHORT).show()
   }
+  var activeProfileTab by remember { mutableStateOf("My info") }
 
   Column(
     modifier = Modifier
@@ -4174,7 +4175,37 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
       )
     }
 
-    Spacer(modifier = Modifier.height(14.dp))
+    Spacer(modifier = Modifier.height(18.dp))
+
+    // A row of tabs, not a stacked list -- only "My info" is real (it's
+    // just the existing content below); the rest are stub taps, matching
+    // the reference the user provided.
+    Row(
+      modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+      horizontalArrangement = Arrangement.spacedBy(26.dp)
+    ) {
+      listOf("My info", "Security", "Preference", "General").forEach { tab ->
+        Column(
+          modifier = Modifier.clickable {
+            if (tab == "My info") activeProfileTab = tab
+            else comingSoon(tab)
+          }
+        ) {
+          Text(
+            tab,
+            color = if (activeProfileTab == tab) Color.White else Color.White.copy(alpha = 0.4f),
+            fontSize = 15.sp,
+            fontWeight = if (activeProfileTab == tab) FontWeight.Bold else FontWeight.Normal
+          )
+          Spacer(modifier = Modifier.height(6.dp))
+          if (activeProfileTab == tab) {
+            Box(modifier = Modifier.width(28.dp).height(2.dp).background(Color.White))
+          }
+        }
+      }
+    }
+
+    Spacer(modifier = Modifier.height(18.dp))
 
     Row {
       Row(
@@ -4582,7 +4613,7 @@ private fun ProfileHubQuickCard(
       .clip(RoundedCornerShape(16.dp))
       .background(Color(0xFF141414))
       .clickable(onClick = onClick)
-      .padding(14.dp)
+      .padding(horizontal = 14.dp, vertical = 10.dp)
   ) {
     icon(Color.White)
     Spacer(modifier = Modifier.width(10.dp))
