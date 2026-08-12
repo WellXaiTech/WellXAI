@@ -345,8 +345,14 @@ class MainActivity : ComponentActivity() {
     // read access just for this. Devices below Android 14 simply don't get
     // the prompt.
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-      registerScreenCaptureCallback(mainExecutor) {
-        viewModel.onScreenshotTaken()
+      // Defensive on purpose -- this is a brand-new (Android 14) system
+      // API being called without a way to test it on-device here, so it
+      // must never be able to take the whole app down if it misbehaves
+      // on some manufacturer's build.
+      runCatching {
+        registerScreenCaptureCallback(mainExecutor) {
+          viewModel.onScreenshotTaken()
+        }
       }
     }
 
