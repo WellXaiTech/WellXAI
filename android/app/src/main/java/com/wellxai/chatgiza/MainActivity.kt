@@ -4097,8 +4097,8 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
       IconButton(onClick = { comingSoon("Support") }) {
         Icon(Icons.Outlined.Headset, contentDescription = "Support", tint = Color.White)
       }
-      IconButton(onClick = { comingSoon("Nearby") }) {
-        Icon(Icons.Outlined.Language, contentDescription = null, tint = Color.White)
+      IconButton(onClick = { viewModel.openSettings() }) {
+        Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = Color.White)
       }
       IconButton(onClick = { comingSoon("Share profile") }) {
         Icon(Icons.Outlined.Share, contentDescription = null, tint = Color.White)
