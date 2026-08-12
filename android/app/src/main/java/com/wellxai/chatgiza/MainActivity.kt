@@ -7150,11 +7150,13 @@ private fun Modifier.dashedBorder(color: Color, cornerRadius: Dp, strokeWidth: D
   )
 }
 
-// Top bar (back/title/"Chat" subtitle/filter) and bottom "Create a task"
-// bar still match the reference as a static shell -- the filter icon and
-// the bottom bar's own task-creation flow aren't wired up yet -- but the
-// task cards themselves are real now: finishing one's wizard creates an
-// actual entry in the Scheduled-tasks list shown above "Get started".
+// Static mockup matching the reference screenshot (top bar with
+// back/title/"Chat" subtitle/filter, dashed task cards, bottom "Create a
+// task" bar) -- tapping a card sends its prompt as a real chat message
+// and, for the tasks with one, opens that task's own preference wizard.
+// It deliberately does NOT create a Scheduled-tasks entry or remove the
+// card from the list -- an earlier pass added that and it was reverted
+// per explicit correction, this is simpler on purpose.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ScheduledScreen(viewModel: ChatViewModel) {
@@ -7214,29 +7216,17 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
       }
     }
   ) { padding ->
-    LaunchedEffect(Unit) { viewModel.loadScheduled() }
-    val visibleMockTasks = remember(viewModel.activatedTaskTitles) {
-      MOCK_TASK_CARDS.filter { it.title !in viewModel.activatedTaskTitles }
-    }
+    // Dismiss the keyboard the instant any task is tapped -- it must not
+    // linger open (and cover the wizard) just because the composer below
+    // happened to have focus from earlier typing.
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
     LazyColumn(
       modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp),
       contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)
     ) {
-      items(viewModel.scheduledTasks, key = { it.id }) { task ->
-        ActiveTaskCard(task = task, onDelete = { viewModel.deleteScheduledTask(task.id) })
-      }
-      if (visibleMockTasks.isNotEmpty()) {
-        item {
-          Text(
-            "Get started",
-            color = colorScheme.onBackground.copy(alpha = 0.5f),
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold
-          )
-        }
-      }
-      items(visibleMockTasks) { task ->
+      items(MOCK_TASK_CARDS) { task ->
         // The whole card is clickable, not just the small "+" -- a
         // much easier target to hit than a 28dp icon button alone.
         Column(
@@ -7245,6 +7235,8 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
             .clip(RoundedCornerShape(20.dp))
             .dashedBorder(colorScheme.onBackground.copy(alpha = 0.25f), cornerRadius = 20.dp)
             .clickable {
+              focusManager.clearFocus()
+              keyboardController?.hide()
               viewModel.closeScheduled()
               viewModel.startTaskExample(task.title, task.description, hasWizard = task.title in TASK_WIZARDS)
             }
@@ -7272,52 +7264,6 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
         }
       }
     }
-  }
-}
-
-// A real scheduled task (created by finishing a task's preference
-// wizard, or via the plain "Create a task" bar), shown at the top of the
-// list above the "Get started" examples. The prompt is stored as
-// "TaskTitle: description" so this can recover a friendly title without
-// needing a schema change on the backend.
-@Composable
-private fun ActiveTaskCard(task: ApiScheduledTask, onDelete: () -> Unit) {
-  val separatorIndex = task.prompt.indexOf(": ")
-  val title = if (separatorIndex > 0) task.prompt.substring(0, separatorIndex) else "Task"
-  val description = if (separatorIndex > 0) task.prompt.substring(separatorIndex + 2) else task.prompt
-  Column(
-    modifier = Modifier
-      .fillMaxWidth()
-      .clip(RoundedCornerShape(20.dp))
-      .background(colorScheme.onBackground.copy(alpha = 0.06f))
-      .padding(16.dp)
-  ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-      Text(
-        "DAILY",
-        color = Color(0xFF5B8DEF),
-        fontSize = 11.sp,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.weight(1f)
-      )
-      IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
-        DeleteIcon(tint = colorScheme.onBackground.copy(alpha = 0.5f))
-      }
-    }
-    Text(title, color = colorScheme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-    Spacer(modifier = Modifier.height(6.dp))
-    Text(
-      description,
-      color = colorScheme.onBackground.copy(alpha = 0.6f),
-      fontSize = 14.sp,
-      lineHeight = 20.sp,
-      maxLines = 3,
-      overflow = TextOverflow.Ellipsis
-    )
-    Spacer(modifier = Modifier.height(8.dp))
-    HorizontalDivider(color = colorScheme.onBackground.copy(alpha = 0.08f), thickness = 1.dp)
-    Spacer(modifier = Modifier.height(8.dp))
-    Text("Morning", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 13.sp)
   }
 }
 
