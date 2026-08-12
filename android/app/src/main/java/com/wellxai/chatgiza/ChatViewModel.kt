@@ -662,12 +662,17 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun setAppLanguage(value: String) = persistProfile(profileData.copy(language = value))
 
+  // Remembers wherever AppLanguage was opened from (Settings, the
+  // Profile Hub's trending row) instead of hardcoding Account.
+  private var appLanguageReturnScreen: AppScreen = AppScreen.Account
+
   fun openAppLanguage() {
+    appLanguageReturnScreen = screen
     screen = AppScreen.AppLanguage
   }
 
   fun closeAppLanguage() {
-    screen = AppScreen.Account
+    screen = appLanguageReturnScreen
   }
 
   fun openAdvanced() {
