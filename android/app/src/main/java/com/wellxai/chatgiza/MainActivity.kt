@@ -227,6 +227,10 @@ import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material.icons.outlined.NoAdultContent
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material.icons.outlined.Photo
 import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.Poll
@@ -4508,8 +4512,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         listOf("My info", "Security", "Preference", "General").forEach { tab ->
           Column(
             modifier = Modifier.clickable {
-              if (tab == "My info" || tab == "Security" || tab == "Preference") activeTab = tab
-              else comingSoon(tab)
+              activeTab = tab
             }
           ) {
             Text(
@@ -4734,6 +4737,52 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(icon = Icons.Outlined.Notifications, label = "Notification Settings", onClick = { comingSoon("Notification Settings") }) {}
           MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.Email, label = "Email Subscriptions", onClick = { comingSoon("Email Subscriptions") }) {}
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+      } else if (activeTab == "General") {
+        var mockAlwaysOn by remember { mutableStateOf(false) }
+        Column(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color(0xFF141414))
+            .padding(horizontal = 16.dp)
+        ) {
+          MyInfoRow(icon = Icons.Outlined.Language, label = "Language", onClick = { viewModel.closeAccountTabs(); viewModel.openAppLanguage() }) {
+            Text("English", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+          }
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.AttachMoney, label = "Currency Display", onClick = { comingSoon("Currency Display") }) {
+            Text("USD", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+          }
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Filled.LightMode, label = "Color Theme", onClick = { comingSoon("Color Theme") }) {
+            Text("Dark Mode", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+          }
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.Palette, label = "Color Preferences", onClick = { comingSoon("Color Preferences") }) {
+            Box(modifier = Modifier.size(14.dp).clip(RoundedCornerShape(3.dp)).background(Color(0xFF2ECC71)))
+            Spacer(modifier = Modifier.width(4.dp))
+            Box(modifier = Modifier.size(14.dp).clip(RoundedCornerShape(3.dp)).background(Color(0xFFE0345C)))
+          }
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.Smartphone, label = "Always on (no screen lock)", showChevron = false, onClick = {}) {
+            Switch(checked = mockAlwaysOn, onCheckedChange = { mockAlwaysOn = it })
+          }
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.HelpOutline, label = "Help Center", onClick = { comingSoon("Help Center") }) {}
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.ScreenShare, label = "Trade market overview", onClick = { comingSoon("Trade market overview") }) {}
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.Headset, label = "Contact Support", onClick = { comingSoon("Contact Support") }) {}
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.EditNote, label = "User feedback", onClick = { comingSoon("User feedback") }) {}
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.Info, label = "About Us", onClick = { viewModel.closeAccountTabs(); viewModel.openAboutUs() }) {}
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.Archive, label = "Storage management", onClick = { comingSoon("Storage management") }) {}
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.ThumbUp, label = "Rate Our App", onClick = { comingSoon("Rate Our App") }) {}
         }
         Spacer(modifier = Modifier.height(20.dp))
       }
