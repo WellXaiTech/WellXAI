@@ -4202,7 +4202,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
       }
     }
 
-    Spacer(modifier = Modifier.height(20.dp))
+    Spacer(modifier = Modifier.height(10.dp))
 
     Column(
       modifier = Modifier
@@ -4237,9 +4237,9 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
             .clip(RoundedCornerShape(50))
             .background(Color(0xFFFF9800))
             .clickable { comingSoon("Enter GiZa Max") }
-            .padding(horizontal = 26.dp, vertical = 8.dp)
+            .padding(horizontal = 32.dp, vertical = 8.dp)
         ) {
-          Text("Enter GiZa Max", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+          Text("Enter GiZa Max", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
       }
     }
