@@ -4237,7 +4237,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
             .clip(RoundedCornerShape(50))
             .background(Color(0xFFFF9D2E))
             .clickable { comingSoon("Enter GiZa Max") }
-            .padding(horizontal = 32.dp, vertical = 8.dp)
+            .padding(horizontal = 20.dp, vertical = 8.dp)
         ) {
           Text("Enter GiZa Max", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
@@ -4269,8 +4269,8 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
       ProfileHubTrendingItem(label = "Connectors", onClick = { comingSoon("Connectors") }) { tint ->
         Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connectors), contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
       }
-      ProfileHubTrendingItem(label = "Rewards Hub", onClick = { comingSoon("Rewards Hub") }) { tint ->
-        Icon(Icons.Outlined.CardGiftcard, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+      ProfileHubTrendingItem(label = "Language", onClick = { viewModel.openAppLanguage() }) { tint ->
+        Icon(Icons.Outlined.Language, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
       }
     }
 
@@ -4600,10 +4600,7 @@ private fun ProfileHubTrendingItem(label: String, onClick: () -> Unit, icon: @Co
     modifier = Modifier.clickable(onClick = onClick)
   ) {
     Box(
-      modifier = Modifier
-        .size(48.dp)
-        .clip(CircleShape)
-        .border(1.dp, Color.White.copy(alpha = 0.2f), CircleShape),
+      modifier = Modifier.size(48.dp),
       contentAlignment = Alignment.Center
     ) {
       icon(Color.White)
