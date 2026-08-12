@@ -14,6 +14,7 @@ import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import android.os.Build
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -40,8 +41,13 @@ import androidx.core.content.FileProvider
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -71,6 +77,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -161,6 +168,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SettingsBrightness
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.outlined.Article
@@ -328,8 +336,23 @@ class MainActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     viewModel = ChatViewModel(TokenStore(applicationContext))
 
+    // Screenshot -> "Share a link to chat?" prompt. Uses the official
+    // Android 14+ callback (no permissions needed) instead of watching
+    // MediaStore for new screenshots, which would need broad photo-library
+    // read access just for this. Devices below Android 14 simply don't get
+    // the prompt.
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+      registerScreenCaptureCallback(mainExecutor) {
+        viewModel.onScreenshotTaken()
+      }
+    }
+
     setContent {
       ChatGizaTheme(themeMode = viewModel.themeMode) {
+        // Wrapped in a Box so the screenshot-triggered "Share a link to
+        // chat?" prompt can float above whichever screen is showing,
+        // instead of being wired into every individual screen separately.
+        Box(Modifier.fillMaxSize()) {
         Surface {
           val screen = viewModel.screen
           // Account/Settings/Projects/Scheduled/LiveVision are reachable by
@@ -458,6 +481,8 @@ class MainActivity : ComponentActivity() {
             }
           }
         }
+        ScreenshotShareOverlay(viewModel)
+        }
       }
     }
   }
@@ -483,6 +508,64 @@ class MainActivity : ComponentActivity() {
         viewModel.onSignInFailed(e.message ?: "Sign-in was cancelled")
       } catch (e: Exception) {
         viewModel.onSignInFailed(e.message ?: "Sign-in failed")
+      }
+    }
+  }
+}
+
+// Floats over whichever screen is showing when a screenshot is taken --
+// same transcript-share action as the "Share" row in the "..." chat menu,
+// just triggered automatically instead of tapped. Auto-dismisses after a
+// few seconds if ignored.
+@Composable
+private fun BoxScope.ScreenshotShareOverlay(viewModel: ChatViewModel) {
+  val context = LocalContext.current
+  val visible = viewModel.showScreenshotSharePrompt
+  LaunchedEffect(visible) {
+    if (visible) {
+      delay(6000)
+      viewModel.dismissScreenshotSharePrompt()
+    }
+  }
+  AnimatedVisibility(
+    visible = visible,
+    enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+    exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+    modifier = Modifier
+      .align(Alignment.TopCenter)
+      .statusBarsPadding()
+      .padding(top = 8.dp, start = 16.dp, end = 16.dp)
+  ) {
+    Row(
+      modifier = Modifier
+        .fillMaxWidth()
+        .clip(RoundedCornerShape(18.dp))
+        .background(Color(0xFF1C1C1C))
+        .padding(16.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Column(modifier = Modifier.weight(1f)) {
+        Text("Share a link to chat?", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text(
+          "This creates a copy that others can chat with",
+          color = Color.White.copy(alpha = 0.55f),
+          fontSize = 12.sp
+        )
+      }
+      Spacer(modifier = Modifier.width(12.dp))
+      IconButton(
+        onClick = {
+          viewModel.dismissScreenshotSharePrompt()
+          val transcript = viewModel.messages.joinToString("\n\n") { m -> "${if (m.role == "user") "You" else "ChatGiZa"}: ${m.content}" }
+          val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, transcript)
+          }
+          context.startActivity(Intent.createChooser(intent, null))
+        },
+        modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.White)
+      ) {
+        Icon(Icons.Filled.Share, contentDescription = "Share", tint = Color.Black, modifier = Modifier.size(18.dp))
       }
     }
   }

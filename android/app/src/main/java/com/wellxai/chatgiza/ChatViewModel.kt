@@ -170,6 +170,18 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var errorMessage by mutableStateOf<String?>(null)
     private set
 
+  var showScreenshotSharePrompt by mutableStateOf(false)
+    private set
+
+  /** Only worth offering when there's an actual conversation to share. */
+  fun onScreenshotTaken() {
+    if (messages.isNotEmpty()) showScreenshotSharePrompt = true
+  }
+
+  fun dismissScreenshotSharePrompt() {
+    showScreenshotSharePrompt = false
+  }
+
   var profileData by mutableStateOf(ProfileData())
     private set
 
