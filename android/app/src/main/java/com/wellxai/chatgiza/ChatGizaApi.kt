@@ -403,6 +403,46 @@ object ChatGizaApi {
     }
   }
 
+  // Background, best-effort call -- fired occasionally (not per message)
+  // after a conversation has enough back-and-forth. Returns 0-3 short
+  // candidate memory strings for the user to accept/dismiss; nothing is
+  // saved server-side by this call itself.
+  suspend fun suggestMemory(
+    token: String,
+    messages: List<ChatMessage>,
+    existingMemory: List<String>
+  ): ApiResult<List<String>> = withContext(Dispatchers.IO) {
+    try {
+      val messagesJson = JSONArray()
+      for (m in messages) {
+        messagesJson.put(JSONObject().put("role", m.role).put("content", m.content))
+      }
+      val existingJson = JSONArray()
+      for (m in existingMemory) existingJson.put(m)
+      val payload = JSONObject()
+        .put("messages", messagesJson)
+        .put("existingMemory", existingJson)
+        .toString()
+        .toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/memory/extract")
+        .header("Authorization", "Bearer $token")
+        .post(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val suggestionsArr = JSONObject(text).optJSONArray("suggestions") ?: JSONArray()
+        val suggestions = (0 until suggestionsArr.length()).map { suggestionsArr.getString(it) }
+        ApiResult.Success(suggestions)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
   suspend fun getRealtimeToken(
     token: String,
     language: String,

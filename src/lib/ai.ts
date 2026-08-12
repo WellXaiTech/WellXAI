@@ -562,6 +562,68 @@ export async function generateCode(prompt: string): Promise<string> {
   return stripCodeFences(text);
 }
 
+const MEMORY_EXTRACT_SYSTEM_PROMPT = `You extract durable, useful facts about the USER from a conversation, for a personal AI assistant's long-term memory.
+
+Only extract a fact if it is:
+- About the user specifically, not general knowledge or something about the assistant.
+- Likely to stay true for months, not a one-off detail (e.g. "prefers direct answers" is durable, "is annoyed today" is not).
+- Genuinely new -- not already covered, even loosely, by the existing memory list you're given.
+
+Never extract: health conditions, sexuality, religion, immigration status, criminal history, or financial account numbers, even if the user mentions them.
+
+Respond with ONLY a JSON array of short strings (each under 12 words), 0 to 3 items. If there is nothing new and durable worth remembering, respond with []. No other text, no markdown fences.`;
+
+function flattenMessageText(content: string | ChatContentPart[]): string {
+  if (typeof content === "string") return content;
+  return content
+    .filter((part): part is { type: "text"; text: string } => part.type === "text")
+    .map((part) => part.text)
+    .join(" ");
+}
+
+// Powers the app's automatic memory suggestions -- called after a
+// conversation has enough back-and-forth, not on every single message
+// (the cost/latency of an extra model call isn't worth it per-turn).
+// Best-effort: any failure just means no suggestions this round, never
+// surfaced as an error to the user.
+export async function extractMemoryCandidates(
+  messages: ChatMessage[],
+  existingMemory: string[]
+): Promise<string[]> {
+  if (getProvider() !== "openai") return [];
+
+  const recent = messages.slice(-16);
+  const transcript = recent
+    .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${flattenMessageText(m.content).slice(0, 500)}`)
+    .join("\n");
+
+  const existingList = existingMemory.length > 0 ? existingMemory.map((m) => `- ${m}`).join("\n") : "(none yet)";
+
+  try {
+    const { default: OpenAI } = await import("openai");
+    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: MEMORY_EXTRACT_SYSTEM_PROMPT },
+        {
+          role: "user",
+          content: `Existing memory:\n${existingList}\n\nConversation:\n${transcript}`,
+        },
+      ],
+    });
+
+    const text = completion.choices[0]?.message?.content?.trim() ?? "[]";
+    const cleaned = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    const parsed = JSON.parse(cleaned);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is string => typeof item === "string" && item.trim().length > 0).slice(0, 3);
+  } catch (err) {
+    console.error("Memory extraction failed:", err);
+    return [];
+  }
+}
+
 async function getOpenAiClient() {
   if (getProvider() !== "openai") {
     throw new Error("Video generation needs an OpenAI API key configured.");
