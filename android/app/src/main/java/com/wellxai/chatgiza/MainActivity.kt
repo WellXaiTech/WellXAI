@@ -4104,67 +4104,67 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
       .verticalScroll(rememberScrollState())
       .padding(horizontal = 16.dp)
   ) {
-    Spacer(modifier = Modifier.height(12.dp))
+    Spacer(modifier = Modifier.height(8.dp))
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-      IconButton(onClick = { viewModel.closeProfileHub() }, modifier = Modifier.size(32.dp)) {
+      IconButton(onClick = { viewModel.closeProfileHub() }, modifier = Modifier.size(30.dp)) {
         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
       }
       Spacer(modifier = Modifier.weight(1f))
-      IconButton(onClick = { comingSoon("Support") }) {
+      IconButton(onClick = { comingSoon("Support") }, modifier = Modifier.size(36.dp)) {
         Icon(Icons.Outlined.Headset, contentDescription = "Support", tint = Color.White)
       }
-      IconButton(onClick = { viewModel.openAccount() }) {
+      IconButton(onClick = { viewModel.openAccount() }, modifier = Modifier.size(36.dp)) {
         Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = Color.White)
       }
-      IconButton(onClick = { comingSoon("Share profile") }) {
+      IconButton(onClick = { comingSoon("Share profile") }, modifier = Modifier.size(36.dp)) {
         Icon(Icons.Outlined.Share, contentDescription = null, tint = Color.White)
       }
     }
 
-    Spacer(modifier = Modifier.height(10.dp))
+    Spacer(modifier = Modifier.height(8.dp))
 
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
       val selectedPreset = AVATAR_PRESETS.find { it.id == viewModel.avatarPresetId }
       Box(modifier = Modifier.clickable { viewModel.openAvatarPicker() }) {
         if (selectedPreset != null) {
-          AvatarPresetThumbnail(selectedPreset, 56.dp, name = viewModel.avatarName)
+          AvatarPresetThumbnail(selectedPreset, 52.dp, name = viewModel.avatarName)
         } else if (viewModel.userImage != null) {
           AsyncImage(
             model = viewModel.userImage,
             contentDescription = "Profile",
-            modifier = Modifier.size(56.dp).clip(CircleShape)
+            modifier = Modifier.size(52.dp).clip(CircleShape)
           )
         } else {
-          Icon(Icons.Outlined.AccountCircle, contentDescription = "Profile", tint = Color.White, modifier = Modifier.size(56.dp))
+          Icon(Icons.Outlined.AccountCircle, contentDescription = "Profile", tint = Color.White, modifier = Modifier.size(52.dp))
         }
       }
-      Spacer(modifier = Modifier.width(14.dp))
+      Spacer(modifier = Modifier.width(12.dp))
       Column(modifier = Modifier.weight(1f)) {
         Text(
           viewModel.userName?.takeIf { it.isNotBlank() } ?: "You",
           color = Color.White,
-          fontSize = 24.sp,
+          fontSize = 21.sp,
           fontWeight = FontWeight.Bold,
           maxLines = 1,
           overflow = TextOverflow.Ellipsis
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(3.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-          Text("UID: $uid", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+          Text("UID: $uid", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp, fontFamily = FontFamily.Monospace)
           Spacer(modifier = Modifier.width(6.dp))
           Icon(
             Icons.Outlined.ContentCopy,
             contentDescription = "Copy UID",
             tint = Color.White.copy(alpha = 0.5f),
-            modifier = Modifier.size(13.dp).clickable {
+            modifier = Modifier.size(12.dp).clickable {
               clipboard.setText(AnnotatedString(uid))
               Toast.makeText(context, "UID copied", Toast.LENGTH_SHORT).show()
             }
           )
           Spacer(modifier = Modifier.width(8.dp))
-          Text("|", color = Color.White.copy(alpha = 0.25f), fontSize = 12.sp)
+          Text("|", color = Color.White.copy(alpha = 0.25f), fontSize = 11.sp)
           Spacer(modifier = Modifier.width(8.dp))
-          Text("Site: GiZa Glo...", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+          Text("Site: GiZa Glo...", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
         }
       }
       Icon(
@@ -4175,7 +4175,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
       )
     }
 
-    Spacer(modifier = Modifier.height(18.dp))
+    Spacer(modifier = Modifier.height(12.dp))
 
     Row {
       Row(
@@ -4183,11 +4183,11 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
         modifier = Modifier
           .clip(RoundedCornerShape(50))
           .background(Color.White.copy(alpha = 0.1f))
-          .padding(horizontal = 10.dp, vertical = 6.dp)
+          .padding(horizontal = 10.dp, vertical = 5.dp)
       ) {
-        Icon(Icons.Filled.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+        Icon(Icons.Filled.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
         Spacer(modifier = Modifier.width(4.dp))
-        Text("Verified", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Text("Verified", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
       }
       Spacer(modifier = Modifier.width(8.dp))
       Row(
@@ -4196,40 +4196,44 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
           .clip(RoundedCornerShape(50))
           .background(Color.White.copy(alpha = 0.1f))
           .clickable { comingSoon("Plan") }
-          .padding(horizontal = 10.dp, vertical = 6.dp)
+          .padding(horizontal = 10.dp, vertical = 5.dp)
       ) {
-        Text("Free plan", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(14.dp))
+        Text("Free plan", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(13.dp))
       }
     }
 
-    Spacer(modifier = Modifier.height(10.dp))
+    Spacer(modifier = Modifier.height(8.dp))
 
+    // Every background/padding value below is deliberately fixed and
+    // small -- this whole screen must fit one viewport with no scrolling
+    // on a normal phone; letting any one piece grow past what it needs
+    // is what pushed the page taller than the screen before.
     Column(
       modifier = Modifier
         .fillMaxWidth()
-        .clip(RoundedCornerShape(20.dp))
+        .clip(RoundedCornerShape(18.dp))
         .background(Color(0xFF141414))
-        .padding(horizontal = 18.dp, vertical = 12.dp)
+        .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
-      Text("Unlock GiZa Pro Perks", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-      Spacer(modifier = Modifier.height(6.dp))
+      Text("Unlock GiZa Pro Perks", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+      Spacer(modifier = Modifier.height(4.dp))
       Text(
         "Upgrade to GiZa Pro for unlimited chats, priority responses, and exclusive perks!",
         color = Color.White.copy(alpha = 0.5f),
-        fontSize = 12.sp,
-        lineHeight = 16.sp
+        fontSize = 11.sp,
+        lineHeight = 14.sp
       )
-      Spacer(modifier = Modifier.height(10.dp))
-      HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
       Spacer(modifier = Modifier.height(8.dp))
-      Text("Current plan: Free", color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp)
-      Spacer(modifier = Modifier.height(10.dp))
+      HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+      Spacer(modifier = Modifier.height(6.dp))
+      Text("Current plan: Free", color = Color.White.copy(alpha = 0.4f), fontSize = 10.sp)
+      Spacer(modifier = Modifier.height(8.dp))
       Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
           "Pro Benefits ›",
           color = Color.White.copy(alpha = 0.6f),
-          fontSize = 12.sp,
+          fontSize = 11.sp,
           fontWeight = FontWeight.Medium,
           modifier = Modifier.weight(1f).clickable { comingSoon("Pro Benefits") }
         )
@@ -4238,44 +4242,44 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
             .clip(RoundedCornerShape(50))
             .background(Color(0xFFFF9D2E))
             .clickable { comingSoon("Enter GiZa Max") }
-            .padding(horizontal = 20.dp, vertical = 8.dp)
+            .padding(horizontal = 20.dp, vertical = 7.dp)
         ) {
-          Text("Enter GiZa Max", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+          Text("Enter GiZa Max", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
       }
     }
 
-    Spacer(modifier = Modifier.height(16.dp))
+    Spacer(modifier = Modifier.height(10.dp))
 
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
       ProfileHubQuickCard(title = "GiZa Card", subtitle = "Coming soon", modifier = Modifier.weight(1f), onClick = { comingSoon("GiZa Card") }) { tint ->
-        Icon(Icons.Outlined.WorkspacePremium, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
+        Icon(Icons.Outlined.WorkspacePremium, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
       }
       ProfileHubQuickCard(title = "Rewards", subtitle = "Check now", modifier = Modifier.weight(1f), onClick = { comingSoon("Rewards") }) { tint ->
-        Icon(Icons.Outlined.CardGiftcard, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
+        Icon(Icons.Outlined.CardGiftcard, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
       }
     }
-    Spacer(modifier = Modifier.height(12.dp))
+    Spacer(modifier = Modifier.height(10.dp))
     ProfileHubQuickCard(title = "Invite Friends", subtitle = "Invite now", modifier = Modifier.fillMaxWidth(), onClick = { comingSoon("Invite Friends") }) { tint ->
-      Icon(Icons.Filled.Person, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
+      Icon(Icons.Filled.Person, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
     }
 
-    Spacer(modifier = Modifier.height(24.dp))
-    Text("Trending services", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
     Spacer(modifier = Modifier.height(14.dp))
+    Text("Trending services", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+    Spacer(modifier = Modifier.height(10.dp))
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
       ProfileHubTrendingItem(label = "Automations", onClick = { comingSoon("Automations") }) { tint ->
-        Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+        Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
       }
       ProfileHubTrendingItem(label = "Connectors", onClick = { comingSoon("Connectors") }) { tint ->
-        Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connectors), contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+        Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connectors), contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
       }
       ProfileHubTrendingItem(label = "Language", onClick = { viewModel.openAppLanguage() }) { tint ->
-        Icon(Icons.Outlined.Language, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+        Icon(Icons.Outlined.Language, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
       }
     }
 
-    Spacer(modifier = Modifier.height(20.dp))
+    Spacer(modifier = Modifier.height(12.dp))
     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
       Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -4283,23 +4287,23 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
           .clip(RoundedCornerShape(50))
           .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(50))
           .clickable { comingSoon("All Services") }
-          .padding(horizontal = 20.dp, vertical = 8.dp)
+          .padding(horizontal = 20.dp, vertical = 7.dp)
       ) {
-        Text("All Services", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Text("All Services", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
       }
     }
 
-    Spacer(modifier = Modifier.height(24.dp))
+    Spacer(modifier = Modifier.height(14.dp))
     HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
-    Spacer(modifier = Modifier.height(16.dp))
+    Spacer(modifier = Modifier.height(10.dp))
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-      Text("GiZa Lite", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { comingSoon("GiZa Lite") })
+      Text("GiZa Lite", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { comingSoon("GiZa Lite") })
       Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { viewModel.openAboutUs() }) {
-        Text("About Us", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White)
+        Text("About Us", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
       }
     }
-    Spacer(modifier = Modifier.height(24.dp))
+    Spacer(modifier = Modifier.height(10.dp))
   }
 
   if (viewModel.showAvatarPicker) {
@@ -4705,13 +4709,13 @@ private fun ProfileHubQuickCard(
       .clip(RoundedCornerShape(16.dp))
       .background(Color(0xFF141414))
       .clickable(onClick = onClick)
-      .padding(horizontal = 14.dp, vertical = 10.dp)
+      .padding(horizontal = 12.dp, vertical = 8.dp)
   ) {
     icon(Color.White)
     Spacer(modifier = Modifier.width(10.dp))
     Column {
-      Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-      Text(subtitle, color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+      Text(title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+      Text(subtitle, color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
     }
   }
 }
@@ -4723,13 +4727,13 @@ private fun ProfileHubTrendingItem(label: String, onClick: () -> Unit, icon: @Co
     modifier = Modifier.clickable(onClick = onClick)
   ) {
     Box(
-      modifier = Modifier.size(48.dp),
+      modifier = Modifier.size(40.dp),
       contentAlignment = Alignment.Center
     ) {
       icon(Color.White)
     }
-    Spacer(modifier = Modifier.height(6.dp))
-    Text(label, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
+    Spacer(modifier = Modifier.height(4.dp))
+    Text(label, color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
   }
 }
 
