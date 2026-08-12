@@ -3308,38 +3308,28 @@ private fun ChatGizaEventsCard() {
 }
 
 // A second, static promo tile below Events -- same card language (rounded,
-// dark, icon swatch + label + headline) but its own background and no
-// rotation, linking straight to the existing Scheduled feature.
+// dark) but much shorter than Events, linking straight to the existing
+// Scheduled feature.
 @Composable
 private fun ChatGizaArrangedCard(onClick: () -> Unit) {
-  Box(
+  Row(
     modifier = Modifier
       .fillMaxWidth()
       .padding(horizontal = 10.dp, vertical = 4.dp)
-      .clip(RoundedCornerShape(20.dp))
+      .clip(RoundedCornerShape(16.dp))
       .background(Color(0xFF1E2B26))
       .clickable(onClick = onClick)
-      .padding(horizontal = 16.dp, vertical = 10.dp)
+      .padding(horizontal = 14.dp, vertical = 8.dp),
+    verticalAlignment = Alignment.CenterVertically
   ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-      Box(
-        modifier = Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFF1EBE7E)),
-        contentAlignment = Alignment.Center
-      ) {
-        Icon(Icons.Outlined.EventNote, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
-      }
-      Spacer(modifier = Modifier.size(14.dp))
-      Column {
-        Text("Arranged", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 11.sp)
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-          "See what GiZa has scheduled for you",
-          color = colorScheme.onBackground,
-          fontSize = 16.sp,
-          fontWeight = FontWeight.Bold
-        )
-      }
+    Box(
+      modifier = Modifier.size(26.dp).clip(RoundedCornerShape(9.dp)).background(Color(0xFF1EBE7E)),
+      contentAlignment = Alignment.Center
+    ) {
+      Icon(Icons.Outlined.EventNote, contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp))
     }
+    Spacer(modifier = Modifier.width(10.dp))
+    Text("Arranged", color = colorScheme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.Bold)
   }
 }
 
