@@ -2040,19 +2040,34 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
       }
     }
   }
+  val composerBackground = colorScheme.onBackground.copy(alpha = 0.06f).compositeOver(colorScheme.background)
+  Box(
+    // A plain (unrounded) backing rectangle in the exact same solid
+    // color, sitting directly behind the rounded Card below. A rounded
+    // Card only paints its own rounded-rect outline -- the four little
+    // corners of its bounding box, just outside that curve, are left
+    // fully unpainted, so with a transparent parent (this whole
+    // composer floats over the scrolling message list) the last
+    // message's text showed straight through those corner slivers.
+    // Same color behind them makes that seam invisible instead.
+    modifier = Modifier
+      .fillMaxWidth()
+      .padding(start = 6.dp, end = 6.dp, top = 10.dp)
+      .background(composerBackground)
+  ) {
   Card(
     // No bottom padding -- the outer Column already carries
     // navigationBarsPadding()/imePadding(), so extra padding here just
     // left a gap between the card and the keyboard/nav bar with the
     // message list visible (and readable) through it.
-    modifier = Modifier.fillMaxWidth().padding(start = 6.dp, end = 6.dp, top = 10.dp),
+    modifier = Modifier.fillMaxWidth(),
     shape = RoundedCornerShape(24.dp),
     // Flattened to an opaque color instead of a low-alpha tint -- now
     // that the composer floats over the scrolling message list, a
     // translucent background let that content stay fully legible right
     // through it. compositeOver bakes in the exact same tint the low
     // alpha used to produce over a plain background, just opaque now.
-    colors = CardDefaults.cardColors(containerColor = colorScheme.onBackground.copy(alpha = 0.06f).compositeOver(colorScheme.background))
+    colors = CardDefaults.cardColors(containerColor = composerBackground)
   ) {
     Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)) {
       if (viewModel.attachedImageUri != null) {
@@ -2417,6 +2432,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
       }
       }
     }
+  }
   }
   }
 }
