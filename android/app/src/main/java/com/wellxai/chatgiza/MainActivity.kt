@@ -226,6 +226,7 @@ import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material.icons.outlined.NoAdultContent
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Photo
 import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.Poll
@@ -237,6 +238,7 @@ import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.ScreenShare
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SupportAgent
 import androidx.compose.material.icons.outlined.WorkspacePremium
@@ -4506,7 +4508,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         listOf("My info", "Security", "Preference", "General").forEach { tab ->
           Column(
             modifier = Modifier.clickable {
-              if (tab == "My info") activeTab = tab
+              if (tab == "My info" || tab == "Security" || tab == "Preference") activeTab = tab
               else comingSoon(tab)
             }
           ) {
@@ -4620,7 +4622,132 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           Text("Log Out", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.height(20.dp))
+      } else if (activeTab == "Security") {
+        // Matches the reference list exactly -- entirely mock data and
+        // stub taps (nothing here connects to a real 2FA/password/device
+        // backend yet), same "don't go deeper" scope as My info.
+        var mockGoogle2fa by remember { mutableStateOf(true) }
+
+        SecurityGroupHeader("Basic Protect", "Essential protection for everyday account activity.")
+        Column(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color(0xFF141414))
+            .padding(horizontal = 16.dp)
+        ) {
+          MyInfoRow(icon = Icons.Outlined.Email, label = "Email", onClick = { comingSoon("Email") }) {
+            Text("nic***@****", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+          }
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.Smartphone, label = "Mobile", onClick = { comingSoon("Mobile") }) {
+            Text("75****182", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+          }
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.Lock, label = "Google 2FA Authentication", showChevron = false, onClick = {}) {
+            Switch(checked = mockGoogle2fa, onCheckedChange = { mockGoogle2fa = it })
+          }
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.Tag, label = "Passkeys", onClick = { comingSoon("Passkeys") }) {}
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.Bolt, label = "Anti-phishing Code", onClick = { comingSoon("Anti-phishing Code") }) {
+            Text("470765", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+          }
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        SecurityGroupHeader("Advanced Protect", "Additional protection for key fund actions.")
+        Column(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color(0xFF141414))
+            .padding(horizontal = 16.dp)
+        ) {
+          MyInfoRow(icon = Icons.Outlined.Lock, label = "Fund Password", onClick = { comingSoon("Fund Password") }) {
+            Text("Not Setup", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+          }
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.Description, label = "Secure Transaction Approval", onClick = { comingSoon("Secure Transaction Approval") }) {}
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        SecurityGroupHeader("Scenario-based protection", "Extra protection for specific scenarios.")
+        Column(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color(0xFF141414))
+            .padding(horizontal = 16.dp)
+        ) {
+          MyInfoRow(icon = Icons.Outlined.Lock, label = "Withdrawal Security", onClick = { comingSoon("Withdrawal Security") }) {}
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        SecurityGroupHeader("Account access and management")
+        Column(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color(0xFF141414))
+            .padding(horizontal = 16.dp)
+        ) {
+          MyInfoRow(icon = Icons.Outlined.Lock, label = "Change Password", onClick = { comingSoon("Change Password") }) {}
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.ScreenShare, label = "Trusted Devices", onClick = { comingSoon("Trusted Devices") }) {}
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Filled.Person, label = "Account Settings", onClick = { viewModel.closeAccountTabs(); viewModel.openAccount() }) {}
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.Lock, label = "App Lock", onClick = { comingSoon("App Lock") }) {}
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("Last login time 2026-08-06 22:06:13", color = Color.White.copy(alpha = 0.35f), fontSize = 12.sp)
+        Spacer(modifier = Modifier.height(2.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Text("Login device ", color = Color.White.copy(alpha = 0.35f), fontSize = 12.sp)
+          Icon(Icons.Outlined.Smartphone, contentDescription = null, tint = Color.White.copy(alpha = 0.35f), modifier = Modifier.size(12.dp))
+          Text(" android", color = Color.White.copy(alpha = 0.35f), fontSize = 12.sp)
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+      } else if (activeTab == "Preference") {
+        // Same "don't go deeper" scope as My info/Security -- mock data,
+        // stub taps.
+        Column(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color(0xFF141414))
+            .padding(horizontal = 16.dp)
+        ) {
+          MyInfoRow(icon = Icons.Filled.Person, label = "Withdrawal Address", onClick = { comingSoon("Withdrawal Address") }) {}
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.Lock, label = "Manage Crypto Withdrawal Limits", onClick = { comingSoon("Manage Crypto Withdrawal Limits") }) {}
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.Autorenew, label = "Route Deposits To", onClick = { comingSoon("Route Deposits To") }) {
+            Text("Funding Account", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+          }
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.Notifications, label = "Notification Settings", onClick = { comingSoon("Notification Settings") }) {}
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.Email, label = "Email Subscriptions", onClick = { comingSoon("Email Subscriptions") }) {}
+        }
+        Spacer(modifier = Modifier.height(20.dp))
       }
+    }
+  }
+}
+
+@Composable
+private fun SecurityGroupHeader(title: String, subtitle: String? = null) {
+  Column(modifier = Modifier.padding(bottom = 10.dp)) {
+    Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+    if (subtitle != null) {
+      Spacer(modifier = Modifier.height(2.dp))
+      Text(subtitle, color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
     }
   }
 }
