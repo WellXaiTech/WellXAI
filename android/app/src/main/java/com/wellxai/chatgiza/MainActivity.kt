@@ -84,6 +84,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
@@ -4467,6 +4468,11 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
 private fun AccountTabsDialog(viewModel: ChatViewModel) {
   var activeTab by remember { mutableStateOf("My info") }
   val context = LocalContext.current
+  val clipboard = LocalClipboardManager.current
+  val uid = remember(viewModel.userId) {
+    val id = viewModel.userId.orEmpty()
+    (kotlin.math.abs(id.hashCode().toLong()) % 100_000_000L).toString().padStart(8, '0')
+  }
   fun comingSoon(label: String) {
     Toast.makeText(context, "$label — coming soon", Toast.LENGTH_SHORT).show()
   }
@@ -4479,6 +4485,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         .fillMaxSize()
         .background(Color(0xFF000000))
         .statusBarsPadding()
+        .verticalScroll(rememberScrollState())
         .padding(horizontal = 16.dp)
     ) {
       Spacer(modifier = Modifier.height(12.dp))
@@ -4520,6 +4527,12 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
       Spacer(modifier = Modifier.height(24.dp))
 
       if (activeTab == "My info") {
+        // Matches the reference list -- real where it's just displaying
+        // data already on hand (Profile Picture opens the picker we
+        // already built; UID shows/copies the same derived id used on
+        // the main screen), a stub everywhere else. Nickname is shown
+        // read-only for now -- actual editing is a later pass.
+        val selectedPreset = AVATAR_PRESETS.find { it.id == viewModel.avatarPresetId }
         Column(
           modifier = Modifier
             .fillMaxWidth()
@@ -4527,14 +4540,120 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             .background(Color(0xFF141414))
             .padding(horizontal = 16.dp)
         ) {
-          AboutUsRow(icon = Icons.Outlined.AccountCircle, label = viewModel.userName?.takeIf { it.isNotBlank() } ?: "You") {
-            viewModel.closeAccountTabs()
-            viewModel.openEditProfile()
+          MyInfoRow(icon = Icons.Outlined.AccountCircle, label = "Profile Picture", onClick = { viewModel.openAvatarPicker() }) {
+            if (selectedPreset != null) {
+              AvatarPresetThumbnail(selectedPreset, 32.dp)
+            } else if (viewModel.userImage != null) {
+              AsyncImage(model = viewModel.userImage, contentDescription = null, modifier = Modifier.size(32.dp).clip(CircleShape))
+            } else {
+              Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(32.dp))
+            }
           }
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.EditNote, label = "Nickname", onClick = { comingSoon("Nickname") }) {
+            Text(viewModel.userName?.takeIf { it.isNotBlank() } ?: "-", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
+          }
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.Tag, label = "UID", showChevron = false, onClick = {}) {
+            Text(uid, color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp, fontFamily = FontFamily.Monospace)
+            Spacer(modifier = Modifier.width(6.dp))
+            Icon(
+              Icons.Outlined.ContentCopy,
+              contentDescription = "Copy UID",
+              tint = Color.White.copy(alpha = 0.5f),
+              modifier = Modifier.size(15.dp).clickable {
+                clipboard.setText(AnnotatedString(uid))
+                Toast.makeText(context, "UID copied", Toast.LENGTH_SHORT).show()
+              }
+            )
+          }
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.Description, label = "Identity Verification", onClick = { comingSoon("Identity Verification") }) {
+            Text("Lv.1 Verified", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
+          }
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.WorkspacePremium, label = "VIP level", onClick = { comingSoon("VIP level") }) {
+            Text("Non-VIP", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
+          }
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.AttachMoney, label = "My Fee Rates", onClick = { comingSoon("My Fee Rates") }) {}
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.Archive, label = "Additional Verification", onClick = { comingSoon("Additional Verification") }) {
+            Text("0 cases", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
+          }
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Filled.Person, label = "Subaccount", onClick = { comingSoon("Subaccount") }) {}
         }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Column(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color(0xFF141414))
+            .padding(horizontal = 16.dp)
+        ) {
+          MyInfoRow(icon = Icons.Outlined.AlternateEmail, label = "Link Account", onClick = { comingSoon("Link Account") }) {}
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.Business, label = "Affiliate's community", onClick = { comingSoon("Affiliate's community") }) {
+            Text("Joined", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
+          }
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.SupportAgent, label = "Join Our Community", onClick = { comingSoon("Join Our Community") }) {}
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(50))
+            .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(50))
+            .clickable {
+              viewModel.closeAccountTabs()
+              viewModel.signOut()
+            }
+            .padding(vertical = 14.dp),
+          contentAlignment = Alignment.Center
+        ) {
+          Text("Log Out", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        }
+        Spacer(modifier = Modifier.height(20.dp))
       }
     }
   }
+}
+
+@Composable
+private fun MyInfoRow(
+  icon: ImageVector,
+  label: String,
+  showChevron: Boolean = true,
+  onClick: () -> Unit,
+  trailing: @Composable RowScope.() -> Unit
+) {
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .clickable(onClick = onClick)
+      .padding(vertical = 14.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Icon(icon, contentDescription = null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(20.dp))
+    Spacer(modifier = Modifier.width(14.dp))
+    Text(label, color = Color.White, fontSize = 15.sp, modifier = Modifier.weight(1f))
+    trailing()
+    if (showChevron) {
+      Spacer(modifier = Modifier.width(4.dp))
+      Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
+    }
+  }
+}
+
+@Composable
+private fun MyInfoDivider() {
+  HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
 }
 
 // Terms of Use / Privacy Policy / Report a Problem, consolidated here so
