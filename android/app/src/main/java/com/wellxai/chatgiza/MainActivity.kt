@@ -1682,20 +1682,12 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
         // below the list as a separate sequential element -- the last
         // message scrolls up from underneath it, and the composer's own
         // low-alpha background lets that content show through rather than
-        // stopping short in a gap above it.
-        //
-        // This wrapper's own solid background + bottom padding is what
-        // reserves the small breathing room below the card and above the
-        // keyboard/nav bar -- it must be opaque (matching the screen's own
-        // black), not the message list's own space, or the scrolling
-        // content shows through that gap instead of it just being empty.
-        Column(
-          modifier = Modifier
-            .align(Alignment.BottomCenter)
-            .fillMaxWidth()
-            .background(Color(0xFF000000))
-            .padding(bottom = 10.dp)
-        ) {
+        // stopping short in a gap above it. This wrapper itself must stay
+        // transparent above the card -- an earlier pass put a solid
+        // background on this whole Column, which also painted over the
+        // card's own top inset and hid the last message right where it
+        // should still be visible scrolling up to meet the composer.
+        Column(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
           if (viewModel.errorMessage != null) {
             Text(
               viewModel.errorMessage ?: "",
@@ -1705,6 +1697,16 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
             )
           }
           ChatComposerCard(viewModel)
+          // Only this strip below the card -- not the space above it --
+          // needs to be opaque: it's the small gap down to the
+          // keyboard/nav bar, and must hide the message list rather than
+          // let it show through.
+          Spacer(
+            modifier = Modifier
+              .fillMaxWidth()
+              .height(6.dp)
+              .background(Color(0xFF000000))
+          )
         }
       }
     }
