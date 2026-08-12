@@ -806,13 +806,16 @@ fun SearchIconCustom(tint: Color, modifier: Modifier = Modifier) {
   }
 }
 
-// A single continuous folder outline (tab + body as one loop, filled
-// solid) instead of two separate stacked rounded rects -- those had a
-// visible seam between them and didn't read as a folder at a glance.
+// The latest pasted reference is a hollow/outline folder (built as a
+// fill-with-holes path, the same fragile pattern that rendered solid
+// elsewhere in this file) -- same single-loop silhouette as before, just
+// stroked instead of filled, which gets the "hollow folder" look without
+// depending on any hole-punching at all.
 @Composable
 private fun ProjectsIconCustom(tint: Color, modifier: Modifier = Modifier) {
   Canvas(modifier = modifier) {
     val scale = size.width / 24f
+    val strokeW = 1.7f * scale
     val folder = Path().apply {
       moveTo(3f * scale, 6.5f * scale)
       lineTo(9.5f * scale, 6.5f * scale)
@@ -822,7 +825,7 @@ private fun ProjectsIconCustom(tint: Color, modifier: Modifier = Modifier) {
       lineTo(3f * scale, 19f * scale)
       close()
     }
-    drawPath(folder, color = tint)
+    drawPath(folder, color = tint, style = Stroke(width = strokeW, join = StrokeJoin.Round))
   }
 }
 
