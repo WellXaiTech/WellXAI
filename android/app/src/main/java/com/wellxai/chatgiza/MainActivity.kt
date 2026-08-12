@@ -1079,26 +1079,18 @@ fun SearchIconCustom(tint: Color, modifier: Modifier = Modifier) {
   }
 }
 
-// The latest pasted reference is a hollow/outline folder (built as a
-// fill-with-holes path, the same fragile pattern that rendered solid
-// elsewhere in this file) -- same single-loop silhouette as before, just
-// stroked instead of filled, which gets the "hollow folder" look without
-// depending on any hole-punching at all.
+// Exact original path (folder outline built as fill-with-holes, nonZero)
+// via PathParser -- same fix as SETTINGS_RING_PATH etc above.
+private val PROJECTS_FOLDER_PATH = PathParser().parsePathString(
+  "M8.33984,3.09961C9.12165,3.09969 9.88333,3.3478 10.5156,3.80762L11.793,4.73633C12.1176,4.97244 12.5087,5.09953 12.9102,5.09961H18.2002C20.2435,5.09971 21.9003,6.75651 21.9004,8.7998V17.2002C21.9003,19.2435 20.2435,20.9003 18.2002,20.9004H5.7998C3.75651,20.9003 2.09972,19.2435 2.09961,17.2002V6.7998C2.09972,4.75651 3.75651,3.09971 5.7998,3.09961H8.33984ZM3.90039,11.9004V17.2002C3.9005,18.2494 4.75062,19.0995 5.7998,19.0996H18.2002C19.2494,19.0995 20.0995,18.2494 20.0996,17.2002V11.9004H3.90039ZM5.7998,4.90039C4.75062,4.9005 3.9005,5.75062 3.90039,6.7998V10.0996H20.0996V8.7998C20.0995,7.75062 19.2494,6.9005 18.2002,6.90039H12.9102C12.1284,6.90031 11.3667,6.6522 10.7344,6.19238L9.45703,5.26367C9.13238,5.02756 8.74127,4.90047 8.33984,4.90039H5.7998Z"
+).toPath()
+
 @Composable
 private fun ProjectsIconCustom(tint: Color, modifier: Modifier = Modifier) {
   Canvas(modifier = modifier) {
-    val scale = size.width / 24f
-    val strokeW = 1.7f * scale
-    val folder = Path().apply {
-      moveTo(3f * scale, 6.5f * scale)
-      lineTo(9.5f * scale, 6.5f * scale)
-      lineTo(11.2f * scale, 8.5f * scale)
-      lineTo(21f * scale, 8.5f * scale)
-      lineTo(21f * scale, 19f * scale)
-      lineTo(3f * scale, 19f * scale)
-      close()
+    scale(size.width / 24f, pivot = Offset.Zero) {
+      drawPath(PROJECTS_FOLDER_PATH, color = tint)
     }
-    drawPath(folder, color = tint, style = Stroke(width = strokeW, join = StrokeJoin.Round))
   }
 }
 
