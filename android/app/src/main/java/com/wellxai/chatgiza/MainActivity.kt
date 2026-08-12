@@ -7357,18 +7357,26 @@ private fun MessageBubble(
       modifier = Modifier.fillMaxWidth(),
       horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
     ) {
-      Box(
-        modifier = Modifier
-          .padding(horizontal = 12.dp, vertical = 10.dp)
-      ) {
-        if (isUser) {
+      if (isUser) {
+        Box(
+          modifier = Modifier
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(colorScheme.onBackground.copy(alpha = 0.1f))
+            .padding(horizontal = 14.dp, vertical = 10.dp)
+        ) {
           Text(
             text = message.content.ifEmpty { "…" },
-            color = Color(0xFFA8A8A8),
+            color = Color.White,
             fontSize = 15.sp,
             fontWeight = FontWeight.Medium
           )
-        } else {
+        }
+      } else {
+        Box(
+          modifier = Modifier
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+        ) {
           MarkdownText(
             text = message.content.ifEmpty { "…" },
             baseColor = Color.White,
@@ -7423,8 +7431,8 @@ private fun ActionBarItemShell(label: String, tint: Color, onClick: () -> Unit, 
   // though it's no longer shown as visible text underneath.
   Box(
     modifier = Modifier
-      .size(48.dp)
-      .clip(RoundedCornerShape(14.dp))
+      .size(34.dp)
+      .clip(RoundedCornerShape(10.dp))
       .clickable(onClick = onClick),
     contentAlignment = Alignment.Center
   ) {
@@ -7481,7 +7489,7 @@ private fun MessageActionBar(
 
   Row(
     modifier = Modifier.horizontalScroll(rememberScrollState()),
-    horizontalArrangement = Arrangement.spacedBy(8.dp)
+    horizontalArrangement = Arrangement.spacedBy(2.dp)
   ) {
     ActionBarItemShell("Copy", Color(0xFFA8A8A8), onClick = {
       clipboard.setText(AnnotatedString(message.content))
