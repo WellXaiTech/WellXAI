@@ -134,6 +134,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -4094,7 +4095,6 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
   fun comingSoon(label: String) {
     Toast.makeText(context, "$label — coming soon", Toast.LENGTH_SHORT).show()
   }
-  var activeProfileTab by remember { mutableStateOf("My info") }
 
   Column(
     modifier = Modifier
@@ -4127,7 +4127,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
       val selectedPreset = AVATAR_PRESETS.find { it.id == viewModel.avatarPresetId }
       Box(modifier = Modifier.clickable { viewModel.openAvatarPicker() }) {
         if (selectedPreset != null) {
-          AvatarPresetThumbnail(selectedPreset, 56.dp)
+          AvatarPresetThumbnail(selectedPreset, 56.dp, name = viewModel.avatarName)
         } else if (viewModel.userImage != null) {
           AsyncImage(
             model = viewModel.userImage,
@@ -4171,38 +4171,8 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
         Icons.Filled.ChevronRight,
         contentDescription = null,
         tint = Color.White.copy(alpha = 0.4f),
-        modifier = Modifier.clickable { comingSoon("Site") }
+        modifier = Modifier.clickable { viewModel.openAccountTabs() }
       )
-    }
-
-    Spacer(modifier = Modifier.height(18.dp))
-
-    // A row of tabs, not a stacked list -- only "My info" is real (it's
-    // just the existing content below); the rest are stub taps, matching
-    // the reference the user provided.
-    Row(
-      modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-      horizontalArrangement = Arrangement.spacedBy(26.dp)
-    ) {
-      listOf("My info", "Security", "Preference", "General").forEach { tab ->
-        Column(
-          modifier = Modifier.clickable {
-            if (tab == "My info") activeProfileTab = tab
-            else comingSoon(tab)
-          }
-        ) {
-          Text(
-            tab,
-            color = if (activeProfileTab == tab) Color.White else Color.White.copy(alpha = 0.4f),
-            fontSize = 15.sp,
-            fontWeight = if (activeProfileTab == tab) FontWeight.Bold else FontWeight.Normal
-          )
-          Spacer(modifier = Modifier.height(6.dp))
-          if (activeProfileTab == tab) {
-            Box(modifier = Modifier.width(28.dp).height(2.dp).background(Color.White))
-          }
-        }
-      }
     }
 
     Spacer(modifier = Modifier.height(18.dp))
@@ -4338,6 +4308,88 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
   if (viewModel.showAboutUs) {
     AboutUsDialog(viewModel)
   }
+  if (viewModel.showAccountTabs) {
+    AccountTabsDialog(viewModel)
+  }
+}
+
+// Opened by tapping the chevron next to the Site row -- the
+// My info/Security/Preference/General tabs live in here instead of
+// inline on the main Profile Hub screen. Only "My info" is real (it
+// just points back at the profile fields already shown on the main
+// screen); the rest are stub taps.
+@Composable
+private fun AccountTabsDialog(viewModel: ChatViewModel) {
+  var activeTab by remember { mutableStateOf("My info") }
+  val context = LocalContext.current
+  fun comingSoon(label: String) {
+    Toast.makeText(context, "$label — coming soon", Toast.LENGTH_SHORT).show()
+  }
+  Dialog(
+    onDismissRequest = { viewModel.closeAccountTabs() },
+    properties = DialogProperties(usePlatformDefaultWidth = false)
+  ) {
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
+        .background(Color(0xFF000000))
+        .statusBarsPadding()
+        .padding(horizontal = 16.dp)
+    ) {
+      Spacer(modifier = Modifier.height(12.dp))
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = { viewModel.closeAccountTabs() }, modifier = Modifier.size(32.dp)) {
+          Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+        }
+        Spacer(modifier = Modifier.width(20.dp))
+        Text("Account", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+
+      Row(
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(26.dp)
+      ) {
+        listOf("My info", "Security", "Preference", "General").forEach { tab ->
+          Column(
+            modifier = Modifier.clickable {
+              if (tab == "My info") activeTab = tab
+              else comingSoon(tab)
+            }
+          ) {
+            Text(
+              tab,
+              color = if (activeTab == tab) Color.White else Color.White.copy(alpha = 0.4f),
+              fontSize = 15.sp,
+              fontWeight = if (activeTab == tab) FontWeight.Bold else FontWeight.Normal
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            if (activeTab == tab) {
+              Box(modifier = Modifier.width(28.dp).height(2.dp).background(Color.White))
+            }
+          }
+        }
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+
+      if (activeTab == "My info") {
+        Column(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color(0xFF141414))
+            .padding(horizontal = 16.dp)
+        ) {
+          AboutUsRow(icon = Icons.Outlined.AccountCircle, label = viewModel.userName?.takeIf { it.isNotBlank() } ?: "You") {
+            viewModel.closeAccountTabs()
+            viewModel.openEditProfile()
+          }
+        }
+      }
+    }
+  }
 }
 
 // Terms of Use / Privacy Policy / Report a Problem, consolidated here so
@@ -4414,42 +4466,43 @@ private fun AboutUsRow(icon: ImageVector, label: String, onClick: () -> Unit) {
 // full custom illustrations -- there's no art pipeline for those in
 // this project, so this is a real (if visually simpler) equivalent: a
 // genuinely pickable, saved-per-device set of distinct avatars rather
-// than a single fixed photo.
+// than a single fixed photo. All people (not animals/fantasy
+// characters) -- a broad, respectable, everyone-can-use-one set.
 private data class AvatarPreset(val id: String, val emoji: String)
 
 private val AVATAR_PRESETS = listOf(
-  AvatarPreset("shades", "😎"),
-  AvatarPreset("cap", "🧢"),
-  AvatarPreset("coder", "🧑‍💻"),
-  AvatarPreset("robot", "🤖"),
-  AvatarPreset("alien", "👽"),
-  AvatarPreset("fox", "🦊"),
-  AvatarPreset("wolf", "🐺"),
-  AvatarPreset("lion", "🦁"),
-  AvatarPreset("tiger", "🐯"),
-  AvatarPreset("owl", "🦉"),
-  AvatarPreset("hero", "🦸"),
-  AvatarPreset("ninja", "🥷"),
+  AvatarPreset("man", "👨"),
+  AvatarPreset("woman", "👩"),
+  AvatarPreset("person", "🧑"),
+  AvatarPreset("old_man", "👴"),
+  AvatarPreset("old_woman", "👵"),
+  AvatarPreset("redhead_man", "👨‍🦰"),
+  AvatarPreset("redhead_woman", "👩‍🦰"),
+  AvatarPreset("curly_man", "👨‍🦱"),
+  AvatarPreset("curly_woman", "👩‍🦱"),
+  AvatarPreset("white_haired_man", "👨‍🦳"),
+  AvatarPreset("white_haired_woman", "👩‍🦳"),
+  AvatarPreset("bald_man", "👨‍🦲"),
+  AvatarPreset("bald_woman", "👩‍🦲"),
+  AvatarPreset("headscarf", "🧕"),
+  AvatarPreset("turban_man", "👳‍♂️"),
+  AvatarPreset("turban_woman", "👳‍♀️"),
+  AvatarPreset("exec_man", "👨‍💼"),
+  AvatarPreset("exec_woman", "👩‍💼"),
+  AvatarPreset("grad_man", "👨‍🎓"),
+  AvatarPreset("grad_woman", "👩‍🎓"),
+  AvatarPreset("teacher", "🧑‍🏫"),
+  AvatarPreset("doctor_man", "👨‍⚕️"),
+  AvatarPreset("doctor_woman", "👩‍⚕️"),
+  AvatarPreset("scientist", "🧑‍🔬"),
+  AvatarPreset("farmer_man", "👨‍🌾"),
+  AvatarPreset("farmer_woman", "👩‍🌾"),
   AvatarPreset("astronaut", "🧑‍🚀"),
-  AvatarPreset("wizard", "🧙"),
-  AvatarPreset("cat", "🐱"),
-  AvatarPreset("panda", "🐼"),
-  AvatarPreset("eagle", "🦅"),
-  AvatarPreset("shark", "🦈"),
-  AvatarPreset("dragon", "🐉"),
-  AvatarPreset("unicorn", "🦄"),
-  AvatarPreset("octopus", "🐙"),
-  AvatarPreset("koala", "🐨"),
-  AvatarPreset("penguin", "🐧"),
-  AvatarPreset("frog", "🐸"),
-  AvatarPreset("bee", "🐝"),
-  AvatarPreset("butterfly", "🦋"),
-  AvatarPreset("dino", "🦖"),
-  AvatarPreset("genie", "🧞")
+  AvatarPreset("coder", "🧑‍💻")
 )
 
 @Composable
-private fun AvatarPresetThumbnail(preset: AvatarPreset, size: Dp, modifier: Modifier = Modifier) {
+private fun AvatarPresetThumbnail(preset: AvatarPreset, size: Dp, modifier: Modifier = Modifier, name: String? = null) {
   Box(
     modifier = modifier
       .size(size)
@@ -4459,6 +4512,25 @@ private fun AvatarPresetThumbnail(preset: AvatarPreset, size: Dp, modifier: Modi
     contentAlignment = Alignment.Center
   ) {
     Text(preset.emoji, fontSize = (size.value * 0.6f).sp)
+    // The custom avatar name, shown as a small label near the bottom of
+    // the circle itself -- only worth showing at sizes big enough to
+    // actually read it.
+    if (!name.isNullOrBlank() && size >= 40.dp) {
+      Text(
+        name,
+        color = Color.White,
+        fontSize = (size.value * 0.16f).sp,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+          .align(Alignment.BottomCenter)
+          .fillMaxWidth()
+          .background(Color.Black.copy(alpha = 0.55f))
+          .padding(vertical = 1.dp)
+      )
+    }
   }
 }
 
@@ -4466,6 +4538,7 @@ private fun AvatarPresetThumbnail(preset: AvatarPreset, size: Dp, modifier: Modi
 private fun AvatarPickerDialog(viewModel: ChatViewModel) {
   var selected by remember { mutableStateOf(viewModel.avatarPresetId ?: AVATAR_PRESETS.first().id) }
   var activeTab by remember { mutableStateOf("Default") }
+  var nameInput by remember { mutableStateOf(viewModel.avatarName ?: "") }
   val context = LocalContext.current
   Dialog(
     onDismissRequest = { viewModel.closeAvatarPicker() },
@@ -4490,7 +4563,7 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
       val previewPreset = AVATAR_PRESETS.find { it.id == selected }
       Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         if (previewPreset != null) {
-          AvatarPresetThumbnail(previewPreset, 88.dp)
+          AvatarPresetThumbnail(previewPreset, 88.dp, name = nameInput)
         } else if (viewModel.userImage != null) {
           AsyncImage(model = viewModel.userImage, contentDescription = null, modifier = Modifier.size(88.dp).clip(CircleShape))
         } else {
@@ -4498,7 +4571,25 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
         }
       }
 
-      Spacer(modifier = Modifier.height(24.dp))
+      Spacer(modifier = Modifier.height(16.dp))
+      // Shown on top of the avatar itself wherever it renders, e.g. "Boss".
+      OutlinedTextField(
+        value = nameInput,
+        onValueChange = { if (it.length <= 20) nameInput = it },
+        modifier = Modifier.fillMaxWidth(),
+        placeholder = { Text("Name your avatar (optional)", color = Color.White.copy(alpha = 0.4f)) },
+        singleLine = true,
+        shape = RoundedCornerShape(12.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+          focusedTextColor = Color.White,
+          unfocusedTextColor = Color.White,
+          focusedBorderColor = Color.White.copy(alpha = 0.4f),
+          unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
+          cursorColor = Color.White
+        )
+      )
+
+      Spacer(modifier = Modifier.height(20.dp))
       Row(
         modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(24.dp)
@@ -4569,6 +4660,7 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
           .background(Color(0xFFB8862E))
           .clickable {
             viewModel.updateAvatarPreset(selected)
+            viewModel.updateAvatarName(nameInput.trim().ifBlank { null })
             viewModel.closeAvatarPicker()
           }
           .padding(vertical = 11.dp),

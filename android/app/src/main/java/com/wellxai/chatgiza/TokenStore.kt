@@ -91,6 +91,13 @@ class TokenStore(context: Context) {
     prefs.edit().putString(KEY_AVATAR_PRESET_ID, value).apply()
   }
 
+  // A custom name given to the chosen avatar, shown as a small label on
+  // top of it wherever it renders -- also device-local only.
+  fun getAvatarName(): String? = prefs.getString(KEY_AVATAR_NAME, null)
+  fun setAvatarName(value: String?) {
+    prefs.edit().putString(KEY_AVATAR_NAME, value).apply()
+  }
+
   fun getThemeMode(): String = prefs.getString(KEY_THEME_MODE, "dark") ?: "dark"
   fun setThemeMode(value: String) {
     prefs.edit().putString(KEY_THEME_MODE, value).apply()
@@ -229,6 +236,7 @@ class TokenStore(context: Context) {
     private const val KEY_HAPTICS_ON_RESPONSE = "haptics_on_response"
     private const val KEY_PASTE_AS_FILE_MODE = "paste_as_file_mode"
     private const val KEY_AVATAR_PRESET_ID = "avatar_preset_id"
+    private const val KEY_AVATAR_NAME = "avatar_name"
     private const val KEY_THEME_MODE = "theme_mode"
     private const val KEY_VOICE_NAME = "voice_name"
     private const val KEY_VOICE_ACTIVATION_MODE = "voice_activation_mode"
