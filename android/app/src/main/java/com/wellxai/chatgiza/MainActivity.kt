@@ -1032,39 +1032,33 @@ private fun SkillsIconCustom(tint: Color, modifier: Modifier = Modifier) {
   }
 }
 
+// Exact original 91x91-viewport paths -- same lesson as SETTINGS_RING_PATH
+// above: the hand-drawn version (box + stroked arcs) read as a different
+// icon. The two sound-wave arcs turn out to each be a single closed loop
+// (crescent band, start curve out - straight edge in - end curve back -
+// straight edge close), so they need no special fillType at all despite
+// being marked nonZero in the source; only the speaker body has a real
+// hole (mic box + cone outline, via evenOdd).
+private val SPEAKER_BODY_PATH = PathParser().parsePathString(
+  "M53.6667,84.3333H44.6561L43.6042,83.4948L25.4857,69H17.25C9.84018,69 3.83334,62.9931 3.83334,55.5833V36.4167C3.83334,29.0068 9.84019,23 17.25,23H25.4857L43.6042,8.50521L44.6561,7.66666H53.6667V84.3333ZM29.2292,29.8281L28.1772,30.6667H17.25C14.0744,30.6667 11.5,33.241 11.5,36.4167V55.5833C11.5,58.759 14.0744,61.3333 17.25,61.3333H28.1772L29.2292,62.1719L46,75.5885V16.4115L29.2292,29.8281Z"
+).toPath().apply { fillType = PathFillType.EvenOdd }
+
+private val SPEAKER_ARC_OUTER_PATH = PathParser().parsePathString(
+  "M79.8,19.541C85.0703,27.0251 88.1667,36.1576 88.1667,46C88.1667,55.8424 85.0703,64.9749 79.8,72.459L73.5334,68.0417C77.9229,61.8077 80.5,54.2106 80.5,46C80.5,37.7895 77.9229,30.1923 73.5334,23.9583L79.8,19.541Z"
+).toPath()
+
+private val SPEAKER_ARC_INNER_PATH = PathParser().parsePathString(
+  "M67.3342,28.473C70.8,33.4418 72.8333,39.4895 72.8333,46C72.8333,52.5105 70.8,58.5582 67.3342,63.527L61.0451,59.1396C63.6425,55.4158 65.1667,50.8917 65.1667,46C65.1667,41.1083 63.6425,36.5842 61.0451,32.8603L67.3342,28.473Z"
+).toPath()
+
 @Composable
 private fun SpeakerIconCustom(tint: Color, modifier: Modifier = Modifier) {
   Canvas(modifier = modifier) {
-    val scale = size.width / 24f
-    val strokeW = 1.6f * scale
-    val speaker = Path().apply {
-      moveTo(1f * scale, 9f * scale)
-      lineTo(4.5f * scale, 9f * scale)
-      lineTo(9.5f * scale, 4.5f * scale)
-      lineTo(9.5f * scale, 19.5f * scale)
-      lineTo(4.5f * scale, 15f * scale)
-      lineTo(1f * scale, 15f * scale)
-      close()
+    scale(size.width / 91f, pivot = Offset.Zero) {
+      drawPath(SPEAKER_BODY_PATH, color = tint)
+      drawPath(SPEAKER_ARC_OUTER_PATH, color = tint)
+      drawPath(SPEAKER_ARC_INNER_PATH, color = tint)
     }
-    drawPath(speaker, color = tint)
-    drawArc(
-      color = tint,
-      startAngle = -40f,
-      sweepAngle = 80f,
-      useCenter = false,
-      topLeft = Offset(11f * scale, 7f * scale),
-      size = Size(8f * scale, 10f * scale),
-      style = Stroke(width = strokeW, cap = StrokeCap.Round)
-    )
-    drawArc(
-      color = tint,
-      startAngle = -40f,
-      sweepAngle = 80f,
-      useCenter = false,
-      topLeft = Offset(14f * scale, 4f * scale),
-      size = Size(11f * scale, 16f * scale),
-      style = Stroke(width = strokeW, cap = StrokeCap.Round)
-    )
   }
 }
 
