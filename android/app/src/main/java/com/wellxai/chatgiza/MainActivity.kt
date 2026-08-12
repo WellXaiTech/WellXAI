@@ -4306,30 +4306,42 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
   }
 }
 
-// A curated set of simple gradient-circle + emoji avatars, standing in
-// for full custom illustrations -- there's no art pipeline for those in
+// A curated set of simple black-circle + emoji avatars, standing in for
+// full custom illustrations -- there's no art pipeline for those in
 // this project, so this is a real (if visually simpler) equivalent: a
 // genuinely pickable, saved-per-device set of distinct avatars rather
 // than a single fixed photo.
-private data class AvatarPreset(val id: String, val emoji: String, val colors: List<Color>)
+private data class AvatarPreset(val id: String, val emoji: String)
 
 private val AVATAR_PRESETS = listOf(
-  AvatarPreset("shades", "😎", listOf(Color(0xFFB8452F), Color(0xFF2A2A2A))),
-  AvatarPreset("cap", "🧢", listOf(Color(0xFFE0A93A), Color(0xFF2A2A2A))),
-  AvatarPreset("coder", "🧑‍💻", listOf(Color(0xFF3A6EA5), Color(0xFF1A1A1A))),
-  AvatarPreset("robot", "🤖", listOf(Color(0xFF5B8DEF), Color(0xFF1A1A1A))),
-  AvatarPreset("alien", "👽", listOf(Color(0xFF4CAF50), Color(0xFF1A1A1A))),
-  AvatarPreset("fox", "🦊", listOf(Color(0xFFE0762A), Color(0xFF2A1A0A))),
-  AvatarPreset("wolf", "🐺", listOf(Color(0xFF616161), Color(0xFF1A1A1A))),
-  AvatarPreset("lion", "🦁", listOf(Color(0xFFE0A93A), Color(0xFF3A1A0A))),
-  AvatarPreset("tiger", "🐯", listOf(Color(0xFFE0762A), Color(0xFF1A1A1A))),
-  AvatarPreset("owl", "🦉", listOf(Color(0xFF7A5C3A), Color(0xFF1A1A1A))),
-  AvatarPreset("hero", "🦸", listOf(Color(0xFF7A3B8A), Color(0xFF1A1A1A))),
-  AvatarPreset("ninja", "🥷", listOf(Color(0xFF2A2A2A), Color(0xFF000000))),
-  AvatarPreset("astronaut", "🧑‍🚀", listOf(Color(0xFF3A6EA5), Color(0xFF0A0A2A))),
-  AvatarPreset("wizard", "🧙", listOf(Color(0xFF5B3A8A), Color(0xFF1A1A1A))),
-  AvatarPreset("cat", "🐱", listOf(Color(0xFFE0A93A), Color(0xFF2A1A0A))),
-  AvatarPreset("panda", "🐼", listOf(Color(0xFF616161), Color(0xFF1A1A1A)))
+  AvatarPreset("shades", "😎"),
+  AvatarPreset("cap", "🧢"),
+  AvatarPreset("coder", "🧑‍💻"),
+  AvatarPreset("robot", "🤖"),
+  AvatarPreset("alien", "👽"),
+  AvatarPreset("fox", "🦊"),
+  AvatarPreset("wolf", "🐺"),
+  AvatarPreset("lion", "🦁"),
+  AvatarPreset("tiger", "🐯"),
+  AvatarPreset("owl", "🦉"),
+  AvatarPreset("hero", "🦸"),
+  AvatarPreset("ninja", "🥷"),
+  AvatarPreset("astronaut", "🧑‍🚀"),
+  AvatarPreset("wizard", "🧙"),
+  AvatarPreset("cat", "🐱"),
+  AvatarPreset("panda", "🐼"),
+  AvatarPreset("eagle", "🦅"),
+  AvatarPreset("shark", "🦈"),
+  AvatarPreset("dragon", "🐉"),
+  AvatarPreset("unicorn", "🦄"),
+  AvatarPreset("octopus", "🐙"),
+  AvatarPreset("koala", "🐨"),
+  AvatarPreset("penguin", "🐧"),
+  AvatarPreset("frog", "🐸"),
+  AvatarPreset("bee", "🐝"),
+  AvatarPreset("butterfly", "🦋"),
+  AvatarPreset("dino", "🦖"),
+  AvatarPreset("genie", "🧞")
 )
 
 @Composable
@@ -4338,10 +4350,11 @@ private fun AvatarPresetThumbnail(preset: AvatarPreset, size: Dp, modifier: Modi
     modifier = modifier
       .size(size)
       .clip(CircleShape)
-      .background(Brush.linearGradient(preset.colors)),
+      .background(Color(0xFF000000))
+      .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape),
     contentAlignment = Alignment.Center
   ) {
-    Text(preset.emoji, fontSize = (size.value * 0.5f).sp)
+    Text(preset.emoji, fontSize = (size.value * 0.6f).sp)
   }
 }
 
@@ -4386,14 +4399,16 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
         modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(24.dp)
       ) {
-        // Only "Default" is real -- the rest are shown for the same
-        // reason a reference tab row would have them, but there are no
-        // extra preset sets behind them yet.
-        listOf("Default", "Animated 🔥", "Animal Avatar").forEach { tab ->
+        // "Default" and "Animated" both use the same preset set for real
+        // (Animated just plays a gentle bounce on them) -- "Animal
+        // Avatar" and "bbSOL" are shown for the same reason a reference
+        // tab row would have them, but there's no separate preset set
+        // behind them yet.
+        listOf("Default", "Animated 🔥", "Animal Avatar", "bbSOL").forEach { tab ->
           Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.clickable {
-              if (tab == "Default") activeTab = tab
+              if (tab == "Default" || tab == "Animated 🔥") activeTab = tab
               else Toast.makeText(context, "$tab — coming soon", Toast.LENGTH_SHORT).show()
             }
           ) {
@@ -4421,14 +4436,15 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
       ) {
         items(AVATAR_PRESETS, key = { it.id }) { preset ->
           Box(contentAlignment = Alignment.BottomEnd) {
-            AvatarPresetThumbnail(
-              preset,
-              64.dp,
-              modifier = (
-                if (selected == preset.id) Modifier.border(2.dp, Color(0xFFFF9800), CircleShape).padding(3.dp)
-                else Modifier
-              ).clickable { selected = preset.id }
-            )
+            val thumbModifier = (
+              if (selected == preset.id) Modifier.border(2.dp, Color(0xFFFF9800), CircleShape).padding(3.dp)
+              else Modifier
+            ).clickable { selected = preset.id }
+            if (activeTab == "Animated 🔥") {
+              BouncingAvatarThumbnail(preset, 64.dp, thumbModifier)
+            } else {
+              AvatarPresetThumbnail(preset, 64.dp, thumbModifier)
+            }
             if (selected == preset.id) {
               Box(
                 modifier = Modifier.size(20.dp).clip(CircleShape).background(Color(0xFFFF9800)),
@@ -4451,7 +4467,7 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
             viewModel.updateAvatarPreset(selected)
             viewModel.closeAvatarPicker()
           }
-          .padding(vertical = 16.dp),
+          .padding(vertical = 11.dp),
         contentAlignment = Alignment.Center
       ) {
         Text("Save", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -4459,6 +4475,24 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
       Spacer(modifier = Modifier.height(20.dp))
     }
   }
+}
+
+// Gently scales an avatar up and down forever -- used only for the
+// "Animated" tab, which otherwise reuses the exact same preset set as
+// "Default".
+@Composable
+private fun BouncingAvatarThumbnail(preset: AvatarPreset, size: Dp, modifier: Modifier = Modifier) {
+  val transition = rememberInfiniteTransition(label = "avatarBounce")
+  val scale by transition.animateFloat(
+    initialValue = 0.9f,
+    targetValue = 1.1f,
+    animationSpec = infiniteRepeatable(
+      animation = tween(850, easing = LinearEasing),
+      repeatMode = RepeatMode.Reverse
+    ),
+    label = "scale"
+  )
+  AvatarPresetThumbnail(preset, size, modifier.graphicsLayer(scaleX = scale, scaleY = scale))
 }
 
 @Composable
