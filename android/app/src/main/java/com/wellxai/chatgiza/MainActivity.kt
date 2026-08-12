@@ -192,6 +192,8 @@ import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Business
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Call
+import androidx.compose.material.icons.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.CardGiftcard
 import androidx.compose.material.icons.outlined.ChildCare
 import androidx.compose.material.icons.outlined.Close
@@ -8604,6 +8606,68 @@ private fun formatHistoryRowDate(millis: Long): String {
 }
 
 @Composable
+private data class QuickAction(val type: String, val value: String, val label: String)
+
+// android.util.Patterns' regexes are the same ones Android's own Linkify
+// uses -- well-tested, not hand-rolled. Capped and deduplicated so a
+// message with lots of numbers doesn't turn into a wall of chips.
+private fun extractQuickActions(text: String): List<QuickAction> {
+  if (text.isBlank()) return emptyList()
+  val actions = mutableListOf<QuickAction>()
+
+  val phoneMatcher = android.util.Patterns.PHONE.matcher(text)
+  while (phoneMatcher.find() && actions.count { it.type == "call" } < 2) {
+    val raw = phoneMatcher.group()
+    val digits = raw.filter { it.isDigit() }
+    if (digits.length in 7..15) {
+      actions.add(QuickAction("call", raw.trim(), raw.trim()))
+    }
+  }
+
+  val emailMatcher = android.util.Patterns.EMAIL_ADDRESS.matcher(text)
+  while (emailMatcher.find() && actions.count { it.type == "email" } < 2) {
+    actions.add(QuickAction("email", emailMatcher.group(), emailMatcher.group()))
+  }
+
+  val urlMatcher = android.util.Patterns.WEB_URL.matcher(text)
+  while (urlMatcher.find() && actions.count { it.type == "url" } < 2) {
+    val raw = urlMatcher.group()
+    actions.add(QuickAction("url", raw, raw.removePrefix("https://").removePrefix("http://").take(28)))
+  }
+
+  return actions.take(4)
+}
+
+@Composable
+private fun MessageQuickActionChip(action: QuickAction) {
+  val context = LocalContext.current
+  val (icon, prefix) = when (action.type) {
+    "call" -> Icons.Outlined.Call to "Call"
+    "email" -> Icons.Outlined.Email to "Email"
+    else -> Icons.Outlined.OpenInNew to "Open"
+  }
+  Row(
+    verticalAlignment = Alignment.CenterVertically,
+    modifier = Modifier
+      .clip(RoundedCornerShape(50))
+      .background(colorScheme.onBackground.copy(alpha = 0.08f))
+      .clickable {
+        val intent = when (action.type) {
+          "call" -> Intent(Intent.ACTION_DIAL, Uri.parse("tel:${action.value}"))
+          "email" -> Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:${action.value}"))
+          else -> Intent(Intent.ACTION_VIEW, Uri.parse(if (action.value.startsWith("http")) action.value else "https://${action.value}"))
+        }
+        runCatching { context.startActivity(intent) }
+      }
+      .padding(horizontal = 12.dp, vertical = 7.dp)
+  ) {
+    Icon(icon, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
+    Spacer(modifier = Modifier.width(6.dp))
+    Text("$prefix ${action.label}", color = colorScheme.onBackground.copy(alpha = 0.8f), fontSize = 12.sp, maxLines = 1)
+  }
+}
+
+@Composable
 private fun MessageBubble(
   message: UiMessage,
   showActions: Boolean,
@@ -8648,6 +8712,26 @@ private fun MessageBubble(
             fontSize = 15.sp
           )
         }
+      }
+    }
+    // Idea #5, the safe version: real device automation without an
+    // AccessibilityService reading/tapping arbitrary screens (that class
+    // of "AI controls your phone" tool is the same mechanism spyware
+    // uses to steal credentials, and Google Play restricts it heavily).
+    // Instead, phone numbers/emails/links found in the message become
+    // one-tap buttons that open the correct native app (Dialer, Email,
+    // Browser) with the target already filled in -- the AI takes the
+    // real action of finding and preparing it, the human still presses
+    // the final call/send/confirm in that app.
+    val quickActions = remember(message.content) { extractQuickActions(message.content) }
+    if (quickActions.isNotEmpty()) {
+      Row(
+        modifier = Modifier
+          .padding(horizontal = 12.dp, vertical = 4.dp)
+          .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+      ) {
+        quickActions.forEach { action -> MessageQuickActionChip(action) }
       }
     }
     // On-device translation (idea #4) -- kept separate from the message's
