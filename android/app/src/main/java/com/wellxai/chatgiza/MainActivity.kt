@@ -302,6 +302,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
@@ -6899,7 +6900,56 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         }
       }
 
+      Spacer(modifier = Modifier.height(40.dp))
+      SettingsVersionFooter(viewModel)
       Spacer(modifier = Modifier.height(24.dp))
+    }
+  }
+}
+
+// Sideloaded (not Play Store), so there's no store page nudging people
+// onto new builds -- this silently checks the same public GitHub Release
+// the CI pipeline publishes, and only shows the "Update" link when it's
+// actually ahead of this install's own versionCode.
+@Composable
+private fun SettingsVersionFooter(viewModel: ChatViewModel) {
+  val context = LocalContext.current
+  LaunchedEffect(Unit) { viewModel.checkForUpdate() }
+  val latest = viewModel.latestVersionInfo
+  val updateAvailable = latest != null && latest.runNumber > BuildConfig.VERSION_CODE
+  Column(
+    modifier = Modifier.fillMaxWidth(),
+    horizontalAlignment = Alignment.CenterHorizontally
+  ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      Icon(
+        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_chatgiza_logo),
+        contentDescription = null,
+        tint = Color.Unspecified,
+        modifier = Modifier.size(18.dp)
+      )
+      Spacer(modifier = Modifier.width(8.dp))
+      Text(
+        "v${BuildConfig.VERSION_NAME}",
+        color = colorScheme.onBackground.copy(alpha = 0.4f),
+        fontSize = 13.sp,
+        fontFamily = FontFamily.Monospace
+      )
+    }
+    if (updateAvailable) {
+      Spacer(modifier = Modifier.height(6.dp))
+      Row {
+        Text("New Version is Available: ", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 13.sp)
+        Text(
+          "Update",
+          color = colorScheme.onBackground.copy(alpha = 0.85f),
+          fontSize = 13.sp,
+          textDecoration = TextDecoration.Underline,
+          modifier = Modifier.clickable {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(latest!!.downloadUrl)))
+          }
+        )
+      }
     }
   }
 }

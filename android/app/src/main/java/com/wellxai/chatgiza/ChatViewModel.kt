@@ -707,6 +707,22 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     screen = settingsReturnScreen
   }
 
+  // Sideloaded (not Play Store), so nothing updates this app on its own --
+  // the Settings footer calls this once to silently check the same public
+  // GitHub Release the CI pipeline publishes, and only shows an "Update"
+  // link if it's actually ahead of this install's own versionCode.
+  var latestVersionInfo by mutableStateOf<LatestVersionInfo?>(null)
+    private set
+
+  fun checkForUpdate() {
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.checkLatestVersion()) {
+        is ApiResult.Success -> latestVersionInfo = result.value
+        is ApiResult.Failure -> {}
+      }
+    }
+  }
+
   private fun persistSettings(updated: SettingsData) {
     settingsData = updated
     val token = tokenStore.getToken() ?: return
