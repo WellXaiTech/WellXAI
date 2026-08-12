@@ -4124,11 +4124,19 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
     Toast.makeText(context, "$label — coming soon", Toast.LENGTH_SHORT).show()
   }
 
-  Column(
+  Box(
     modifier = Modifier
       .fillMaxSize()
       .background(Color(0xFF000000))
       .statusBarsPadding()
+  ) {
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      // Bottom padding reserves room so scrolled content never sits
+      // behind the pinned footer below -- that footer is deliberately
+      // outside this scrolling Column, not just the last item in it.
+      .padding(bottom = 54.dp)
       .verticalScroll(rememberScrollState())
       .padding(horizontal = 16.dp)
   ) {
@@ -4320,8 +4328,19 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
         Text("All Services", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
       }
     }
+  }
 
-    Spacer(modifier = Modifier.height(14.dp))
+  // Pinned to the very bottom of the screen instead of just flowing
+  // after everything else -- visually set apart from the rest of the
+  // page by its own divider, the way the reference footer sits.
+  Column(
+    modifier = Modifier
+      .align(Alignment.BottomCenter)
+      .fillMaxWidth()
+      .background(Color(0xFF000000))
+      .navigationBarsPadding()
+      .padding(horizontal = 16.dp)
+  ) {
     HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
     Spacer(modifier = Modifier.height(10.dp))
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -4332,6 +4351,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
       }
     }
     Spacer(modifier = Modifier.height(10.dp))
+  }
   }
 
   if (viewModel.showAvatarPicker) {
