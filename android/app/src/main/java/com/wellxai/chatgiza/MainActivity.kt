@@ -8650,6 +8650,39 @@ private fun MessageBubble(
         }
       }
     }
+    // On-device translation (idea #4) -- kept separate from the message's
+    // own content so the original is never edited/lost, just shown or
+    // hidden alongside it. Detects Swahili vs English and flips to the
+    // other one, running entirely on the phone.
+    var translatedText by remember(message.id) { mutableStateOf<String?>(null) }
+    var translating by remember(message.id) { mutableStateOf(false) }
+    var translateError by remember(message.id) { mutableStateOf(false) }
+    val translateScope = rememberCoroutineScope()
+    if (translatedText != null || translating || translateError) {
+      Box(modifier = Modifier.padding(horizontal = 12.dp)) {
+        Column(
+          modifier = Modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(colorScheme.onBackground.copy(alpha = 0.06f))
+            .padding(12.dp)
+        ) {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.Language, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.5f), modifier = Modifier.size(14.dp))
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+              if (translating) "Translating on-device…" else if (translateError) "Translation failed" else "On-device translation",
+              color = colorScheme.onBackground.copy(alpha = 0.5f),
+              fontSize = 11.sp,
+              fontWeight = FontWeight.Medium
+            )
+          }
+          if (translatedText != null) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(translatedText ?: "", color = colorScheme.onBackground, fontSize = 14.sp)
+          }
+        }
+      }
+    }
     if (message.content.isNotBlank() && showActions) {
       Spacer(modifier = Modifier.height(4.dp))
       Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start) {
@@ -8663,7 +8696,20 @@ private fun MessageBubble(
           onSpeakToggle = onSpeakToggle,
           onRegenerate = onRegenerate,
           onDelete = onDelete,
-          onPushToExtra = onPushToExtra
+          onPushToExtra = onPushToExtra,
+          onTranslate = {
+            if (translatedText != null) {
+              translatedText = null
+            } else if (!translating) {
+              translating = true
+              translateError = false
+              translateScope.launch {
+                val result = OnDeviceTranslator.translate(message.content)
+                translating = false
+                result.onSuccess { translatedText = it }.onFailure { translateError = true }
+              }
+            }
+          }
         )
       }
     }
@@ -8722,7 +8768,8 @@ private fun MessageActionBar(
   onSpeakToggle: () -> Unit,
   onRegenerate: () -> Unit,
   onDelete: () -> Unit,
-  onPushToExtra: (caption: String?, destination: String, onDone: (Boolean) -> Unit) -> Unit
+  onPushToExtra: (caption: String?, destination: String, onDone: (Boolean) -> Unit) -> Unit,
+  onTranslate: () -> Unit
 ) {
   val context = LocalContext.current
   val clipboard = LocalClipboardManager.current
@@ -8759,6 +8806,7 @@ private fun MessageActionBar(
     ActionBarItemShell("Copy", Color(0xFFA8A8A8), onClick = {
       clipboard.setText(AnnotatedString(message.content))
     }) { tint -> CopyIconCustom(tint = tint, modifier = Modifier.size(20.dp)) }
+    ActionBarItem(Icons.Outlined.Language, "Translate on-device", onClick = onTranslate)
     if (message.content.length >= MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH) {
       ActionBarExtraItem(
         label = if (pushState == "pushed") "Sent" else "Extra",
