@@ -13,6 +13,18 @@ export async function POST(request: Request) {
     role: typeof body.profile?.role === "string" ? body.profile.role : "",
     memory: Array.isArray(body.memory) ? body.memory.filter((m: unknown) => typeof m === "string") : [],
     language: typeof body.language === "string" ? body.language : "",
+    historyIndex: Array.isArray(body.historyIndex)
+      ? body.historyIndex
+          .filter(
+            (e: unknown): e is { title: unknown; snippet: unknown } =>
+              !!e && typeof e === "object"
+          )
+          .map((e: { title: unknown; snippet: unknown }) => ({
+            title: typeof e.title === "string" ? e.title : "",
+            snippet: typeof e.snippet === "string" ? e.snippet : "",
+          }))
+          .filter((e: { title: string; snippet: string }) => e.title.length > 0)
+      : undefined,
     location: typeof body.location === "string" ? body.location : "",
     company: {
       name: typeof body.company?.name === "string" ? body.company.name : "",

@@ -16,6 +16,7 @@ export type ChatTool =
   | "python_helper"
   | "business_assistant"
   | "ai_agent"
+  | "agent_team"
   | null;
 
 export type CompanyProfile = {
@@ -23,6 +24,8 @@ export type CompanyProfile = {
   description?: string;
   employees?: { name: string; role: string }[];
 };
+
+export type HistoryIndexEntry = { title: string; snippet: string };
 
 export type Personalization = {
   nickname?: string;
@@ -33,6 +36,13 @@ export type Personalization = {
   location?: string;
   company?: CompanyProfile;
   workspaceInstructions?: string;
+  // A lightweight index (title + a short snippet of the opening
+  // message, not full content) of the user's other saved
+  // conversations -- lets the model answer "how many chats do I have"
+  // or "what have we talked about before" and reference past topics by
+  // name, without shipping every past conversation's full text on
+  // every single request.
+  historyIndex?: HistoryIndexEntry[];
 };
 
 type Provider = "openai" | "anthropic" | "mock";
@@ -178,6 +188,13 @@ const AI_AGENT_PROMPT =
   "research and then give one clear, complete final answer, citing sources inline as markdown links where it " +
   "matters.";
 
+const AGENT_TEAM_PROMPT =
+  CAPABILITIES_PROMPT +
+  "\n\nYou are currently in Agent Team mode: a small team of specialist agents (a planner, 2-3 role-specific " +
+  "workers, and a coordinator who writes the final reply) breaks the request apart and works it collaboratively " +
+  "instead of one model answering alone. The user sees which roles were involved and gets one cohesive final " +
+  "answer, not each agent's raw output pasted together.";
+
 const TOOL_PROMPTS: Record<string, string> = {
   default: SYSTEM_PROMPT,
   deep_research: DEEP_RESEARCH_PROMPT,
@@ -187,6 +204,7 @@ const TOOL_PROMPTS: Record<string, string> = {
   python_helper: PYTHON_HELPER_PROMPT,
   business_assistant: BUSINESS_ASSISTANT_PROMPT,
   ai_agent: AI_AGENT_PROMPT,
+  agent_team: AGENT_TEAM_PROMPT,
 };
 
 const CANNED_REPLIES = [
@@ -234,6 +252,17 @@ function buildSystemPrompt(base: string, personalization?: Personalization): str
       "You are also representing this company, and know it well like a real staff member would — answer questions about " +
         "what it does, its services, or who works there confidently and naturally, in your own words, never as a copied data dump:\n" +
         lines.join("\n")
+    );
+  }
+  if (personalization?.historyIndex?.length) {
+    const idx = personalization.historyIndex;
+    const lines = idx.slice(0, 40).map((e) => `- "${e.title}" — ${e.snippet}`).join("\n");
+    parts.push(
+      `The user has ${idx.length} other saved conversation${idx.length === 1 ? "" : "s"} in their History besides ` +
+        `this one. Here's a quick index (title — what it opened with) so you can answer questions like "how many ` +
+        `chats do I have" or "what have we talked about before" and reference past topics by name when relevant. ` +
+        `You only have this short index, not the full text of those conversations -- if the user wants the actual ` +
+        `content, tell them to reopen that chat from History rather than guessing at details you don't have:\n${lines}`
     );
   }
   if (personalization?.workspaceInstructions?.trim()) {
@@ -375,6 +404,169 @@ async function runAiAgent(
   controller.enqueue(encoder.encode(text));
 }
 
+type AgentPlanStep = { role: string; task: string };
+
+// A genuine team, not just a different persona: a planner breaks the
+// request into 2-4 role-specific sub-tasks, each runs as its own
+// focused model call (researchers get the web_search tool, same as AI
+// Agent mode), and a coordinator writes one final answer from all of
+// it. The user sees which roles were involved before the answer, then
+// gets one cohesive reply -- not each agent's raw output pasted
+// together.
+const MAX_TEAM_SIZE = 4;
+
+async function runAgentTeam(
+  client: InstanceType<typeof import("openai").default>,
+  system: string,
+  messages: ChatMessage[],
+  controller: ReadableStreamDefaultController<Uint8Array>,
+  encoder: TextEncoder
+) {
+  const userRequest = contentToText(messages[messages.length - 1]?.content ?? "");
+  const conversationContext = messages
+    .slice(0, -1)
+    .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${contentToText(m.content).slice(0, 400)}`)
+    .join("\n");
+
+  // 1. Plan -- ask for a small JSON list of roles + sub-tasks.
+  let plan: AgentPlanStep[] = [];
+  try {
+    const planCompletion = await client.chat.completions.create({
+      model: "gpt-5.5",
+      messages: [
+        {
+          role: "system",
+          content:
+            "Break the user's request into 2-4 sub-tasks for a small team of specialist agents to work in " +
+            "parallel, each with a short role name (e.g. Researcher, Writer, Analyst, Reviewer, Coder -- pick " +
+            "whatever fits the actual request) and a one-sentence task description. If the request is simple " +
+            "enough for one person, return just 1 step with role \"Assistant\". Respond with ONLY a JSON array " +
+            'like [{"role": "Researcher", "task": "..."}, ...], no other text, no markdown fences.',
+        },
+        { role: "user", content: userRequest },
+      ],
+    });
+    const raw = (planCompletion.choices[0]?.message?.content ?? "[]").trim();
+    const cleaned = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    const parsed = JSON.parse(cleaned);
+    if (Array.isArray(parsed)) {
+      plan = parsed
+        .filter((s): s is AgentPlanStep => !!s && typeof s.role === "string" && typeof s.task === "string")
+        .slice(0, MAX_TEAM_SIZE);
+    }
+  } catch (err) {
+    console.error("Agent team planning failed:", err);
+  }
+  if (plan.length === 0) plan = [{ role: "Assistant", task: userRequest }];
+
+  // Let the user see the team before the work happens -- this is the
+  // whole point of the mode being visibly different from one model
+  // answering alone.
+  const teamLine = `**Team:** ${plan.map((s) => s.role).join(" → ")}\n\n`;
+  controller.enqueue(encoder.encode(teamLine));
+
+  // 2. Each role works its sub-task. Researcher-ish roles get a
+  // web_search tool, same one AI Agent mode uses, so "the researcher"
+  // can actually look things up instead of guessing.
+  const WEB_SEARCH_TOOL = {
+    type: "function" as const,
+    function: {
+      name: "web_search",
+      description: "Search the web for current information relevant to your sub-task.",
+      parameters: {
+        type: "object",
+        properties: { query: { type: "string", description: "The search query" } },
+        required: ["query"],
+      },
+    },
+  };
+
+  const results: { role: string; task: string; output: string }[] = [];
+  for (const step of plan) {
+    const looksLikeResearch = /research|search|find|look ?up|investigat/i.test(step.role + step.task);
+    try {
+      if (looksLikeResearch) {
+        const first = await client.chat.completions.create({
+          model: "gpt-5.5",
+          messages: [
+            {
+              role: "system",
+              content: `You are the ${step.role} on a small AI team. Your specific sub-task: ${step.task}\n\nOriginal user request: ${userRequest}\n\nUse the web_search tool if it would help. Report back your findings/output concisely -- this feeds into a coordinator who writes the final user-facing answer, so be dense with substance, not pleasantries.`,
+            },
+          ],
+          tools: [WEB_SEARCH_TOOL],
+          tool_choice: "auto",
+        });
+        const msg = first.choices[0]?.message;
+        if (msg?.tool_calls?.length) {
+          const toolResults = await Promise.all(
+            msg.tool_calls.map(async (call) => {
+              let query = "";
+              if (call.type === "function") {
+                try {
+                  query = JSON.parse(call.function.arguments)?.query ?? "";
+                } catch {
+                  // Malformed arguments -- proceed with an empty query.
+                }
+              }
+              return query ? await performAgentWebSearch(client, query) : "No query provided.";
+            })
+          );
+          const second = await client.chat.completions.create({
+            model: "gpt-5.5",
+            messages: [
+              { role: "system", content: `You are the ${step.role}. Sub-task: ${step.task}` },
+              { role: "assistant", content: msg.content, tool_calls: msg.tool_calls },
+              ...msg.tool_calls.map((call, i) => ({
+                role: "tool" as const,
+                tool_call_id: call.id,
+                content: toolResults[i] ?? "",
+              })),
+            ] as Parameters<typeof client.chat.completions.create>[0]["messages"],
+          });
+          results.push({ role: step.role, task: step.task, output: second.choices[0]?.message?.content ?? "" });
+        } else {
+          results.push({ role: step.role, task: step.task, output: msg?.content ?? "" });
+        }
+      } else {
+        const completion = await client.chat.completions.create({
+          model: "gpt-5.5",
+          messages: [
+            {
+              role: "system",
+              content: `You are the ${step.role} on a small AI team. Your specific sub-task: ${step.task}\n\nOriginal user request: ${userRequest}\n${conversationContext ? `\nEarlier in this conversation:\n${conversationContext}\n` : ""}\nProduce your part of the work. This feeds into a coordinator who writes the final user-facing answer, so be dense with substance, not pleasantries.`,
+            },
+          ],
+        });
+        results.push({ role: step.role, task: step.task, output: completion.choices[0]?.message?.content ?? "" });
+      }
+    } catch (err) {
+      console.error(`Agent team step failed (${step.role}):`, err);
+      results.push({ role: step.role, task: step.task, output: "(this step failed, work around the gap)" });
+    }
+  }
+
+  // 3. Coordinator synthesizes one final, cohesive reply -- streamed to
+  // the user like a normal answer.
+  const teamOutput = results.map((r) => `[${r.role} -- ${r.task}]\n${r.output}`).join("\n\n");
+  const finalStream = await client.chat.completions.create({
+    model: "gpt-5.5",
+    stream: true,
+    messages: [
+      {
+        role: "system",
+        content: `${system}\n\nYou are the team coordinator. Your teammates did the work below -- write ONE cohesive final answer to the user's original request from it. Don't mention "the team" or paste their raw output; just give the polished answer as if you produced it yourself, using proper markdown formatting.`,
+      },
+      { role: "user", content: `Original request: ${userRequest}\n\nTeam output:\n${teamOutput}` },
+    ],
+  });
+
+  for await (const chunk of finalStream) {
+    const delta = chunk.choices[0]?.delta?.content;
+    if (delta) controller.enqueue(encoder.encode(delta));
+  }
+}
+
 async function streamOpenAi(
   messages: ChatMessage[],
   tool: ChatTool,
@@ -391,6 +583,11 @@ async function streamOpenAi(
 
   if (tool === "ai_agent") {
     await runAiAgent(client, system, messages, controller, encoder);
+    return;
+  }
+
+  if (tool === "agent_team") {
+    await runAgentTeam(client, system, messages, controller, encoder);
     return;
   }
 
