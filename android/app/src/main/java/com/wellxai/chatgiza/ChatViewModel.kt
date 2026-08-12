@@ -254,12 +254,18 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     }
   }
 
+  // Remembers wherever Account was opened from (Chat, the Profile Hub,
+  // etc.) instead of hardcoding Chat, so closing it returns to the
+  // actual screen the user came from rather than always landing on Chat.
+  private var accountReturnScreen: AppScreen = AppScreen.Chat
+
   fun openAccount() {
+    accountReturnScreen = screen
     screen = AppScreen.Account
   }
 
   fun closeAccount() {
-    screen = AppScreen.Chat
+    screen = accountReturnScreen
   }
 
   fun openCustomize() {
