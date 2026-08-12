@@ -28,6 +28,8 @@ data class ApiConversation(
 
 data class HistorySnapshot(val conversations: List<ApiConversation>, val deletedIds: Map<String, Long>)
 
+data class LatestVersionInfo(val runNumber: Int, val downloadUrl: String)
+
 data class ApiProfile(
   val nickname: String = "",
   val about: String = "",
@@ -1109,6 +1111,38 @@ object ChatGizaApi {
       JSONObject(body).optString("error", "Request failed ($code)")
     } catch (e: Exception) {
       "Request failed ($code)"
+    }
+  }
+
+  // Sideloaded APKs (this app isn't on the Play Store) never auto-update --
+  // this checks the same public GitHub Release the CI pipeline publishes to
+  // and returns its build number (the release tag is "android-build-N")
+  // so the caller can compare it against this install's own versionCode,
+  // which is set to that same CI run number at build time.
+  suspend fun checkLatestVersion(): ApiResult<LatestVersionInfo> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("https://api.github.com/repos/WellXaiTech/WellXAI/releases/latest")
+        .header("Accept", "application/vnd.github+json")
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val json = JSONObject(text)
+        val runNumber = json.optString("tag_name", "").substringAfterLast("-").toIntOrNull()
+          ?: return@withContext ApiResult.Failure("Unrecognized release tag")
+        val assets = json.optJSONArray("assets")
+        val downloadUrl = (0 until (assets?.length() ?: 0))
+          .map { assets!!.getJSONObject(it) }
+          .firstOrNull { it.optString("name") == "app-release.apk" }
+          ?.optString("browser_download_url")
+          ?: "https://github.com/WellXaiTech/WellXAI/releases/latest/download/app-release.apk"
+        ApiResult.Success(LatestVersionInfo(runNumber, downloadUrl))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
     }
   }
 }
