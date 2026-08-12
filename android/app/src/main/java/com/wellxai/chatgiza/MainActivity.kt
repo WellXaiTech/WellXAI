@@ -6828,8 +6828,6 @@ private fun ProjectsScreen(viewModel: ChatViewModel) {
   }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
 private data class MockTaskCard(val emoji: String, val title: String, val description: String)
 
 private val MOCK_TASK_CARDS = listOf(
