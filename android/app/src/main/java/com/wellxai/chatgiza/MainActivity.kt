@@ -362,6 +362,11 @@ class MainActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     viewModel = ChatViewModel(TokenStore(applicationContext))
 
+    // Makes Scheduled Tasks actually fire -- idempotent (KEEP policy), so
+    // calling this on every launch is fine; WorkManager only schedules it
+    // once and keeps it running in the background afterward.
+    ScheduledTaskWorker.enqueuePeriodicWork(applicationContext)
+
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
       screenCaptureCallback = Activity.ScreenCaptureCallback {
         viewModel.onScreenshotTaken()
@@ -374,6 +379,19 @@ class MainActivity : ComponentActivity() {
         // chat?" prompt can float above whichever screen is showing,
         // instead of being wired into every individual screen separately.
         Box(Modifier.fillMaxSize()) {
+        // Android 13+ requires this to be asked for at runtime before a
+        // Scheduled Task's firing notification can actually show -- asked
+        // once, up front, rather than waiting for the first task to fire
+        // (which would be a confusing moment to suddenly show a system
+        // permission dialog).
+        val notificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+        LaunchedEffect(Unit) {
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val granted = ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS) ==
+              PackageManager.PERMISSION_GRANTED
+            if (!granted) notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+          }
+        }
         Surface {
           val screen = viewModel.screen
           // Account/Settings/Projects/Scheduled/LiveVision are reachable by

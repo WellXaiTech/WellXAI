@@ -46,5 +46,9 @@
          never fires, no crash and no error, which is why the screenshot
          "Share a link to chat?" prompt never appeared. -->
     <uses-permission android:name="android.permission.DETECT_SCREEN_CAPTURE" />
+    <!-- Required on Android 13+ to actually show the Scheduled Tasks
+         firing notification: runtime-requested at first use, this
+         just declares the app is allowed to ask. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 </manifest>
