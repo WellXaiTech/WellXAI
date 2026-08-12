@@ -6676,6 +6676,7 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
     modifier = Modifier
       .fillMaxSize()
       .background(Color(0xFF181818))
+      .statusBarsPadding()
       .padding(20.dp)
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -6693,12 +6694,12 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
         .fillMaxWidth()
         .clickable { showDialog = true },
       shape = RoundedCornerShape(22.dp),
-      colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+      colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
     ) {
       Column(modifier = Modifier.padding(20.dp)) {
-        Text(text = "Paste as File", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+        Text(text = "Paste as File", color = Color.White, fontWeight = FontWeight.Medium, fontSize = 16.sp)
         Spacer(Modifier.height(6.dp))
-        Text(text = pasteAsFileModeLabel(viewModel.pasteAsFileMode), color = Color.Gray, fontSize = 17.sp)
+        Text(text = pasteAsFileModeLabel(viewModel.pasteAsFileMode), color = Color.Gray, fontSize = 13.sp)
       }
     }
 
