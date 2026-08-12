@@ -580,6 +580,29 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     tokenStore.setHapticsOnResponse(value)
   }
 
+  // A locally-picked preset avatar, overriding the Google-account photo
+  // wherever the app shows an avatar. Device-local only -- there's no
+  // backend field for this yet, so it won't follow the account to
+  // another device.
+  var avatarPresetId by mutableStateOf(tokenStore.getAvatarPresetId())
+    private set
+
+  fun updateAvatarPreset(id: String?) {
+    avatarPresetId = id
+    tokenStore.setAvatarPresetId(id)
+  }
+
+  var showAvatarPicker by mutableStateOf(false)
+    private set
+
+  fun openAvatarPicker() {
+    showAvatarPicker = true
+  }
+
+  fun closeAvatarPicker() {
+    showAvatarPicker = false
+  }
+
   fun openDataControls() {
     screen = AppScreen.DataControls
   }
