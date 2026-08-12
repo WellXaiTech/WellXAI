@@ -2044,18 +2044,26 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
   }
   val composerBackground = colorScheme.onBackground.copy(alpha = 0.06f).compositeOver(colorScheme.background)
   Box(
-    // A plain (unrounded) backing rectangle in the exact same solid
-    // color, sitting directly behind the rounded Card below. A rounded
-    // Card only paints its own rounded-rect outline -- the four little
-    // corners of its bounding box, just outside that curve, are left
-    // fully unpainted, so with a transparent parent (this whole
-    // composer floats over the scrolling message list) the last
-    // message's text showed straight through those corner slivers.
-    // Same color behind them makes that seam invisible instead.
+    // A plain (unrounded) backing rectangle, sitting directly behind the
+    // rounded Card below. A rounded Card only paints its own rounded-rect
+    // outline -- the four little corners of its bounding box, just
+    // outside that curve, are left fully unpainted, so with a
+    // transparent parent (this whole composer floats over the scrolling
+    // message list) the last message's text showed straight through
+    // those corner slivers.
+    //
+    // This backing rectangle is painted the screen's own solid black --
+    // NOT the card's own lighter tint. Using the card's own color here
+    // erased the rounded corners entirely (a flat-colored square behind
+    // a same-colored rounded shape reads as just a square, since there's
+    // no contrast at the curve). Black matches the true app background
+    // outside the card, so the notch just reads as background peeking
+    // around a rounded corner -- correct either way, and it still blocks
+    // the message list from showing through.
     modifier = Modifier
       .fillMaxWidth()
       .padding(start = 6.dp, end = 6.dp, top = 10.dp)
-      .background(composerBackground)
+      .background(Color(0xFF000000))
   ) {
   Card(
     // No bottom padding -- the outer Column already carries
