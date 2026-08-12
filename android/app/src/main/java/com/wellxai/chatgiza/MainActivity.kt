@@ -4208,7 +4208,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
       modifier = Modifier
         .fillMaxWidth()
         .clip(RoundedCornerShape(20.dp))
-        .background(Color.White.copy(alpha = 0.06f))
+        .background(Color(0xFF141414))
         .padding(horizontal = 18.dp, vertical = 12.dp)
     ) {
       Text("Unlock GiZa Pro Perks", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -4235,7 +4235,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
         Box(
           modifier = Modifier
             .clip(RoundedCornerShape(50))
-            .background(Color(0xFFFF9800))
+            .background(Color(0xFFFF9D2E))
             .clickable { comingSoon("Enter GiZa Max") }
             .padding(horizontal = 32.dp, vertical = 8.dp)
         ) {
@@ -4580,7 +4580,7 @@ private fun ProfileHubQuickCard(
     verticalAlignment = Alignment.CenterVertically,
     modifier = modifier
       .clip(RoundedCornerShape(16.dp))
-      .background(Color.White.copy(alpha = 0.06f))
+      .background(Color(0xFF141414))
       .clickable(onClick = onClick)
       .padding(14.dp)
   ) {
