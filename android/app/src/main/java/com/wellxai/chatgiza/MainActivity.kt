@@ -1683,7 +1683,19 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
         // message scrolls up from underneath it, and the composer's own
         // low-alpha background lets that content show through rather than
         // stopping short in a gap above it.
-        Column(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
+        //
+        // This wrapper's own solid background + bottom padding is what
+        // reserves the small breathing room below the card and above the
+        // keyboard/nav bar -- it must be opaque (matching the screen's own
+        // black), not the message list's own space, or the scrolling
+        // content shows through that gap instead of it just being empty.
+        Column(
+          modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .fillMaxWidth()
+            .background(Color(0xFF000000))
+            .padding(bottom = 10.dp)
+        ) {
           if (viewModel.errorMessage != null) {
             Text(
               viewModel.errorMessage ?: "",
