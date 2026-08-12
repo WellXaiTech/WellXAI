@@ -55,6 +55,7 @@ sealed class AppScreen {
   object NsfwPreferences : AppScreen()
   object Connectors : AppScreen()
   object Profile : AppScreen()
+  object ProfileHub : AppScreen()
 }
 
 class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
@@ -499,6 +500,18 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeMediaProfile() {
     screen = AppScreen.Account
+  }
+
+  // The account-hub screen opened by tapping the avatar at the top of
+  // History -- a static shell for now (VIP-style card, quick links,
+  // trending row) matching a reference layout the user provided; none of
+  // it goes deeper than this screen yet, that's deliberately a later pass.
+  fun openProfileHub() {
+    screen = AppScreen.ProfileHub
+  }
+
+  fun closeProfileHub() {
+    screen = AppScreen.History
   }
 
   fun openHaptics() {
