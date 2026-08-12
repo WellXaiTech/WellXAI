@@ -4151,7 +4151,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
           Spacer(modifier = Modifier.width(8.dp))
           Text("|", color = Color.White.copy(alpha = 0.25f), fontSize = 12.sp)
           Spacer(modifier = Modifier.width(8.dp))
-          Text("Site: GiZa Global", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+          Text("Site: GiZa Glo...", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
         }
       }
       Icon(
@@ -4298,7 +4298,8 @@ private fun ProfileHubQuickCard(
   onClick: () -> Unit,
   icon: @Composable (Color) -> Unit
 ) {
-  Column(
+  Row(
+    verticalAlignment = Alignment.CenterVertically,
     modifier = modifier
       .clip(RoundedCornerShape(16.dp))
       .background(Color.White.copy(alpha = 0.06f))
@@ -4306,9 +4307,11 @@ private fun ProfileHubQuickCard(
       .padding(14.dp)
   ) {
     icon(Color.White)
-    Spacer(modifier = Modifier.height(10.dp))
-    Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-    Text(subtitle, color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+    Spacer(modifier = Modifier.width(10.dp))
+    Column {
+      Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+      Text(subtitle, color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+    }
   }
 }
 
