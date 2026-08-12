@@ -806,6 +806,67 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     screen = AppScreen.Account
   }
 
+  // Tapping "+" on a Tasks example (e.g. "Weekend ideas") sends its prompt
+  // as a real chat message and, for the ones that make sense to refine,
+  // opens a short preference wizard so the follow-up reply can actually
+  // use the answers instead of guessing.
+  var preferenceWizardStep by mutableStateOf(-1)
+    private set
+  var wizardActivities by mutableStateOf(setOf<String>())
+    private set
+  var wizardBudget by mutableStateOf<String?>(null)
+    private set
+  var wizardDistance by mutableStateOf<String?>(null)
+    private set
+
+  fun startTaskExample(prompt: String, withPreferenceWizard: Boolean) {
+    screen = AppScreen.Chat
+    onInputChange(prompt)
+    sendMessage()
+    if (withPreferenceWizard) {
+      wizardActivities = emptySet()
+      wizardBudget = null
+      wizardDistance = null
+      preferenceWizardStep = 0
+    }
+  }
+
+  fun toggleWizardActivity(activity: String) {
+    wizardActivities = if (activity in wizardActivities) wizardActivities - activity else wizardActivities + activity
+  }
+
+  fun setWizardBudget(budget: String) {
+    wizardBudget = budget
+  }
+
+  fun setWizardDistance(distance: String) {
+    wizardDistance = distance
+  }
+
+  fun wizardBack() {
+    if (preferenceWizardStep > 0) preferenceWizardStep--
+  }
+
+  fun wizardNext() {
+    if (preferenceWizardStep < 2) preferenceWizardStep++ else finishPreferenceWizard()
+  }
+
+  fun dismissPreferenceWizard() {
+    preferenceWizardStep = -1
+  }
+
+  private fun finishPreferenceWizard() {
+    val parts = mutableListOf<String>()
+    if (wizardActivities.isNotEmpty()) parts += "activities: ${wizardActivities.joinToString(", ")}"
+    if (wizardBudget != null) parts += "budget: $wizardBudget"
+    if (wizardDistance != null) parts += "preferred distance: $wizardDistance"
+    preferenceWizardStep = -1
+    if (parts.isNotEmpty()) {
+      onInputChange("My preferences — ${parts.joinToString("; ")}")
+      sendMessage()
+    }
+  }
+
   fun onNewTaskPromptChange(value: String) {
     newTaskPrompt = value
   }

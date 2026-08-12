@@ -150,6 +150,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddToHomeScreen
 import androidx.compose.material.icons.filled.ArrowBackIosNew
+import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -491,6 +492,7 @@ class MainActivity : ComponentActivity() {
           }
         }
         ScreenshotShareOverlay(viewModel)
+        PreferenceWizardOverlay(viewModel)
         }
       }
     }
@@ -576,6 +578,183 @@ private fun BoxScope.ScreenshotShareOverlay(viewModel: ChatViewModel) {
       ) {
         Icon(Icons.Filled.Share, contentDescription = "Share", tint = Color.Black, modifier = Modifier.size(18.dp))
       }
+    }
+  }
+}
+
+// The 3-step preference wizard shown after sending the "Weekend ideas"
+// task example -- collects activity types, budget, and distance so the
+// follow-up message the AI sees is actually informed by real answers
+// instead of the assistant just guessing. Each step can be answered or
+// skipped; finishing (or skipping) the last step sends one summary
+// message and closes the wizard.
+private val WIZARD_ACTIVITY_OPTIONS = listOf(
+  "Burudani & nightlife",
+  "Michezo & outdoor",
+  "Migahawa & food",
+  "Matukio, concerts & shows"
+)
+private val WIZARD_BUDGET_OPTIONS = listOf(
+  "Chini ya TSh 20,000",
+  "TSh 20,000–50,000",
+  "TSh 50,000–100,000",
+  "TSh 100,000+"
+)
+private val WIZARD_DISTANCE_OPTIONS = listOf(
+  "Karibu sana (≤5 km)",
+  "Hadi 10 km",
+  "Hadi 25 km",
+  "Popote jijini"
+)
+
+@Composable
+private fun BoxScope.PreferenceWizardOverlay(viewModel: ChatViewModel) {
+  val step = viewModel.preferenceWizardStep
+  AnimatedVisibility(
+    visible = step >= 0,
+    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+    modifier = Modifier
+      .align(Alignment.BottomCenter)
+      .navigationBarsPadding()
+      .padding(16.dp)
+  ) {
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .clip(RoundedCornerShape(22.dp))
+        .background(Color(0xFF1C1C1C))
+        .padding(20.dp)
+    ) {
+      Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        IconButton(onClick = { viewModel.wizardBack() }, enabled = step > 0, modifier = Modifier.size(28.dp)) {
+          Icon(
+            Icons.Filled.ArrowBackIosNew,
+            contentDescription = "Nyuma",
+            tint = Color.White.copy(alpha = if (step > 0) 0.7f else 0.2f),
+            modifier = Modifier.size(14.dp)
+          )
+        }
+        Text(
+          "${step + 1} of 3",
+          color = Color.White.copy(alpha = 0.6f),
+          fontSize = 13.sp,
+          modifier = Modifier.weight(1f),
+          textAlign = TextAlign.Center
+        )
+        IconButton(onClick = { viewModel.wizardNext() }, enabled = step < 2, modifier = Modifier.size(28.dp)) {
+          Icon(
+            Icons.Filled.ArrowForwardIos,
+            contentDescription = "Mbele",
+            tint = Color.White.copy(alpha = if (step < 2) 0.7f else 0.2f),
+            modifier = Modifier.size(14.dp)
+          )
+        }
+        Spacer(modifier = Modifier.width(6.dp))
+        IconButton(onClick = { viewModel.dismissPreferenceWizard() }, modifier = Modifier.size(28.dp)) {
+          Icon(Icons.Outlined.Close, contentDescription = "Funga", tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
+        }
+      }
+      Spacer(modifier = Modifier.height(14.dp))
+      when (step) {
+        0 -> {
+          Text("Ni shughuli gani ungependa nipendekeze zaidi?", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+          Spacer(modifier = Modifier.height(4.dp))
+          Text("Select all that apply", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+          Spacer(modifier = Modifier.height(10.dp))
+          WIZARD_ACTIVITY_OPTIONS.forEach { option ->
+            WizardCheckboxRow(
+              label = option,
+              checked = option in viewModel.wizardActivities,
+              onClick = { viewModel.toggleWizardActivity(option) }
+            )
+          }
+          WizardSkipRow(label = "Ongeza aina nyingine ya shughuli", onSkip = { viewModel.wizardNext() })
+        }
+        1 -> {
+          Text("Bajeti yako kwa shughuli ya weekend ni kiasi gani?", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+          Spacer(modifier = Modifier.height(10.dp))
+          WIZARD_BUDGET_OPTIONS.forEach { option ->
+            WizardRadioRow(
+              label = option,
+              selected = option == viewModel.wizardBudget,
+              onClick = { viewModel.setWizardBudget(option); viewModel.wizardNext() }
+            )
+          }
+          WizardSkipRow(label = "Andika bajeti yako", onSkip = { viewModel.wizardNext() })
+        }
+        2 -> {
+          Text("Unapendelea umbali gani kutoka ulipo?", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+          Spacer(modifier = Modifier.height(10.dp))
+          WIZARD_DISTANCE_OPTIONS.forEach { option ->
+            WizardRadioRow(
+              label = option,
+              selected = option == viewModel.wizardDistance,
+              onClick = { viewModel.setWizardDistance(option); viewModel.wizardNext() }
+            )
+          }
+          WizardSkipRow(label = "Taja eneo unalopendelea", onSkip = { viewModel.wizardNext() })
+        }
+      }
+    }
+  }
+}
+
+@Composable
+private fun WizardCheckboxRow(label: String, checked: Boolean, onClick: () -> Unit) {
+  Row(
+    modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Box(
+      modifier = Modifier
+        .size(20.dp)
+        .clip(RoundedCornerShape(5.dp))
+        .background(if (checked) Color.White else Color.Transparent)
+        .border(1.5.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(5.dp)),
+      contentAlignment = Alignment.Center
+    ) {
+      if (checked) Icon(Icons.Filled.Check, contentDescription = null, tint = Color.Black, modifier = Modifier.size(14.dp))
+    }
+    Spacer(modifier = Modifier.width(12.dp))
+    Text(label, color = Color.White, fontSize = 15.sp)
+  }
+  HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+}
+
+@Composable
+private fun WizardRadioRow(label: String, selected: Boolean, onClick: () -> Unit) {
+  Row(
+    modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Box(
+      modifier = Modifier
+        .size(20.dp)
+        .clip(CircleShape)
+        .background(if (selected) Color.White else Color.Transparent)
+        .border(1.5.dp, Color.White.copy(alpha = 0.5f), CircleShape)
+    )
+    Spacer(modifier = Modifier.width(12.dp))
+    Text(label, color = Color.White, fontSize = 15.sp)
+  }
+  HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+}
+
+@Composable
+private fun WizardSkipRow(label: String, onSkip: () -> Unit) {
+  Row(
+    modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Text(label, color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp, modifier = Modifier.weight(1f))
+    OutlinedButton(
+      onClick = onSkip,
+      colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+      border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.3f)),
+      contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
+    ) {
+      Text("Skip", fontSize = 13.sp)
     }
   }
 }
@@ -7030,7 +7209,15 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
               fontWeight = FontWeight.SemiBold,
               modifier = Modifier.weight(1f)
             )
-            Icon(Icons.Filled.Add, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+            IconButton(
+              onClick = {
+                viewModel.closeScheduled()
+                viewModel.startTaskExample(task.description, withPreferenceWizard = task.title == "Weekend ideas")
+              },
+              modifier = Modifier.size(28.dp)
+            ) {
+              Icon(Icons.Filled.Add, contentDescription = "Use this task", tint = colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+            }
           }
           Spacer(modifier = Modifier.height(6.dp))
           Text(
