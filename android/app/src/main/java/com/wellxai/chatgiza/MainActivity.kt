@@ -7185,10 +7185,17 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
       contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)
     ) {
       items(MOCK_TASK_CARDS) { task ->
+        // The whole card is clickable, not just the small "+" -- a
+        // much easier target to hit than a 28dp icon button alone.
         Column(
           modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
             .dashedBorder(colorScheme.onBackground.copy(alpha = 0.25f), cornerRadius = 20.dp)
+            .clickable {
+              viewModel.closeScheduled()
+              viewModel.startTaskExample(task.description, withPreferenceWizard = task.title == "Weekend ideas")
+            }
             .padding(16.dp)
         ) {
           Row(verticalAlignment = Alignment.CenterVertically) {
@@ -7201,15 +7208,7 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
               fontWeight = FontWeight.SemiBold,
               modifier = Modifier.weight(1f)
             )
-            IconButton(
-              onClick = {
-                viewModel.closeScheduled()
-                viewModel.startTaskExample(task.description, withPreferenceWizard = task.title == "Weekend ideas")
-              },
-              modifier = Modifier.size(28.dp)
-            ) {
-              Icon(Icons.Filled.Add, contentDescription = "Use this task", tint = colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
-            }
+            Icon(Icons.Filled.Add, contentDescription = "Use this task", tint = colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
           }
           Spacer(modifier = Modifier.height(6.dp))
           Text(
