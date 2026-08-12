@@ -444,12 +444,18 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     tokenStore.setPersonality("custom")
   }
 
+  // Remembers wherever Report a Problem was opened from (Settings, the
+  // Profile Hub's About Us sheet) instead of hardcoding Account, so
+  // closing it returns to the actual screen the user came from.
+  private var reportProblemReturnScreen: AppScreen = AppScreen.Account
+
   fun openReportProblem() {
+    reportProblemReturnScreen = screen
     screen = AppScreen.ReportProblem
   }
 
   fun closeReportProblem() {
-    screen = AppScreen.Account
+    screen = reportProblemReturnScreen
   }
 
   fun openWidgets() {
@@ -601,6 +607,17 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeAvatarPicker() {
     showAvatarPicker = false
+  }
+
+  var showAboutUs by mutableStateOf(false)
+    private set
+
+  fun openAboutUs() {
+    showAboutUs = true
+  }
+
+  fun closeAboutUs() {
+    showAboutUs = false
   }
 
   fun openDataControls() {

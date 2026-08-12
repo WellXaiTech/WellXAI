@@ -4293,7 +4293,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
     Spacer(modifier = Modifier.height(16.dp))
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
       Text("GiZa Lite", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { comingSoon("GiZa Lite") })
-      Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { comingSoon("About Us") }) {
+      Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { viewModel.openAboutUs() }) {
         Text("About Us", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White)
       }
@@ -4303,6 +4303,79 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
 
   if (viewModel.showAvatarPicker) {
     AvatarPickerDialog(viewModel)
+  }
+  if (viewModel.showAboutUs) {
+    AboutUsDialog(viewModel)
+  }
+}
+
+// Terms of Use / Privacy Policy / Report a Problem, consolidated here so
+// they're reachable from the Profile Hub footer instead of only buried
+// in Settings. Report a Problem was moved out of Settings entirely (this
+// is now its only entry point); Terms of Use and Privacy Policy are
+// still in Settings too, since only Report a Problem was asked to move.
+@Composable
+private fun AboutUsDialog(viewModel: ChatViewModel) {
+  val context = LocalContext.current
+  Dialog(
+    onDismissRequest = { viewModel.closeAboutUs() },
+    properties = DialogProperties(usePlatformDefaultWidth = false)
+  ) {
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
+        .background(Color(0xFF000000))
+        .statusBarsPadding()
+        .padding(horizontal = 16.dp)
+    ) {
+      Spacer(modifier = Modifier.height(12.dp))
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = { viewModel.closeAboutUs() }, modifier = Modifier.size(32.dp)) {
+          Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+        }
+        Spacer(modifier = Modifier.width(20.dp))
+        Text("About Us", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+      }
+
+      Spacer(modifier = Modifier.height(28.dp))
+
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(18.dp))
+          .background(Color.White.copy(alpha = 0.06f))
+          .padding(horizontal = 14.dp)
+      ) {
+        AboutUsRow(icon = Icons.AutoMirrored.Outlined.Article, label = "Terms of Use") {
+          context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/terms")))
+        }
+        HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+        AboutUsRow(icon = Icons.Outlined.Lock, label = "Privacy Policy") {
+          context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/privacy")))
+        }
+        HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+        AboutUsRow(icon = Icons.Outlined.ReportProblem, label = "Report a Problem") {
+          viewModel.closeAboutUs()
+          viewModel.openReportProblem()
+        }
+      }
+    }
+  }
+}
+
+@Composable
+private fun AboutUsRow(icon: ImageVector, label: String, onClick: () -> Unit) {
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .clickable(onClick = onClick)
+      .padding(vertical = 14.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+    Spacer(modifier = Modifier.width(16.dp))
+    Text(label, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+    Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
   }
 }
 
@@ -7362,10 +7435,9 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         }
       }
 
-      SettingsSectionHeader("Support")
-      SettingsSection {
-        SettingsMenuRow("Report a Problem", icon = Icons.Outlined.ReportProblem) { viewModel.openReportProblem() }
-      }
+      // Report a Problem moved to the Profile Hub's About Us sheet --
+      // this was its only row, so the whole Support section goes with it
+      // rather than leaving an empty header behind.
 
       Spacer(modifier = Modifier.height(16.dp))
       Card(
