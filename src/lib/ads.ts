@@ -12,6 +12,10 @@ export type Ad = {
   linkUrl: string;
   // ISO 3166-1 alpha-2 codes, e.g. "KE", "TZ" -- see src/lib/countries.ts.
   countries: string[];
+  // Full language name, e.g. "Swahili" -- see LANGUAGES in
+  // src/components/LanguagePanel.tsx, same list the chat language picker
+  // already uses.
+  language: string;
   durationSeconds: number;
   status: AdStatus;
   createdAt: number;
@@ -48,6 +52,40 @@ const PRICE_TABLE_CENTS: Record<number, number> = {
 
 export function priceForDurationSeconds(seconds: number): number | null {
   return PRICE_TABLE_CENTS[seconds] ?? null;
+}
+
+// The web form stores the advertiser's chosen language as a full name
+// (e.g. "Swahili", matching LANGUAGES in LanguagePanel.tsx). The Android
+// app only knows its device locale as an ISO 639-1 code (e.g. "sw") --
+// this resolves either form to the stored full name so /api/ads/active can
+// filter consistently regardless of which client is asking.
+const LANGUAGE_CODE_TO_NAME: Record<string, string> = {
+  en: "English",
+  sw: "Swahili",
+  fr: "French",
+  ar: "Arabic",
+  es: "Spanish",
+  pt: "Portuguese",
+  de: "German",
+  it: "Italian",
+  hi: "Hindi",
+  zh: "Chinese (Simplified)",
+  am: "Amharic",
+  so: "Somali",
+  ha: "Hausa",
+  ig: "Igbo",
+  yo: "Yoruba",
+  zu: "Zulu",
+  ru: "Russian",
+  ja: "Japanese",
+  ko: "Korean",
+  tr: "Turkish",
+};
+
+export function resolveLanguageQuery(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  return LANGUAGE_CODE_TO_NAME[trimmed.toLowerCase()] ?? trimmed;
 }
 
 export async function getAllAds(): Promise<Ad[]> {

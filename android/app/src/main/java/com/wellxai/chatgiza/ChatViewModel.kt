@@ -1281,14 +1281,16 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   /** Fetches admin-approved ads for the Events carousel, targeted by the
-   * device's own locale country. Decorative content -- a failure just
-   * leaves activeAds empty rather than surfacing an error banner. */
+   * device's own locale country and language. Decorative content -- a
+   * failure just leaves activeAds empty rather than surfacing an error
+   * banner. */
   fun loadActiveAds() {
     val token = tokenStore.getToken() ?: return
-    val country = java.util.Locale.getDefault().country
+    val locale = java.util.Locale.getDefault()
+    val country = locale.country
     if (country.isBlank()) return
     viewModelScope.launch {
-      val result = ChatGizaApi.getActiveAds(token, country)
+      val result = ChatGizaApi.getActiveAds(token, country, locale.language)
       if (result is ApiResult.Success) activeAds = result.value
     }
   }

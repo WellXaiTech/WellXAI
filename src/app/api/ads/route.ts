@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { getMobileUserId } from "@/lib/mobileAuth";
 import { getAllAds, saveAllAds, isValidDurationSeconds, priceForDurationSeconds, type Ad } from "@/lib/ads";
 import { getStripe, getOrCreateCustomer } from "@/lib/stripe";
+import { LANGUAGES } from "@/components/LanguagePanel";
 
 const MAX_TEXT_LENGTH = 500;
 
@@ -22,12 +23,16 @@ export async function POST(req: NextRequest) {
     ? body.countries.filter((c: unknown): c is string => typeof c === "string" && c.trim().length > 0).map((c: string) => c.trim().toUpperCase())
     : [];
   const durationSeconds = Number(body?.durationSeconds);
+  const language = typeof body?.language === "string" ? body.language.trim() : "";
 
   if (!headline || !subtitle) {
     return NextResponse.json({ error: "Headline and subtitle are required" }, { status: 400 });
   }
   if (countries.length === 0) {
     return NextResponse.json({ error: "Choose at least one country" }, { status: 400 });
+  }
+  if (!LANGUAGES.includes(language)) {
+    return NextResponse.json({ error: "Choose a valid language" }, { status: 400 });
   }
   if (!isValidDurationSeconds(durationSeconds)) {
     return NextResponse.json({ error: "Invalid duration" }, { status: 400 });
@@ -46,6 +51,7 @@ export async function POST(req: NextRequest) {
     imageUrl,
     linkUrl,
     countries,
+    language,
     durationSeconds,
     // Enters the admin review queue only once payment is confirmed (see
     // /api/ads/checkout/verify) -- never before, so nothing unpaid can slip
@@ -78,7 +84,7 @@ export async function POST(req: NextRequest) {
             unit_amount: priceCents,
             product_data: {
               name: `ChatGiZa Ads — ${headline}`,
-              description: `${countries.join(", ")} · ${Math.round(durationSeconds / 60)} min live`,
+              description: `${countries.join(", ")} · ${language} · ${Math.round(durationSeconds / 60)} min live`,
             },
           },
           quantity: 1,
