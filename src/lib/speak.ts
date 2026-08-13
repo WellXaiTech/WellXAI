@@ -26,16 +26,47 @@ function splitIntoSpeechChunks(text: string, maxLen = 200): string[] {
   return chunks.length ? chunks : [text];
 }
 
+// A handful of very common Kiswahili/Sheng function words -- cheap enough to
+// scan per chunk, and only needs to catch "this chunk leans Kiswahili" for
+// picking a voice, not do real language ID.
+const SWAHILI_MARKERS =
+  /\b(na|ya|wa|za|la|kwa|ni|si|hii|hiyo|hapa|pia|lakini|kwamba|sana|leo|kesho|jana|nini|nani|vipi|karibu|asante|habari|mambo|sawa|tafadhali|nataka|ninataka|unaweza|utaweza|nimefanya|nimekuwa|wewe|yeye|sisi|wao)\b/i;
+
+function looksSwahili(text: string): boolean {
+  return SWAHILI_MARKERS.test(text);
+}
+
+// The free on-device engine defaults to whatever the browser/OS picked as
+// its default voice (usually an English one) and stays there regardless of
+// what's actually being read -- Kiswahili/Sheng text came out sounded-out
+// with English phonetics. Best-effort, mirroring the Android app: if the
+// chunk actually looks Kiswahili and the user hasn't explicitly chosen a
+// voice of their own, prefer whichever installed voice is tagged "sw" --
+// most browsers/OSes still have none, in which case this quietly falls
+// through to the default voice, same as before (Premium Voice in Settings
+// is the reliable fix in that case).
+function pickVoiceForChunk(chunk: string): SpeechSynthesisVoice | null {
+  const voices = window.speechSynthesis.getVoices();
+  const storedVoiceURI = getStoredVoiceURI();
+  if (storedVoiceURI) {
+    return voices.find((v) => v.voiceURI === storedVoiceURI) ?? null;
+  }
+  if (looksSwahili(chunk)) {
+    return voices.find((v) => v.lang.toLowerCase().startsWith("sw")) ?? null;
+  }
+  return null;
+}
+
 function speakChunks(chunks: string[], index: number, onDone?: () => void, onError?: () => void) {
   if (index >= chunks.length) {
     onDone?.();
     return;
   }
   const utterance = new SpeechSynthesisUtterance(chunks[index]);
-  const storedVoiceURI = getStoredVoiceURI();
-  if (storedVoiceURI) {
-    const voice = window.speechSynthesis.getVoices().find((v) => v.voiceURI === storedVoiceURI);
-    if (voice) utterance.voice = voice;
+  const voice = pickVoiceForChunk(chunks[index]);
+  if (voice) {
+    utterance.voice = voice;
+    utterance.lang = voice.lang;
   }
   utterance.rate = speedToRate(getStoredVoiceSpeed());
   utterance.onend = () => speakChunks(chunks, index + 1, onDone, onError);

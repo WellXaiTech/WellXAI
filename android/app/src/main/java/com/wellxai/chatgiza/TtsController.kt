@@ -9,6 +9,18 @@ import android.speech.tts.UtteranceProgressListener
 import java.io.File
 import java.util.UUID
 
+// A handful of very common Kiswahili/Sheng function words -- cheap enough to
+// scan per message, and only needs to catch "this reply leans Kiswahili" for
+// picking a TTS locale, not do real language ID. Mirrors the same heuristic
+// used on the web client (src/lib/speak.ts).
+private val SWAHILI_MARKERS = Regex(
+  "\\b(na|ya|wa|za|la|kwa|ni|si|hii|hiyo|hapa|pia|lakini|kwamba|sana|leo|kesho|jana|nini|nani|vipi|karibu|" +
+    "asante|habari|mambo|sawa|tafadhali|nataka|ninataka|unaweza|utaweza|nimefanya|nimekuwa|wewe|yeye|sisi|wao)\\b",
+  RegexOption.IGNORE_CASE
+)
+
+private fun looksSwahili(text: String): Boolean = SWAHILI_MARKERS.containsMatchIn(text)
+
 /** Reads ChatGiZa's replies aloud using the device's built-in text-to-speech
  * engine — no network call, no extra permission needed. */
 class TtsController(context: Context) {
@@ -40,18 +52,21 @@ class TtsController(context: Context) {
 
   fun speak(text: String) {
     if (!ready || text.isBlank()) return
-    // The free on-device engine defaults to whatever language it started
-    // in (usually English) and stays there for every utterance regardless
-    // of what's actually being read -- Kiswahili text came out sounded-out
-    // with English phonetics. Best-effort: switch to a Kiswahili voice if
-    // this device actually has one installed; silently keep the current
-    // voice otherwise (most devices' free TTS still has no Kiswahili data
-    // at all, in which case Premium Voice in Settings is the real fix).
+    // The free on-device engine defaults to whatever language it started in
+    // and stays there for every utterance regardless of what's actually
+    // being read -- switching the engine to Kiswahili unconditionally then
+    // mispronounces plain English replies just as badly as the original bug
+    // mispronounced Kiswahili ones. Best-effort: pick the engine language
+    // per message based on what this specific text actually looks like;
+    // silently keep the current voice if the matching language isn't
+    // installed on this device (most devices' free TTS still has no
+    // Kiswahili data at all, in which case Premium Voice in Settings is the
+    // real fix).
     runCatching {
-      val swahili = java.util.Locale("sw")
-      val availability = engine?.isLanguageAvailable(swahili) ?: TextToSpeech.LANG_NOT_SUPPORTED
+      val locale = if (looksSwahili(text)) java.util.Locale("sw") else java.util.Locale.US
+      val availability = engine?.isLanguageAvailable(locale) ?: TextToSpeech.LANG_NOT_SUPPORTED
       if (availability >= TextToSpeech.LANG_AVAILABLE) {
-        engine?.language = swahili
+        engine?.language = locale
       }
     }
     engine?.speak(text, TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString())
