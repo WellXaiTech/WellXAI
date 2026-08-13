@@ -43,6 +43,7 @@ export async function POST(request: Request) {
       typeof body.referencedPair.answer === "string"
         ? { question: body.referencedPair.question, answer: body.referencedPair.answer }
         : undefined,
+    localDateTime: typeof body.localDateTime === "string" ? body.localDateTime : undefined,
   };
 
   if (!Array.isArray(messages) || messages.length === 0) {

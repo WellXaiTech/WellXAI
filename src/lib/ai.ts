@@ -48,6 +48,12 @@ export type Personalization = {
   // looks it up locally (across all saved history, no matter how old)
   // and sends the exact pair here -- real content, not a guess.
   referencedPair?: { question: string; answer: string };
+  // The device's own current wall-clock time, "YYYY-MM-DDTHH:mm", in the
+  // user's own local timezone (no timezone offset attached -- matches the
+  // same naive-local-time format the scheduled-reminder runAt field uses).
+  // Lets the model resolve relative/spoken time references ("today at 6pm",
+  // "saa kumi na mbili jioni") into an absolute timestamp correctly.
+  localDateTime?: string;
 };
 
 type Provider = "openai" | "anthropic" | "mock";
@@ -114,6 +120,19 @@ const CAPABILITIES_PROMPT =
   "- Every question you answer and its reply share a short ID (shown in the app, e.g. \"Q-4F2A19\"). The user can bring that " +
   "exact exchange back up later, no matter how old, just by mentioning its ID — if you're given a specific past Q/A pair below " +
   "because the user referenced one, treat it as exact ground truth and engage with its real content, not a vague summary.\n" +
+  "- You CAN set real reminders. When the user asks to be reminded, alerted, or woken up about something at a specific or " +
+  "clearly-implied time (in any language — e.g. \"remind me at 6pm about the meeting\", \"nikumbushe kesho asubuhi nichukue dawa\", " +
+  "\"niambie saa kumi na mbili jioni nina kazi\"), do two things in the same reply: (1) answer naturally and warmly, confirming in " +
+  "plain words what you'll remind them of and when (in their own language/time format, e.g. \"Sawa, nitakukumbusha saa 12 jioni " +
+  "kuhusu kazi.\"), and (2) append, at the very end of the reply, on its own line, one exact marker: " +
+  "`[[REMINDER_START]]{\"runAt\":\"YYYY-MM-DDTHH:mm\",\"prompt\":\"<short reminder text, in the user's own language>\"}[[REMINDER_END]]`. " +
+  "You are given the user's current local date and time below — use it to resolve relative or spoken time references (\"today\", " +
+  "\"tomorrow morning\", \"leo\", \"kesho\", Swahili clock hours, etc.) into an exact absolute local timestamp in that same " +
+  "\"YYYY-MM-DDTHH:mm\" 24-hour format; never guess a date/time if you weren't given the current one. If the user's message is " +
+  "ambiguous about WHEN (no time given or implied at all), don't emit the marker — ask a short clarifying question instead. Never " +
+  "show the raw marker text to the user as something to read; it's invisible plumbing the app extracts automatically. Only ever " +
+  "emit one marker per reply, and only when the user is genuinely asking to be reminded of something later, not for general " +
+  "scheduling questions or when just discussing time.\n" +
   "If a user asks what you can do, describe these capabilities plainly and specifically instead of a generic disclaimer.\n\n" +
   "Depth and quality: for practical creation tasks — CVs/resumes, cover letters, business plans, brainstorms, names, taglines, " +
   "study plans, and similar — never hand back a thin, generic first draft. Produce something genuinely strong and ready to use: " +
@@ -234,6 +253,12 @@ const CANNED_REPLIES = [
 
 function buildSystemPrompt(base: string, personalization?: Personalization): string {
   const parts: string[] = [base];
+  if (personalization?.localDateTime?.trim()) {
+    parts.push(
+      `The user's current local date and time is ${personalization.localDateTime.trim()} (format YYYY-MM-DDTHH:mm, 24-hour, ` +
+        `already in their own timezone). Use this as "now" for anything time-relative, including resolving reminder requests.`
+    );
+  }
   if (personalization?.nickname?.trim()) {
     parts.push(`The user's preferred name is "${personalization.nickname.trim()}" — address them that way when it feels natural.`);
   }

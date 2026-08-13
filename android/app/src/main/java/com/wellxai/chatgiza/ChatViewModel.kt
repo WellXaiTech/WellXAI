@@ -10,6 +10,10 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.json.JSONObject
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.UUID
 
 // pairId links a question to its answer with a short, stable, shareable
@@ -1171,6 +1175,17 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     viewModelScope.launch { ChatGizaApi.saveScheduled(token, updated) }
   }
 
+  /** Same effect as [addScheduledTask], but driven by the AI's own
+   * [[REMINDER_START]] marker instead of the manual Automations form --
+   * doesn't touch newTaskPrompt/newTaskRunAt since there's no form open. */
+  private fun scheduleReminderFromChat(reminder: ChatReminderRequest) {
+    val token = tokenStore.getToken() ?: return
+    val runAt = reminder.runAt.replaceFirst(" ", "T")
+    val updated = listOf(ApiScheduledTask(UUID.randomUUID().toString(), reminder.prompt, runAt, false)) + scheduledTasks
+    scheduledTasks = updated
+    viewModelScope.launch { ChatGizaApi.saveScheduled(token, updated) }
+  }
+
   fun deleteScheduledTask(id: String) {
     val token = tokenStore.getToken() ?: return
     val updated = scheduledTasks.filter { it.id != id }
@@ -1654,7 +1669,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         company = settingsData.company,
         imageDataUrls = imagesToSend,
         historyIndex = buildHistoryIndex(conversationId),
-        referencedPair = referencedPair
+        referencedPair = referencedPair,
+        localDateTime = currentLocalDateTimeString()
       ) { chunk ->
         messages = messages.map { m ->
           if (m.id == assistantId) m.copy(content = m.content + chunk) else m
@@ -1667,6 +1683,12 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
           if (m.id == assistantId && m.content.isEmpty()) m.copy(content = "(failed to respond)") else m
         }
       } else {
+        val finalContent = messages.find { it.id == assistantId }?.content.orEmpty()
+        val (cleaned, reminder) = extractReminderRequest(finalContent)
+        if (reminder != null) {
+          messages = messages.map { m -> if (m.id == assistantId) m.copy(content = cleaned) else m }
+          scheduleReminderFromChat(reminder)
+        }
         maybeCheckForMemorySuggestions()
       }
 
@@ -1717,7 +1739,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         language = profileData.language,
         location = settingsData.location,
         company = settingsData.company,
-        historyIndex = buildHistoryIndex(conversationId)
+        historyIndex = buildHistoryIndex(conversationId),
+        localDateTime = currentLocalDateTimeString()
       ) { chunk ->
         messages = messages.map { m -> if (m.id == assistantId) m.copy(content = m.content + chunk) else m }
       }
@@ -1726,6 +1749,13 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         errorMessage = result.message
         messages = messages.map { m ->
           if (m.id == assistantId && m.content.isEmpty()) m.copy(content = "(failed to respond)") else m
+        }
+      } else {
+        val finalContent = messages.find { it.id == assistantId }?.content.orEmpty()
+        val (cleaned, reminder) = extractReminderRequest(finalContent)
+        if (reminder != null) {
+          messages = messages.map { m -> if (m.id == assistantId) m.copy(content = cleaned) else m }
+          scheduleReminderFromChat(reminder)
         }
       }
 
@@ -1762,3 +1792,31 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 }
 
 private fun ApiConversation.lastActivity(): Long = messages.maxOfOrNull { it.createdAt ?: 0L } ?: 0L
+
+/** Device's own local wall-clock time, matching the naive "yyyy-MM-dd'T'HH:mm"
+ * format the backend and the Scheduled Tasks feature both already use for
+ * runAt -- sent with every chat request so the model can resolve relative
+ * time references ("today at 6pm", Swahili clock hours) correctly. */
+private fun currentLocalDateTimeString(): String =
+  SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US).format(Date())
+
+private data class ChatReminderRequest(val prompt: String, val runAt: String)
+
+private val REMINDER_MARKER_REGEX = Regex("\\[\\[REMINDER_START\\]\\]([\\s\\S]*?)\\[\\[REMINDER_END\\]\\]")
+
+/** Pulls the model's invisible [[REMINDER_START]]{...}[[REMINDER_END]] marker
+ * (see CAPABILITIES_PROMPT on the backend) out of a finished reply, if
+ * present, returning the reply text with the marker stripped plus the
+ * parsed reminder request. Never throws -- a malformed marker is just
+ * treated as "no reminder", the reply text is still cleaned of it either way. */
+private fun extractReminderRequest(content: String): Pair<String, ChatReminderRequest?> {
+  val match = REMINDER_MARKER_REGEX.find(content) ?: return content to null
+  val cleaned = content.replace(match.value, "").trimEnd()
+  val reminder = runCatching {
+    val json = JSONObject(match.groupValues[1].trim())
+    val runAt = json.optString("runAt").trim()
+    val prompt = json.optString("prompt").trim()
+    if (runAt.isNotEmpty() && prompt.isNotEmpty()) ChatReminderRequest(prompt, runAt) else null
+  }.getOrNull()
+  return cleaned to reminder
+}
