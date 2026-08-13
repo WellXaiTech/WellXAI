@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSession, signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { COUNTRIES, COUNTRY_CODES } from "@/lib/countries";
+import { LANGUAGES } from "@/components/LanguagePanel";
 
 type Ad = {
   id: string;
@@ -12,6 +13,7 @@ type Ad = {
   imageUrl: string;
   linkUrl: string;
   countries: string[];
+  language: string;
   durationSeconds: number;
   status: "pending_payment" | "pending_review" | "approved" | "rejected";
   createdAt: number;
@@ -63,6 +65,7 @@ function AdvertisePageInner() {
   const [imageUrl, setImageUrl] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
+  const [language, setLanguage] = useState(LANGUAGES.includes("English") ? "English" : LANGUAGES[0]);
   const [durationSeconds, setDurationSeconds] = useState(DURATION_OPTIONS[2].seconds);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -122,6 +125,7 @@ function AdvertisePageInner() {
           imageUrl: imageUrl.trim(),
           linkUrl: linkUrl.trim(),
           countries: selectedCountries,
+          language,
           durationSeconds,
         }),
       });
@@ -197,6 +201,21 @@ function AdvertisePageInner() {
         />
 
         <div>
+          <p className="mb-1 text-xs text-muted">Language</p>
+          <select
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+          >
+            {LANGUAGES.map((lang) => (
+              <option key={lang} value={lang}>
+                {lang}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
           <p className="mb-1 text-xs text-muted">Duration</p>
           <select
             value={durationSeconds}
@@ -252,7 +271,7 @@ function AdvertisePageInner() {
                     <p className="text-sm font-medium truncate">{ad.headline}</p>
                     <p className="text-xs text-muted truncate">{ad.subtitle}</p>
                     <p className="mt-1 text-xs text-muted">
-                      {ad.countries.join(", ")}
+                      {ad.countries.join(", ")} · {ad.language}
                       {ad.priceCents !== null && ` · ${formatUsd(ad.priceCents)}`}
                     </p>
                     {ad.rejectionReason && <p className="mt-1 text-xs text-red-500">Reason: {ad.rejectionReason}</p>}

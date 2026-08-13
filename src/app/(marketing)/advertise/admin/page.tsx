@@ -11,6 +11,7 @@ type Ad = {
   imageUrl: string;
   linkUrl: string;
   countries: string[];
+  language: string;
   durationSeconds: number;
   status: "pending_payment" | "pending_review" | "approved" | "rejected";
   createdAt: number;
@@ -119,7 +120,7 @@ export default function AdvertiseAdminPage() {
               <p className="text-sm font-medium">{ad.headline}</p>
               <p className="text-xs text-muted">{ad.subtitle}</p>
               <p className="mt-1 text-xs text-muted">
-                {ad.advertiserEmail} · {ad.countries.join(", ")} · {formatDuration(ad.durationSeconds)}
+                {ad.advertiserEmail} · {ad.countries.join(", ")} · {ad.language} · {formatDuration(ad.durationSeconds)}
               </p>
               {ad.imageUrl && (
                 // eslint-disable-next-line @next/next/no-img-element

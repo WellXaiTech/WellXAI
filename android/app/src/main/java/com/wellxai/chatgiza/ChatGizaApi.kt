@@ -787,12 +787,14 @@ object ChatGizaApi {
   }
 
   /** Live, admin-approved ads targeting [country] (an ISO 3166-1 alpha-2
-   * code) for the Events carousel. Decorative content -- callers should
-   * treat a failure the same as "no ads right now", not surface an error. */
-  suspend fun getActiveAds(token: String, country: String): ApiResult<List<ApiAd>> = withContext(Dispatchers.IO) {
+   * code) and [language] (an ISO 639-1 code, e.g. "sw" -- the backend
+   * resolves it to the advertiser's stored full language name) for the
+   * Events carousel. Decorative content -- callers should treat a failure
+   * the same as "no ads right now", not surface an error. */
+  suspend fun getActiveAds(token: String, country: String, language: String): ApiResult<List<ApiAd>> = withContext(Dispatchers.IO) {
     try {
       val request = Request.Builder()
-        .url("$BASE_URL/api/ads/active?country=$country")
+        .url("$BASE_URL/api/ads/active?country=$country&language=$language")
         .header("Authorization", "Bearer $token")
         .get()
         .build()

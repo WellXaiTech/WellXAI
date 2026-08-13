@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getMobileUserId } from "@/lib/mobileAuth";
-import { getAllAds, isAdActive } from "@/lib/ads";
+import { getAllAds, isAdActive, resolveLanguageQuery } from "@/lib/ads";
 
 // Public-facing (any signed-in user/device), used by the Events carousel on
 // both web and the Android app -- only exposes the fields a viewer actually
@@ -15,10 +15,16 @@ export async function GET(req: NextRequest) {
   }
 
   const country = (req.nextUrl.searchParams.get("country") ?? "").trim().toUpperCase();
+  const language = resolveLanguageQuery(req.nextUrl.searchParams.get("language") ?? "");
   const now = Date.now();
   const ads = await getAllAds();
   const active = ads
-    .filter((ad) => isAdActive(ad, now) && (!country || ad.countries.includes(country)))
+    .filter(
+      (ad) =>
+        isAdActive(ad, now) &&
+        (!country || ad.countries.includes(country)) &&
+        (!language || ad.language === language)
+    )
     .map((ad) => ({
       id: ad.id,
       headline: ad.headline,
