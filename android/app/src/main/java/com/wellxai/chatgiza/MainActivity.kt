@@ -9543,10 +9543,11 @@ private fun ActionBarItem(
   label: String,
   tint: Color = Color(0xFFA8A8A8),
   rotation: Float = 0f,
+  size: Dp = 20.dp,
   onClick: () -> Unit
 ) {
   ActionBarItemShell(label, tint, onClick) { iconTint ->
-    Icon(painter, contentDescription = label, tint = iconTint, modifier = Modifier.size(20.dp).rotate(rotation))
+    Icon(painter, contentDescription = label, tint = iconTint, modifier = Modifier.size(size).rotate(rotation))
   }
 }
 
@@ -9622,7 +9623,7 @@ private fun MessageActionBar(
   ) {
     ActionBarItemShell("Copy", Color(0xFFA8A8A8), onClick = {
       clipboard.setText(AnnotatedString(cleanContent))
-    }) { tint -> CopyIconCustom(tint = tint, modifier = Modifier.size(20.dp)) }
+    }) { tint -> CopyIconCustom(tint = tint, modifier = Modifier.size(22.dp)) }
     ActionBarItem(Icons.Outlined.Language, "Translate on-device", onClick = onTranslate)
     if (cleanContent.length >= MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH) {
       ActionBarExtraItem(
@@ -9685,7 +9686,7 @@ private fun MessageActionBar(
           context.startActivity(Intent.createChooser(intent, null))
         }
       }
-      ActionBarItem(androidx.compose.ui.res.painterResource(R.drawable.ic_regenerate), "Regenerate", onClick = onRegenerate)
+      ActionBarItem(androidx.compose.ui.res.painterResource(R.drawable.ic_regenerate), "Regenerate", size = 18.dp, onClick = onRegenerate)
       Box {
         ActionBarItem(Icons.Outlined.MoreHoriz, "More") { moreOpen = true }
         DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }) {
