@@ -70,8 +70,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.scrollBy
@@ -168,6 +166,8 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Replay10
+import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
@@ -1947,6 +1947,17 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
               modifier = Modifier.padding(horizontal = 16.dp)
             )
           }
+          // Sits directly above the composer instead of floating near the
+          // status bar -- reads as part of the same input area the user is
+          // already looking at, instead of a separate overlay competing
+          // with the top bar and scrolled message content.
+          if (speakingMessageId != null) {
+            NowPlayingBar(
+              isPremium = speakingViaPremium,
+              player = premiumTts,
+              onClose = { stopSpeakingNow() }
+            )
+          }
           ChatComposerCard(viewModel)
           // Only this strip below the card -- not the space above it --
           // needs to be opaque: it's the small gap down to the
@@ -1984,37 +1995,28 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
       }
     )
   }
-
-  // Floating now-playing bar, matching the reference: sits just below the
-  // status bar, overlapping the top of the message list. Only Premium
-  // Voice's audio can be scrubbed/paused (MediaPlayer-backed); the free
-  // on-device engine only gets a stop button, since it has no seek API.
-  if (speakingMessageId != null) {
-    NowPlayingBar(
-      isPremium = speakingViaPremium,
-      player = premiumTts,
-      onClose = { stopSpeakingNow() }
-    )
-  }
   }
 }
 
-// Floating scrubbable audio bar shown while a message is being read aloud,
-// matching the reference: play/pause, elapsed time, a seek slider, close.
-// The slider only appears for Premium Voice -- Android's on-device
-// TextToSpeech has no seek/pause API at all, so the free-engine fallback
-// just gets a static bar with a stop (close) button.
+// Floating audio bar shown while a message is being read aloud, docked
+// right above the composer: play/pause, -10s, +10s, a tap-to-cycle speed
+// pill, and elapsed/total time. Rewind/forward/speed only appear for
+// Premium Voice -- Android's on-device TextToSpeech has no seek or rate-
+// while-speaking API at all, so the free-engine fallback just gets a
+// static bar with play/pause and a stop (close) button.
+private val PLAYBACK_SPEEDS = listOf(1f, 1.25f, 1.5f, 1.75f, 2f)
+
 @Composable
-private fun BoxScope.NowPlayingBar(isPremium: Boolean, player: PremiumTtsPlayer, onClose: () -> Unit) {
+private fun NowPlayingBar(isPremium: Boolean, player: PremiumTtsPlayer, onClose: () -> Unit) {
   var positionMs by remember { mutableStateOf(0) }
   var durationMs by remember { mutableStateOf(0) }
   var playing by remember { mutableStateOf(true) }
-  var userScrubbing by remember { mutableStateOf(false) }
+  var speedIndex by remember { mutableStateOf(0) }
 
   LaunchedEffect(isPremium) {
     if (!isPremium) return@LaunchedEffect
     while (true) {
-      if (!userScrubbing) positionMs = player.currentPositionMs()
+      positionMs = player.currentPositionMs()
       durationMs = player.durationMs()
       playing = player.isCurrentlyPlaying()
       delay(200)
@@ -2030,10 +2032,9 @@ private fun BoxScope.NowPlayingBar(isPremium: Boolean, player: PremiumTtsPlayer,
 
   Row(
     modifier = Modifier
-      .align(Alignment.TopCenter)
-      .statusBarsPadding()
-      .padding(top = 8.dp, start = 16.dp, end = 16.dp)
       .fillMaxWidth()
+      .padding(horizontal = 16.dp)
+      .padding(bottom = 8.dp)
       .height(52.dp)
       .clip(RoundedCornerShape(percent = 50))
       .background(Color(0xFF1F1F1F))
@@ -2060,87 +2061,52 @@ private fun BoxScope.NowPlayingBar(isPremium: Boolean, player: PremiumTtsPlayer,
         modifier = Modifier.size(18.dp)
       )
     }
-    Spacer(modifier = Modifier.width(8.dp))
+    if (isPremium) {
+      Spacer(modifier = Modifier.width(4.dp))
+      Icon(
+        Icons.Filled.Replay10,
+        contentDescription = "Rewind 10 seconds",
+        tint = Color.White,
+        modifier = Modifier
+          .size(28.dp)
+          .clickable { player.seekTo((positionMs - 10_000).coerceAtLeast(0)) }
+      )
+      Spacer(modifier = Modifier.width(2.dp))
+      Icon(
+        Icons.Filled.Forward10,
+        contentDescription = "Forward 10 seconds",
+        tint = Color.White,
+        modifier = Modifier
+          .size(28.dp)
+          .clickable { player.seekTo((positionMs + 10_000).coerceAtMost(durationMs)) }
+      )
+      Spacer(modifier = Modifier.width(6.dp))
+      Box(
+        modifier = Modifier
+          .clip(RoundedCornerShape(percent = 50))
+          .background(Color.White.copy(alpha = 0.12f))
+          .clickable {
+            speedIndex = (speedIndex + 1) % PLAYBACK_SPEEDS.size
+            player.setSpeed(PLAYBACK_SPEEDS[speedIndex])
+          }
+          .padding(horizontal = 8.dp, vertical = 4.dp)
+      ) {
+        Text("${PLAYBACK_SPEEDS[speedIndex]}x", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+      }
+    }
+    Spacer(modifier = Modifier.weight(1f))
     Text(
       if (durationMs > 0) "${formatTime(positionMs)} / ${formatTime(durationMs)}" else formatTime(positionMs),
       color = Color.White,
       fontSize = 12.sp
     )
     Spacer(modifier = Modifier.width(10.dp))
-    if (isPremium && durationMs > 0) {
-      WaveformScrubber(
-        progress = (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f),
-        modifier = Modifier.weight(1f).height(28.dp),
-        onSeek = { fraction ->
-          userScrubbing = true
-          val ms = (fraction * durationMs).toInt()
-          positionMs = ms
-          player.seekTo(ms)
-        },
-        onSeekFinished = { userScrubbing = false }
-      )
-    } else {
-      Spacer(modifier = Modifier.weight(1f))
-    }
-    Spacer(modifier = Modifier.width(8.dp))
     Icon(
       Icons.Filled.Close,
       contentDescription = "Stop",
       tint = Color.White.copy(alpha = 0.7f),
       modifier = Modifier.size(20.dp).clickable(onClick = onClose)
     )
-  }
-}
-
-// A fixed, deterministic bar-height pattern (not real decoded amplitude --
-// decoding the MP3 for a true waveform is a lot more machinery for a
-// scrub track) that fills in white up to the current playback fraction,
-// and reports drag/tap position as a 0..1 fraction for seeking.
-@Composable
-private fun WaveformScrubber(
-  progress: Float,
-  modifier: Modifier = Modifier,
-  onSeek: (Float) -> Unit,
-  onSeekFinished: () -> Unit
-) {
-  val barCount = 44
-  val heights = remember {
-    List(barCount) { i ->
-      val n = kotlin.math.sin(i * 12.9898f) * 43758.5453f
-      0.3f + 0.7f * (n - kotlin.math.floor(n))
-    }
-  }
-  Canvas(
-    modifier = modifier
-      .pointerInput(Unit) {
-        detectTapGestures { offset ->
-          onSeek((offset.x / size.width).coerceIn(0f, 1f))
-          onSeekFinished()
-        }
-      }
-      .pointerInput(Unit) {
-        detectDragGestures(
-          onDragEnd = { onSeekFinished() },
-          onDragCancel = { onSeekFinished() }
-        ) { change, _ ->
-          change.consume()
-          onSeek((change.position.x / size.width).coerceIn(0f, 1f))
-        }
-      }
-  ) {
-    val barWidth = size.width / barCount
-    val gap = barWidth * 0.3f
-    for (i in 0 until barCount) {
-      val h = heights[i] * size.height
-      val x = i * barWidth
-      val filled = i.toFloat() / barCount <= progress
-      drawRoundRect(
-        color = if (filled) Color.White else Color.White.copy(alpha = 0.28f),
-        topLeft = Offset(x, (size.height - h) / 2f),
-        size = Size((barWidth - gap).coerceAtLeast(1f), h),
-        cornerRadius = CornerRadius(barWidth / 3f, barWidth / 3f)
-      )
-    }
   }
 }
 

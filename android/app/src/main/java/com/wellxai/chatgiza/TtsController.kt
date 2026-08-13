@@ -170,6 +170,19 @@ class PremiumTtsPlayer(private val context: Context) {
     runCatching { player?.seekTo(ms) }
   }
 
+  fun setSpeed(rate: Float) {
+    runCatching {
+      player?.let { mp ->
+        val wasPlaying = mp.isPlaying
+        mp.playbackParams = mp.playbackParams.setSpeed(rate)
+        // setPlaybackParams silently resumes a paused player on some
+        // devices -- put it back the way it was so tapping the speed pill
+        // never un-pauses playback as a side effect.
+        if (!wasPlaying) mp.pause()
+      }
+    }
+  }
+
   fun isCurrentlyPlaying(): Boolean = runCatching { player?.isPlaying }.getOrNull() ?: false
 
   fun currentPositionMs(): Int = runCatching { player?.currentPosition }.getOrNull() ?: 0
