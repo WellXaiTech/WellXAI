@@ -1122,7 +1122,7 @@ export default function SettingsPanel({
                   <div>
                     <h3 className="text-sm font-semibold">Digital Twin</h3>
                     <p className="text-xs text-muted">
-                      A synthesized profile of your voice, interests, and values — used by "Digital Twin" mode to
+                      A synthesized profile of your voice, interests, and values — used by &quot;Digital Twin&quot; mode to
                       answer as you.
                     </p>
                   </div>
