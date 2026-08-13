@@ -1721,11 +1721,10 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
         modifier = Modifier.statusBarsPadding(),
         windowInsets = WindowInsets(0, 0, 0, 0),
         title = {
-          // Blank home state has no tabs to switch between yet -- they
-          // only make sense once an actual conversation is underway.
-          if (viewModel.messages.isNotEmpty()) {
-            AskImagineTabs(current = "Ask", onAsk = {}, onImagine = { viewModel.openChatGizaMedia() })
-          }
+          // Always visible, including the blank home state before the
+          // first message -- Ask/Extra shouldn't disappear just because
+          // there's no conversation yet.
+          AskImagineTabs(current = "Ask", onAsk = {}, onImagine = { viewModel.openChatGizaMedia() })
         },
         navigationIcon = {
           IconButton(onClick = { viewModel.openHistory() }) {
