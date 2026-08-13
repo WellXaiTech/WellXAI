@@ -53,6 +53,7 @@ sealed class AppScreen {
   object Voice : AppScreen()
   object ReportProblem : AppScreen()
   object DataControls : AppScreen()
+  object DataDashboard : AppScreen()
   object ManageCloudStorage : AppScreen()
   object Widgets : AppScreen()
   object Haptics : AppScreen()
@@ -775,6 +776,14 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeDataControls() {
+    screen = AppScreen.Account
+  }
+
+  fun openDataDashboard() {
+    screen = AppScreen.DataDashboard
+  }
+
+  fun closeDataDashboard() {
     screen = AppScreen.Account
   }
 

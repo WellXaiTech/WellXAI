@@ -49,6 +49,8 @@ type ConversationLite = {
   archived?: boolean;
   messages?: {
     id?: string;
+    role?: string;
+    content?: string;
     createdAt?: number;
     attachments?: {
       id?: string;
@@ -83,7 +85,7 @@ type BillingSummary = {
 };
 
 const TABS_GROUP_1 = ["General", "Data controls", "Security"] as const;
-const TABS_GROUP_2 = ["Account", "Memory", "Storage", "Billing"] as const;
+const TABS_GROUP_2 = ["Account", "Memory", "Dashboard", "Storage", "Billing"] as const;
 export type Tab = (typeof TABS_GROUP_1)[number] | (typeof TABS_GROUP_2)[number];
 
 const TAB_DESCRIPTIONS: Record<Tab, string> = {
@@ -92,6 +94,7 @@ const TAB_DESCRIPTIONS: Record<Tab, string> = {
   Security: "Password, sessions, and login",
   Account: "Profile and personal info",
   Memory: "What ChatGiZa remembers about you",
+  Dashboard: "Your usage stats and data, in one place",
   Storage: "Files, images, and space used",
   Billing: "Plan, invoices, and payment methods",
 };
@@ -136,6 +139,16 @@ const BillingIcon = (
   </svg>
 );
 
+// Idea #10: a personal data dashboard -- three bars, not a generic
+// gear/chart glyph, so it reads distinctly as "your stats" in the tab list.
+const DashboardIcon = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="4" y="12" width="4" height="8" rx="1" />
+    <rect x="10" y="7" width="4" height="13" rx="1" />
+    <rect x="16" y="3" width="4" height="17" rx="1" />
+  </svg>
+);
+
 const ChevronDownIcon = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M6 9l6 6 6-6" />
@@ -162,6 +175,7 @@ const TAB_ICONS: Record<Tab, React.ReactNode> = {
   Security: SecurityLockIcon,
   Account: AccountIcon,
   Memory: MemoryIcon,
+  Dashboard: DashboardIcon,
   Storage: StorageIcon,
   Billing: BillingIcon,
 };
@@ -185,6 +199,15 @@ const MoonIcon = (
     <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
   </svg>
 );
+
+function StatTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border p-3">
+      <p className="text-lg font-semibold">{value}</p>
+      <p className="text-xs text-muted">{label}</p>
+    </div>
+  );
+}
 
 function SegmentedControl<T extends string>({
   value,
@@ -732,6 +755,21 @@ export default function SettingsPanel({
   const storageBytesUsed = JSON.stringify(conversations).length;
   const storageCapBytes = 4 * 1024 * 1024 * 1024;
   const storagePct = Math.min(100, Math.round((storageBytesUsed / storageCapBytes) * 100));
+
+  // Idea #10: a personal data dashboard -- transparency into what ChatGiZa
+  // actually holds about the user, computed entirely from data already
+  // loaded client-side (no extra network round trip needed for this tab).
+  const activeConversations = conversations.filter((c) => !c.archived);
+  const allMessages = conversations.flatMap((c) => c.messages ?? []);
+  const userMessages = allMessages.filter((m) => m.role === "user");
+  const assistantMessages = allMessages.filter((m) => m.role === "assistant");
+  const wordsWritten = userMessages.reduce((sum, m) => sum + (m.content?.trim().split(/\s+/).filter(Boolean).length ?? 0), 0);
+  const attachmentCount = allMessages.reduce((sum, m) => sum + (m.attachments?.length ?? 0), 0);
+  const mediaCount = allMessages.filter((m) => m.imageUrl || m.videoUrl).length;
+  const timestamps = allMessages.map((m) => m.createdAt).filter((t): t is number => typeof t === "number");
+  const firstMessageAt = timestamps.length ? Math.min(...timestamps) : null;
+  const lastMessageAt = timestamps.length ? Math.max(...timestamps) : null;
+  const activeDayCount = new Set(timestamps.map((t) => new Date(t).toDateString())).size;
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-0 sm:p-10" onClick={onClose}>
@@ -1726,6 +1764,59 @@ export default function SettingsPanel({
                   Delete account
                 </button>
               )}
+            </div>
+          )}
+
+          {tab === "Dashboard" && (
+            <div>
+              <h3 className="mb-1 border-b border-border pb-3 text-sm font-semibold">Your data dashboard</h3>
+              <p className="mb-4 mt-3 text-xs text-muted">
+                A transparent look at what ChatGiZa actually holds about you — computed from your own account, not sent anywhere else.
+              </p>
+
+              <div className="mb-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                <StatTile label="Conversations" value={String(activeConversations.length)} />
+                <StatTile label="Messages you sent" value={String(userMessages.length)} />
+                <StatTile label="Replies received" value={String(assistantMessages.length)} />
+                <StatTile label="Words written" value={wordsWritten.toLocaleString()} />
+                <StatTile label="Active days" value={String(activeDayCount)} />
+                <StatTile label="Files & images shared" value={String(attachmentCount + mediaCount)} />
+              </div>
+
+              <div className="mb-5 space-y-1.5 rounded-lg border border-border p-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted">First message</span>
+                  <span>{firstMessageAt ? new Date(firstMessageAt).toLocaleDateString() : "—"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted">Most recent message</span>
+                  <span>{lastMessageAt ? new Date(lastMessageAt).toLocaleDateString() : "—"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted">Memory facts saved</span>
+                  <span>{memory.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted">Digital Twin profile</span>
+                  <span>{digitalTwin.trim() ? `Generated · ${new Date(digitalTwinUpdatedAt).toLocaleDateString()}` : "Not generated yet"}</span>
+                </div>
+              </div>
+
+              <h4 className="mb-2 text-sm font-semibold">Manage your data</h4>
+              <button
+                onClick={onExportData}
+                className="mb-2 flex w-full items-center justify-between gap-3 rounded-lg border border-border p-3 text-left text-sm transition-colors hover:bg-surface-2"
+              >
+                <span>Export everything as a file</span>
+                <span className="text-muted">{ChevronRightIcon}</span>
+              </button>
+              <button
+                onClick={() => setTab("Data controls")}
+                className="flex w-full items-center justify-between gap-3 rounded-lg border border-border p-3 text-left text-sm transition-colors hover:bg-surface-2"
+              >
+                <span>Data controls & delete account</span>
+                <span className="text-muted">{ChevronRightIcon}</span>
+              </button>
             </div>
           )}
 

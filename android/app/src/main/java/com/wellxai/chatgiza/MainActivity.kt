@@ -241,6 +241,7 @@ import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material.icons.outlined.Photo
 import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.Poll
+import androidx.compose.material.icons.outlined.QueryStats
 import androidx.compose.material.icons.outlined.RadioButtonChecked
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.RecordVoiceOver
@@ -504,6 +505,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Widgets -> WidgetsScreen(viewModel)
             is AppScreen.Haptics -> HapticsScreen(viewModel)
             is AppScreen.DataControls -> DataControlsScreen(viewModel)
+            is AppScreen.DataDashboard -> DataDashboardScreen(viewModel)
             is AppScreen.ManageCloudStorage -> ManageCloudStorageScreen(viewModel)
             is AppScreen.Settings -> SettingsScreen(viewModel)
             is AppScreen.Projects -> ProjectsScreen(viewModel)
@@ -7266,6 +7268,113 @@ private fun DataControlsScreen(viewModel: ChatViewModel) {
   }
 }
 
+@Composable
+private fun DashboardStatTile(label: String, value: String, modifier: Modifier = Modifier) {
+  Column(
+    modifier = modifier
+      .clip(RoundedCornerShape(12.dp))
+      .background(Color.White.copy(alpha = 0.06f))
+      .padding(12.dp)
+  ) {
+    Text(value, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+    Spacer(modifier = Modifier.height(2.dp))
+    Text(label, color = Color(0xFFA8A8A8), fontSize = 11.sp)
+  }
+}
+
+// Idea #10: a personal data dashboard -- computed entirely from data
+// already loaded on-device (conversations, memory, digital twin), no
+// extra network call needed just to view it. Mirrors the web's
+// Settings > Dashboard tab.
+@Composable
+private fun DataDashboardScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeDataDashboard() }
+  val allMessages = remember(viewModel.conversations) { viewModel.conversations.flatMap { it.messages } }
+  val userMessages = remember(allMessages) { allMessages.filter { it.role == "user" } }
+  val assistantMessages = remember(allMessages) { allMessages.filter { it.role == "assistant" } }
+  val wordsWritten = remember(userMessages) {
+    userMessages.sumOf { m -> m.content.trim().split(Regex("\\s+")).count { it.isNotBlank() } }
+  }
+  val timestamps = remember(allMessages) { allMessages.mapNotNull { it.createdAt } }
+  val firstMessageAt = timestamps.minOrNull()
+  val lastMessageAt = timestamps.maxOrNull()
+  val activeDayCount = remember(timestamps) {
+    val fmt = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+    timestamps.map { fmt.format(java.util.Date(it)) }.toSet().size
+  }
+  val dateFmt = remember { java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault()) }
+
+  Scaffold(containerColor = Color.Transparent) { padding ->
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(padding)
+        .verticalScroll(rememberScrollState())
+        .padding(horizontal = 20.dp)
+    ) {
+      DataControlsAppBar("Data Dashboard") { viewModel.closeDataDashboard() }
+      Text(
+        "A transparent look at what ChatGiZa actually holds about you.",
+        color = Color(0xFFA8A8A8),
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
+        modifier = Modifier.padding(bottom = 20.dp)
+      )
+
+      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        DashboardStatTile("Conversations", viewModel.conversations.size.toString(), modifier = Modifier.weight(1f))
+        DashboardStatTile("Messages sent", userMessages.size.toString(), modifier = Modifier.weight(1f))
+        DashboardStatTile("Replies received", assistantMessages.size.toString(), modifier = Modifier.weight(1f))
+      }
+      Spacer(modifier = Modifier.height(10.dp))
+      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        DashboardStatTile("Words written", wordsWritten.toString(), modifier = Modifier.weight(1f))
+        DashboardStatTile("Active days", activeDayCount.toString(), modifier = Modifier.weight(1f))
+        DashboardStatTile("Memory facts", viewModel.profileData.memory.size.toString(), modifier = Modifier.weight(1f))
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(12.dp))
+          .background(Color.White.copy(alpha = 0.06f))
+          .padding(14.dp)
+      ) {
+        DashboardInfoRow("First message", firstMessageAt?.let { dateFmt.format(java.util.Date(it)) } ?: "—")
+        Spacer(modifier = Modifier.height(10.dp))
+        DashboardInfoRow("Most recent message", lastMessageAt?.let { dateFmt.format(java.util.Date(it)) } ?: "—")
+        Spacer(modifier = Modifier.height(10.dp))
+        DashboardInfoRow(
+          "Digital Twin profile",
+          if (viewModel.digitalTwin.isNotBlank()) "Generated · ${dateFmt.format(java.util.Date(viewModel.digitalTwinUpdatedAt))}" else "Not generated yet"
+        )
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+      Text("Manage your data", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 10.dp))
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clickable { viewModel.openDataControls() },
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Text("Data controls & delete account", color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color(0xFFA8A8A8), modifier = Modifier.size(22.dp))
+      }
+      Spacer(modifier = Modifier.height(24.dp))
+    }
+  }
+}
+
+@Composable
+private fun DashboardInfoRow(label: String, value: String) {
+  Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+    Text(label, color = Color(0xFFA8A8A8), fontSize = 13.sp)
+    Text(value, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+  }
+}
+
 private val CLOUD_STORAGE_FILTERS = listOf("All", "Images", "Videos", "Documents", "Audio")
 private val CLOUD_STORAGE_SORTS = listOf("Last used", "Date created", "Name", "Size")
 
@@ -8468,6 +8577,8 @@ private fun AccountScreen(viewModel: ChatViewModel) {
       SettingsSectionHeader("Data & Information")
       SettingsSection {
         SettingsMenuRow("Collaborative Chat", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_share_link)) { viewModel.openSharedConversations() }
+        SettingsDivider()
+        SettingsMenuRow("Data Dashboard", icon = Icons.Outlined.QueryStats) { viewModel.openDataDashboard() }
         SettingsDivider()
         SettingsMenuRow("Data Controls", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_data_controls)) { viewModel.openDataControls() }
         SettingsDivider()
