@@ -40,6 +40,20 @@ class TtsController(context: Context) {
 
   fun speak(text: String) {
     if (!ready || text.isBlank()) return
+    // The free on-device engine defaults to whatever language it started
+    // in (usually English) and stays there for every utterance regardless
+    // of what's actually being read -- Kiswahili text came out sounded-out
+    // with English phonetics. Best-effort: switch to a Kiswahili voice if
+    // this device actually has one installed; silently keep the current
+    // voice otherwise (most devices' free TTS still has no Kiswahili data
+    // at all, in which case Premium Voice in Settings is the real fix).
+    runCatching {
+      val swahili = java.util.Locale("sw")
+      val availability = engine?.isLanguageAvailable(swahili) ?: TextToSpeech.LANG_NOT_SUPPORTED
+      if (availability >= TextToSpeech.LANG_AVAILABLE) {
+        engine?.language = swahili
+      }
+    }
     engine?.speak(text, TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString())
   }
 
