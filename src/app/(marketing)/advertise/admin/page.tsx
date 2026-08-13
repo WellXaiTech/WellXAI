@@ -12,7 +12,7 @@ type Ad = {
   linkUrl: string;
   countries: string[];
   durationSeconds: number;
-  status: "pending_review" | "approved" | "rejected";
+  status: "pending_payment" | "pending_review" | "approved" | "rejected";
   createdAt: number;
   expiresAt: number | null;
   rejectionReason: string | null;
@@ -99,8 +99,10 @@ export default function AdvertiseAdminPage() {
     );
   }
 
+  // pending_payment ads haven't been paid for yet -- not admin's concern
+  // until checkout completes and they land in pending_review.
   const pending = ads?.filter((a) => a.status === "pending_review") ?? [];
-  const reviewed = ads?.filter((a) => a.status !== "pending_review") ?? [];
+  const reviewed = ads?.filter((a) => a.status === "approved" || a.status === "rejected") ?? [];
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 w-full">

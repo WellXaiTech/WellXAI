@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getMobileUserId } from "@/lib/mobileAuth";
-import { getAllAds, saveAllAds, isValidDurationSeconds, type Ad } from "@/lib/ads";
+import { getAllAds, saveAllAds, isValidDurationSeconds, priceForDurationSeconds, type Ad } from "@/lib/ads";
+import { getStripe, getOrCreateCustomer } from "@/lib/stripe";
 
 const MAX_TEXT_LENGTH = 500;
 
@@ -31,6 +32,10 @@ export async function POST(req: NextRequest) {
   if (!isValidDurationSeconds(durationSeconds)) {
     return NextResponse.json({ error: "Invalid duration" }, { status: 400 });
   }
+  const priceCents = priceForDurationSeconds(durationSeconds);
+  if (priceCents === null) {
+    return NextResponse.json({ error: "No price available for that duration" }, { status: 400 });
+  }
 
   const ad: Ad = {
     id: crypto.randomUUID(),
@@ -42,21 +47,50 @@ export async function POST(req: NextRequest) {
     linkUrl,
     countries,
     durationSeconds,
-    status: "pending_review",
+    // Enters the admin review queue only once payment is confirmed (see
+    // /api/ads/checkout/verify) -- never before, so nothing unpaid can slip
+    // into the Events rotation.
+    status: "pending_payment",
     createdAt: Date.now(),
     startsAt: null,
     expiresAt: null,
     rejectionReason: null,
-    priceCents: null,
-    currency: null,
-    paymentStatus: "not_required",
+    priceCents,
+    currency: "usd",
+    paymentStatus: "pending",
   };
 
   try {
     const ads = await getAllAds();
     ads.unshift(ad);
     await saveAllAds(ads);
-    return NextResponse.json({ ad });
+
+    const stripe = getStripe();
+    const origin = req.headers.get("origin") ?? req.nextUrl.origin;
+    const customerId = await getOrCreateCustomer(userId, session?.user?.email, session?.user?.name);
+    const checkoutSession = await stripe.checkout.sessions.create({
+      mode: "payment",
+      customer: customerId,
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            unit_amount: priceCents,
+            product_data: {
+              name: `ChatGiZa Ads — ${headline}`,
+              description: `${countries.join(", ")} · ${Math.round(durationSeconds / 60)} min live`,
+            },
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: `${origin}/advertise?ad_session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/advertise?ad_cancelled=1`,
+      metadata: { adId: ad.id },
+      client_reference_id: userId,
+    });
+
+    return NextResponse.json({ ad, checkoutUrl: checkoutSession.url });
   } catch (err) {
     console.error("Ad create error", err);
     return NextResponse.json({ error: "Failed to create ad" }, { status: 500 });
