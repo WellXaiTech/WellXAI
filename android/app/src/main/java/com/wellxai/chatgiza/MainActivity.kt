@@ -4688,7 +4688,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
     Spacer(modifier = Modifier.height(10.dp))
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
       ProfileHubTrendingItem(label = "Automations", onClick = { comingSoon("Automations") }) { tint ->
-        Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+        Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_automations), contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
       }
       ProfileHubTrendingItem(label = "Connectors", onClick = { comingSoon("Connectors") }) { tint ->
         Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connectors), contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
