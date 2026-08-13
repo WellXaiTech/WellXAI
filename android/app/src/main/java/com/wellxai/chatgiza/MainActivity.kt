@@ -256,6 +256,7 @@ import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material.icons.outlined.Tag
 import androidx.compose.material.icons.outlined.TrendingDown
 import androidx.compose.material.icons.outlined.TrendingUp
+import androidx.compose.material.icons.outlined.Verified
 import androidx.compose.material.icons.outlined.Vibration
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material.icons.outlined.Visibility
@@ -1654,7 +1655,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
     if (speakingMessageId == message.id) {
       stopSpeakingNow()
     } else {
-      speakMessage(message.id, message.content)
+      speakMessage(message.id, stripSourceMarkers(message.content))
     }
   }
 
@@ -1910,7 +1911,8 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
                 onRegenerate = { viewModel.regenerateMessage(message.id) },
                 onDelete = { viewModel.deleteMessage(message.id) },
                 onPushToExtra = { caption, destination, onDone ->
-                  val finalText = if (caption.isNullOrBlank()) message.content else "${message.content}\n\n$caption"
+                  val pushContent = stripSourceMarkers(message.content)
+                  val finalText = if (caption.isNullOrBlank()) pushContent else "$pushContent\n\n$caption"
                   viewModel.pushReplyToExtraMedia(finalText, destination, onDone)
                 }
               )
@@ -9058,6 +9060,119 @@ private fun MessageQuickActionChip(action: QuickAction) {
   }
 }
 
+// Idea #8: a "Verified Source Trail" -- structured url_citation data the
+// backend pulls from OpenAI's search-preview model (real pages it actually
+// searched) rather than links the model typed into its own prose, which it
+// can invent. The backend appends it as a [[SOURCES_START]]...[[SOURCES_END]]
+// JSON marker block at the very end of the stream (mirrors the web client's
+// src/lib/sourceMarkers.ts and the pre-existing [[PDF_START]] convention).
+private data class VerifiedSource(val url: String, val title: String)
+
+private val SOURCES_BLOCK_RE = Regex("\\[\\[SOURCES_START]]([\\s\\S]*?)\\[\\[SOURCES_END]]")
+private val SOURCES_PARTIAL_RE = Regex("\\n?\\[\\[SOURCES_START]][\\s\\S]*$")
+
+private fun extractSources(text: String): List<VerifiedSource> {
+  val match = SOURCES_BLOCK_RE.find(text) ?: return emptyList()
+  return runCatching {
+    val arr = org.json.JSONArray(match.groupValues[1])
+    (0 until arr.length()).mapNotNull { i ->
+      val obj = arr.optJSONObject(i) ?: return@mapNotNull null
+      val url = obj.optString("url", "")
+      val title = obj.optString("title", "")
+      if (url.isNotBlank() && title.isNotBlank()) VerifiedSource(url, title) else null
+    }
+  }.getOrDefault(emptyList())
+}
+
+// Strips the marker block whether it's already closed, or still streaming
+// in (opened but no closing tag yet) -- it's always appended last, so
+// there's nothing worth keeping after the opening tag either way.
+private fun stripSourceMarkers(text: String): String {
+  return text.replace(SOURCES_BLOCK_RE, "").replace(SOURCES_PARTIAL_RE, "")
+}
+
+private fun sourceDomain(url: String): String {
+  return runCatching { Uri.parse(url).host?.removePrefix("www.") ?: url }.getOrDefault(url)
+}
+
+@Composable
+private fun SourceTrail(sources: List<VerifiedSource>) {
+  val context = LocalContext.current
+  var expanded by remember(sources) { mutableStateOf(sources.size <= 3) }
+  val shown = if (expanded) sources else sources.take(3)
+  Column(
+    modifier = Modifier
+      .padding(horizontal = 12.dp, vertical = 4.dp)
+      .widthIn(max = 320.dp)
+      .clip(RoundedCornerShape(14.dp))
+      .background(colorScheme.onBackground.copy(alpha = 0.06f))
+      .padding(12.dp)
+  ) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+      Icon(Icons.Outlined.Verified, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.size(14.dp))
+      Spacer(modifier = Modifier.width(6.dp))
+      Text(
+        "Verified source trail",
+        color = colorScheme.onBackground.copy(alpha = 0.85f),
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Medium,
+        modifier = Modifier.weight(1f)
+      )
+      Text(
+        "${sources.size} ${if (sources.size == 1) "source" else "sources"}",
+        color = colorScheme.onBackground.copy(alpha = 0.4f),
+        fontSize = 11.sp
+      )
+    }
+    Spacer(modifier = Modifier.height(6.dp))
+    shown.forEach { source ->
+      Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(8.dp))
+          .clickable {
+            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(source.url))) }
+          }
+          .padding(vertical = 5.dp)
+      ) {
+        AsyncImage(
+          model = "https://www.google.com/s2/favicons?sz=32&domain=${sourceDomain(source.url)}",
+          contentDescription = null,
+          modifier = Modifier.size(16.dp).clip(RoundedCornerShape(3.dp))
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+          source.title,
+          color = colorScheme.onBackground.copy(alpha = 0.9f),
+          fontSize = 12.sp,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+          modifier = Modifier.weight(1f)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+          sourceDomain(source.url),
+          color = colorScheme.onBackground.copy(alpha = 0.35f),
+          fontSize = 10.sp,
+          maxLines = 1
+        )
+      }
+    }
+    if (sources.size > 3) {
+      Text(
+        if (expanded) "Show fewer" else "Show all ${sources.size}",
+        color = colorScheme.onBackground.copy(alpha = 0.45f),
+        fontSize = 11.sp,
+        modifier = Modifier
+          .fillMaxWidth()
+          .clickable { expanded = !expanded }
+          .padding(top = 4.dp)
+      )
+    }
+  }
+}
+
 @Composable
 private fun MessageBubble(
   message: UiMessage,
@@ -9072,6 +9187,12 @@ private fun MessageBubble(
   onPushToExtra: (caption: String?, destination: String, onDone: (Boolean) -> Unit) -> Unit
 ) {
   val isUser = message.role == "user"
+  // Idea #8: the model's own content may end with a [[SOURCES_START]]...
+  // [[SOURCES_END]] marker block (see extractSources/stripSourceMarkers
+  // above) -- keep the parsed sources and the display text derived from
+  // the same snapshot of message.content so they never disagree.
+  val cleanContent = remember(message.content) { stripSourceMarkers(message.content) }
+  val verifiedSources = remember(message.content) { extractSources(message.content) }
   Column(modifier = Modifier.fillMaxWidth()) {
     Row(
       modifier = Modifier.fillMaxWidth(),
@@ -9086,7 +9207,7 @@ private fun MessageBubble(
             .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
           Text(
-            text = message.content.ifEmpty { "…" },
+            text = cleanContent.ifEmpty { "…" },
             color = Color.White,
             fontSize = 15.sp,
             fontWeight = FontWeight.Medium
@@ -9098,12 +9219,15 @@ private fun MessageBubble(
             .padding(horizontal = 12.dp, vertical = 10.dp)
         ) {
           MarkdownText(
-            text = message.content.ifEmpty { "…" },
+            text = cleanContent.ifEmpty { "…" },
             baseColor = Color.White,
             fontSize = 15.sp
           )
         }
       }
+    }
+    if (!isUser && verifiedSources.isNotEmpty()) {
+      SourceTrail(verifiedSources)
     }
     // Idea #5, the safe version: real device automation without an
     // AccessibilityService reading/tapping arbitrary screens (that class
@@ -9132,7 +9256,7 @@ private fun MessageBubble(
           Toast.makeText(pairIdContext, "Copied $displayPairId", Toast.LENGTH_SHORT).show()
         }
     )
-    val quickActions = remember(message.content) { extractQuickActions(message.content) }
+    val quickActions = remember(cleanContent) { extractQuickActions(cleanContent) }
     if (quickActions.isNotEmpty()) {
       Row(
         modifier = Modifier
@@ -9197,7 +9321,7 @@ private fun MessageBubble(
               translating = true
               translateError = false
               translateScope.launch {
-                val result = OnDeviceTranslator.translate(message.content)
+                val result = OnDeviceTranslator.translate(cleanContent)
                 translating = false
                 result.onSuccess { translatedText = it }.onFailure { translateError = true }
               }
@@ -9266,6 +9390,9 @@ private fun MessageActionBar(
 ) {
   val context = LocalContext.current
   val clipboard = LocalClipboardManager.current
+  // Copy/Share/PDF/Extra all deal in reader-facing text -- never leak the
+  // raw [[SOURCES_START]] JSON marker block into any of them.
+  val cleanContent = remember(message.content) { stripSourceMarkers(message.content) }
   var reaction by remember(message.id) { mutableStateOf<String?>(null) }
   var moreOpen by remember { mutableStateOf(false) }
   var pushState by remember(message.id) { mutableStateOf("idle") } // idle | pushing | pushed
@@ -9297,10 +9424,10 @@ private fun MessageActionBar(
     horizontalArrangement = Arrangement.spacedBy(2.dp)
   ) {
     ActionBarItemShell("Copy", Color(0xFFA8A8A8), onClick = {
-      clipboard.setText(AnnotatedString(message.content))
+      clipboard.setText(AnnotatedString(cleanContent))
     }) { tint -> CopyIconCustom(tint = tint, modifier = Modifier.size(20.dp)) }
     ActionBarItem(Icons.Outlined.Language, "Translate on-device", onClick = onTranslate)
-    if (message.content.length >= MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH) {
+    if (cleanContent.length >= MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH) {
       ActionBarExtraItem(
         label = if (pushState == "pushed") "Sent" else "Extra",
         tint = if (pushState == "pushed") accent else Color(0xFFA8A8A8),
@@ -9345,13 +9472,13 @@ private fun MessageActionBar(
       ActionBarItem(androidx.compose.ui.res.painterResource(R.drawable.ic_share), "Share") {
         val intent = Intent(Intent.ACTION_SEND).apply {
           type = "text/plain"
-          putExtra(Intent.EXTRA_TEXT, message.content)
+          putExtra(Intent.EXTRA_TEXT, cleanContent)
         }
         context.startActivity(Intent.createChooser(intent, null))
       }
       ActionBarItem(Icons.Outlined.PictureAsPdf, "PDF") {
         runCatching {
-          val file = generateReplyPdf(context, "ChatGiZa reply", message.content)
+          val file = generateReplyPdf(context, "ChatGiZa reply", cleanContent)
           val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
           val intent = Intent(Intent.ACTION_SEND).apply {
             type = "application/pdf"
@@ -9387,7 +9514,7 @@ private fun MessageActionBar(
     "preview" -> ExtraPostPreviewSheet(
       authorName = extraAuthorName,
       authorImage = extraAuthorImage,
-      bodyText = message.content,
+      bodyText = cleanContent,
       caption = pendingCaption,
       posting = pushState == "pushing",
       onDismiss = { extraStage = "none" },

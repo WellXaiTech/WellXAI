@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import type { Attachment } from "@/lib/attachments";
 import { textToPdfBlob } from "@/lib/generatePdf";
 import { extractPdfSection, stripPdfMarkers, splitAroundPdfSection, splitTitleAndBody } from "@/lib/pdfMarkers";
+import { extractSources, stripSourceMarkers, sourceDomain, type VerifiedSource } from "@/lib/sourceMarkers";
 import { speakText, stopSpeaking } from "@/lib/speak";
 
 const FileIcon = (
@@ -219,6 +220,64 @@ function PdfFileCardPending() {
   );
 }
 
+const VerifiedBadgeIcon = (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <path d="M9 12l2 2 4-4" />
+    <circle cx="12" cy="12" r="9" />
+  </svg>
+);
+
+// Idea #8, the creative part: instead of trusting the model's own prose
+// links (which it can invent), this renders the real url_citation data
+// OpenAI's search-preview models attach when they actually searched --
+// a distinct, collapsible "trail" so a reader can tell "the model says
+// so" apart from "this was independently confirmed by N live sources."
+function SourceTrail({ sources }: { sources: VerifiedSource[] }) {
+  const [expanded, setExpanded] = useState(sources.length <= 3);
+  if (sources.length === 0) return null;
+  const shown = expanded ? sources : sources.slice(0, 3);
+  return (
+    <div className="my-2 w-full max-w-sm rounded-xl border border-border bg-surface-2 p-3">
+      <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-foreground">
+        <span className="text-muted">{VerifiedBadgeIcon}</span>
+        Verified source trail
+        <span className="ml-auto text-muted">
+          {sources.length} {sources.length === 1 ? "source" : "sources"}
+        </span>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {shown.map((s, i) => (
+          <a
+            key={`${s.url}-${i}`}
+            href={s.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center gap-2 rounded-lg px-1.5 py-1 text-left transition-colors hover:bg-background"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`https://www.google.com/s2/favicons?sz=32&domain=${sourceDomain(s.url)}`}
+              alt=""
+              className="h-4 w-4 shrink-0 rounded-sm"
+            />
+            <span className="min-w-0 flex-1 truncate text-xs text-foreground group-hover:underline">{s.title}</span>
+            <span className="shrink-0 text-[11px] text-muted">{sourceDomain(s.url)}</span>
+          </a>
+        ))}
+      </div>
+      {sources.length > 3 && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-1.5 w-full text-center text-[11px] text-muted hover:text-foreground"
+        >
+          {expanded ? "Show fewer" : `Show all ${sources.length}`}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function slugifyFilename(title: string): string {
   const slug = title
     .toLowerCase()
@@ -343,13 +402,16 @@ export default function ChatMessageBubble({
   const [pdfFile, setPdfFile] = useState<{ url: string; filename: string; title: string } | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
 
-  const { before: beforePdfText, after: afterPdfText, hasSection: hasPdfSection } = splitAroundPdfSection(content);
+  const sources = extractSources(content);
+  const contentSansSources = stripSourceMarkers(content);
+
+  const { before: beforePdfText, after: afterPdfText, hasSection: hasPdfSection } = splitAroundPdfSection(contentSansSources);
 
   useEffect(() => {
     if (isStreaming || !hasPdfSection) return;
     let cancelled = false;
     (async () => {
-      const { title, body } = splitTitleAndBody(extractPdfSection(content), "Document");
+      const { title, body } = splitTitleAndBody(extractPdfSection(contentSansSources), "Document");
       const blob = await textToPdfBlob(title, body);
       if (cancelled) return;
       setPdfFile((prev) => {
@@ -371,7 +433,7 @@ export default function ChatMessageBubble({
   }, []);
 
   async function handleCopy() {
-    const cleanContent = stripPdfMarkers(content);
+    const cleanContent = stripPdfMarkers(contentSansSources);
     try {
       await navigator.clipboard.writeText(cleanContent);
     } catch {
@@ -398,7 +460,7 @@ export default function ChatMessageBubble({
       setIsSpeaking(false);
       return;
     }
-    const plainText = stripPdfMarkers(content)
+    const plainText = stripPdfMarkers(contentSansSources)
       .replace(/```[\s\S]*?```/g, "")
       .replace(/[#*_`>~-]/g, "")
       .replace(/\[(.*?)\]\(.*?\)/g, "$1")
@@ -418,7 +480,7 @@ export default function ChatMessageBubble({
   async function handleShare() {
     if (navigator.share) {
       try {
-        await navigator.share({ text: stripPdfMarkers(content) });
+        await navigator.share({ text: stripPdfMarkers(contentSansSources) });
         return;
       } catch {
         // user cancelled or share failed; fall through to clipboard copy
@@ -474,7 +536,7 @@ export default function ChatMessageBubble({
       downloadUrl(pdfFile.url, pdfFile.filename);
       return;
     }
-    const { title, body } = splitTitleAndBody(extractPdfSection(content), "ChatGiZa reply");
+    const { title, body } = splitTitleAndBody(extractPdfSection(contentSansSources), "ChatGiZa reply");
     const blob = await textToPdfBlob(title, body);
     const url = URL.createObjectURL(blob);
     downloadUrl(url, "chatgiza-reply.pdf");
@@ -692,10 +754,11 @@ export default function ChatMessageBubble({
               )}
             </>
           ) : (
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{stripPdfMarkers(content)}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{stripPdfMarkers(contentSansSources)}</ReactMarkdown>
           )}
         </div>
       )}
+      {!isStreaming && sources.length > 0 && <SourceTrail sources={sources} />}
       {!isStreaming && content && !imageUrl && !videoUrl && (
         <div className="toolbar mt-1">
           <button onClick={handleCopy} aria-label="Copy" className="tool-btn">

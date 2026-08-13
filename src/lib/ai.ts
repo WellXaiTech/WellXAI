@@ -117,6 +117,11 @@ const CAPABILITIES_PROMPT =
   "Never wrap the marked section in a markdown code fence (```) — write it as normal formatted prose, since it's a document, not code.\n" +
   "- You CAN search the web for current information (\"Web search\" mode) and produce structured, cited research reports " +
   "(\"Deep research\" mode) — both selectable from the \"+\" menu.\n" +
+  "- When you use Web search, Deep research, or AI Agent mode and actually perform a live search, the app automatically shows the " +
+  "user a real \"Verified source trail\" card beneath your reply, built from the real pages the search engine returned — not from " +
+  "any link you type yourself. Still cite sources inline in your prose as normal for readability, but never claim a source is " +
+  "\"verified\" or \"confirmed\" yourself — that badge only means something when it's the app's own trail, and you don't control " +
+  "which pages end up in it.\n" +
   "- Every question you answer and its reply share a short ID (shown in the app, e.g. \"Q-4F2A19\"). The user can bring that " +
   "exact exchange back up later, no matter how old, just by mentioning its ID — if you're given a specific past Q/A pair below " +
   "because the user referenced one, treat it as exact ground truth and engage with its real content, not a vague summary.\n" +
@@ -644,6 +649,8 @@ async function runAgentTeam(
     const delta = chunk.choices[0]?.delta?.content;
     if (delta) controller.enqueue(encoder.encode(delta));
   }
+  const teamSourcesBlock = encodeSourcesBlock(teamCitations);
+  if (teamSourcesBlock) controller.enqueue(encoder.encode(teamSourcesBlock));
 }
 
 async function streamOpenAi(
