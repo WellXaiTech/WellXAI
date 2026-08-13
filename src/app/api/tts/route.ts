@@ -49,13 +49,18 @@ export async function POST(req: NextRequest) {
         | "cedar",
       input: text,
       // gpt-4o-mini-tts is instruction-steerable (unlike the older tts-1
-      // models) -- without this, Kiswahili/Sheng text got sounded out with
+      // models) -- without this, non-English text got sounded out with
       // English phonetics instead of spoken like a native speaker actually
-      // would. This doesn't change what's said, only how it's pronounced.
+      // would. This doesn't change what's said, only how it's pronounced --
+      // and applies to any language the reply happens to be in, not just
+      // Kiswahili, since ChatGiZa replies in whatever language the user
+      // wrote in.
       instructions:
-        "Speak fluently and naturally, like a real native speaker, in whatever language or mix of languages the " +
-        "text is written in. For Kiswahili or Sheng text specifically, use authentic Kiswahili/Sheng pronunciation, " +
-        "rhythm, and intonation -- never sound out the words with English phonetics or a foreign accent.",
+        "Speak fluently and naturally, like a genuine native speaker of whatever language or mix of languages the " +
+        "text is actually written in -- correct native pronunciation, rhythm, and intonation for THAT language, " +
+        "never sounding out the words with English (or any other foreign) phonetics or accent. This applies equally " +
+        "to every language, not just the more common ones. Kiswahili or Sheng text specifically needs authentic " +
+        "Kiswahili/Sheng pronunciation and rhythm, since that's frequently misread with English phonetics otherwise.",
       response_format: "mp3",
     });
     const buffer = Buffer.from(await response.arrayBuffer());

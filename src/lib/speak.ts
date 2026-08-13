@@ -1,3 +1,4 @@
+import { franc } from "franc-min";
 import {
   getStoredVoiceURI,
   getStoredVoiceSpeed,
@@ -26,50 +27,127 @@ function splitIntoSpeechChunks(text: string, maxLen = 200): string[] {
   return chunks.length ? chunks : [text];
 }
 
-// A handful of very common Kiswahili/Sheng function words -- cheap enough to
-// scan per chunk, and only needs to catch "this chunk leans Kiswahili" for
-// picking a voice, not do real language ID.
-const SWAHILI_MARKERS =
-  /\b(na|ya|wa|za|la|kwa|ni|si|hii|hiyo|hapa|pia|lakini|kwamba|sana|leo|kesho|jana|nini|nani|vipi|karibu|asante|habari|mambo|sawa|tafadhali|nataka|ninataka|unaweza|utaweza|nimefanya|nimekuwa|wewe|yeye|sisi|wao)\b/i;
+// franc returns the specific ISO 639-3 code it detected (e.g. "swh" for
+// everyday spoken Swahili, "cmn" for Mandarin, "arb" for Standard Arabic)
+// -- but SpeechSynthesisVoice.lang is keyed on the two-letter ISO 639-1
+// macrolanguage code ("sw", "zh", "ar"), and generic 639-3<->639-1 lookup
+// tables (e.g. the `langs` package) are built around the macrolanguage
+// codes themselves, not each individual-language code that maps to them --
+// so a naive lookup misses exactly the codes franc actually returns (it
+// returned "swh" with 100% confidence for real Swahili text in testing,
+// but a generic table has no "swh" entry at all, only "swa"). This table
+// is hand-verified against every one of franc-min's ~60 supported
+// languages (plus "cmn", detected via script rather than its trigram
+// data) instead. Entries with no real ISO 639-1 code (mostly regional
+// languages unlikely to have an installed browser voice anyway) are
+// simply omitted -- detectVoiceLangPrefix falls through to null for
+// those, the same safe no-op as an unrecognized language.
+const ISO_639_3_TO_1: Record<string, string> = {
+  arb: "ar", // Standard Arabic
+  azj: "az", // Azerbaijani
+  bel: "be", // Belarusian
+  bos: "bs", // Bosnian
+  bul: "bg", // Bulgarian
+  ces: "cs", // Czech
+  ckb: "ku", // Central Kurdish (Sorani)
+  cmn: "zh", // Mandarin Chinese
+  deu: "de", // German
+  eng: "en", // English
+  fra: "fr", // French
+  hau: "ha", // Hausa
+  hin: "hi", // Hindi
+  hrv: "hr", // Croatian
+  hun: "hu", // Hungarian
+  ibo: "ig", // Igbo
+  ind: "id", // Indonesian
+  ita: "it", // Italian
+  jav: "jv", // Javanese
+  kaz: "kk", // Kazakh
+  kin: "rw", // Kinyarwanda
+  koi: "kv", // Komi
+  lin: "ln", // Lingala
+  mar: "mr", // Marathi
+  nld: "nl", // Dutch
+  npi: "ne", // Nepali
+  nya: "ny", // Chichewa/Nyanja
+  pbu: "ps", // Northern Pashto
+  pes: "fa", // Iranian Persian
+  plt: "mg", // Plateau Malagasy
+  pol: "pl", // Polish
+  por: "pt", // Portuguese
+  qug: "qu", // Chimborazo Highland Quichua
+  ron: "ro", // Romanian
+  run: "rn", // Rundi
+  rus: "ru", // Russian
+  som: "so", // Somali
+  spa: "es", // Spanish
+  srp: "sr", // Serbian
+  sun: "su", // Sundanese
+  swe: "sv", // Swedish
+  swh: "sw", // Swahili (the everyday spoken variant -- ChatGiZa's flagship language)
+  tgl: "tl", // Tagalog
+  tur: "tr", // Turkish
+  ukr: "uk", // Ukrainian
+  urd: "ur", // Urdu
+  uzn: "uz", // Northern Uzbek
+  vie: "vi", // Vietnamese
+  yor: "yo", // Yoruba
+  zlm: "ms", // Malay
+  zul: "zu", // Zulu
+};
 
-function looksSwahili(text: string): boolean {
-  return SWAHILI_MARKERS.test(text);
+// Detection is unreliable below ~12 characters, so short chunks ("Sawa.",
+// "Asante!") are left alone rather than risk a wrong guess -- and even a
+// wrong guess is bounded: it only matters at all when a voice for that
+// (wrong) language happens to be installed, otherwise this still falls
+// through to the default voice exactly as if nothing was detected.
+function detectVoiceLangPrefix(text: string): string | null {
+  if (text.trim().length < 12) return null;
+  const iso3 = franc(text, { minLength: 10 });
+  return ISO_639_3_TO_1[iso3] ?? null;
 }
 
 // The free on-device engine defaults to whatever the browser/OS picked as
-// its default voice (usually an English one) and stays there regardless of
-// what's actually being read -- Kiswahili/Sheng text came out sounded-out
-// with English phonetics. Best-effort, mirroring the Android app: if the
-// chunk actually looks Kiswahili and the user hasn't explicitly chosen a
-// voice of their own, prefer whichever installed voice is tagged "sw" --
-// most browsers/OSes still have none, in which case this quietly falls
-// through to the default voice, same as before (Premium Voice in Settings
-// is the reliable fix in that case).
-function pickVoiceForChunk(chunk: string): SpeechSynthesisVoice | null {
+// its default voice and stays there regardless of what's actually being
+// read -- text in any other language came out sounded-out with that
+// voice's phonetics. Detected once per full reply (not per chunk, for more
+// reliable detection with more context) and reused for every chunk of it,
+// so a single reply doesn't flip voices mid-sentence. Respects an
+// explicitly user-chosen voice first; otherwise prefers whichever
+// installed voice matches the detected language -- most browsers/OSes
+// only ship a handful of languages' worth of free voices, in which case
+// this quietly falls through to the default voice, same as before
+// (Premium Voice in Settings is the reliable fix for anything not
+// installed locally).
+function pickVoiceForText(text: string): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices();
   const storedVoiceURI = getStoredVoiceURI();
   if (storedVoiceURI) {
     return voices.find((v) => v.voiceURI === storedVoiceURI) ?? null;
   }
-  if (looksSwahili(chunk)) {
-    return voices.find((v) => v.lang.toLowerCase().startsWith("sw")) ?? null;
-  }
-  return null;
+  const prefix = detectVoiceLangPrefix(text);
+  if (!prefix) return null;
+  return voices.find((v) => v.lang.toLowerCase().startsWith(prefix)) ?? null;
 }
 
-function speakChunks(chunks: string[], index: number, onDone?: () => void, onError?: () => void) {
+function speakChunks(
+  chunks: string[],
+  index: number,
+  voice: SpeechSynthesisVoice | null,
+  onDone?: () => void,
+  onError?: () => void
+) {
   if (index >= chunks.length) {
     onDone?.();
     return;
   }
   const utterance = new SpeechSynthesisUtterance(chunks[index]);
-  const voice = pickVoiceForChunk(chunks[index]);
   if (voice) {
     utterance.voice = voice;
     utterance.lang = voice.lang;
   }
   utterance.rate = speedToRate(getStoredVoiceSpeed());
-  utterance.onend = () => speakChunks(chunks, index + 1, onDone, onError);
+  utterance.onend = () => speakChunks(chunks, index + 1, voice, onDone, onError);
   utterance.onerror = () => onError?.();
   window.speechSynthesis.speak(utterance);
 }
@@ -80,7 +158,8 @@ function speakBrowser(text: string, onDone?: () => void, onError?: () => void) {
     return;
   }
   window.speechSynthesis.cancel();
-  speakChunks(splitIntoSpeechChunks(text), 0, onDone, onError);
+  const voice = pickVoiceForText(text);
+  speakChunks(splitIntoSpeechChunks(text), 0, voice, onDone, onError);
 }
 
 let premiumAudio: HTMLAudioElement | null = null;
