@@ -15,9 +15,12 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
 
 /** Makes Scheduled Tasks actually do something -- until this, the feature
  * only ever stored a prompt + a time; nothing anywhere (web or Android)
@@ -81,11 +84,46 @@ class ScheduledTaskWorker(context: Context, params: WorkerParameters) : Coroutin
           company = CompanyProfile()
         ) { chunk -> reply.append(chunk) }
       }
-      postNotification(task.id, task.prompt, reply.toString().ifBlank { "Done." })
+      val body = reply.toString().ifBlank { "Done." }
+      postNotification(task.id, task.prompt, body)
+      // Reads the reminder aloud as a real voice note, on-device (no
+      // network needed, works fully offline) -- separate from the AI reply
+      // itself, which does need network and just falls back to "Done." above
+      // when it can't be reached. The reminder text alone is still spoken
+      // either way, so the user gets a real spoken alert offline too.
+      speakReminderAloud(task.prompt)
       updatedTasks = updatedTasks.map { if (it.id == task.id) it.copy(fired = true) else it }
     }
     ChatGizaApi.saveScheduled(token, updatedTasks)
     return Result.success()
+  }
+
+  /** Speaks [text] using the free on-device TTS engine (same one
+   * TtsController uses for "Read Aloud" in chat) so a fired reminder is a
+   * real voice note, not just a silent notification -- works fully offline
+   * since it never touches the network. Waits for the utterance to finish
+   * (capped at 15s) so the worker doesn't tear down the engine mid-sentence,
+   * but never blocks the reminder itself from firing if speech fails. */
+  private suspend fun speakReminderAloud(text: String) {
+    if (text.isBlank()) return
+    runCatching {
+      withTimeoutOrNull(15_000) {
+        suspendCancellableCoroutine<Unit> { cont ->
+          val tts = TtsController(applicationContext)
+          tts.onDone = {
+            tts.shutdown()
+            if (cont.isActive) cont.resume(Unit)
+          }
+          // TtsController's TextToSpeech init is itself async -- give it a
+          // moment before speaking, otherwise speak() silently no-ops
+          // because `ready` hasn't flipped true yet.
+          android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            tts.speak(text)
+          }, 300)
+          cont.invokeOnCancellation { tts.shutdown() }
+        }
+      }
+    }
   }
 
   // Mirrors how the app itself builds runAt when a task is created
@@ -101,7 +139,10 @@ class ScheduledTaskWorker(context: Context, params: WorkerParameters) : Coroutin
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
       manager.createNotificationChannel(
-        NotificationChannel(CHANNEL_ID, "Scheduled Tasks", NotificationManager.IMPORTANCE_DEFAULT)
+        NotificationChannel(CHANNEL_ID, "Scheduled Tasks", NotificationManager.IMPORTANCE_DEFAULT).apply {
+          enableVibration(true)
+          vibrationPattern = longArrayOf(0, 400, 200, 400)
+        }
       )
     }
   }
@@ -129,6 +170,8 @@ class ScheduledTaskWorker(context: Context, params: WorkerParameters) : Coroutin
       .setStyle(NotificationCompat.BigTextStyle().bigText(body))
       .setContentIntent(pendingIntent)
       .setAutoCancel(true)
+      .setVibrate(longArrayOf(0, 400, 200, 400))
+      .setPriority(NotificationCompat.PRIORITY_HIGH)
       .build()
     runCatching { manager.notify(taskId.hashCode(), notification) }
   }

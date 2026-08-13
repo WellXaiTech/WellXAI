@@ -247,6 +247,10 @@ object ChatGizaApi {
     // pair ID (e.g. "Q-4F2A19") and that exact past exchange was found
     // locally, so the model gets the real content instead of guessing.
     referencedPair: Pair<String, String>? = null,
+    // Device's own local wall-clock time, "yyyy-MM-dd'T'HH:mm" -- lets the
+    // model resolve relative/spoken time references (e.g. reminder
+    // requests) into an absolute timestamp in the user's real timezone.
+    localDateTime: String? = null,
     onChunk: (String) -> Unit
   ): ApiResult<Unit> =
     withContext(Dispatchers.IO) {
@@ -307,6 +311,7 @@ object ChatGizaApi {
             JSONObject().put("question", referencedPair.first).put("answer", referencedPair.second)
           )
         }
+        if (localDateTime != null) payloadObj.put("localDateTime", localDateTime)
 
         val payload = payloadObj.toString().toRequestBody(JSON)
         val request = Request.Builder()
