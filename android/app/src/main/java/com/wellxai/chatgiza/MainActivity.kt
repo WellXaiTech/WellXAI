@@ -82,6 +82,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -3977,18 +3979,43 @@ private fun imageProxyToJpeg(image: ImageProxy): ByteArray {
   return out.toByteArray()
 }
 
-// Events is a rotating promo carousel (per the reference: dark card,
-// small icon, "Events" label, bold rotating headline, and a "current/
-// total" counter badge) -- the card itself stays the same charcoal as
-// the rest of the screen; only the little icon swatch and the headline
-// rotate, each announcement getting its own icon color.
-private data class ChatGizaAnnouncement(val headline: String, val icon: ImageVector, val iconColor: Color)
+// Events is a real, swipeable full-page carousel (per the reference: dark
+// card, small icon, "Events" label, bold headline + a short subtitle line,
+// and a "current/total" counter badge) -- the card itself stays the same
+// charcoal as the rest of the screen; each page gets its own icon color.
+private data class ChatGizaAnnouncement(val headline: String, val subtitle: String, val icon: ImageVector, val iconColor: Color)
 
 private val CHATGIZA_ANNOUNCEMENTS = listOf(
-  ChatGizaAnnouncement("GiZa Pro — smarter answers, deeper research", Icons.Outlined.AutoAwesome, Color(0xFF6D5DF6)),
-  ChatGizaAnnouncement("New: attach photos in chat — GiZa can see them", Icons.Outlined.Photo, Color(0xFFF7971E)),
-  ChatGizaAnnouncement("ChatGiZa Media — share and discover with the community", Icons.Outlined.Whatshot, Color(0xFF11998E)),
-  ChatGizaAnnouncement("Live Vision — talk to GiZa face to face", Icons.Outlined.Videocam, Color(0xFFEE0979))
+  ChatGizaAnnouncement(
+    "Live Vision — talk to GiZa face to face",
+    "Talk to GiZa in real time using your camera and voice.",
+    Icons.Outlined.Videocam, Color(0xFFEE0979)
+  ),
+  ChatGizaAnnouncement(
+    "See GiZa. Talk naturally.",
+    "Turn on your camera and start a natural conversation with GiZa.",
+    Icons.Outlined.Visibility, Color(0xFF6D5DF6)
+  ),
+  ChatGizaAnnouncement(
+    "Real-time AI responses",
+    "GiZa listens, understands, and responds instantly.",
+    Icons.Outlined.Bolt, Color(0xFFF7971E)
+  ),
+  ChatGizaAnnouncement(
+    "More than just a chat",
+    "Ask questions, learn, get ideas, plan, or simply talk with GiZa.",
+    Icons.Outlined.Psychology, Color(0xFF11998E)
+  ),
+  ChatGizaAnnouncement(
+    "Fast, private & secure",
+    "Your conversations are designed with your privacy and security in mind.",
+    Icons.Outlined.Lock, Color(0xFF2193B0)
+  ),
+  ChatGizaAnnouncement(
+    "Experience GiZa Live Vision",
+    "Start your first face-to-face AI conversation today.",
+    Icons.Outlined.EmojiEvents, Color(0xFF1EBE7E)
+  )
 )
 
 // A flat fill read as plain/empty for a promo card -- this scatters a
@@ -4008,11 +4035,12 @@ private fun Modifier.speckledEventsBackground(): Modifier = this.drawBehind {
 
 @Composable
 private fun ChatGizaEventsCard() {
-  var index by remember { mutableStateOf(0) }
-  LaunchedEffect(Unit) {
+  val pagerState = rememberPagerState(pageCount = { CHATGIZA_ANNOUNCEMENTS.size })
+  LaunchedEffect(pagerState) {
     while (true) {
       delay(4000)
-      index = (index + 1) % CHATGIZA_ANNOUNCEMENTS.size
+      val next = (pagerState.currentPage + 1) % CHATGIZA_ANNOUNCEMENTS.size
+      pagerState.animateScrollToPage(next)
     }
   }
   Box(
@@ -4023,26 +4051,35 @@ private fun ChatGizaEventsCard() {
       .speckledEventsBackground()
       .padding(horizontal = 16.dp, vertical = 10.dp)
   ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-      Crossfade(targetState = index, label = "eventsIcon") { i ->
-        val item = CHATGIZA_ANNOUNCEMENTS[i]
+    // A real swipeable page for every announcement -- not just a crossfading
+    // headline -- so the user can flick through all six at their own pace,
+    // on top of the same auto-advance timer.
+    HorizontalPager(state = pagerState, modifier = Modifier.fillMaxWidth()) { page ->
+      val item = CHATGIZA_ANNOUNCEMENTS[page]
+      Row(modifier = Modifier.heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(
           modifier = Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(item.iconColor),
           contentAlignment = Alignment.Center
         ) {
           Icon(item.icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
         }
-      }
-      Spacer(modifier = Modifier.size(14.dp))
-      Column(modifier = Modifier.weight(1f)) {
-        Text("Events", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 11.sp)
-        Spacer(modifier = Modifier.height(2.dp))
-        Crossfade(targetState = index, label = "eventsHeadline") { i ->
+        Spacer(modifier = Modifier.size(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+          Text("Events", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 11.sp)
+          Spacer(modifier = Modifier.height(2.dp))
           Text(
-            CHATGIZA_ANNOUNCEMENTS[i].headline,
+            item.headline,
             color = colorScheme.onBackground,
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold
+          )
+          Spacer(modifier = Modifier.height(2.dp))
+          Text(
+            item.subtitle,
+            color = colorScheme.onBackground.copy(alpha = 0.6f),
+            fontSize = 12.sp,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
           )
         }
       }
@@ -4055,7 +4092,7 @@ private fun ChatGizaEventsCard() {
         .padding(horizontal = 6.dp, vertical = 2.dp)
     ) {
       Text(
-        "${index + 1}/${CHATGIZA_ANNOUNCEMENTS.size}",
+        "${pagerState.currentPage + 1}/${CHATGIZA_ANNOUNCEMENTS.size}",
         color = Color.White.copy(alpha = 0.7f),
         fontSize = 9.sp,
         fontWeight = FontWeight.Medium
