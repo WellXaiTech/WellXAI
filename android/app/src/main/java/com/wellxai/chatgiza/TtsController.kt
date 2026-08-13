@@ -119,4 +119,25 @@ class PremiumTtsPlayer(private val context: Context) {
     }
     player = null
   }
+
+  /** These four back the scrubbable now-playing bar -- pause/resume keep
+   * the same MediaPlayer instance (unlike stop, which releases it), so
+   * scrubbing and resuming mid-message actually works. */
+  fun pause() {
+    runCatching { player?.takeIf { it.isPlaying }?.pause() }
+  }
+
+  fun resume() {
+    runCatching { player?.start() }
+  }
+
+  fun seekTo(ms: Int) {
+    runCatching { player?.seekTo(ms) }
+  }
+
+  fun isCurrentlyPlaying(): Boolean = runCatching { player?.isPlaying }.getOrNull() ?: false
+
+  fun currentPositionMs(): Int = runCatching { player?.currentPosition }.getOrNull() ?: 0
+
+  fun durationMs(): Int = runCatching { player?.duration }.getOrNull()?.coerceAtLeast(0) ?: 0
 }

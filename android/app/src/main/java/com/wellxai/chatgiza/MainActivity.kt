@@ -138,6 +138,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -161,6 +163,9 @@ import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
@@ -1592,6 +1597,11 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
   val premiumTts = remember { PremiumTtsPlayer(context) }
   val haptic = LocalHapticFeedback.current
   var speakingMessageId by remember { mutableStateOf<String?>(null) }
+  // Only Premium Voice's MediaPlayer-backed audio supports scrubbing -- the
+  // free on-device engine has no seek API at all, so the floating now-
+  // playing bar's slider only appears for a Premium Voice utterance.
+  var speakingViaPremium by remember { mutableStateOf(false) }
+  var speakingText by remember { mutableStateOf("") }
   var chatMenuOpen by remember { mutableStateOf(false) }
   var chatDeleteConfirm by remember { mutableStateOf(false) }
   var findInChatOpen by remember { mutableStateOf(false) }
@@ -1613,13 +1623,16 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
   // than going silent, since the user still expects something to happen.
   fun speakMessage(id: String, text: String) {
     speakingMessageId = id
+    speakingText = text
+    speakingViaPremium = false
     if (viewModel.premiumChatVoiceEnabled) {
       viewModel.fetchPremiumSpeech(text) { bytes ->
         if (bytes != null) {
+          speakingViaPremium = true
           premiumTts.play(
             bytes,
-            onDone = { if (speakingMessageId == id) speakingMessageId = null },
-            onError = { tts.speak(text) }
+            onDone = { if (speakingMessageId == id) { speakingMessageId = null; speakingViaPremium = false } },
+            onError = { speakingViaPremium = false; tts.speak(text) }
           )
         } else {
           tts.speak(text)
@@ -1634,6 +1647,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
     tts.stop()
     premiumTts.stop()
     speakingMessageId = null
+    speakingViaPremium = false
   }
 
   fun toggleSpeak(message: UiMessage) {
@@ -1676,6 +1690,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
     wasSending = viewModel.sending
   }
 
+  Box(modifier = Modifier.fillMaxSize()) {
   Scaffold(
     topBar = {
       // Fully transparent all the way up, including the true status-bar
@@ -1955,6 +1970,109 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
           Text("Cancel", fontWeight = FontWeight.Bold)
         }
       }
+    )
+  }
+
+  // Floating now-playing bar, matching the reference: sits just below the
+  // status bar, overlapping the top of the message list. Only Premium
+  // Voice's audio can be scrubbed/paused (MediaPlayer-backed); the free
+  // on-device engine only gets a stop button, since it has no seek API.
+  if (speakingMessageId != null) {
+    NowPlayingBar(
+      isPremium = speakingViaPremium,
+      player = premiumTts,
+      onClose = { stopSpeakingNow() }
+    )
+  }
+  }
+}
+
+// Floating scrubbable audio bar shown while a message is being read aloud,
+// matching the reference: play/pause, elapsed time, a seek slider, close.
+// The slider only appears for Premium Voice -- Android's on-device
+// TextToSpeech has no seek/pause API at all, so the free-engine fallback
+// just gets a static bar with a stop (close) button.
+@Composable
+private fun BoxScope.NowPlayingBar(isPremium: Boolean, player: PremiumTtsPlayer, onClose: () -> Unit) {
+  var positionMs by remember { mutableStateOf(0) }
+  var durationMs by remember { mutableStateOf(0) }
+  var playing by remember { mutableStateOf(true) }
+  var userScrubbing by remember { mutableStateOf(false) }
+
+  LaunchedEffect(isPremium) {
+    if (!isPremium) return@LaunchedEffect
+    while (true) {
+      if (!userScrubbing) positionMs = player.currentPositionMs()
+      durationMs = player.durationMs()
+      playing = player.isCurrentlyPlaying()
+      delay(200)
+    }
+  }
+
+  fun formatTime(ms: Int): String {
+    val totalSeconds = ms / 1000
+    val m = totalSeconds / 60
+    val s = totalSeconds % 60
+    return "%d:%02d".format(m, s)
+  }
+
+  Row(
+    modifier = Modifier
+      .align(Alignment.TopCenter)
+      .statusBarsPadding()
+      .padding(top = 8.dp, start = 16.dp, end = 16.dp)
+      .fillMaxWidth()
+      .height(52.dp)
+      .clip(RoundedCornerShape(percent = 50))
+      .background(Color(0xFF1F1F1F))
+      .padding(horizontal = 10.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Box(
+      modifier = Modifier
+        .size(36.dp)
+        .clip(CircleShape)
+        .background(Color.White)
+        .let {
+          if (isPremium) it.clickable {
+            if (playing) player.pause() else player.resume()
+            playing = !playing
+          } else it
+        },
+      contentAlignment = Alignment.Center
+    ) {
+      Icon(
+        if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+        contentDescription = if (playing) "Pause" else "Play",
+        tint = Color.Black,
+        modifier = Modifier.size(18.dp)
+      )
+    }
+    Spacer(modifier = Modifier.width(8.dp))
+    Text(formatTime(positionMs), color = Color.White, fontSize = 12.sp)
+    Spacer(modifier = Modifier.width(8.dp))
+    if (isPremium && durationMs > 0) {
+      Slider(
+        value = positionMs.toFloat().coerceIn(0f, durationMs.toFloat()),
+        onValueChange = { userScrubbing = true; positionMs = it.toInt() },
+        onValueChangeFinished = { player.seekTo(positionMs); userScrubbing = false },
+        valueRange = 0f..durationMs.toFloat(),
+        modifier = Modifier.weight(1f).height(20.dp),
+        colors = SliderDefaults.colors(
+          thumbColor = Color.White,
+          activeTrackColor = Color.White,
+          inactiveTrackColor = Color.White.copy(alpha = 0.25f)
+        )
+      )
+    } else {
+      Spacer(modifier = Modifier.weight(1f))
+    }
+    Spacer(modifier = Modifier.width(8.dp))
+    Icon(
+      Icons.Filled.Close,
+      contentDescription = "Stop",
+      tint = Color.White.copy(alpha = 0.7f),
+      modifier = Modifier.size(20.dp).clickable(onClick = onClose)
     )
   }
 }
