@@ -48,6 +48,14 @@ export async function POST(req: NextRequest) {
         | "marin"
         | "cedar",
       input: text,
+      // gpt-4o-mini-tts is instruction-steerable (unlike the older tts-1
+      // models) -- without this, Kiswahili/Sheng text got sounded out with
+      // English phonetics instead of spoken like a native speaker actually
+      // would. This doesn't change what's said, only how it's pronounced.
+      instructions:
+        "Speak fluently and naturally, like a real native speaker, in whatever language or mix of languages the " +
+        "text is written in. For Kiswahili or Sheng text specifically, use authentic Kiswahili/Sheng pronunciation, " +
+        "rhythm, and intonation -- never sound out the words with English phonetics or a foreign accent.",
       response_format: "mp3",
     });
     const buffer = Buffer.from(await response.arrayBuffer());
