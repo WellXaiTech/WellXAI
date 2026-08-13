@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSession, signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import { COUNTRIES, COUNTRY_CODES } from "@/lib/countries";
 
 type Ad = {
@@ -12,25 +13,33 @@ type Ad = {
   linkUrl: string;
   countries: string[];
   durationSeconds: number;
-  status: "pending_review" | "approved" | "rejected";
+  status: "pending_payment" | "pending_review" | "approved" | "rejected";
   createdAt: number;
   startsAt: number | null;
   expiresAt: number | null;
   rejectionReason: string | null;
+  priceCents: number | null;
 };
 
+// Must match PRICE_TABLE_CENTS in src/lib/ads.ts -- kept here too so the
+// price can be shown before the user submits, without an extra round trip.
 const DURATION_OPTIONS = [
-  { label: "5 minutes", seconds: 5 * 60 },
-  { label: "15 minutes", seconds: 15 * 60 },
-  { label: "30 minutes", seconds: 30 * 60 },
-  { label: "1 hour", seconds: 60 * 60 },
-  { label: "6 hours", seconds: 6 * 60 * 60 },
-  { label: "24 hours", seconds: 24 * 60 * 60 },
-  { label: "7 days", seconds: 7 * 24 * 60 * 60 },
+  { label: "5 minutes", seconds: 5 * 60, priceCents: 200 },
+  { label: "15 minutes", seconds: 15 * 60, priceCents: 500 },
+  { label: "30 minutes", seconds: 30 * 60, priceCents: 900 },
+  { label: "1 hour", seconds: 60 * 60, priceCents: 1500 },
+  { label: "6 hours", seconds: 6 * 60 * 60, priceCents: 6000 },
+  { label: "24 hours", seconds: 24 * 60 * 60, priceCents: 18000 },
+  { label: "7 days", seconds: 7 * 24 * 60 * 60, priceCents: 90000 },
 ];
+
+function formatUsd(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
+}
 
 function statusLabel(ad: Ad, nowMs: number): string {
   if (ad.status === "approved" && ad.expiresAt !== null && ad.expiresAt <= nowMs) return "Expired";
+  if (ad.status === "pending_payment") return "Awaiting payment";
   if (ad.status === "pending_review") return "Pending review";
   if (ad.status === "approved") return "Live";
   if (ad.status === "rejected") return "Rejected";
@@ -39,13 +48,14 @@ function statusLabel(ad: Ad, nowMs: number): string {
 
 function statusColor(label: string): string {
   if (label === "Live") return "text-green-500";
-  if (label === "Pending review") return "text-yellow-500";
+  if (label === "Pending review" || label === "Awaiting payment") return "text-yellow-500";
   if (label === "Rejected") return "text-red-500";
   return "text-muted";
 }
 
-export default function AdvertisePage() {
+function AdvertisePageInner() {
   const { status } = useSession();
+  const searchParams = useSearchParams();
   const [ads, setAds] = useState<Ad[] | null>(null);
   const [nowMs] = useState(() => Date.now());
   const [headline, setHeadline] = useState("");
@@ -56,14 +66,43 @@ export default function AdvertisePage() {
   const [durationSeconds, setDurationSeconds] = useState(DURATION_OPTIONS[2].seconds);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (status !== "authenticated") return;
+  function reload() {
     fetch("/api/ads")
       .then((r) => r.json())
       .then((data) => setAds(data.ads ?? []))
       .catch(() => setError("Couldn't load your ads"));
+  }
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    reload();
   }, [status]);
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    const adSessionId = searchParams.get("ad_session_id");
+    const cancelled = searchParams.get("ad_cancelled");
+    if (!adSessionId && !cancelled) return;
+    window.history.replaceState(null, "", "/advertise");
+
+    if (cancelled) {
+      Promise.resolve().then(() => setNotice("Payment cancelled -- your ad was not submitted."));
+      return;
+    }
+    fetch(`/api/ads/checkout/verify?session_id=${encodeURIComponent(adSessionId!)}`)
+      .then((r) => r.json())
+      .then((data: { paid?: boolean }) => {
+        setNotice(
+          data.paid
+            ? "Payment received -- your ad is now waiting for review."
+            : "We couldn't confirm your payment yet. If you were charged, contact support."
+        );
+        reload();
+      })
+      .catch(() => setNotice("We couldn't confirm your payment yet. If you were charged, contact support."));
+  }, [status, searchParams]);
 
   function toggleCountry(code: string) {
     setSelectedCountries((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]));
@@ -88,18 +127,15 @@ export default function AdvertisePage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to create ad");
-      setAds((prev) => [data.ad, ...(prev ?? [])]);
-      setHeadline("");
-      setSubtitle("");
-      setImageUrl("");
-      setLinkUrl("");
-      setSelectedCountries([]);
+      if (!data.checkoutUrl) throw new Error("No checkout URL returned");
+      window.location.href = data.checkoutUrl;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create ad");
-    } finally {
       setBusy(false);
     }
   }
+
+  const selectedDuration = DURATION_OPTIONS.find((opt) => opt.seconds === durationSeconds) ?? DURATION_OPTIONS[0];
 
   if (status === "loading" || (status === "authenticated" && ads === null)) {
     return <div className="mx-auto max-w-2xl px-4 py-16 w-full" />;
@@ -125,9 +161,10 @@ export default function AdvertisePage() {
       <h1 className="text-3xl font-semibold">Advertise on ChatGiZa</h1>
       <p className="mt-3 text-muted">
         Your ad appears in the Events carousel, targeted to the countries you choose, for the duration you pay for.
-        Every ad is reviewed before it goes live.
+        Every ad is reviewed before it goes live -- your live window starts once it&apos;s approved, not at payment.
       </p>
 
+      {notice && <p className="mt-4 text-sm text-green-500">{notice}</p>}
       {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
 
       <div className="mt-8 card rounded-2xl p-6 space-y-3">
@@ -168,7 +205,7 @@ export default function AdvertisePage() {
           >
             {DURATION_OPTIONS.map((opt) => (
               <option key={opt.seconds} value={opt.seconds}>
-                {opt.label}
+                {opt.label} — {formatUsd(opt.priceCents)}
               </option>
             ))}
           </select>
@@ -197,7 +234,7 @@ export default function AdvertisePage() {
           disabled={busy || !headline.trim() || !subtitle.trim() || selectedCountries.length === 0}
           className="w-full rounded-full bg-foreground px-5 py-2 text-sm font-medium text-background hover:opacity-90 transition-opacity disabled:opacity-50"
         >
-          Submit for review
+          {busy ? "Redirecting to payment..." : `Pay ${formatUsd(selectedDuration.priceCents)} & submit`}
         </button>
       </div>
 
@@ -214,7 +251,10 @@ export default function AdvertisePage() {
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{ad.headline}</p>
                     <p className="text-xs text-muted truncate">{ad.subtitle}</p>
-                    <p className="mt-1 text-xs text-muted">{ad.countries.join(", ")}</p>
+                    <p className="mt-1 text-xs text-muted">
+                      {ad.countries.join(", ")}
+                      {ad.priceCents !== null && ` · ${formatUsd(ad.priceCents)}`}
+                    </p>
                     {ad.rejectionReason && <p className="mt-1 text-xs text-red-500">Reason: {ad.rejectionReason}</p>}
                   </div>
                   <span className={`shrink-0 text-xs font-medium ${statusColor(label)}`}>{label}</span>
@@ -225,5 +265,13 @@ export default function AdvertisePage() {
         </ul>
       )}
     </div>
+  );
+}
+
+export default function AdvertisePage() {
+  return (
+    <Suspense>
+      <AdvertisePageInner />
+    </Suspense>
   );
 }

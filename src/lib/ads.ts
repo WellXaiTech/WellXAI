@@ -1,6 +1,6 @@
 import { kv } from "@vercel/kv";
 
-export type AdStatus = "pending_review" | "approved" | "rejected";
+export type AdStatus = "pending_payment" | "pending_review" | "approved" | "rejected";
 
 export type Ad = {
   id: string;
@@ -20,9 +20,6 @@ export type Ad = {
   startsAt: number | null;
   expiresAt: number | null;
   rejectionReason: string | null;
-  // Payment isn't wired up yet (built once pricing/currency are decided) --
-  // these fields exist now so approval/serving logic never needs to change
-  // shape later, just start getting populated.
   priceCents: number | null;
   currency: string | null;
   paymentStatus: "not_required" | "pending" | "paid";
@@ -33,6 +30,24 @@ const MAX_DURATION_SECONDS = 30 * 24 * 60 * 60; // 30 days, sanity cap
 
 export function isValidDurationSeconds(seconds: number): boolean {
   return Number.isFinite(seconds) && seconds > 0 && seconds <= MAX_DURATION_SECONDS;
+}
+
+// Starter pricing, USD cents -- flat rate per duration tier rather than a
+// per-second formula, so the price is a clean, predictable number instead
+// of an odd fraction of a cent. Easy to retune later: just edit this table,
+// nothing else needs to change.
+const PRICE_TABLE_CENTS: Record<number, number> = {
+  [5 * 60]: 200, // $2 / 5 min
+  [15 * 60]: 500, // $5 / 15 min
+  [30 * 60]: 900, // $9 / 30 min
+  [60 * 60]: 1500, // $15 / hour
+  [6 * 60 * 60]: 6000, // $60 / 6 hours
+  [24 * 60 * 60]: 18000, // $180 / day
+  [7 * 24 * 60 * 60]: 90000, // $900 / week
+};
+
+export function priceForDurationSeconds(seconds: number): number | null {
+  return PRICE_TABLE_CENTS[seconds] ?? null;
 }
 
 export async function getAllAds(): Promise<Ad[]> {
@@ -52,10 +67,10 @@ export function isAdActive(ad: Ad, nowMs: number): boolean {
   return ad.status === "approved" && ad.expiresAt !== null && ad.expiresAt > nowMs;
 }
 
-// A stored ad's own `status` only ever moves pending_review -> approved/
-// rejected -- "expired" is derived at read time from expiresAt instead of
-// a background sweep mutating the record, so display status is always
-// correct without needing a cron job to keep it in sync.
+// A stored ad's own `status` only ever moves pending_payment -> pending_review
+// -> approved/rejected -- "expired" is derived at read time from expiresAt
+// instead of a background sweep mutating the record, so display status is
+// always correct without needing a cron job to keep it in sync.
 export function displayStatus(ad: Ad, nowMs: number): AdStatus | "expired" {
   if (ad.status === "approved" && ad.expiresAt !== null && ad.expiresAt <= nowMs) return "expired";
   return ad.status;
