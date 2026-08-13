@@ -221,6 +221,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var newProjectName by mutableStateOf("")
 
   var scheduledTasks by mutableStateOf<List<ApiScheduledTask>>(emptyList())
+  var activeAds by mutableStateOf<List<ApiAd>>(emptyList())
     private set
   var loadingScheduled by mutableStateOf(false)
     private set
@@ -1277,6 +1278,19 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     val updated = listOf(ApiScheduledTask(UUID.randomUUID().toString(), reminder.prompt, runAt, false)) + scheduledTasks
     scheduledTasks = updated
     viewModelScope.launch { ChatGizaApi.saveScheduled(token, updated) }
+  }
+
+  /** Fetches admin-approved ads for the Events carousel, targeted by the
+   * device's own locale country. Decorative content -- a failure just
+   * leaves activeAds empty rather than surfacing an error banner. */
+  fun loadActiveAds() {
+    val token = tokenStore.getToken() ?: return
+    val country = java.util.Locale.getDefault().country
+    if (country.isBlank()) return
+    viewModelScope.launch {
+      val result = ChatGizaApi.getActiveAds(token, country)
+      if (result is ApiResult.Success) activeAds = result.value
+    }
   }
 
   fun deleteScheduledTask(id: String) {

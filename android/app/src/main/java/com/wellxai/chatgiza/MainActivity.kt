@@ -3913,7 +3913,12 @@ private fun imageProxyToJpeg(image: ImageProxy): ByteArray {
 // Events is a real, swipeable full-page carousel (per the reference: plain
 // black card, "Events" label, bold headline + a short subtitle line, and a
 // "current/total" counter badge) -- no icons, just text on black.
-private data class ChatGizaAnnouncement(val headline: String, val subtitle: String)
+private data class ChatGizaAnnouncement(
+  val headline: String,
+  val subtitle: String,
+  val isAd: Boolean = false,
+  val linkUrl: String? = null
+)
 
 private val CHATGIZA_ANNOUNCEMENTS = listOf(
   ChatGizaAnnouncement(
@@ -3943,12 +3948,22 @@ private val CHATGIZA_ANNOUNCEMENTS = listOf(
 )
 
 @Composable
-private fun ChatGizaEventsCard() {
-  val pagerState = rememberPagerState(pageCount = { CHATGIZA_ANNOUNCEMENTS.size })
-  LaunchedEffect(pagerState) {
+private fun ChatGizaEventsCard(viewModel: ChatViewModel) {
+  val context = LocalContext.current
+  LaunchedEffect(Unit) { viewModel.loadActiveAds() }
+  // Paid, admin-approved ads targeting this device's country slot in
+  // alongside ChatGiZa's own onboarding pages -- same pager, same rotation,
+  // just tagged "Ad" so they're never mistaken for ChatGiZa's own content.
+  val items = remember(viewModel.activeAds) {
+    CHATGIZA_ANNOUNCEMENTS + viewModel.activeAds.map { ad ->
+      ChatGizaAnnouncement(ad.headline, ad.subtitle, isAd = true, linkUrl = ad.linkUrl.ifBlank { null })
+    }
+  }
+  val pagerState = rememberPagerState(pageCount = { items.size })
+  LaunchedEffect(pagerState, items.size) {
     while (true) {
       delay(4000)
-      val next = (pagerState.currentPage + 1) % CHATGIZA_ANNOUNCEMENTS.size
+      val next = (pagerState.currentPage + 1) % items.size
       pagerState.animateScrollToPage(next)
     }
   }
@@ -3964,9 +3979,32 @@ private fun ChatGizaEventsCard() {
     // headline -- so the user can flick through all six at their own pace,
     // on top of the same auto-advance timer.
     HorizontalPager(state = pagerState, modifier = Modifier.fillMaxWidth()) { page ->
-      val item = CHATGIZA_ANNOUNCEMENTS[page]
-      Column(modifier = Modifier.heightIn(min = 36.dp)) {
-        Text("Events", color = Color.White.copy(alpha = 0.5f), fontSize = 10.sp)
+      val item = items[page]
+      Column(
+        modifier = Modifier
+          .heightIn(min = 36.dp)
+          .let {
+            if (item.isAd && item.linkUrl != null) {
+              it.clickable {
+                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(item.linkUrl))) }
+              }
+            } else it
+          }
+      ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Text("Events", color = Color.White.copy(alpha = 0.5f), fontSize = 10.sp)
+          if (item.isAd) {
+            Spacer(modifier = Modifier.width(6.dp))
+            Box(
+              modifier = Modifier
+                .clip(RoundedCornerShape(4.dp))
+                .background(Color.White.copy(alpha = 0.15f))
+                .padding(horizontal = 4.dp, vertical = 1.dp)
+            ) {
+              Text("Ad", color = Color.White.copy(alpha = 0.7f), fontSize = 8.sp, fontWeight = FontWeight.Medium)
+            }
+          }
+        }
         Spacer(modifier = Modifier.height(1.dp))
         Text(
           item.headline,
@@ -3991,7 +4029,7 @@ private fun ChatGizaEventsCard() {
         .padding(horizontal = 6.dp, vertical = 2.dp)
     ) {
       Text(
-        "${pagerState.currentPage + 1}/${CHATGIZA_ANNOUNCEMENTS.size}",
+        "${pagerState.currentPage + 1}/${items.size}",
         color = Color.White.copy(alpha = 0.7f),
         fontSize = 9.sp,
         fontWeight = FontWeight.Medium
@@ -4161,7 +4199,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
         // -- that was the wrong call earlier; Automations/Scheduled already
         // has its own dedicated tab in the bottom nav below, so nothing is
         // lost by decoupling this card from it.
-        ChatGizaEventsCard()
+        ChatGizaEventsCard(viewModel)
 
         Spacer(modifier = Modifier.height(10.dp))
         ChatGizaArrangedCard(onClick = { viewModel.openScheduled() })

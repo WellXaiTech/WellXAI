@@ -131,6 +131,8 @@ data class ApiProject(val id: String, val name: String, val createdAt: Long?)
 
 data class ApiScheduledTask(val id: String, val prompt: String, val runAt: String, val fired: Boolean)
 
+data class ApiAd(val id: String, val headline: String, val subtitle: String, val imageUrl: String, val linkUrl: String)
+
 data class BillingSubscription(
   val tier: String?,
   val planName: String,
@@ -778,6 +780,38 @@ object ChatGizaApi {
           return@withContext ApiResult.Failure(errorMessage(text, response.code))
         }
         ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  /** Live, admin-approved ads targeting [country] (an ISO 3166-1 alpha-2
+   * code) for the Events carousel. Decorative content -- callers should
+   * treat a failure the same as "no ads right now", not surface an error. */
+  suspend fun getActiveAds(token: String, country: String): ApiResult<List<ApiAd>> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/ads/active?country=$country")
+        .header("Authorization", "Bearer $token")
+        .get()
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val arr = JSONObject(text).optJSONArray("ads") ?: JSONArray()
+        ApiResult.Success((0 until arr.length()).map { i ->
+          val a = arr.getJSONObject(i)
+          ApiAd(
+            id = a.getString("id"),
+            headline = a.optString("headline", ""),
+            subtitle = a.optString("subtitle", ""),
+            imageUrl = a.optString("imageUrl", ""),
+            linkUrl = a.optString("linkUrl", "")
+          )
+        })
       }
     } catch (e: Exception) {
       ApiResult.Failure(e.message ?: "Network error")
