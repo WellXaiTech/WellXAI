@@ -1109,41 +1109,6 @@ private fun FilterIconCustom(modifier: Modifier = Modifier, tint: Color = Color.
   }
 }
 
-// A single evenOdd path (frame ring + mountain notch + sun, all one
-// <path>) doesn't actually work for this particular glyph -- the
-// mountain sub-path only traces the BOTTOM portion of the inner
-// boundary, not the full rect, so evenOdd counts the upper interior as
-// filled instead of a hollow window. Drawing the three shapes as
-// separate, unambiguous primitives (a stroked frame, a solid mountain
-// triangle, a solid circle) sidesteps that entirely and always renders
-// a clean hollow icon.
-@Composable
-private fun GalleryIconCustom(modifier: Modifier = Modifier, tint: Color = Color.White) {
-  Canvas(modifier = modifier) {
-    val scale = size.width / 24f
-    val strokeW = 1.8f * scale
-    drawRoundRect(
-      color = tint,
-      topLeft = Offset(2.9f * scale, 2.9f * scale),
-      size = Size(18.2f * scale, 18.2f * scale),
-      cornerRadius = CornerRadius(4.4f * scale, 4.4f * scale),
-      style = Stroke(width = strokeW)
-    )
-    drawCircle(color = tint, radius = 1.9f * scale, center = Offset(15.3f * scale, 8.7f * scale))
-    // A single small, sharp triangle -- the earlier wide two-peak shape
-    // spanned almost the whole frame width with a shallow valley, so it
-    // read as a bulky filled block sitting in the window rather than a
-    // recognizable mountain glyph.
-    val mountain = Path().apply {
-      moveTo(7.5f * scale, 17.3f * scale)
-      lineTo(12.3f * scale, 11.8f * scale)
-      lineTo(17f * scale, 17.3f * scale)
-      close()
-    }
-    drawPath(mountain, color = tint)
-  }
-}
-
 // ic_settings.xml, ic_copy.xml, ic_extra_search.xml, ic_projects.xml,
 // ic_rename.xml, ic_skills.xml and ic_speaker.xml all used
 // fillType="evenOdd" to punch a hole/ring out of a filled shape, which
@@ -1268,7 +1233,7 @@ private fun RenameIconCustom(tint: Color, modifier: Modifier = Modifier) {
   }
 }
 
-// Photo frame (sun + mountain, like GalleryIconCustom) with a pencil
+// Photo frame (sun + mountain) with a pencil
 // signing the top-right corner (like RenameIconCustom's pencil) -- the
 // pasted reference SVG's pathData was cut off mid-coordinate with no
 // closing Z, so this redraws the same "edit image" concept as primitives
@@ -2684,7 +2649,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
               }
             )
             AttachMenuRow(
-              icon = { GalleryIconCustom(modifier = Modifier.size(24.dp), tint = Color.White) },
+              iconRes = R.drawable.ic_gallery,
               label = "Gallery",
               onClick = {
                 attachMenuOpen = false
@@ -3992,7 +3957,7 @@ private fun ChatGizaEventsCard() {
       .fillMaxWidth()
       .padding(horizontal = 10.dp, vertical = 2.dp)
       .clip(RoundedCornerShape(16.dp))
-      .background(Color.Black)
+      .background(Color(0xFF262626))
       .padding(horizontal = 10.dp, vertical = 6.dp)
   ) {
     // A real swipeable page for every announcement -- not just a crossfading
