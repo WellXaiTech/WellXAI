@@ -508,6 +508,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.OpenSourceLicenses -> OpenSourceLicensesScreen(viewModel)
             is AppScreen.KidsMode -> KidsModeScreen(viewModel)
             is AppScreen.SharedConversations -> SharedConversationsScreen(viewModel)
+            is AppScreen.CollabChat -> CollabChatScreen(viewModel)
             is AppScreen.NsfwPreferences -> NsfwPreferencesScreen(viewModel)
             is AppScreen.Connectors -> ConnectorsScreen(viewModel)
             is AppScreen.Profile -> {
@@ -7571,9 +7572,13 @@ private fun KidsModeScreen(viewModel: ChatViewModel) {
   }
 }
 
+// Idea #7: real-time(ish) collaborative AI sessions -- this screen used
+// to be a static "no shared links yet" placeholder with nothing behind
+// it; it's now the entry point for starting or joining one.
 @Composable
 private fun SharedConversationsScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeSharedConversations() }
+  val context = LocalContext.current
   Column(
     modifier = Modifier
       .fillMaxSize()
@@ -7585,15 +7590,229 @@ private fun SharedConversationsScreen(viewModel: ChatViewModel) {
         Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
       }
       Spacer(Modifier.width(18.dp))
-      Text(text = "Shared Conversations", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+      Text(text = "Collaborative Chat", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
     }
     Spacer(Modifier.height(20.dp))
     Text(
-      text = "Shared links can be viewed by anyone with the link. No shared links yet.",
+      text = "Chat with GiZa together with other people, live -- everyone in the session sees the same conversation and each other's messages.",
       color = Color(0xFFA8A8A8),
       fontSize = 13.sp,
       lineHeight = 18.sp
     )
+
+    Spacer(Modifier.height(24.dp))
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .clip(RoundedCornerShape(16.dp))
+        .background(Color.White)
+        .clickable { viewModel.startCollabSession() }
+        .padding(vertical = 16.dp),
+      contentAlignment = Alignment.Center
+    ) {
+      Text("Start a Collaborative Chat", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+    }
+
+    Spacer(Modifier.height(28.dp))
+    Text("Join with a code", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    Spacer(Modifier.height(10.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      OutlinedTextField(
+        value = viewModel.collabJoinCodeInput,
+        onValueChange = { viewModel.onCollabJoinCodeChange(it) },
+        modifier = Modifier.weight(1f),
+        placeholder = { Text("ABC123", color = Color.White.copy(alpha = 0.35f)) },
+        singleLine = true,
+        shape = RoundedCornerShape(12.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+          focusedTextColor = Color.White,
+          unfocusedTextColor = Color.White,
+          focusedBorderColor = Color.White.copy(alpha = 0.4f),
+          unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
+          cursorColor = Color.White
+        )
+      )
+      Spacer(Modifier.width(10.dp))
+      Box(
+        modifier = Modifier
+          .clip(RoundedCornerShape(12.dp))
+          .background(if (viewModel.collabJoinCodeInput.length >= 4) Color.White else Color.White.copy(alpha = 0.15f))
+          .clickable(enabled = viewModel.collabJoinCodeInput.length >= 4) { viewModel.joinCollabSession() }
+          .padding(horizontal = 20.dp, vertical = 14.dp)
+      ) {
+        Text(
+          "Join",
+          color = if (viewModel.collabJoinCodeInput.length >= 4) Color.Black else Color.White.copy(alpha = 0.4f),
+          fontSize = 14.sp,
+          fontWeight = FontWeight.Bold
+        )
+      }
+    }
+
+    val error = viewModel.collabError
+    if (error != null) {
+      Spacer(Modifier.height(10.dp))
+      Text(error, color = Color(0xFFFF6B6B), fontSize = 12.sp)
+    }
+  }
+  // Fires the OS share sheet the moment a session is created, so the
+  // code doesn't just sit unseen in a corner of the chat screen -- the
+  // whole point of a code is to hand it to someone else.
+  LaunchedEffect(viewModel.collabSession?.code) {
+    val code = viewModel.collabSession?.code
+    if (code != null && viewModel.screen is AppScreen.CollabChat) {
+      val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, "Join my ChatGiZa collaborative chat — open the app, go to Collaborative Chat, and enter code: $code")
+      }
+      runCatching { context.startActivity(Intent.createChooser(intent, "Share join code")) }
+    }
+  }
+}
+
+@Composable
+private fun CollabChatScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeCollabChat() }
+  val context = LocalContext.current
+  val clipboard = LocalClipboardManager.current
+  val session = viewModel.collabSession
+  val listState = rememberLazyListState()
+
+  LaunchedEffect(session?.messages?.size) {
+    val count = session?.messages?.size ?: 0
+    if (count > 0) listState.animateScrollToItem(count - 1)
+  }
+
+  Column(modifier = Modifier.fillMaxSize().background(Color(0xFF000000)).statusBarsPadding()) {
+    Row(
+      modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      IconButton(onClick = { viewModel.closeCollabChat() }, modifier = Modifier.size(32.dp)) {
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+      }
+      Spacer(Modifier.width(12.dp))
+      Column(modifier = Modifier.weight(1f)) {
+        Text("Collaborative Chat", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        if (session != null) {
+          Text(
+            "${session.participants.size} in this chat",
+            color = Color.White.copy(alpha = 0.5f),
+            fontSize = 12.sp
+          )
+        }
+      }
+      if (session != null) {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(Color.White.copy(alpha = 0.1f))
+            .clickable {
+              clipboard.setText(AnnotatedString(session.code))
+              Toast.makeText(context, "Code copied", Toast.LENGTH_SHORT).show()
+            }
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+        ) {
+          Text(session.code, color = Color.White, fontSize = 13.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+          Spacer(Modifier.width(6.dp))
+          Icon(Icons.Outlined.ContentCopy, contentDescription = "Copy code", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(14.dp))
+        }
+      }
+    }
+
+    if (session != null && session.participants.size > 1) {
+      Row(
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+      ) {
+        session.participants.forEach { p ->
+          Text(
+            p.name,
+            color = Color.White.copy(alpha = 0.5f),
+            fontSize = 11.sp,
+            modifier = Modifier
+              .clip(RoundedCornerShape(50))
+              .background(Color.White.copy(alpha = 0.06f))
+              .padding(horizontal = 10.dp, vertical = 4.dp)
+          )
+        }
+      }
+      Spacer(Modifier.height(8.dp))
+    }
+
+    LazyColumn(
+      state = listState,
+      modifier = Modifier.weight(1f).fillMaxWidth(),
+      contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+      verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+      val myName = viewModel.userName?.takeIf { it.isNotBlank() } ?: "Someone"
+      items(session?.messages.orEmpty(), key = { it.id }) { msg ->
+        if (msg.role == "user") {
+          Column(horizontalAlignment = Alignment.End, modifier = Modifier.fillMaxWidth()) {
+            Text(
+              if (msg.authorName == myName) "You" else (msg.authorName ?: "Someone"),
+              color = Color.White.copy(alpha = 0.4f),
+              fontSize = 11.sp,
+              modifier = Modifier.padding(bottom = 2.dp, end = 4.dp)
+            )
+            Box(
+              modifier = Modifier
+                .clip(RoundedCornerShape(18.dp))
+                .background(colorScheme.onBackground.copy(alpha = 0.1f))
+                .padding(horizontal = 14.dp, vertical = 10.dp)
+            ) {
+              Text(msg.content, color = Color.White, fontSize = 15.sp)
+            }
+          }
+        } else {
+          Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp)) {
+            MarkdownText(text = msg.content, baseColor = Color.White, fontSize = 15.sp)
+          }
+        }
+      }
+      if (viewModel.collabSending) {
+        item {
+          Text("GiZa is replying…", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+        }
+      }
+    }
+
+    Row(
+      modifier = Modifier
+        .fillMaxWidth()
+        .navigationBarsPadding()
+        .imePadding()
+        .padding(horizontal = 12.dp, vertical = 10.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      OutlinedTextField(
+        value = viewModel.collabInput,
+        onValueChange = { viewModel.onCollabInputChange(it) },
+        modifier = Modifier.weight(1f),
+        placeholder = { Text("Message the group…", color = Color.White.copy(alpha = 0.35f)) },
+        shape = RoundedCornerShape(20.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+          focusedTextColor = Color.White,
+          unfocusedTextColor = Color.White,
+          focusedBorderColor = Color.White.copy(alpha = 0.4f),
+          unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
+          cursorColor = Color.White
+        )
+      )
+      Spacer(Modifier.width(8.dp))
+      Box(
+        modifier = Modifier
+          .size(44.dp)
+          .clip(CircleShape)
+          .background(if (viewModel.collabInput.isNotBlank() && !viewModel.collabSending) Color.White else Color.White.copy(alpha = 0.15f))
+          .clickable(enabled = viewModel.collabInput.isNotBlank() && !viewModel.collabSending) { viewModel.sendCollabMessage() },
+        contentAlignment = Alignment.Center
+      ) {
+        Icon(Icons.Filled.ArrowUpward, contentDescription = "Send", tint = Color.Black, modifier = Modifier.size(18.dp))
+      }
+    }
   }
 }
 
@@ -8070,7 +8289,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
 
       SettingsSectionHeader("Data & Information")
       SettingsSection {
-        SettingsMenuRow("Shared Conversations", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_share_link)) { viewModel.openSharedConversations() }
+        SettingsMenuRow("Collaborative Chat", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_share_link)) { viewModel.openSharedConversations() }
         SettingsDivider()
         SettingsMenuRow("Data Controls", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_data_controls)) { viewModel.openDataControls() }
         SettingsDivider()

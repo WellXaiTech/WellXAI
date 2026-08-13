@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -60,6 +61,7 @@ sealed class AppScreen {
   object OpenSourceLicenses : AppScreen()
   object KidsMode : AppScreen()
   object SharedConversations : AppScreen()
+  object CollabChat : AppScreen()
   object NsfwPreferences : AppScreen()
   object Connectors : AppScreen()
   object Profile : AppScreen()
@@ -501,6 +503,102 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeSharedConversations() {
     screen = AppScreen.Account
+  }
+
+  // Idea #7: a shared AI chat session multiple people can join with a
+  // short code. Polling-based (see collabPollJob below) -- no push/
+  // WebSocket infra exists in this project -- but genuinely
+  // multi-person: every participant's app fetches the same session and
+  // sees everyone's messages, not just their own.
+  var collabSession by mutableStateOf<CollabSession?>(null)
+    private set
+  var collabInput by mutableStateOf("")
+  var collabSending by mutableStateOf(false)
+    private set
+  var collabJoinCodeInput by mutableStateOf("")
+  var collabError by mutableStateOf<String?>(null)
+    private set
+  private var collabPollJob: Job? = null
+
+  fun onCollabInputChange(value: String) {
+    collabInput = value
+  }
+
+  fun onCollabJoinCodeChange(value: String) {
+    collabJoinCodeInput = value.uppercase().filter { it.isLetterOrDigit() }.take(6)
+  }
+
+  private fun startCollabPolling(code: String) {
+    collabPollJob?.cancel()
+    collabPollJob = viewModelScope.launch {
+      while (true) {
+        delay(3000)
+        val token = tokenStore.getToken() ?: break
+        when (val result = ChatGizaApi.getCollabSession(token, code)) {
+          is ApiResult.Success -> collabSession = result.value
+          is ApiResult.Failure -> {}
+        }
+      }
+    }
+  }
+
+  fun startCollabSession() {
+    val token = tokenStore.getToken() ?: return
+    val name = userName?.takeIf { it.isNotBlank() } ?: "Someone"
+    collabError = null
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.createCollabSession(token, name)) {
+        is ApiResult.Success -> {
+          collabSession = result.value
+          screen = AppScreen.CollabChat
+          startCollabPolling(result.value.code)
+        }
+        is ApiResult.Failure -> collabError = result.message
+      }
+    }
+  }
+
+  fun joinCollabSession() {
+    val token = tokenStore.getToken() ?: return
+    val code = collabJoinCodeInput.trim()
+    if (code.length < 4) return
+    val name = userName?.takeIf { it.isNotBlank() } ?: "Someone"
+    collabError = null
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.joinCollabSession(token, code, name)) {
+        is ApiResult.Success -> {
+          collabSession = result.value
+          collabJoinCodeInput = ""
+          screen = AppScreen.CollabChat
+          startCollabPolling(result.value.code)
+        }
+        is ApiResult.Failure -> collabError = result.message
+      }
+    }
+  }
+
+  fun sendCollabMessage() {
+    val token = tokenStore.getToken() ?: return
+    val code = collabSession?.code ?: return
+    val text = collabInput.trim()
+    if (text.isEmpty() || collabSending) return
+    val name = userName?.takeIf { it.isNotBlank() } ?: "Someone"
+    collabInput = ""
+    collabSending = true
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.postCollabMessage(token, code, text, name)) {
+        is ApiResult.Success -> collabSession = result.value
+        is ApiResult.Failure -> collabError = result.message
+      }
+      collabSending = false
+    }
+  }
+
+  fun closeCollabChat() {
+    collabPollJob?.cancel()
+    collabPollJob = null
+    collabSession = null
+    screen = AppScreen.SharedConversations
   }
 
   fun openNsfwPreferences() {
