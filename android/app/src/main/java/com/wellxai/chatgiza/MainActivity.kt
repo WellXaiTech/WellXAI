@@ -8586,6 +8586,13 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         SettingsMenuRow("Voice", icon = Icons.Outlined.GraphicEq) { viewModel.openVoice() }
       }
 
+      SettingsSectionHeader("Business")
+      SettingsSection {
+        SettingsMenuRow("Advertise on ChatGiZa", icon = Icons.Outlined.Business) {
+          context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/advertise")))
+        }
+      }
+
       SettingsSectionHeader("Data & Information")
       SettingsSection {
         SettingsMenuRow("Collaborative Chat", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_share_link)) { viewModel.openSharedConversations() }
@@ -9136,19 +9143,26 @@ private fun BillingScreen(viewModel: ChatViewModel) {
           }
         }
         Spacer(modifier = Modifier.height(24.dp))
+        var openingPortal by remember { mutableStateOf(false) }
         Button(
           onClick = {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/chatgiza"))
-            context.startActivity(intent)
+            openingPortal = true
+            viewModel.fetchBillingPortalUrl { url ->
+              openingPortal = false
+              if (url != null) {
+                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+              }
+            }
           },
+          enabled = !openingPortal,
           shape = RoundedCornerShape(24.dp),
           modifier = Modifier.fillMaxWidth().height(48.dp)
         ) {
-          Text("Manage billing")
+          Text(if (openingPortal) "Opening..." else "Manage billing")
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-          "Opens ChatGiZa in your browser to change plan, cards, or cancel.",
+          "Opens Stripe's secure billing portal in your browser to change plan, cards, or cancel.",
           color = colorScheme.onBackground.copy(alpha = 0.5f),
           fontSize = 12.sp
         )

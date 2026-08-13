@@ -1317,6 +1317,26 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     loadBilling()
   }
 
+  /** Fetches a real, pre-authorized Stripe portal URL so the caller can hand
+   * it straight to a browser Intent -- the browser needs no sign-in of its
+   * own for this link to work. */
+  fun fetchBillingPortalUrl(onResult: (String?) -> Unit) {
+    val token = tokenStore.getToken()
+    if (token == null) {
+      onResult(null)
+      return
+    }
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.getBillingPortalUrl(token)) {
+        is ApiResult.Success -> onResult(result.value)
+        is ApiResult.Failure -> {
+          errorMessage = result.message
+          onResult(null)
+        }
+      }
+    }
+  }
+
   fun closeBilling() {
     screen = AppScreen.Account
   }
