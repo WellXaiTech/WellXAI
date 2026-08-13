@@ -125,7 +125,17 @@ export async function POST(req: NextRequest) {
   const languageInstruction =
     `Always speak and reply in ${language}. Every single reply must be in ${language}, with no exceptions — even if ` +
     `you mishear the user's audio or aren't fully sure what they said, respond in ${language} anyway rather than ` +
-    `switching languages.`;
+    `switching languages.` +
+    (language.toLowerCase() === "swahili"
+      ? " This is a core strength, not an afterthought: when the user speaks Kiswahili, Sheng, or naturally mixes " +
+        "Kiswahili/Sheng/English mid-sentence, respond the way a genuinely fluent, native speaker would — never a " +
+        "stiff, word-for-word translation from English. Mirror their actual register: casual Sheng gets a casual, " +
+        "idiomatic spoken reply using real Sheng vocabulary and rhythm, not textbook Kiswahili Sanifu; formal " +
+        "Kiswahili gets a properly formal one. It's fine to mirror their language-mixing back rather than forcing " +
+        "everything into one language. Get slang, proverbs, and regional expressions right. The bar: a Kiswahili " +
+        "or Sheng speaker should immediately feel this understands and talks like them, better than any other " +
+        "voice AI they've used."
+      : "");
 
   // ISO-639-1 hint for the speech-to-text model — significantly improves
   // transcription accuracy for non-English languages (Swahili especially),
