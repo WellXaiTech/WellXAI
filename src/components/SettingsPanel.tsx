@@ -386,6 +386,11 @@ export default function SettingsPanel({
   memory,
   onAddMemory,
   onRemoveMemory,
+  digitalTwin,
+  digitalTwinUpdatedAt,
+  digitalTwinRegenerating,
+  onChangeDigitalTwin,
+  onRegenerateDigitalTwin,
   historyEnabled,
   onToggleHistoryEnabled,
   onClearHistory,
@@ -435,6 +440,11 @@ export default function SettingsPanel({
   memory: string[];
   onAddMemory: (fact: string) => void;
   onRemoveMemory: (index: number) => void;
+  digitalTwin: string;
+  digitalTwinUpdatedAt: number;
+  digitalTwinRegenerating: boolean;
+  onChangeDigitalTwin: (summary: string) => void;
+  onRegenerateDigitalTwin: () => void;
   historyEnabled: boolean;
   onToggleHistoryEnabled: () => void;
   onClearHistory: () => void;
@@ -1068,6 +1078,39 @@ export default function SettingsPanel({
                   ))}
                 </ul>
               )}
+
+              <div className="mt-6 border-t border-border pt-5">
+                <div className="mb-2 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold">Digital Twin</h3>
+                    <p className="text-xs text-muted">
+                      A synthesized profile of your voice, interests, and values — used by "Digital Twin" mode to
+                      answer as you.
+                    </p>
+                  </div>
+                </div>
+                <textarea
+                  value={digitalTwin}
+                  onChange={(e) => onChangeDigitalTwin(e.target.value)}
+                  placeholder="Nothing generated yet — tap Regenerate to build one from your chat history, or write your own."
+                  rows={5}
+                  className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+                />
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-xs text-muted">
+                    {digitalTwinUpdatedAt > 0
+                      ? `Last updated ${new Date(digitalTwinUpdatedAt).toLocaleDateString()}`
+                      : "Never generated"}
+                  </span>
+                  <button
+                    onClick={onRegenerateDigitalTwin}
+                    disabled={digitalTwinRegenerating}
+                    className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-surface-2 disabled:opacity-40"
+                  >
+                    {digitalTwinRegenerating ? "Generating…" : "Regenerate from my chats"}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 

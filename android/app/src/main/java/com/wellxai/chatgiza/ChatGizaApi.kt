@@ -28,6 +28,8 @@ data class ApiConversation(
 
 data class HistorySnapshot(val conversations: List<ApiConversation>, val deletedIds: Map<String, Long>)
 
+data class TwinData(val summary: String, val updatedAt: Long)
+
 data class LatestVersionInfo(val runNumber: Int, val downloadUrl: String)
 
 // Idea #7: a shared AI chat session multiple people can join with a
@@ -110,7 +112,8 @@ data class PluginsState(
   val sqlHelper: Boolean = true,
   val pythonHelper: Boolean = true,
   val businessAssistant: Boolean = true,
-  val aiAgent: Boolean = true
+  val aiAgent: Boolean = true,
+  val digitalTwin: Boolean = true
 )
 
 data class SettingsData(
@@ -251,6 +254,10 @@ object ChatGizaApi {
     // model resolve relative/spoken time references (e.g. reminder
     // requests) into an absolute timestamp in the user's real timezone.
     localDateTime: String? = null,
+    // Idea #9: the user's synthesized digital twin profile, sent so it can
+    // both quietly improve personalization in every mode and be used
+    // literally when tool == "digital_twin".
+    digitalTwin: String? = null,
     onChunk: (String) -> Unit
   ): ApiResult<Unit> =
     withContext(Dispatchers.IO) {
@@ -312,6 +319,7 @@ object ChatGizaApi {
           )
         }
         if (localDateTime != null) payloadObj.put("localDateTime", localDateTime)
+        if (!digitalTwin.isNullOrBlank()) payloadObj.put("digitalTwin", digitalTwin)
 
         val payload = payloadObj.toString().toRequestBody(JSON)
         val request = Request.Builder()
@@ -446,6 +454,83 @@ object ChatGizaApi {
           return@withContext ApiResult.Failure(errorMessage(text, response.code))
         }
         ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  // Idea #9: Digital Twin -- one synthesized narrative profile, separate
+  // KV entry from profile/memory (see /api/twin), get/save mirrors
+  // getProfile/saveProfile exactly.
+  suspend fun getTwin(token: String): ApiResult<TwinData> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/twin")
+        .header("Authorization", "Bearer $token")
+        .get()
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val obj = JSONObject(text)
+        ApiResult.Success(TwinData(obj.optString("summary", ""), obj.optLong("updatedAt", 0L)))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun saveTwin(token: String, summary: String): ApiResult<TwinData> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject().put("summary", summary).toString().toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/twin")
+        .header("Authorization", "Bearer $token")
+        .put(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val obj = JSONObject(text)
+        ApiResult.Success(TwinData(obj.optString("summary", summary), obj.optLong("updatedAt", 0L)))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  // Draft only -- caller decides whether to call saveTwin with the result.
+  suspend fun synthesizeTwin(
+    token: String,
+    messages: List<ChatMessage>,
+    existingTwin: String
+  ): ApiResult<String> = withContext(Dispatchers.IO) {
+    try {
+      val messagesJson = JSONArray()
+      for (m in messages) {
+        messagesJson.put(JSONObject().put("role", m.role).put("content", m.content))
+      }
+      val payload = JSONObject()
+        .put("messages", messagesJson)
+        .put("existingTwin", existingTwin)
+        .toString()
+        .toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/twin/synthesize")
+        .header("Authorization", "Bearer $token")
+        .post(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(JSONObject(text).optString("summary", existingTwin))
       }
     } catch (e: Exception) {
       ApiResult.Failure(e.message ?: "Network error")
@@ -1131,7 +1216,8 @@ object ChatGizaApi {
         sqlHelper = pluginsObj.optBoolean("sql_helper", true),
         pythonHelper = pluginsObj.optBoolean("python_helper", true),
         businessAssistant = pluginsObj.optBoolean("business_assistant", true),
-        aiAgent = pluginsObj.optBoolean("ai_agent", true)
+        aiAgent = pluginsObj.optBoolean("ai_agent", true),
+        digitalTwin = pluginsObj.optBoolean("digital_twin", true)
       ),
       notifyOnComplete = obj.optBoolean("notifyOnComplete", true),
       notifyImageGen = obj.optBoolean("notifyImageGen", true),
@@ -1177,6 +1263,7 @@ object ChatGizaApi {
       .put("python_helper", data.plugins.pythonHelper)
       .put("business_assistant", data.plugins.businessAssistant)
       .put("ai_agent", data.plugins.aiAgent)
+      .put("digital_twin", data.plugins.digitalTwin)
 
     val privacyObj = JSONObject()
       .put("improveModel", data.privacy.improveModel)

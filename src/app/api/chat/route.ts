@@ -44,6 +44,7 @@ export async function POST(request: Request) {
         ? { question: body.referencedPair.question, answer: body.referencedPair.answer }
         : undefined,
     localDateTime: typeof body.localDateTime === "string" ? body.localDateTime : undefined,
+    digitalTwin: typeof body.digitalTwin === "string" ? body.digitalTwin : undefined,
   };
 
   if (!Array.isArray(messages) || messages.length === 0) {

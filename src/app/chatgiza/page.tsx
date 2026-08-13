@@ -114,6 +114,7 @@ const DEFAULT_PLUGINS: Record<PluginKey, boolean> = {
   python_helper: true,
   business_assistant: true,
   ai_agent: true,
+  digital_twin: true,
 };
 
 const DEFAULT_PROFILE: Profile = { nickname: "", about: "" };
@@ -381,6 +382,11 @@ function ChatGizaInner() {
   const [companyRequests, setCompanyRequests] = useState<CompanyRequest[]>([]);
   const [memory, setMemory] = useState<string[]>([]);
   const [memoryEnabled, setMemoryEnabled] = useState(true);
+  // Idea #9: a single synthesized narrative profile, loaded once and sent
+  // alongside every chat request (see /api/twin, digital_twin tool).
+  const [digitalTwin, setDigitalTwin] = useState("");
+  const [digitalTwinUpdatedAt, setDigitalTwinUpdatedAt] = useState(0);
+  const [digitalTwinRegenerating, setDigitalTwinRegenerating] = useState(false);
   const [historyEnabled, setHistoryEnabled] = useState(true);
   const [language, setLanguage] = useState("Auto-detect");
   const [languageOpen, setLanguageOpen] = useState(false);
@@ -400,6 +406,8 @@ function ChatGizaInner() {
   const pulledHistoryFor = useRef<string | null>(null);
   const profileSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pulledProfileFor = useRef<string | null>(null);
+  const pulledTwinFor = useRef<string | null>(null);
+  const twinSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const settingsSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pulledSettingsFor = useRef<string | null>(null);
   const projectsSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -594,6 +602,47 @@ function ChatGizaInner() {
       if (profileSyncTimer.current) clearTimeout(profileSyncTimer.current);
     };
   }, [profile, memory, memoryEnabled, language, signedIn]);
+
+  // Idea #9: separate KV entry from profile/memory (see /api/twin) since
+  // it's a single synthesized narrative, not a list of discrete facts.
+  useEffect(() => {
+    if (!signedIn) return;
+    const userId = authSession?.user?.id;
+    if (!userId || pulledTwinFor.current === userId) return;
+    pulledTwinFor.current = userId;
+    fetch("/api/twin")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { summary?: string; updatedAt?: number } | null) => {
+        if (!data) return;
+        if (typeof data.summary === "string") setDigitalTwin(data.summary);
+        if (typeof data.updatedAt === "number") setDigitalTwinUpdatedAt(data.updatedAt);
+      })
+      .catch(() => {});
+  }, [signedIn, authSession?.user?.id]);
+
+  // Debounced save, covers manual edits from the Digital Twin settings
+  // panel -- regenerating from chat history saves immediately instead (see
+  // handleRegenerateDigitalTwin below), so this only fires for typing.
+  useEffect(() => {
+    if (!signedIn || pulledTwinFor.current === null) return;
+    if (twinSyncTimer.current) clearTimeout(twinSyncTimer.current);
+    twinSyncTimer.current = setTimeout(() => {
+      fetch("/api/twin", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ summary: digitalTwin }),
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data: { updatedAt?: number } | null) => {
+          if (data && typeof data.updatedAt === "number") setDigitalTwinUpdatedAt(data.updatedAt);
+        })
+        .catch(() => {});
+    }, 1200);
+    return () => {
+      if (twinSyncTimer.current) clearTimeout(twinSyncTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [digitalTwin, signedIn]);
 
   // Same pull/push pattern, for plugins/notifications/privacy/location/company —
   // the rest of what used to be localStorage-only settings.
@@ -865,6 +914,41 @@ function ChatGizaInner() {
       .filter((k) => k.startsWith("chatgiza:"))
       .forEach((k) => localStorage.removeItem(k));
     await signOut({ callbackUrl: "/login" });
+  }
+
+  // Idea #9: samples recent turns across the user's own saved conversations
+  // (not just the currently open one) so the synthesized profile reflects
+  // how they actually write/decide generally, not just today's chat.
+  async function handleRegenerateDigitalTwin() {
+    if (digitalTwinRegenerating) return;
+    setDigitalTwinRegenerating(true);
+    try {
+      const sample = conversations
+        .slice(0, 8)
+        .flatMap((c) => c.messages.slice(-10))
+        .slice(-60)
+        .map((m) => ({ role: m.role, content: m.content }));
+      const res = await fetch("/api/twin/synthesize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: sample, existingTwin: digitalTwin }),
+      });
+      const data = await res.json().catch(() => null);
+      if (data?.summary) {
+        setDigitalTwin(data.summary);
+        const saveRes = await fetch("/api/twin", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ summary: data.summary }),
+        });
+        const saved = await saveRes.json().catch(() => null);
+        if (saved && typeof saved.updatedAt === "number") setDigitalTwinUpdatedAt(saved.updatedAt);
+      }
+    } catch {
+      // Best-effort -- the existing profile (if any) just stays as-is.
+    } finally {
+      setDigitalTwinRegenerating(false);
+    }
   }
 
   function handleFontSizeChange(s: ChatFontSize) {
@@ -1289,6 +1373,7 @@ function ChatGizaInner() {
           language,
           location,
           company,
+          digitalTwin,
         }),
       });
 
@@ -1556,6 +1641,11 @@ function ChatGizaInner() {
           memory={memory}
           onAddMemory={(fact) => setMemory((prev) => [...prev, fact])}
           onRemoveMemory={(index) => setMemory((prev) => prev.filter((_, i) => i !== index))}
+          digitalTwin={digitalTwin}
+          digitalTwinUpdatedAt={digitalTwinUpdatedAt}
+          digitalTwinRegenerating={digitalTwinRegenerating}
+          onChangeDigitalTwin={setDigitalTwin}
+          onRegenerateDigitalTwin={handleRegenerateDigitalTwin}
           historyEnabled={historyEnabled}
           onToggleHistoryEnabled={() => setHistoryEnabled((v) => !v)}
           onClearHistory={clearAllHistory}
