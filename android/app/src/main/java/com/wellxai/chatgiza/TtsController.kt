@@ -6,27 +6,33 @@ import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import com.google.android.gms.tasks.Task
+import com.google.mlkit.nl.languageid.LanguageIdentification
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.File
+import java.util.Locale
 import java.util.UUID
-
-// A handful of very common Kiswahili/Sheng function words -- cheap enough to
-// scan per message, and only needs to catch "this reply leans Kiswahili" for
-// picking a TTS locale, not do real language ID. Mirrors the same heuristic
-// used on the web client (src/lib/speak.ts).
-private val SWAHILI_MARKERS = Regex(
-  "\\b(na|ya|wa|za|la|kwa|ni|si|hii|hiyo|hapa|pia|lakini|kwamba|sana|leo|kesho|jana|nini|nani|vipi|karibu|" +
-    "asante|habari|mambo|sawa|tafadhali|nataka|ninataka|unaweza|utaweza|nimefanya|nimekuwa|wewe|yeye|sisi|wao)\\b",
-  RegexOption.IGNORE_CASE
-)
-
-private fun looksSwahili(text: String): Boolean = SWAHILI_MARKERS.containsMatchIn(text)
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /** Reads ChatGiZa's replies aloud using the device's built-in text-to-speech
- * engine — no network call, no extra permission needed. */
+ * engine — no network call for the speech itself, no extra permission
+ * needed. */
 class TtsController(context: Context) {
   private var engine: TextToSpeech? = null
   private var ready = false
   private val mainHandler = Handler(Looper.getMainLooper())
+  private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+  // Same on-device model OnDeviceTranslator.kt already uses -- recognizes
+  // 100+ languages, ships bundled with the library (no separate download
+  // step, unlike Translation's per-language packs), and is dramatically
+  // more accurate than guessing from a hardcoded word list.
+  private val languageIdentifier by lazy { LanguageIdentification.getClient() }
+  private var currentEngineLocale: Locale? = null
 
   /** Invoked (on the main thread) when the current utterance finishes or
    * errors out, so the UI can reset whichever "speaking" toggle it showed. */
@@ -50,26 +56,40 @@ class TtsController(context: Context) {
     }
   }
 
+  // The free on-device engine defaults to whatever language it started in
+  // and stays there for every utterance regardless of what's actually being
+  // read -- locking it to one language (even a correctly-detected one)
+  // mispronounces every reply in any other language just as badly. Detects
+  // this specific message's actual language via ML Kit (any of the 100+ it
+  // knows, not just Kiswahili) and switches the engine to match, but only
+  // when that language's voice data is actually installed on this device;
+  // otherwise keeps the current voice unchanged (most devices only ship a
+  // handful of languages' worth of free TTS data -- Premium Voice in
+  // Settings is the reliable fix for anything not installed locally).
   fun speak(text: String) {
     if (!ready || text.isBlank()) return
-    // The free on-device engine defaults to whatever language it started in
-    // and stays there for every utterance regardless of what's actually
-    // being read -- switching the engine to Kiswahili unconditionally then
-    // mispronounces plain English replies just as badly as the original bug
-    // mispronounced Kiswahili ones. Best-effort: pick the engine language
-    // per message based on what this specific text actually looks like;
-    // silently keep the current voice if the matching language isn't
-    // installed on this device (most devices' free TTS still has no
-    // Kiswahili data at all, in which case Premium Voice in Settings is the
-    // real fix).
-    runCatching {
-      val locale = if (looksSwahili(text)) java.util.Locale("sw") else java.util.Locale.US
-      val availability = engine?.isLanguageAvailable(locale) ?: TextToSpeech.LANG_NOT_SUPPORTED
-      if (availability >= TextToSpeech.LANG_AVAILABLE) {
-        engine?.language = locale
+    scope.launch {
+      runCatching {
+        val bcp47 = awaitTask(languageIdentifier.identifyLanguage(text))
+        if (bcp47 != "und") {
+          val locale = Locale.forLanguageTag(bcp47)
+          if (locale != currentEngineLocale) {
+            val availability = engine?.isLanguageAvailable(locale) ?: TextToSpeech.LANG_NOT_SUPPORTED
+            if (availability >= TextToSpeech.LANG_AVAILABLE) {
+              engine?.language = locale
+              currentEngineLocale = locale
+            }
+          }
+        }
       }
+      engine?.speak(text, TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString())
     }
-    engine?.speak(text, TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString())
+  }
+
+  private suspend fun <T> awaitTask(task: Task<T>): T = suspendCancellableCoroutine { cont ->
+    task
+      .addOnSuccessListener { if (cont.isActive) cont.resume(it) }
+      .addOnFailureListener { if (cont.isActive) cont.resumeWithException(it) }
   }
 
   fun stop() {
