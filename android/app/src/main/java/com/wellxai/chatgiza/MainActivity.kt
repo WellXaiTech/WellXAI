@@ -3671,7 +3671,7 @@ private data class PersonalityOption(
 private val PERSONALITY_OPTIONS = listOf(
   PersonalityOption("custom", "Custom", null),
   PersonalityOption("assistant", "Assistant", Icons.Outlined.SupportAgent),
-  PersonalityOption("therapist", "Therapist", Icons.Outlined.Psychology),
+  PersonalityOption("therapist", "\"Therapist\"", null, iconRes = R.drawable.ic_therapist),
   PersonalityOption("storyteller", "Storyteller", Icons.AutoMirrored.Outlined.MenuBook),
   PersonalityOption("story_time", "Story Time", null, tag = "Kids", iconRes = R.drawable.ic_story_time),
   PersonalityOption("trivia_game", "Trivia Game", Icons.Outlined.Quiz, tag = "Kids"),
