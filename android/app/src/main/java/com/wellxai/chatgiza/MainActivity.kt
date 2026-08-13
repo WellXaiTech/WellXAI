@@ -1172,20 +1172,26 @@ private fun SettingsIconCustom(tint: Color, modifier: Modifier = Modifier) {
   }
 }
 
-private val COPY_BACK_SHEET_PATH = PathParser().parsePathString(
-  "M2 11.667a3.4 3.4 0 0 1 3.4-3.4h2.205v2H5.4a1.4 1.4 0 0 0-1.4 1.4v7.2a1.4 1.4 0 0 0 1.4 1.4h7.2a1.4 1.4 0 0 0 1.4-1.4v-1.8h2v1.8a3.4 3.4 0 0 1-3.4 3.4H5.4a3.4 3.4 0 0 1-3.4-3.4z"
-).toPath().apply { fillType = PathFillType.EvenOdd }
+// Back sheet's visible corner (top edge + rounded left corner + left
+// edge) -- the front sheet below is drawn on top, so only this sliver
+// needs to exist.
+private val COPY_BACK_CORNER_PATH = PathParser().parsePathString("M15 3H9a4 4 0 0 0-4 4v8").toPath()
 
+// Front sheet -- a full rounded-rect outline. The SVG built this via a
+// <mask>+<use> so the back sheet's stroke wouldn't show through it, but
+// masks aren't worth replicating in Canvas here since this path is
+// stroke-only (no fill to mask) -- drawing it plain on top already fully
+// covers that corner of the back sheet the same way.
 private val COPY_FRONT_SHEET_PATH = PathParser().parsePathString(
-  "M10 3h8a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4h-8a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4m0 2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"
-).toPath().apply { fillType = PathFillType.EvenOdd }
+  "M8 11.5c0-2.346 0-3.518.62-4.326a3 3 0 0 1 .554-.554C9.982 6 11.154 6 13.5 6s3.518 0 4.326.62a3 3 0 0 1 .554.554c.62.808.62 1.98.62 4.326v4c0 2.346 0 3.518-.62 4.326a3 3 0 0 1-.554.554c-.808.62-1.98.62-4.326.62s-3.518 0-4.326-.62a3 3 0 0 1-.554-.554C8 19.018 8 17.846 8 15.5z"
+).toPath()
 
 @Composable
 private fun CopyIconCustom(tint: Color, modifier: Modifier = Modifier) {
   Canvas(modifier = modifier) {
     scale(size.width / 24f, pivot = Offset.Zero) {
-      drawPath(COPY_BACK_SHEET_PATH, color = tint)
-      drawPath(COPY_FRONT_SHEET_PATH, color = tint)
+      drawPath(COPY_BACK_CORNER_PATH, color = tint, style = Stroke(width = 2f))
+      drawPath(COPY_FRONT_SHEET_PATH, color = tint, style = Stroke(width = 2f))
     }
   }
 }
