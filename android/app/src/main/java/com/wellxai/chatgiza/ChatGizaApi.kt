@@ -30,6 +30,28 @@ data class HistorySnapshot(val conversations: List<ApiConversation>, val deleted
 
 data class LatestVersionInfo(val runNumber: Int, val downloadUrl: String)
 
+// Idea #7: a shared AI chat session multiple people can join with a
+// short code and all talk to at once. Polling-based (see
+// ChatViewModel's collab polling loop) rather than push/WebSocket --
+// there's no realtime infra in this project -- but it's a real,
+// working, multi-person session, not a mockup.
+data class CollabParticipant(val id: String, val name: String)
+
+data class CollabMessage(
+  val id: String,
+  val role: String,
+  val content: String,
+  val authorName: String?,
+  val createdAt: Long
+)
+
+data class CollabSession(
+  val code: String,
+  val createdBy: String,
+  val participants: List<CollabParticipant>,
+  val messages: List<CollabMessage>
+)
+
 data class ApiProfile(
   val nickname: String = "",
   val about: String = "",
@@ -666,6 +688,102 @@ object ChatGizaApi {
           return@withContext ApiResult.Failure(errorMessage(text, response.code))
         }
         ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  private fun collabSessionFromJson(obj: JSONObject): CollabSession {
+    val participantsArr = obj.optJSONArray("participants") ?: JSONArray()
+    val participants = (0 until participantsArr.length()).map { i ->
+      val p = participantsArr.getJSONObject(i)
+      CollabParticipant(p.getString("id"), p.optString("name", "Someone"))
+    }
+    val messagesArr = obj.optJSONArray("messages") ?: JSONArray()
+    val messages = (0 until messagesArr.length()).map { i ->
+      val m = messagesArr.getJSONObject(i)
+      CollabMessage(
+        id = m.optString("id", java.util.UUID.randomUUID().toString()),
+        role = m.optString("role", "user"),
+        content = m.optString("content", ""),
+        authorName = if (m.has("authorName") && !m.isNull("authorName")) m.optString("authorName") else null,
+        createdAt = m.optLong("createdAt", System.currentTimeMillis())
+      )
+    }
+    return CollabSession(
+      code = obj.getString("code"),
+      createdBy = obj.optString("createdBy", ""),
+      participants = participants,
+      messages = messages
+    )
+  }
+
+  suspend fun createCollabSession(token: String, displayName: String): ApiResult<CollabSession> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject().put("displayName", displayName).toString().toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/collab")
+        .header("Authorization", "Bearer $token")
+        .post(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        ApiResult.Success(collabSessionFromJson(JSONObject(text).getJSONObject("session")))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun joinCollabSession(token: String, code: String, displayName: String): ApiResult<CollabSession> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject().put("displayName", displayName).toString().toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/collab/$code/join")
+        .header("Authorization", "Bearer $token")
+        .post(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        ApiResult.Success(collabSessionFromJson(JSONObject(text).getJSONObject("session")))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun getCollabSession(token: String, code: String): ApiResult<CollabSession> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/collab/$code")
+        .header("Authorization", "Bearer $token")
+        .get()
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        ApiResult.Success(collabSessionFromJson(JSONObject(text).getJSONObject("session")))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun postCollabMessage(token: String, code: String, content: String, displayName: String): ApiResult<CollabSession> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject().put("content", content).put("displayName", displayName).toString().toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/collab/$code/message")
+        .header("Authorization", "Bearer $token")
+        .post(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        ApiResult.Success(collabSessionFromJson(JSONObject(text).getJSONObject("session")))
       }
     } catch (e: Exception) {
       ApiResult.Failure(e.message ?: "Network error")
