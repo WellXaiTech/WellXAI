@@ -9142,6 +9142,21 @@ private fun MessageActionBar(
         onOpen = { extraStage = "options" }
       )
     }
+    // Read Aloud/Stop is available on the user's own messages too (not just
+    // AI replies) -- lets them hear a message spoken back in the selected
+    // voice to check pronunciation, e.g. for Kiswahili/Sheng.
+    if (isSpeaking) {
+      ActionBarItem(
+        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_stop),
+        label = "Stop",
+        tint = accent,
+        onClick = onSpeakToggle
+      )
+    } else {
+      ActionBarItemShell("Read Aloud", Color(0xFFA8A8A8), onClick = onSpeakToggle) { tint ->
+        SpeakerIconCustom(tint = tint, modifier = Modifier.size(20.dp))
+      }
+    }
     if (!isUser) {
       ActionBarItem(
         painter = androidx.compose.ui.res.painterResource(R.drawable.ic_thumbs_up),
@@ -9171,18 +9186,6 @@ private fun MessageActionBar(
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
           }
           context.startActivity(Intent.createChooser(intent, null))
-        }
-      }
-      if (isSpeaking) {
-        ActionBarItem(
-          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_stop),
-          label = "Stop",
-          tint = accent,
-          onClick = onSpeakToggle
-        )
-      } else {
-        ActionBarItemShell("Read Aloud", Color(0xFFA8A8A8), onClick = onSpeakToggle) { tint ->
-          SpeakerIconCustom(tint = tint, modifier = Modifier.size(20.dp))
         }
       }
       ActionBarItem(androidx.compose.ui.res.painterResource(R.drawable.ic_regenerate), "Regenerate", onClick = onRegenerate)
