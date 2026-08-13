@@ -4100,6 +4100,14 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   BackHandler(enabled = viewModel.screen is AppScreen.History) { viewModel.closeHistory() }
   val context = LocalContext.current
 
+  // The account-plan banner below needs this, but Billing is otherwise only
+  // loaded when the user actually opens the Billing screen -- fetch it once
+  // here too so the banner shows the real plan name instead of just "Free"
+  // the whole time.
+  LaunchedEffect(Unit) {
+    if (viewModel.billingSummary == null) viewModel.loadBilling()
+  }
+
   val query = viewModel.historySearchQuery.trim()
   val visibleConversations = viewModel.conversations
     .filter { query.isEmpty() || it.title.contains(query, ignoreCase = true) }
@@ -4184,9 +4192,34 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           }
         }
 
-        // Big empty gap between Search and Events, matching the reference's
-        // large open space above its promo card.
-        Spacer(modifier = Modifier.height(190.dp))
+        // A big account-plan banner instead of an empty gap -- shows which
+        // package the account is actually on. Every real tier already has
+        // its own name from the backend (Starter/Growth/Enterprise via
+        // PLAN_DETAILS); no active subscription just means the free tier,
+        // shown here as "Free" rather than leaving it blank or generic.
+        val planName = viewModel.billingSummary?.subscription?.planName?.takeIf { it != "ChatGiZa" } ?: "Free"
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+            .height(150.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(Brush.linearGradient(listOf(Color(0xFF3A2E6B), Color(0xFF1B1430))))
+            .clickable { viewModel.openBilling() }
+            .padding(20.dp)
+        ) {
+          Icon(
+            Icons.Outlined.WorkspacePremium,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.14f),
+            modifier = Modifier.align(Alignment.TopEnd).size(72.dp)
+          )
+          Column(modifier = Modifier.align(Alignment.BottomStart)) {
+            Text("Your account", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(planName, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+          }
+        }
 
         // Events is a rotating promo carousel, not an Automations shortcut
         // -- that was the wrong call earlier; Automations/Scheduled already
