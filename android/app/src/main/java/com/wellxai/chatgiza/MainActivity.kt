@@ -1094,29 +1094,16 @@ private fun DeleteIcon(tint: Color, modifier: Modifier = Modifier) {
   }
 }
 
-/** Matches the exact custom waveform glyph the user supplied (24x24
- * viewBox, 5 filled rounded bars of varying height). */
+// Filter icon (pasted stroke SVG, viewBox 24x24) -- three horizontal
+// lines of decreasing width and indent, the classic "filter list" glyph.
+private val FILTER_LINES_PATH = PathParser().parsePathString("M3 6h18M6 12h12m-9 6h6").toPath()
+
 @Composable
 private fun FilterIconCustom(modifier: Modifier = Modifier, tint: Color = Color.White) {
   Canvas(modifier = modifier) {
-    val scale = size.width / 24f
-    val strokeW = 2f * scale
-    drawLine(
-      color = tint,
-      start = Offset(3f * scale, 8f * scale),
-      end = Offset(21f * scale, 8f * scale),
-      strokeWidth = strokeW,
-      cap = StrokeCap.Round
-    )
-    drawLine(
-      color = tint,
-      start = Offset(3f * scale, 16f * scale),
-      end = Offset(21f * scale, 16f * scale),
-      strokeWidth = strokeW,
-      cap = StrokeCap.Round
-    )
-    drawCircle(color = tint, radius = 2.5f * scale, center = Offset(9f * scale, 8f * scale))
-    drawCircle(color = tint, radius = 2.5f * scale, center = Offset(15f * scale, 16f * scale))
+    scale(size.width / 24f, pivot = Offset.Zero) {
+      drawPath(FILTER_LINES_PATH, color = tint, style = Stroke(width = 2f, cap = StrokeCap.Round))
+    }
   }
 }
 
