@@ -65,7 +65,17 @@ export function isRealAiConfigured() {
 const CAPABILITIES_PROMPT =
   "You are ChatGiZa, a conversational assistant. Reply in the language the user writes in (or their preferred " +
   "language if one is set below). You have real, working capabilities beyond plain text — know them and offer them proactively " +
-  "when relevant, don't just say you can't help:\n" +
+  "when relevant, don't just say you can't help:\n\n" +
+  "Kiswahili and Sheng: this is a core strength, not an afterthought. When the user writes in Kiswahili, Sheng, or " +
+  "code-switches between Kiswahili/Sheng/English mid-sentence (very common in everyday East African conversation), " +
+  "respond the way a genuinely fluent, native speaker would — never a stiff, word-for-word translation from English. " +
+  "Mirror the user's actual register: casual Sheng gets a casual, idiomatic reply using real Sheng vocabulary and " +
+  "rhythm, not textbook Kiswahili Sanifu; formal or business Kiswahili gets a properly formal one. When the user " +
+  "mixes languages, it's fine to mirror that mixing back rather than forcing everything into one language — e.g. " +
+  "keep an English technical term they used rather than awkwardly translating it, if that reads more naturally. " +
+  "Get slang, proverbs, idioms, and regional expressions right, and don't over-explain them unless asked. The bar: " +
+  "a Kiswahili or Sheng speaker should immediately feel this understands them better and more naturally than any " +
+  "other AI they've used — not that they're talking to a translation layer.\n\n" +
   "- For any question that isn't trivial small talk, think it through carefully before answering: consider what the user actually " +
   "needs (not just the literal words), weigh more than one angle when the topic has any nuance, check your own reasoning for " +
   "mistakes, and prefer a correct, well-considered answer over the fastest surface-level one. For genuinely complex or ambiguous " +
@@ -315,7 +325,12 @@ function mockReplyFor(messages: ChatMessage[]): string {
 // search pass like the plain "Web search" tool.
 const MAX_AGENT_STEPS = 5;
 
-async function performAgentWebSearch(client: InstanceType<typeof import("openai").default>, query: string): Promise<string> {
+type SourceCitation = { url: string; title: string };
+
+async function performAgentWebSearch(
+  client: InstanceType<typeof import("openai").default>,
+  query: string
+): Promise<{ text: string; citations: SourceCitation[] }> {
   try {
     const completion = await client.chat.completions.create({
       model: "gpt-4o-search-preview",
@@ -331,11 +346,25 @@ async function performAgentWebSearch(client: InstanceType<typeof import("openai"
         { role: "user", content: query },
       ],
     });
-    return completion.choices[0]?.message?.content?.trim() || "No results found.";
+    const message = completion.choices[0]?.message;
+    const rawAnnotations = (message as { annotations?: Array<{ type?: string; url_citation?: { url?: string; title?: string } }> } | undefined)
+      ?.annotations;
+    const citations: SourceCitation[] = [];
+    for (const ann of rawAnnotations ?? []) {
+      const url = ann.url_citation?.url;
+      if (ann.type === "url_citation" && url) citations.push({ url, title: ann.url_citation?.title || url });
+    }
+    return { text: message?.content?.trim() || "No results found.", citations };
   } catch (err) {
     console.error("Agent web_search tool error:", err);
-    return "Search failed -- try a different query or answer from what you already know.";
+    return { text: "Search failed -- try a different query or answer from what you already know.", citations: [] };
   }
+}
+
+function encodeSourcesBlock(citations: Map<string, string>): string | null {
+  if (citations.size === 0) return null;
+  const sources = Array.from(citations.entries()).map(([url, title]) => ({ url, title }));
+  return `\n[[SOURCES_START]]${JSON.stringify(sources)}[[SOURCES_END]]`;
 }
 
 async function runAiAgent(
@@ -370,6 +399,8 @@ async function runAiAgent(
     })),
   ];
 
+  const citations = new Map<string, string>();
+
   for (let step = 0; step < MAX_AGENT_STEPS; step++) {
     const completion = await client.chat.completions.create({
       model: "gpt-5.5",
@@ -389,6 +420,8 @@ async function runAiAgent(
       for (let i = 0; i < finalText.length; i += chunkSize) {
         controller.enqueue(encoder.encode(finalText.slice(i, i + chunkSize)));
       }
+      const sourcesBlock = encodeSourcesBlock(citations);
+      if (sourcesBlock) controller.enqueue(encoder.encode(sourcesBlock));
       return;
     }
 
@@ -402,8 +435,9 @@ async function runAiAgent(
           // Malformed arguments -- fall through with an empty query below.
         }
       }
-      const result = query ? await performAgentWebSearch(client, query) : "No query provided.";
-      conversation.push({ role: "tool", tool_call_id: call.id, content: result });
+      const result = query ? await performAgentWebSearch(client, query) : { text: "No query provided.", citations: [] };
+      for (const c of result.citations) citations.set(c.url, c.title);
+      conversation.push({ role: "tool", tool_call_id: call.id, content: result.text });
     }
   }
 
@@ -418,6 +452,8 @@ async function runAiAgent(
   });
   const text = wrapUp.choices[0]?.message?.content ?? "";
   controller.enqueue(encoder.encode(text));
+  const sourcesBlock = encodeSourcesBlock(citations);
+  if (sourcesBlock) controller.enqueue(encoder.encode(sourcesBlock));
 }
 
 type AgentPlanStep = { role: string; task: string };
@@ -498,6 +534,7 @@ async function runAgentTeam(
   };
 
   const results: { role: string; task: string; output: string }[] = [];
+  const teamCitations = new Map<string, string>();
   for (const step of plan) {
     const looksLikeResearch = /research|search|find|look ?up|investigat/i.test(step.role + step.task);
     try {
@@ -525,9 +562,10 @@ async function runAgentTeam(
                   // Malformed arguments -- proceed with an empty query.
                 }
               }
-              return query ? await performAgentWebSearch(client, query) : "No query provided.";
+              return query ? await performAgentWebSearch(client, query) : { text: "No query provided.", citations: [] };
             })
           );
+          for (const r of toolResults) for (const c of r.citations) teamCitations.set(c.url, c.title);
           const second = await client.chat.completions.create({
             model: "gpt-5.5",
             messages: [
@@ -536,7 +574,7 @@ async function runAgentTeam(
               ...msg.tool_calls.map((call, i) => ({
                 role: "tool" as const,
                 tool_call_id: call.id,
-                content: toolResults[i] ?? "",
+                content: toolResults[i]?.text ?? "",
               })),
             ] as Parameters<typeof client.chat.completions.create>[0]["messages"],
           });
@@ -622,9 +660,29 @@ async function streamOpenAi(
     ],
   });
 
+  // Idea #8: real, verifiable sources -- not the model typing links into
+  // its own prose (which it can get wrong or invent), but the actual
+  // url_citation annotations OpenAI's search-preview models attach to
+  // their own output when web_search_options is on. Collected silently
+  // while streaming and appended as a marker block the app parses out
+  // and renders as a real source list, the same trick already used for
+  // PDF export's [[PDF_START]]/[[PDF_END]] markers.
+  const citations = new Map<string, string>();
   for await (const chunk of completion) {
-    const delta = chunk.choices[0]?.delta?.content;
-    if (delta) controller.enqueue(encoder.encode(delta));
+    const delta = chunk.choices[0]?.delta as
+      | { content?: string; annotations?: Array<{ type?: string; url_citation?: { url?: string; title?: string } }> }
+      | undefined;
+    if (delta?.content) controller.enqueue(encoder.encode(delta.content));
+    for (const ann of delta?.annotations ?? []) {
+      const url = ann.url_citation?.url;
+      if (ann.type === "url_citation" && url && !citations.has(url)) {
+        citations.set(url, ann.url_citation?.title || url);
+      }
+    }
+  }
+  if (citations.size > 0) {
+    const sources = Array.from(citations.entries()).map(([url, title]) => ({ url, title }));
+    controller.enqueue(encoder.encode(`\n[[SOURCES_START]]${JSON.stringify(sources)}[[SOURCES_END]]`));
   }
 }
 
