@@ -231,6 +231,19 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var loadingBilling by mutableStateOf(false)
     private set
 
+  // Idea #9: Digital Twin -- one synthesized narrative profile, loaded
+  // once like profile/settings, editable via digitalTwinInput + saveDigitalTwin(),
+  // or regenerated from the user's own chat history via regenerateDigitalTwin().
+  var digitalTwin by mutableStateOf("")
+    private set
+  var digitalTwinInput by mutableStateOf("")
+  var digitalTwinUpdatedAt by mutableStateOf(0L)
+    private set
+  var digitalTwinRegenerating by mutableStateOf(false)
+    private set
+  var savingDigitalTwin by mutableStateOf(false)
+    private set
+
   init {
     if (tokenStore.getToken() != null) {
       userId = tokenStore.getUserId()
@@ -240,6 +253,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
       screen = AppScreen.Chat
       loadHistory()
       loadProfile()
+      loadDigitalTwin()
       loadSettings()
       loadProjects()
       loadScheduled()
@@ -956,6 +970,75 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     }
   }
 
+  fun loadDigitalTwin() {
+    val token = tokenStore.getToken() ?: return
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.getTwin(token)) {
+        is ApiResult.Success -> {
+          digitalTwin = result.value.summary
+          digitalTwinInput = result.value.summary
+          digitalTwinUpdatedAt = result.value.updatedAt
+        }
+        is ApiResult.Failure -> {} // Settings just shows blank; not worth surfacing.
+      }
+    }
+  }
+
+  fun onDigitalTwinInputChange(value: String) {
+    digitalTwinInput = value
+  }
+
+  fun saveDigitalTwin() {
+    val token = tokenStore.getToken() ?: return
+    savingDigitalTwin = true
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.saveTwin(token, digitalTwinInput)) {
+        is ApiResult.Success -> {
+          digitalTwin = result.value.summary
+          digitalTwinUpdatedAt = result.value.updatedAt
+          savingDigitalTwin = false
+        }
+        is ApiResult.Failure -> {
+          errorMessage = result.message
+          savingDigitalTwin = false
+        }
+      }
+    }
+  }
+
+  // Samples recent turns across the user's own saved conversations (not
+  // just whichever is open) so the profile reflects how they generally
+  // write/decide, not just today's chat.
+  fun regenerateDigitalTwin() {
+    val token = tokenStore.getToken() ?: return
+    if (digitalTwinRegenerating) return
+    digitalTwinRegenerating = true
+    val sample = conversations
+      .take(8)
+      .flatMap { it.messages.takeLast(10) }
+      .takeLast(60)
+      .map { ChatMessage(it.role, it.content) }
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.synthesizeTwin(token, sample, digitalTwinInput)) {
+        is ApiResult.Success -> {
+          digitalTwinInput = result.value
+          when (val saveResult = ChatGizaApi.saveTwin(token, result.value)) {
+            is ApiResult.Success -> {
+              digitalTwin = saveResult.value.summary
+              digitalTwinUpdatedAt = saveResult.value.updatedAt
+            }
+            is ApiResult.Failure -> {}
+          }
+          digitalTwinRegenerating = false
+        }
+        is ApiResult.Failure -> {
+          errorMessage = result.message
+          digitalTwinRegenerating = false
+        }
+      }
+    }
+  }
+
   fun loadSettings() {
     val token = tokenStore.getToken() ?: return
     viewModelScope.launch {
@@ -1021,6 +1104,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
       "python_helper" -> p.copy(pythonHelper = !p.pythonHelper)
       "business_assistant" -> p.copy(businessAssistant = !p.businessAssistant)
       "ai_agent" -> p.copy(aiAgent = !p.aiAgent)
+      "digital_twin" -> p.copy(digitalTwin = !p.digitalTwin)
       else -> p
     }
     persistSettings(settingsData.copy(plugins = updated))
@@ -1670,7 +1754,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         imageDataUrls = imagesToSend,
         historyIndex = buildHistoryIndex(conversationId),
         referencedPair = referencedPair,
-        localDateTime = currentLocalDateTimeString()
+        localDateTime = currentLocalDateTimeString(),
+        digitalTwin = digitalTwin
       ) { chunk ->
         messages = messages.map { m ->
           if (m.id == assistantId) m.copy(content = m.content + chunk) else m
@@ -1740,7 +1825,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         location = settingsData.location,
         company = settingsData.company,
         historyIndex = buildHistoryIndex(conversationId),
-        localDateTime = currentLocalDateTimeString()
+        localDateTime = currentLocalDateTimeString(),
+        digitalTwin = digitalTwin
       ) { chunk ->
         messages = messages.map { m -> if (m.id == assistantId) m.copy(content = m.content + chunk) else m }
       }

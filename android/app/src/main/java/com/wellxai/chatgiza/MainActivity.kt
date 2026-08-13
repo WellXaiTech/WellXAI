@@ -1024,7 +1024,8 @@ private val TOOL_LABELS = mapOf(
   "python_helper" to "Python Helper",
   "business_assistant" to "Business Assistant",
   "ai_agent" to "AI Agent",
-  "agent_team" to "Agent Team"
+  "agent_team" to "Agent Team",
+  "digital_twin" to "Digital Twin"
 )
 
 @Composable
@@ -2771,6 +2772,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             DropdownMenuItem(text = { Text("Business Assistant") }, onClick = { viewModel.selectTool("business_assistant"); toolMenuOpen = false })
             DropdownMenuItem(text = { Text("AI Agent") }, onClick = { viewModel.selectTool("ai_agent"); toolMenuOpen = false })
             DropdownMenuItem(text = { Text("Agent Team") }, onClick = { viewModel.selectTool("agent_team"); toolMenuOpen = false })
+            DropdownMenuItem(text = { Text("Digital Twin") }, onClick = { viewModel.selectTool("digital_twin"); toolMenuOpen = false })
           }
         }
         Spacer(modifier = Modifier.weight(1f))
@@ -3242,6 +3244,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
                   DropdownMenuItem(text = { Text("Business Assistant") }, onClick = { viewModel.selectTool("business_assistant"); toolMenuOpen = false })
                   DropdownMenuItem(text = { Text("AI Agent") }, onClick = { viewModel.selectTool("ai_agent"); toolMenuOpen = false })
                   DropdownMenuItem(text = { Text("Agent Team") }, onClick = { viewModel.selectTool("agent_team"); toolMenuOpen = false })
+                  DropdownMenuItem(text = { Text("Digital Twin") }, onClick = { viewModel.selectTool("digital_twin"); toolMenuOpen = false })
                 }
               }
               // Material3 TextField's own vertical padding is sized for a
@@ -8658,6 +8661,51 @@ private fun SettingsScreen(viewModel: ChatViewModel) {
       SettingsSwitchRow("Python Helper", data.plugins.pythonHelper) { viewModel.togglePlugin("python_helper") }
       SettingsSwitchRow("Business Assistant", data.plugins.businessAssistant) { viewModel.togglePlugin("business_assistant") }
       SettingsSwitchRow("AI Agent", data.plugins.aiAgent) { viewModel.togglePlugin("ai_agent") }
+      SettingsSwitchRow("Digital Twin", data.plugins.digitalTwin) { viewModel.togglePlugin("digital_twin") }
+
+      Spacer(modifier = Modifier.height(20.dp))
+      SettingsSectionTitle("Digital Twin profile")
+      Text(
+        "A synthesized profile of your voice, interests, and values -- used by Digital Twin mode to answer as you.",
+        color = colorScheme.onBackground.copy(alpha = 0.5f),
+        fontSize = 12.sp,
+        modifier = Modifier.padding(bottom = 8.dp)
+      )
+      OutlinedTextField(
+        value = viewModel.digitalTwinInput,
+        onValueChange = viewModel::onDigitalTwinInputChange,
+        placeholder = { Text("Nothing generated yet -- tap Regenerate, or write your own.") },
+        minLines = 4,
+        maxLines = 8,
+        modifier = Modifier.fillMaxWidth(),
+        colors = OutlinedTextFieldDefaults.colors(
+          focusedTextColor = Color.White,
+          unfocusedTextColor = Color.White,
+          focusedBorderColor = Color.White.copy(alpha = 0.4f),
+          unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
+          cursorColor = Color.White
+        )
+      )
+      Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Text(
+          if (viewModel.digitalTwinUpdatedAt > 0) {
+            "Last updated " + java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
+              .format(java.util.Date(viewModel.digitalTwinUpdatedAt))
+          } else "Never generated",
+          color = colorScheme.onBackground.copy(alpha = 0.4f),
+          fontSize = 11.sp,
+          modifier = Modifier.weight(1f)
+        )
+        TextButton(onClick = { viewModel.saveDigitalTwin() }, enabled = !viewModel.savingDigitalTwin) {
+          Text(if (viewModel.savingDigitalTwin) "Saving…" else "Save")
+        }
+        TextButton(onClick = { viewModel.regenerateDigitalTwin() }, enabled = !viewModel.digitalTwinRegenerating) {
+          Text(if (viewModel.digitalTwinRegenerating) "Generating…" else "Regenerate from my chats")
+        }
+      }
 
       Spacer(modifier = Modifier.height(20.dp))
       SettingsSectionTitle("Notifications")

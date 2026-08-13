@@ -16,6 +16,7 @@ export type ComposerTool =
   | "python_helper"
   | "business_assistant"
   | "ai_agent"
+  | "digital_twin"
   | null;
 
 type SpeechRecognitionLike = {
@@ -163,6 +164,17 @@ const AgentIcon = (
   </svg>
 );
 
+// Two overlapping people -- "you" and your synthesized twin -- rather than
+// a single-person icon, so it reads as a second self, not just a profile.
+const TwinIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="9" cy="8" r="3" />
+    <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
+    <circle cx="16" cy="7" r="2.6" strokeDasharray="3 2" />
+    <path d="M13.2 19a5.3 5.3 0 0 1 7.3-4.9" strokeDasharray="3 2" />
+  </svg>
+);
+
 const TOOL_LABELS: Record<Exclude<ComposerTool, null>, string> = {
   image: "Create image",
   video: "Create video",
@@ -174,6 +186,7 @@ const TOOL_LABELS: Record<Exclude<ComposerTool, null>, string> = {
   python_helper: "Python Helper",
   business_assistant: "Business Assistant",
   ai_agent: "AI Agent",
+  digital_twin: "Digital Twin",
 };
 
 export default function ChatComposer({
@@ -392,6 +405,12 @@ export default function ChatComposer({
       description: "Researches autonomously, searching multiple times before answering",
       icon: AgentIcon,
       tool: "ai_agent",
+    },
+    {
+      title: "Digital Twin",
+      description: "Answers as you, in your own voice, from your synthesized profile",
+      icon: TwinIcon,
+      tool: "digital_twin",
     },
   ];
 

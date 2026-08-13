@@ -17,6 +17,7 @@ export type ChatTool =
   | "business_assistant"
   | "ai_agent"
   | "agent_team"
+  | "digital_twin"
   | null;
 
 export type CompanyProfile = {
@@ -48,6 +49,13 @@ export type Personalization = {
   // looks it up locally (across all saved history, no matter how old)
   // and sends the exact pair here -- real content, not a guess.
   referencedPair?: { question: string; answer: string };
+  // Idea #9: a "Digital Twin" -- a short, evolving narrative profile of
+  // the user's communication style/voice, interests, values/decision
+  // patterns, and current goals, synthesized from their own chats (see
+  // synthesizeDigitalTwin below). Passed through so it can both quietly
+  // improve personalization in every mode, and be used literally in
+  // "digital_twin" mode to answer AS the user.
+  digitalTwin?: string;
   // The device's own current wall-clock time, "YYYY-MM-DDTHH:mm", in the
   // user's own local timezone (no timezone offset attached -- matches the
   // same naive-local-time format the scheduled-reminder runAt field uses).
@@ -122,6 +130,10 @@ const CAPABILITIES_PROMPT =
   "any link you type yourself. Still cite sources inline in your prose as normal for readability, but never claim a source is " +
   "\"verified\" or \"confirmed\" yourself — that badge only means something when it's the app's own trail, and you don't control " +
   "which pages end up in it.\n" +
+  "- You CAN speak AS the user in their own voice (\"Digital Twin\" mode, selectable from the \"+\" menu) — it drafts " +
+  "replies/decisions the way THEY would write them, based on a profile the app synthesizes from their own past chats " +
+  "(Settings > Digital Twin, where they can regenerate or edit it). Outside that specific mode, don't roleplay as the " +
+  "user yourself.\n" +
   "- Every question you answer and its reply share a short ID (shown in the app, e.g. \"Q-4F2A19\"). The user can bring that " +
   "exact exchange back up later, no matter how old, just by mentioning its ID — if you're given a specific past Q/A pair below " +
   "because the user referenced one, treat it as exact ground truth and engage with its real content, not a vague summary.\n" +
@@ -237,6 +249,27 @@ const AGENT_TEAM_PROMPT =
   "instead of one model answering alone. The user sees which roles were involved and gets one cohesive final " +
   "answer, not each agent's raw output pasted together.";
 
+// Idea #9: Digital Twin mode. Unlike every other mode (which is ChatGiZa
+// helping the user), this one is ChatGiZa BEING the user -- answering
+// entirely in first person, in their synthesized voice, for drafting
+// messages in their style or predicting how they'd likely respond/decide.
+// It leans entirely on personalization.digitalTwin (injected by
+// buildSystemPrompt below); with no twin profile yet it must say so
+// rather than inventing a fake personality.
+const DIGITAL_TWIN_PROMPT =
+  CAPABILITIES_PROMPT +
+  "\n\nYou are currently in Digital Twin mode. You are not ChatGiZa helping the user right now -- you ARE the user, " +
+  "speaking as them, in first person, using their own voice, phrasing habits, interests, values, and typical way of " +
+  "making decisions, exactly as captured in the digital twin profile provided below (in the personalization context). " +
+  "Use it to draft messages the way they'd actually write them, answer 'what would I say/decide here' questions as " +
+  "them, or let them see their own likely reaction to something. Stay fully in character as the user for the whole " +
+  "reply -- never slip into 'as your assistant, I think...' commentary, never break character to explain what you're " +
+  "doing, and never invent specific facts (names, events, opinions) the profile doesn't support -- if something is " +
+  "genuinely unknown, answer the way the real person would if asked something they hadn't thought about yet, in " +
+  "their voice, rather than fabricating certainty. If no digital twin profile was provided at all, don't pretend to " +
+  "be the user -- say plainly (as ChatGiZa, breaking the one exception to the rule above) that no profile exists yet " +
+  "and it needs to be generated first from Settings > Digital Twin.";
+
 const TOOL_PROMPTS: Record<string, string> = {
   default: SYSTEM_PROMPT,
   deep_research: DEEP_RESEARCH_PROMPT,
@@ -247,6 +280,7 @@ const TOOL_PROMPTS: Record<string, string> = {
   business_assistant: BUSINESS_ASSISTANT_PROMPT,
   ai_agent: AI_AGENT_PROMPT,
   agent_team: AGENT_TEAM_PROMPT,
+  digital_twin: DIGITAL_TWIN_PROMPT,
 };
 
 const CANNED_REPLIES = [
@@ -312,6 +346,9 @@ function buildSystemPrompt(base: string, personalization?: Personalization): str
         `You only have this short index, not the full text of those conversations -- if the user wants the actual ` +
         `content, tell them to reopen that chat from History rather than guessing at details you don't have:\n${lines}`
     );
+  }
+  if (personalization?.digitalTwin?.trim()) {
+    parts.push(`The user's digital twin profile (a synthesized picture of their voice, interests, values, and goals from their own past chats): ${personalization.digitalTwin.trim()}`);
   }
   if (personalization?.referencedPair) {
     const { question, answer } = personalization.referencedPair;
@@ -924,6 +961,55 @@ export async function extractMemoryCandidates(
   } catch (err) {
     console.error("Memory extraction failed:", err);
     return [];
+  }
+}
+
+const DIGITAL_TWIN_SYNTHESIS_PROMPT = `You build a short "digital twin" profile of the USER from their own chat history, for a personal AI assistant feature that lets the user get replies written in their own voice.
+
+Write ONE cohesive paragraph (120-220 words), in third person, covering whichever of these the conversation actually gives evidence for -- skip any you have no real basis for, don't pad with generic filler:
+- Voice and communication style: how direct/formal/casual they are, typical phrasing habits, tone.
+- Interests and areas of expertise or knowledge.
+- Values and decision-making patterns: what they seem to prioritize, how they weigh tradeoffs.
+- Current goals or ongoing projects/priorities, if apparent.
+
+Base this ONLY on real patterns actually visible across the conversation -- never invent specifics (names, opinions, facts) with no support. If an existing profile is provided, refine and update it with anything new rather than starting over, keeping what's still accurate.
+
+Never include: health conditions, sexuality, religion, immigration status, criminal history, or financial account numbers, even if mentioned.
+
+Respond with ONLY the paragraph itself -- no heading, no markdown, no preamble like "Here is the profile".`;
+
+// Idea #9: unlike extractMemoryCandidates (discrete, literal facts with an
+// accept/dismiss flow), this produces one holistic narrative -- closer to
+// a mirror of the user than a fact list -- meant to be reviewed/edited by
+// the user before saving, then reused both for general personalization
+// (buildSystemPrompt above) and literally in Digital Twin mode.
+export async function synthesizeDigitalTwin(messages: ChatMessage[], existingTwin?: string): Promise<string> {
+  if (getProvider() !== "openai") return existingTwin ?? "";
+
+  const recent = messages.slice(-60);
+  const transcript = recent
+    .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${flattenMessageText(m.content).slice(0, 400)}`)
+    .join("\n");
+
+  if (!transcript.trim()) return existingTwin ?? "";
+
+  try {
+    const { default: OpenAI } = await import("openai");
+    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const completion = await client.chat.completions.create({
+      model: "gpt-5.5",
+      messages: [
+        { role: "system", content: DIGITAL_TWIN_SYNTHESIS_PROMPT },
+        {
+          role: "user",
+          content: `${existingTwin?.trim() ? `Existing profile:\n${existingTwin.trim()}\n\n` : ""}Conversation:\n${transcript}`,
+        },
+      ],
+    });
+    return completion.choices[0]?.message?.content?.trim() || existingTwin || "";
+  } catch (err) {
+    console.error("Digital twin synthesis failed:", err);
+    return existingTwin ?? "";
   }
 }
 
