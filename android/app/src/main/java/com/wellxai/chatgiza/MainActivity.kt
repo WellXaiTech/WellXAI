@@ -209,7 +209,6 @@ import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Email
-import androidx.compose.material.icons.outlined.EventNote
 import androidx.compose.material.icons.outlined.Feedback
 import androidx.compose.material.icons.outlined.GraphicEq
 import androidx.compose.material.icons.outlined.Headset
@@ -1496,6 +1495,23 @@ private fun InviteFriendsIconCustom(tint: Color, modifier: Modifier = Modifier) 
           isAntiAlias = true
         }
       )
+    }
+  }
+}
+
+// "Arranged" briefcase icon (pasted stroke SVG, viewBox 24x24) -- one
+// combined path: a closed rounded-rect body, two short diagonal handle
+// straps, and a horizontal divider line, all stroked rather than filled.
+private val ARRANGED_PATH = PathParser().parsePathString(
+  "M2 9.667C2 6.26 4.686 3.5 8 3.5h8c3.314 0 6 2.76 6 6.167v6.166C22 19.24 19.314 22 16 22H8c-3.314 0-6-2.76-6-6.167z" +
+    "M8 5L7 2m9 3l1-3m4.5 7h-19"
+).toPath()
+
+@Composable
+private fun ArrangedIconCustom(tint: Color, modifier: Modifier = Modifier) {
+  Canvas(modifier = modifier) {
+    scale(size.width / 24f, pivot = Offset.Zero) {
+      drawPath(ARRANGED_PATH, color = tint, style = Stroke(width = 2f, cap = StrokeCap.Round, join = StrokeJoin.Round))
     }
   }
 }
@@ -4078,7 +4094,7 @@ private fun ChatGizaArrangedCard(onClick: () -> Unit) {
       modifier = Modifier.size(26.dp).clip(RoundedCornerShape(9.dp)).background(Color(0xFF1EBE7E)),
       contentAlignment = Alignment.Center
     ) {
-      Icon(Icons.Outlined.EventNote, contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp))
+      ArrangedIconCustom(tint = Color.White, modifier = Modifier.size(15.dp))
     }
     Spacer(modifier = Modifier.width(10.dp))
     Text("Arranged", color = colorScheme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.Bold)
