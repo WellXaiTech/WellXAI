@@ -943,6 +943,32 @@ object ChatGizaApi {
     }
   }
 
+  /** A real, pre-authorized Stripe Customer Portal URL -- unlike a plain
+   * chatgiza.com link, this works standalone in a browser that was never
+   * signed into the site (the app's own sign-in is a bearer token, not a
+   * browser cookie, so a bare app-URL handoff previously landed on a blank,
+   * signed-out page). */
+  suspend fun getBillingPortalUrl(token: String): ApiResult<String> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/billing/portal")
+        .header("Authorization", "Bearer $token")
+        .post("".toRequestBody(JSON))
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val url = JSONObject(text).optString("url", "")
+        if (url.isEmpty()) return@withContext ApiResult.Failure("No portal URL returned")
+        ApiResult.Success(url)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
   suspend fun getMediaPosts(token: String): ApiResult<List<ApiMediaPost>> = withContext(Dispatchers.IO) {
     try {
       val request = Request.Builder()
