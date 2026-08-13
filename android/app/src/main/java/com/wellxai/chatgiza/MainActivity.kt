@@ -70,6 +70,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.scrollBy
@@ -138,8 +140,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -2049,20 +2049,23 @@ private fun BoxScope.NowPlayingBar(isPremium: Boolean, player: PremiumTtsPlayer,
       )
     }
     Spacer(modifier = Modifier.width(8.dp))
-    Text(formatTime(positionMs), color = Color.White, fontSize = 12.sp)
-    Spacer(modifier = Modifier.width(8.dp))
+    Text(
+      if (durationMs > 0) "${formatTime(positionMs)} / ${formatTime(durationMs)}" else formatTime(positionMs),
+      color = Color.White,
+      fontSize = 12.sp
+    )
+    Spacer(modifier = Modifier.width(10.dp))
     if (isPremium && durationMs > 0) {
-      Slider(
-        value = positionMs.toFloat().coerceIn(0f, durationMs.toFloat()),
-        onValueChange = { userScrubbing = true; positionMs = it.toInt() },
-        onValueChangeFinished = { player.seekTo(positionMs); userScrubbing = false },
-        valueRange = 0f..durationMs.toFloat(),
-        modifier = Modifier.weight(1f).height(20.dp),
-        colors = SliderDefaults.colors(
-          thumbColor = Color.White,
-          activeTrackColor = Color.White,
-          inactiveTrackColor = Color.White.copy(alpha = 0.25f)
-        )
+      WaveformScrubber(
+        progress = (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f),
+        modifier = Modifier.weight(1f).height(28.dp),
+        onSeek = { fraction ->
+          userScrubbing = true
+          val ms = (fraction * durationMs).toInt()
+          positionMs = ms
+          player.seekTo(ms)
+        },
+        onSeekFinished = { userScrubbing = false }
       )
     } else {
       Spacer(modifier = Modifier.weight(1f))
@@ -2074,6 +2077,58 @@ private fun BoxScope.NowPlayingBar(isPremium: Boolean, player: PremiumTtsPlayer,
       tint = Color.White.copy(alpha = 0.7f),
       modifier = Modifier.size(20.dp).clickable(onClick = onClose)
     )
+  }
+}
+
+// A fixed, deterministic bar-height pattern (not real decoded amplitude --
+// decoding the MP3 for a true waveform is a lot more machinery for a
+// scrub track) that fills in white up to the current playback fraction,
+// and reports drag/tap position as a 0..1 fraction for seeking.
+@Composable
+private fun WaveformScrubber(
+  progress: Float,
+  modifier: Modifier = Modifier,
+  onSeek: (Float) -> Unit,
+  onSeekFinished: () -> Unit
+) {
+  val barCount = 44
+  val heights = remember {
+    List(barCount) { i ->
+      val n = kotlin.math.sin(i * 12.9898f) * 43758.5453f
+      0.3f + 0.7f * (n - kotlin.math.floor(n))
+    }
+  }
+  Canvas(
+    modifier = modifier
+      .pointerInput(Unit) {
+        detectTapGestures { offset ->
+          onSeek((offset.x / size.width).coerceIn(0f, 1f))
+          onSeekFinished()
+        }
+      }
+      .pointerInput(Unit) {
+        detectDragGestures(
+          onDragEnd = { onSeekFinished() },
+          onDragCancel = { onSeekFinished() }
+        ) { change, _ ->
+          change.consume()
+          onSeek((change.position.x / size.width).coerceIn(0f, 1f))
+        }
+      }
+  ) {
+    val barWidth = size.width / barCount
+    val gap = barWidth * 0.3f
+    for (i in 0 until barCount) {
+      val h = heights[i] * size.height
+      val x = i * barWidth
+      val filled = i.toFloat() / barCount <= progress
+      drawRoundRect(
+        color = if (filled) Color.White else Color.White.copy(alpha = 0.28f),
+        topLeft = Offset(x, (size.height - h) / 2f),
+        size = Size((barWidth - gap).coerceAtLeast(1f), h),
+        cornerRadius = CornerRadius(barWidth / 3f, barWidth / 3f)
+      )
+    }
   }
 }
 
