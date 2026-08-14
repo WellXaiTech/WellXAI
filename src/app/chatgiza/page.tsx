@@ -426,6 +426,7 @@ function ChatGizaInner() {
   const [showUpgradeNudge, setShowUpgradeNudge] = useState(false);
   const [topBarMenuOpen, setTopBarMenuOpen] = useState(false);
   const [greeting, setGreeting] = useState<string | null>(null);
+  const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const autoSent = useRef(false);
   const historySyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1068,6 +1069,47 @@ function ChatGizaInner() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [active?.messages, loading]);
+
+  // Right-edge question navigator: defaults to the newest question whenever
+  // one is asked or the conversation is switched, then tracks scroll
+  // position so the tick for whichever question is currently in view lights
+  // up as the user scrolls through the conversation.
+  useEffect(() => {
+    const userMsgs = active?.messages.filter((m) => m.role === "user") ?? [];
+    const last = userMsgs[userMsgs.length - 1];
+    setActiveQuestionId(last ? last.id : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active?.id, active?.messages.length]);
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    const userMsgs = active?.messages.filter((m) => m.role === "user") ?? [];
+    if (!container || userMsgs.length === 0) return;
+
+    let ticking = false;
+    const updateActiveFromScroll = () => {
+      ticking = false;
+      const containerRect = container.getBoundingClientRect();
+      const focusLine = containerRect.top + containerRect.height * 0.35;
+      let currentId = userMsgs[0].id;
+      for (const m of userMsgs) {
+        const el = document.getElementById(`msg-${m.id}`);
+        if (el && el.getBoundingClientRect().top <= focusLine) {
+          currentId = m.id;
+        }
+      }
+      setActiveQuestionId(currentId);
+    };
+
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(updateActiveFromScroll);
+    };
+
+    container.addEventListener("scroll", onScroll, { passive: true });
+    return () => container.removeEventListener("scroll", onScroll);
+  }, [active?.id, active?.messages]);
 
   useEffect(() => {
     const q = searchParams.get("q");
@@ -1878,25 +1920,36 @@ function ChatGizaInner() {
             "jump to previous prompt" strip -- one small tick per question
             asked, growing as the conversation grows, always visible (not
             hidden behind a menu). Hover reveals a preview, click jumps
-            straight to that message. */}
+            straight to that message, and the tick for whichever question is
+            currently in view (or was just asked) lights up. */}
         {active && active.messages.some((m) => m.role === "user") && (
           <div className="fixed right-1.5 top-1/2 z-30 hidden -translate-y-1/2 flex-col items-end gap-2.5 sm:flex">
             {active.messages
               .filter((m) => m.role === "user")
-              .map((m) => (
-                <div key={m.id} className="group relative flex items-center">
-                  <div className="pointer-events-none absolute right-5 max-w-[240px] truncate rounded-lg border border-border bg-surface px-3 py-1.5 text-xs text-foreground opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100">
-                    {m.content || "…"}
+              .map((m) => {
+                const isActiveQuestion = activeQuestionId === m.id;
+                return (
+                  <div key={m.id} className="group relative flex items-center">
+                    <div className="pointer-events-none absolute right-5 max-w-[240px] truncate rounded-lg border border-border bg-surface px-3 py-1.5 text-xs text-foreground opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100">
+                      {m.content || "…"}
+                    </div>
+                    <button
+                      aria-label="Jump to this question"
+                      onClick={() => {
+                        setActiveQuestionId(m.id);
+                        document
+                          .getElementById(`msg-${m.id}`)
+                          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      }}
+                      className={`h-[3px] rounded-full transition-all duration-150 ${
+                        isActiveQuestion
+                          ? "w-6 bg-foreground"
+                          : "w-4 bg-foreground/25 hover:w-6 hover:bg-foreground/70"
+                      }`}
+                    />
                   </div>
-                  <button
-                    aria-label="Jump to this question"
-                    onClick={() =>
-                      document.getElementById(`msg-${m.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" })
-                    }
-                    className="h-[3px] w-4 rounded-full bg-foreground/25 transition-all duration-150 hover:w-6 hover:bg-foreground/70"
-                  />
-                </div>
-              ))}
+                );
+              })}
           </div>
         )}
 
