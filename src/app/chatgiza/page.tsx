@@ -402,7 +402,6 @@ function ChatGizaInner() {
   const [supportOpen, setSupportOpen] = useState(false);
   const [celebration, setCelebration] = useState<string | null>(null);
   const [showUpgradeNudge, setShowUpgradeNudge] = useState(false);
-  const [streak, setStreak] = useState(0);
   const [greeting, setGreeting] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const autoSent = useRef(false);
@@ -459,7 +458,6 @@ function ChatGizaInner() {
     applyReduceMotion(storedReduceMotion);
 
     const currentStreak = recordVisitAndGetStreak();
-    setStreak(currentStreak);
     const streakMessage = checkStreakMilestone(currentStreak);
     if (streakMessage) setCelebration(streakMessage);
 
@@ -1600,7 +1598,6 @@ function ChatGizaInner() {
         onOpenSupport={() => setSupportOpen(true)}
         onOpenScheduled={() => setScheduledOpen(true)}
         userPlan={userPlan}
-        streak={streak}
         projects={projects.map(({ id, name }) => ({ id, name }))}
         onMoveToProject={assignConversationToProject}
       />
