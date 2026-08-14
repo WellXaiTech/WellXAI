@@ -425,6 +425,9 @@ function ChatGizaInner() {
   const [celebration, setCelebration] = useState<string | null>(null);
   const [showUpgradeNudge, setShowUpgradeNudge] = useState(false);
   const [topBarMenuOpen, setTopBarMenuOpen] = useState(false);
+  // A quick-jump index of every question asked in the open conversation --
+  // grows as it grows, click one to scroll straight to it.
+  const [questionsListOpen, setQuestionsListOpen] = useState(false);
   const [greeting, setGreeting] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const autoSent = useRef(false);
@@ -1846,7 +1849,16 @@ function ChatGizaInner() {
                 {topBarMenuOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setTopBarMenuOpen(false)} />
-                    <div className="absolute right-0 top-10 z-50 w-40 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-lg">
+                    <div className="absolute right-0 top-10 z-50 w-44 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-lg">
+                      <button
+                        onClick={() => {
+                          setQuestionsListOpen(true);
+                          setTopBarMenuOpen(false);
+                        }}
+                        className="block w-full px-3 py-2 text-left text-sm hover:bg-surface-2"
+                      >
+                        My questions
+                      </button>
                       <button
                         onClick={() => {
                           const title = window.prompt("Rename conversation", active.title);
@@ -1873,6 +1885,38 @@ function ChatGizaInner() {
             </>
           )}
         </div>
+
+        {questionsListOpen && active && (
+          <>
+            <div className="fixed inset-0 z-40 bg-black/50" onClick={() => setQuestionsListOpen(false)} />
+            <div className="fixed left-1/2 top-16 z-50 max-h-[420px] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 overflow-hidden rounded-2xl border border-border bg-surface shadow-lg">
+              <div className="border-b border-border px-4 py-3 text-xs font-medium text-muted">My questions</div>
+              <div className="max-h-[360px] overflow-y-auto">
+                {active.messages.filter((m) => m.role === "user").length === 0 ? (
+                  <p className="px-4 py-4 text-sm text-muted">Nothing asked yet.</p>
+                ) : (
+                  active.messages
+                    .filter((m) => m.role === "user")
+                    .map((m) => (
+                      <button
+                        key={m.id}
+                        onClick={() => {
+                          setQuestionsListOpen(false);
+                          document
+                            .getElementById(`msg-${m.id}`)
+                            ?.scrollIntoView({ behavior: "smooth", block: "center" });
+                        }}
+                        className="block w-full truncate px-4 py-3 text-left text-sm hover:bg-surface-2"
+                      >
+                        {m.content || "…"}
+                      </button>
+                    ))
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
         {!active ? (
           <div className="relative mx-auto flex w-full max-w-[var(--max-w-chat)] flex-1 flex-col items-center justify-end px-4 pb-3 sm:justify-center sm:pb-0">
             {signedIn && !userPlan && showUpgradeNudge && (
@@ -1965,23 +2009,24 @@ function ChatGizaInner() {
                     )}
                   </div>
                 ) : (
-                  <ChatMessageBubble
-                    key={m.id}
-                    role={m.role}
-                    content={m.content}
-                    attachments={m.attachments}
-                    imageUrl={m.imageUrl}
-                    videoUrl={m.videoUrl}
-                    isStreaming={m.id === streamingId}
-                    onEdit={m.role === "user" ? (text) => handleEditMessage(m.id, text) : undefined}
-                    onEditImage={m.imageUrl ? (instruction) => handleEditImage(m.imageUrl as string, instruction) : undefined}
-                    onRegenerate={
-                      m.role === "assistant" && !m.imageUrl && !m.videoUrl
-                        ? () => handleRegenerate(m.id)
-                        : undefined
-                    }
-                    onDelete={m.role === "assistant" ? () => handleDeleteMessage(m.id) : undefined}
-                  />
+                  <div key={m.id} id={`msg-${m.id}`}>
+                    <ChatMessageBubble
+                      role={m.role}
+                      content={m.content}
+                      attachments={m.attachments}
+                      imageUrl={m.imageUrl}
+                      videoUrl={m.videoUrl}
+                      isStreaming={m.id === streamingId}
+                      onEdit={m.role === "user" ? (text) => handleEditMessage(m.id, text) : undefined}
+                      onEditImage={m.imageUrl ? (instruction) => handleEditImage(m.imageUrl as string, instruction) : undefined}
+                      onRegenerate={
+                        m.role === "assistant" && !m.imageUrl && !m.videoUrl
+                          ? () => handleRegenerate(m.id)
+                          : undefined
+                      }
+                      onDelete={m.role === "assistant" ? () => handleDeleteMessage(m.id) : undefined}
+                    />
+                  </div>
                 );
               })}
             </div>
