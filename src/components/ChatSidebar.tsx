@@ -241,7 +241,7 @@ function NavItem({
   return (
     <button
       onClick={onClick}
-      className="flex h-10 w-full items-center gap-2.5 rounded-xl px-2 text-base font-medium text-foreground transition-colors hover:bg-surface-2"
+      className="flex h-10 w-full items-center gap-2.5 rounded-xl px-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-2"
     >
       <span className="flex h-5 w-5 shrink-0 items-center justify-center text-muted">{icon}</span>
       {label}
@@ -258,7 +258,7 @@ function SubItem({ icon, label, onClick }: { icon: React.ReactNode; label: strin
   return (
     <button
       onClick={onClick}
-      className="flex h-10 w-full items-center gap-2 rounded-xl px-2 text-left text-base font-medium text-foreground transition-colors hover:bg-surface-2"
+      className="flex h-10 w-full items-center gap-2 rounded-xl px-2 text-left text-sm font-medium text-foreground transition-colors hover:bg-surface-2"
     >
       <span className="flex h-5 w-5 shrink-0 items-center justify-center text-muted">{icon}</span>
       {label}
@@ -951,7 +951,7 @@ export default function ChatSidebar({
 
           <button
             onClick={closeMobileThen(onNewChat)}
-            className="mb-2 hidden h-10 w-full items-center gap-2 rounded-xl border border-border px-2 text-base font-medium shadow-sm transition-all hover:bg-surface-2 hover:shadow-md sm:flex"
+            className="mb-2 hidden h-10 w-full items-center gap-2 rounded-xl border border-border px-2 text-sm font-medium shadow-sm transition-all hover:bg-surface-2 hover:shadow-md sm:flex"
           >
             <span className="flex h-5 w-5 shrink-0 items-center justify-center">{PencilIcon}</span>
             New chat
