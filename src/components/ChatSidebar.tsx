@@ -62,9 +62,15 @@ const GearIcon = (
 );
 
 const PanelIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <rect x="3" y="4" width="18" height="16" rx="2" />
-    <line x1="9" y1="4" x2="9" y2="20" />
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 2H8a6 6 0 0 0-6 6v8a6 6 0 0 0 6 6h1M9 2h7a6 6 0 0 1 6 6v8a6 6 0 0 1-6 6H9M9 2v20" />
+    <path d="M17 15c-.7-1.26-1.74-2.3-3-3c1.26-.7 2.3-1.74 3-3" />
+  </svg>
+);
+
+const StreakBadgeIcon = (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m20 20l-4.05-4.05m0 0a7 7 0 1 0-9.9-9.9a7 7 0 0 0 9.9 9.9" />
   </svg>
 );
 
@@ -918,7 +924,7 @@ export default function ChatSidebar({
                 title={`Siku ${streak} mfululizo`}
                 className="flex items-center gap-1 rounded-full border border-border px-2 py-1 text-xs font-medium text-muted"
               >
-                🔥 {streak}
+                {StreakBadgeIcon} {streak}
               </span>
             )}
             <button
