@@ -98,10 +98,14 @@ const ArrowUpIcon = (
   </svg>
 );
 
-const MicIcon = (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 19v3m7-12v2a7 7 0 0 1-14 0v-2" />
-    <rect width="6" height="13" x="9" y="2" rx="3" />
+const WaveformIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+    <rect x="1.4" y="9" width="2.6" height="6" rx="1.3" />
+    <rect x="5" y="6" width="2.6" height="12" rx="1.3" />
+    <rect x="8.6" y="3" width="2.6" height="18" rx="1.3" />
+    <rect x="12.2" y="2" width="2.6" height="20" rx="1.3" />
+    <rect x="15.8" y="5" width="2.6" height="14" rx="1.3" />
+    <rect x="19.4" y="8" width="2.6" height="8" rx="1.3" />
   </svg>
 );
 
@@ -576,7 +580,7 @@ export default function ChatComposer({
         isListening ? "ring-2 ring-blue-300" : ""
       }`}
     >
-      {MicIcon}
+      {WaveformIcon}
     </button>
   );
 
