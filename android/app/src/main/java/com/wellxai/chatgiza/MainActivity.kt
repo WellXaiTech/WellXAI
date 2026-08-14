@@ -184,6 +184,7 @@ import androidx.compose.material.icons.filled.SettingsBrightness
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Comment
 import androidx.compose.material.icons.automirrored.outlined.TrendingFlat
@@ -1582,6 +1583,11 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
   var chatDeleteConfirm by remember { mutableStateOf(false) }
   var findInChatOpen by remember { mutableStateOf(false) }
   var findInChatQuery by remember { mutableStateOf("") }
+  // A quick-jump index of every question the user has asked in this chat --
+  // grows as the conversation grows, tap one to scroll straight to it
+  // instead of manually scrolling back through a long history.
+  var questionsListOpen by remember { mutableStateOf(false) }
+  val jumpScope = rememberCoroutineScope()
   // Moved up from further down so the top bar's 3-dot icon (below) can
   // reference it directly -- the menu now anchors to that icon instead
   // of being a bottom sheet unrelated to where it was tapped from.
@@ -1752,6 +1758,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
                   },
                   onTogglePin = { activeConversation?.let { viewModel.togglePin(it.id) } },
                   onFindInChat = { findInChatOpen = true },
+                  onQuestionsList = { questionsListOpen = true },
                   onDelete = { chatDeleteConfirm = true },
                   onComingSoon = { label -> Toast.makeText(context, "$label — coming soon", Toast.LENGTH_SHORT).show() }
                 )
@@ -1939,6 +1946,66 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
     }
   }
 
+  if (questionsListOpen) {
+    val userMessages = remember(viewModel.messages) {
+      viewModel.messages.withIndex().filter { it.value.role == "user" }
+    }
+    Box(
+      modifier = Modifier
+        .fillMaxSize()
+        .background(Color.Black.copy(alpha = 0.5f))
+        .clickable(
+          indication = null,
+          interactionSource = remember { MutableInteractionSource() }
+        ) { questionsListOpen = false }
+    ) {
+      Column(
+        modifier = Modifier
+          .align(Alignment.TopCenter)
+          .statusBarsPadding()
+          .padding(top = 60.dp, start = 16.dp, end = 16.dp)
+          .heightIn(max = 420.dp)
+          .clip(RoundedCornerShape(18.dp))
+          .background(Color(0xFF202020))
+          .border(1.dp, Color(0xFF2A2A2A), RoundedCornerShape(18.dp))
+      ) {
+        Text(
+          "My questions",
+          color = Color.White.copy(alpha = 0.5f),
+          fontSize = 13.sp,
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)
+        )
+        if (userMessages.isEmpty()) {
+          Text(
+            "Nothing asked yet.",
+            color = Color.White.copy(alpha = 0.4f),
+            fontSize = 13.sp,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+          )
+        } else {
+          LazyColumn {
+            items(userMessages, key = { it.index }) { (index, message) ->
+              Text(
+                message.content.ifBlank { "…" },
+                color = Color.White,
+                fontSize = 14.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .clickable {
+                    questionsListOpen = false
+                    jumpScope.launch { listState.animateScrollToItem(index) }
+                  }
+                  .padding(horizontal = 16.dp, vertical = 12.dp)
+              )
+            }
+          }
+        }
+      }
+    }
+  }
+
   if (chatDeleteConfirm) {
     val target = activeConversation
     AlertDialog(
@@ -2084,6 +2151,7 @@ private fun ChatConversationMenuSheet(
   onShare: () -> Unit,
   onTogglePin: () -> Unit,
   onFindInChat: () -> Unit,
+  onQuestionsList: () -> Unit,
   onDelete: () -> Unit,
   onComingSoon: (String) -> Unit
 ) {
@@ -2125,6 +2193,9 @@ private fun ChatConversationMenuSheet(
     ) { onDismiss(); onComingSoon("Add to project") }
     ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_find_in_chat), contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp)) }, label = "Find in chat") {
       onDismiss(); onFindInChat()
+    }
+    ChatMenuRow(icon = { Icon(Icons.AutoMirrored.Outlined.FormatListBulleted, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp)) }, label = "My questions") {
+      onDismiss(); onQuestionsList()
     }
     ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_home), contentDescription = null, tint = Color.White) }, label = "Add to home") {
       onDismiss(); onComingSoon("Add to home")
