@@ -545,27 +545,28 @@ private fun MediaStoriesRow(
       .padding(horizontal = 12.dp, vertical = 10.dp),
     horizontalArrangement = Arrangement.spacedBy(14.dp)
   ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp).clickable(onClick = onMyStoryClick)) {
+    val storyShape = RoundedCornerShape(14.dp)
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(60.dp).clickable(onClick = onMyStoryClick)) {
       Box(contentAlignment = Alignment.BottomEnd) {
         if (myImage != null) {
           AsyncImage(
             model = myImage,
             contentDescription = "Your story",
-            modifier = Modifier.size(64.dp).clip(CircleShape).border(1.dp, Color(0xFFDADADA), CircleShape),
+            modifier = Modifier.size(52.dp).clip(storyShape).border(1.dp, Color(0xFFDADADA), storyShape),
             contentScale = ContentScale.Crop
           )
         } else {
-          Icon(Icons.Outlined.AccountCircle, contentDescription = "Your story", tint = Color.Gray, modifier = Modifier.size(64.dp))
+          Icon(Icons.Outlined.AccountCircle, contentDescription = "Your story", tint = Color.Gray, modifier = Modifier.size(52.dp))
         }
         Box(
           modifier = Modifier
-            .size(22.dp)
+            .size(19.dp)
             .clip(CircleShape)
             .background(Color.Black)
             .border(2.dp, Color.White, CircleShape),
           contentAlignment = Alignment.Center
         ) {
-          Icon(Icons.Filled.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+          Icon(Icons.Filled.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(11.dp))
         }
       }
       Spacer(modifier = Modifier.height(4.dp))
@@ -575,23 +576,23 @@ private fun MediaStoriesRow(
       Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-          .width(72.dp)
+          .width(60.dp)
           .clickable { onOpenProfile(ProfileTarget(post.authorId, post.authorName, post.authorImage)) }
       ) {
         Box(
-          modifier = Modifier.size(68.dp).clip(CircleShape).background(Color.Black).padding(2.5.dp),
+          modifier = Modifier.size(56.dp).clip(storyShape).background(Color.Black).padding(2.5.dp),
           contentAlignment = Alignment.Center
         ) {
           if (post.authorImage != null) {
             AsyncImage(
               model = post.authorImage,
               contentDescription = post.authorName,
-              modifier = Modifier.size(61.dp).clip(CircleShape).border(2.dp, Color.White, CircleShape),
+              modifier = Modifier.size(49.dp).clip(RoundedCornerShape(11.dp)).border(2.dp, Color.White, RoundedCornerShape(11.dp)),
               contentScale = ContentScale.Crop
             )
           } else {
-            Box(modifier = Modifier.size(61.dp).clip(CircleShape).background(Color(0xFFEDEDED)).border(2.dp, Color.White, CircleShape), contentAlignment = Alignment.Center) {
-              Icon(Icons.Outlined.AccountCircle, contentDescription = post.authorName, tint = Color.Gray, modifier = Modifier.size(46.dp))
+            Box(modifier = Modifier.size(49.dp).clip(RoundedCornerShape(11.dp)).background(Color(0xFFEDEDED)).border(2.dp, Color.White, RoundedCornerShape(11.dp)), contentAlignment = Alignment.Center) {
+              Icon(Icons.Outlined.AccountCircle, contentDescription = post.authorName, tint = Color.Gray, modifier = Modifier.size(36.dp))
             }
           }
         }
