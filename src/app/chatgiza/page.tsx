@@ -8,11 +8,14 @@ import ChatMessageBubble from "@/components/ChatMessageBubble";
 import ChatComposer, { type ComposerTool } from "@/components/ChatComposer";
 import GeneratingMediaPlaceholder from "@/components/GeneratingMediaPlaceholder";
 import MediaLibrary from "@/components/MediaLibrary";
+import ChatGizaMediaFeed from "@/components/ChatGizaMediaFeed";
+import LiveVisionPanel from "@/components/LiveVisionPanel";
 import ProjectsPanel, { type Project } from "@/components/ProjectsPanel";
 import ScheduledPanel, { type ScheduledTask } from "@/components/ScheduledPanel";
 import PluginsPanel, { type PluginKey } from "@/components/PluginsPanel";
 import CodePanel from "@/components/CodePanel";
 import SettingsPanel, { type Profile, type PrivacyPrefs, type Tab as SettingsTab } from "@/components/SettingsPanel";
+import CompanyDashboard, { type CompanyProfile, type CompanyRequest } from "@/components/CompanyDashboard";
 import ComingSoonModal from "@/components/ComingSoonModal";
 import SignInPromptModal from "@/components/SignInPromptModal";
 import OnboardingModal from "@/components/OnboardingModal";
@@ -94,7 +97,9 @@ const GUEST_FREE_MESSAGES = 1;
 const ONBOARDING_DISMISSED_KEY = "chatgiza:onboarding-dismissed";
 const LANGUAGE_KEY = "chatgiza:language";
 const LOCATION_KEY = "chatgiza:location";
+const COMPANY_KEY = "chatgiza:company";
 const USER_PLAN_KEY = "chatgiza:user-plan";
+const COMPANY_REQUESTS_KEY = "chatgiza:company-requests";
 const GREETED_SESSION_KEY = "chatgiza:greeted-this-session";
 const GREETING_TEXT = "Karibu sana! Nimefurahi kuwa na wewe leo. Naweza kukusaidia vipi?";
 
@@ -113,6 +118,7 @@ const DEFAULT_PLUGINS: Record<PluginKey, boolean> = {
 };
 
 const DEFAULT_PROFILE: Profile = { nickname: "", about: "" };
+const DEFAULT_COMPANY: CompanyProfile = { name: "", description: "", employees: [] };
 
 const DEFAULT_PRIVACY_PREFS: PrivacyPrefs = {
   improveModel: false,
@@ -368,6 +374,8 @@ function ChatGizaInner() {
   const [streamingTool, setStreamingTool] = useState<ComposerTool>(null);
   const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [mediaFeedOpen, setMediaFeedOpen] = useState(false);
+  const [liveVisionOpen, setLiveVisionOpen] = useState(false);
   const [projectsOpen, setProjectsOpen] = useState(false);
   const [scheduledOpen, setScheduledOpen] = useState(false);
   const [pluginsOpen, setPluginsOpen] = useState(false);
@@ -376,6 +384,7 @@ function ChatGizaInner() {
   const [scheduledTasks, setScheduledTasks] = useState<ScheduledTask[]>([]);
   const [pluginsEnabled, setPluginsEnabled] = useState<Record<PluginKey, boolean>>(DEFAULT_PLUGINS);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [companyDashboardOpen, setCompanyDashboardOpen] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTab>("General");
   const [comingSoonTitle, setComingSoonTitle] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -395,6 +404,8 @@ function ChatGizaInner() {
   const [onboardingDismissed, setOnboardingDismissed] = useState(true);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
+  const [company, setCompany] = useState<CompanyProfile>(DEFAULT_COMPANY);
+  const [companyRequests, setCompanyRequests] = useState<CompanyRequest[]>([]);
   const [memory, setMemory] = useState<string[]>([]);
   const [memoryEnabled, setMemoryEnabled] = useState(true);
   // Idea #9: a single synthesized narrative profile, loaded once and sent
@@ -436,6 +447,8 @@ function ChatGizaInner() {
     setScheduledTasks(loadJson(SCHEDULED_KEY, []));
     setPluginsEnabled(loadJson(PLUGINS_KEY, DEFAULT_PLUGINS));
     setProfile(loadJson(PROFILE_KEY, DEFAULT_PROFILE));
+    setCompany(loadJson(COMPANY_KEY, DEFAULT_COMPANY));
+    setCompanyRequests(loadJson(COMPANY_REQUESTS_KEY, []));
     setUserPlan(loadJson<PlanTier | null>(USER_PLAN_KEY, null));
     setMemory(loadJson(MEMORY_KEY, []));
     setMemoryEnabled(loadJson(MEMORY_ENABLED_KEY, true));
@@ -657,7 +670,7 @@ function ChatGizaInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [digitalTwin, signedIn]);
 
-  // Same pull/push pattern, for plugins/notifications/privacy/location —
+  // Same pull/push pattern, for plugins/notifications/privacy/location/company —
   // the rest of what used to be localStorage-only settings.
   useEffect(() => {
     if (!signedIn) return;
@@ -675,6 +688,8 @@ function ChatGizaInner() {
             allNotificationsEnabled?: boolean;
             privacy?: PrivacyPrefs;
             location?: string;
+            company?: CompanyProfile;
+            companyRequests?: CompanyRequest[];
           } | null
         ) => {
           if (!data) return;
@@ -684,6 +699,8 @@ function ChatGizaInner() {
           if (typeof data.allNotificationsEnabled === "boolean") setAllNotificationsEnabled(data.allNotificationsEnabled);
           if (data.privacy) setPrivacyPrefs(data.privacy);
           if (typeof data.location === "string") setLocationState(data.location);
+          if (data.company) setCompany(data.company);
+          if (data.companyRequests) setCompanyRequests(data.companyRequests);
         }
       )
       .catch(() => {});
@@ -703,13 +720,15 @@ function ChatGizaInner() {
           allNotificationsEnabled,
           privacy: privacyPrefs,
           location,
+          company,
+          companyRequests,
         }),
       }).catch(() => {});
     }, 1200);
     return () => {
       if (settingsSyncTimer.current) clearTimeout(settingsSyncTimer.current);
     };
-  }, [pluginsEnabled, notifyOnComplete, notifyImageGen, allNotificationsEnabled, privacyPrefs, location, signedIn]);
+  }, [pluginsEnabled, notifyOnComplete, notifyImageGen, allNotificationsEnabled, privacyPrefs, location, company, companyRequests, signedIn]);
 
   // Same pull/push pattern, for Projects.
   useEffect(() => {
@@ -775,6 +794,10 @@ function ChatGizaInner() {
   }, [profile]);
 
   useEffect(() => {
+    localStorage.setItem(COMPANY_KEY, JSON.stringify(company));
+  }, [company]);
+
+  useEffect(() => {
     if (userPlan) localStorage.setItem(USER_PLAN_KEY, JSON.stringify(userPlan));
   }, [userPlan]);
 
@@ -802,6 +825,10 @@ function ChatGizaInner() {
       .catch(() => setUpgradeNotice("We couldn't confirm your payment yet. If you were charged, contact support."));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  useEffect(() => {
+    localStorage.setItem(COMPANY_REQUESTS_KEY, JSON.stringify(companyRequests));
+  }, [companyRequests]);
 
   useEffect(() => {
     localStorage.setItem(MEMORY_KEY, JSON.stringify(memory));
@@ -1412,6 +1439,7 @@ function ChatGizaInner() {
           memory: memoryEnabled ? memory : [],
           language,
           location,
+          company,
           digitalTwin,
         }),
       });
@@ -1567,6 +1595,21 @@ function ChatGizaInner() {
     );
   }
 
+  function addCompanyRequest(customerName: string, note: string) {
+    setCompanyRequests((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), customerName, note, status: "pending", createdAt: Date.now() },
+    ]);
+  }
+
+  function updateCompanyRequestStatus(id: string, status: CompanyRequest["status"]) {
+    setCompanyRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+  }
+
+  function removeCompanyRequest(id: string) {
+    setCompanyRequests((prev) => prev.filter((r) => r.id !== id));
+  }
+
   function createScheduledTask(prompt: string, runAt: string) {
     setScheduledTasks((prev) => [...prev, { id: crypto.randomUUID(), prompt, runAt, fired: false }]);
   }
@@ -1607,11 +1650,14 @@ function ChatGizaInner() {
         onDelete={deleteConversation}
         onShare={shareConversation}
         onOpenLibrary={() => setLibraryOpen(true)}
+        onOpenMedia={() => setMediaFeedOpen(true)}
+        onOpenLiveVision={() => setLiveVisionOpen(true)}
         onOpenProjects={() => setProjectsOpen(true)}
         onOpenCode={() => setCodeOpen(true)}
         onOpenSearch={() => setSearchOpen(true)}
         onOpenComingSoon={setComingSoonTitle}
         onOpenSettingsTab={openSettingsTab}
+        onOpenCompanyDashboard={() => setCompanyDashboardOpen(true)}
         onOpenLanguage={() => setLanguageOpen(true)}
         onOpenUpgradePlan={() => setUpgradePlanOpen(true)}
         onOpenSupport={() => setSupportOpen(true)}
@@ -1683,6 +1729,20 @@ function ChatGizaInner() {
         />
       )}
 
+      {companyDashboardOpen && (
+        <CompanyDashboard
+          onClose={() => setCompanyDashboardOpen(false)}
+          company={company}
+          onCompanyChange={setCompany}
+          plan={userPlan}
+          onOpenUpgradePlan={() => setUpgradePlanOpen(true)}
+          companyRequests={companyRequests}
+          onAddCompanyRequest={addCompanyRequest}
+          onUpdateCompanyRequestStatus={updateCompanyRequestStatus}
+          onRemoveCompanyRequest={removeCompanyRequest}
+        />
+      )}
+
       {comingSoonTitle && <ComingSoonModal title={comingSoonTitle} onClose={() => setComingSoonTitle(null)} />}
 
       {signInPromptOpen && <SignInPromptModal onClose={() => setSignInPromptOpen(false)} />}
@@ -1748,6 +1808,10 @@ function ChatGizaInner() {
           }}
         />
       )}
+
+      {mediaFeedOpen && <ChatGizaMediaFeed onClose={() => setMediaFeedOpen(false)} />}
+
+      {liveVisionOpen && <LiveVisionPanel onClose={() => setLiveVisionOpen(false)} />}
 
       {projectsOpen && (
         <ProjectsPanel
