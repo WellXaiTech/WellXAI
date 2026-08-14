@@ -69,7 +69,7 @@ const PanelIcon = (
 );
 
 const StreakBadgeIcon = (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="m20 20l-4.05-4.05m0 0a7 7 0 1 0-9.9-9.9a7 7 0 0 0 9.9 9.9" />
   </svg>
 );
@@ -721,7 +721,6 @@ export default function ChatSidebar({
   onOpenSupport,
   onOpenScheduled,
   userPlan,
-  streak,
   onTogglePin,
   onArchive,
   onDelete,
@@ -748,7 +747,6 @@ export default function ChatSidebar({
   onOpenSupport: () => void;
   onOpenScheduled: () => void;
   userPlan: PlanTier | null;
-  streak: number;
   onTogglePin: (id: string) => void;
   onArchive: (id: string) => void;
   onDelete: (id: string) => void;
@@ -919,14 +917,7 @@ export default function ChatSidebar({
             <span className="glow-badge rounded-full px-2 py-0.5">ChatGiZa</span>
           </button>
           <div className="flex items-center gap-1">
-            {streak >= 2 && (
-              <span
-                title={`Siku ${streak} mfululizo`}
-                className="flex items-center gap-1 rounded-full border border-border px-2 py-1 text-xs font-medium text-muted"
-              >
-                {StreakBadgeIcon} {streak}
-              </span>
-            )}
+            <span className="flex items-center justify-center text-muted">{StreakBadgeIcon}</span>
             <button
               onClick={onHeaderClose}
               aria-label={headerCloseLabel}
