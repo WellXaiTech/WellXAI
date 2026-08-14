@@ -149,6 +149,23 @@ const NewChatBubbleIcon = (
   </svg>
 );
 
+// Shown in the top bar once a real conversation is open, replacing the
+// Chat/Work tabs and New Chat button -- matches the reference: a "Share"
+// button and a "..." more-options menu, top-right.
+const TopBarShareIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m15 5l-3-3m0 0L9 5m3-3v12M6 9H4v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9h-2" />
+  </svg>
+);
+
+const TopBarMoreDotsIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+    <circle cx="5" cy="12" r="1.6" />
+    <circle cx="12" cy="12" r="1.6" />
+    <circle cx="19" cy="12" r="1.6" />
+  </svg>
+);
+
 const QUICK_ACTIONS = [
   {
     label: "Write or edit",
@@ -402,6 +419,7 @@ function ChatGizaInner() {
   const [supportOpen, setSupportOpen] = useState(false);
   const [celebration, setCelebration] = useState<string | null>(null);
   const [showUpgradeNudge, setShowUpgradeNudge] = useState(false);
+  const [topBarMenuOpen, setTopBarMenuOpen] = useState(false);
   const [greeting, setGreeting] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const autoSent = useRef(false);
@@ -1782,24 +1800,73 @@ function ChatGizaInner() {
       <div className="flex flex-1 flex-col overflow-hidden">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center px-4 pt-3">
           <span />
-          <div className="flex items-center justify-self-center gap-1 rounded-full bg-surface-2 p-1">
-            <span className="rounded-full bg-surface px-3 py-1 text-sm font-medium text-foreground shadow-sm">
-              Chat
-            </span>
-            <button
-              onClick={() => setComingSoonTitle("Work")}
-              className="rounded-full px-3 py-1 text-sm font-medium text-muted transition-colors hover:text-foreground"
-            >
-              Work
-            </button>
-          </div>
-          <button
-            onClick={() => setActiveId(null)}
-            aria-label="New chat"
-            className="flex h-10 w-10 shrink-0 items-center justify-self-end rounded-full border border-border bg-surface text-xl text-muted transition-all hover:scale-105 hover:border-foreground/30 hover:text-foreground hover:shadow-md [&>svg]:mx-auto"
-          >
-            {NewChatBubbleIcon}
-          </button>
+          {!active ? (
+            <>
+              <div className="flex items-center justify-self-center gap-1 rounded-full bg-surface-2 p-1">
+                <span className="rounded-full bg-surface px-3 py-1 text-sm font-medium text-foreground shadow-sm">
+                  Chat
+                </span>
+                <button
+                  onClick={() => setComingSoonTitle("Work")}
+                  className="rounded-full px-3 py-1 text-sm font-medium text-muted transition-colors hover:text-foreground"
+                >
+                  Work
+                </button>
+              </div>
+              <button
+                onClick={() => setActiveId(null)}
+                aria-label="New chat"
+                className="flex h-10 w-10 shrink-0 items-center justify-self-end rounded-full border border-border bg-surface text-xl text-muted transition-all hover:scale-105 hover:border-foreground/30 hover:text-foreground hover:shadow-md [&>svg]:mx-auto"
+              >
+                {NewChatBubbleIcon}
+              </button>
+            </>
+          ) : (
+            <>
+              <span />
+              <div className="relative flex items-center justify-self-end gap-1">
+                <button
+                  onClick={() => shareConversation(active.id)}
+                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-2"
+                >
+                  {TopBarShareIcon} Share
+                </button>
+                <button
+                  onClick={() => setTopBarMenuOpen((v) => !v)}
+                  aria-label="More"
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                >
+                  {TopBarMoreDotsIcon}
+                </button>
+                {topBarMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setTopBarMenuOpen(false)} />
+                    <div className="absolute right-0 top-10 z-50 w-40 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-lg">
+                      <button
+                        onClick={() => {
+                          const title = window.prompt("Rename conversation", active.title);
+                          if (title && title.trim()) renameConversation(active.id, title.trim());
+                          setTopBarMenuOpen(false);
+                        }}
+                        className="block w-full px-3 py-2 text-left text-sm hover:bg-surface-2"
+                      >
+                        Rename
+                      </button>
+                      <button
+                        onClick={() => {
+                          deleteConversation(active.id);
+                          setTopBarMenuOpen(false);
+                        }}
+                        className="block w-full px-3 py-2 text-left text-sm text-red-500 hover:bg-surface-2"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
+          )}
         </div>
         {!active ? (
           <div className="relative mx-auto flex w-full max-w-[var(--max-w-chat)] flex-1 flex-col items-center justify-end px-4 pb-3 sm:justify-center sm:pb-0">
