@@ -436,15 +436,16 @@ private fun ChatGiZaHeader(
       verticalAlignment = Alignment.CenterVertically,
       modifier = Modifier
         .weight(1f)
-        .height(38.dp)
-        .clip(RoundedCornerShape(19.dp))
+        .height(46.dp)
+        .clip(RoundedCornerShape(23.dp))
         .background(Color(0xFFF0F0F0))
+        .border(width = 1.5.dp, color = Color(0xFFD6D6D6), shape = RoundedCornerShape(23.dp))
         .clickable(onClick = onSearchClick)
-        .padding(horizontal = 12.dp)
+        .padding(horizontal = 14.dp)
     ) {
-      Icon(Icons.Filled.Search, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
-      Spacer(modifier = Modifier.width(6.dp))
-      Text("Find anything", color = Color.Gray, fontSize = 13.sp)
+      Icon(Icons.Filled.Search, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(18.dp))
+      Spacer(modifier = Modifier.width(8.dp))
+      Text("Find anything", color = Color.Gray, fontSize = 14.sp)
     }
     Spacer(modifier = Modifier.width(4.dp))
     IconButton(onClick = onNotificationsClick) {
