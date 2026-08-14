@@ -122,9 +122,54 @@ const StockIcon = (
   </svg>
 );
 
+const KycIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="2" y="4" width="20" height="16" rx="2" />
+    <circle cx="8" cy="11" r="2" />
+    <path d="M5 17c.5-1.7 1.8-3 3-3s2.5 1.3 3 3" />
+    <path d="M14 9h6M14 13h6" />
+  </svg>
+);
+
+const ChevronDownIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M6 9l6 6 6-6" />
+  </svg>
+);
+
 const ChevronRightIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M9 18l6-6-6-6" />
+  </svg>
+);
+
+const PersonIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 20c1.3-3.6 4.4-6 8-6s6.7 2.4 8 6" />
+  </svg>
+);
+
+const BuildingIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="4" y="3" width="16" height="18" rx="1" />
+    <path d="M9 8h1M14 8h1M9 12h1M14 12h1M9 16h1M14 16h1" />
+  </svg>
+);
+
+const MediaFeedIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M3 15l4.5-4.5a2 2 0 0 1 2.8 0L15 15" />
+    <circle cx="16.5" cy="8.5" r="1.5" />
+    <path d="M14 15l1.5-1.5a2 2 0 0 1 2.8 0L21 16" />
+  </svg>
+);
+
+const LiveVisionIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M23 7l-7 5 7 5V7Z" />
+    <rect x="1" y="5" width="15" height="14" rx="2" />
   </svg>
 );
 
@@ -217,6 +262,18 @@ function NavItem({
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return <div className="px-2.5 pb-1 pt-3 text-xs text-muted">{children}</div>;
+}
+
+function SubItem({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick?: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex h-10 w-full items-center gap-2 rounded-xl px-2 text-left text-sm font-medium text-foreground transition-colors hover:bg-surface-2"
+    >
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center text-muted">{icon}</span>
+      {label}
+    </button>
+  );
 }
 
 type MenuCoords = { left: number; top?: number; bottom?: number };
@@ -654,11 +711,14 @@ export default function ChatSidebar({
   onNewChat,
   onRename,
   onOpenLibrary,
+  onOpenMedia,
+  onOpenLiveVision,
   onOpenProjects,
   onOpenCode,
   onOpenSearch,
   onOpenComingSoon,
   onOpenSettingsTab,
+  onOpenCompanyDashboard,
   onOpenLanguage,
   onOpenUpgradePlan,
   onOpenSupport,
@@ -677,11 +737,14 @@ export default function ChatSidebar({
   onNewChat: () => void;
   onRename: (id: string, title: string) => void;
   onOpenLibrary: () => void;
+  onOpenMedia: () => void;
+  onOpenLiveVision: () => void;
   onOpenProjects: () => void;
   onOpenCode: () => void;
   onOpenSearch: () => void;
   onOpenComingSoon: (title: string) => void;
   onOpenSettingsTab: (tab: SettingsTab) => void;
+  onOpenCompanyDashboard: () => void;
   onOpenLanguage: () => void;
   onOpenUpgradePlan: () => void;
   onOpenSupport: () => void;
@@ -700,6 +763,7 @@ export default function ChatSidebar({
   const historyAnchorRef = useRef<HTMLDivElement>(null);
   const getMenuAnchor = () => historyAnchorRef.current?.getBoundingClientRect() ?? null;
   const [collapsed, setCollapsed] = useState(false);
+  const [kycOpen, setKycOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -898,6 +962,23 @@ export default function ChatSidebar({
             <NavItem icon={ProjectsIcon} label="Projects" onClick={closeMobileThen(onOpenProjects)} />
             <NavItem icon={ImagesIcon} label="images" onClick={closeMobileThen(onOpenLibrary)} />
             <NavItem icon={LibraryIcon} label="Library" onClick={closeMobileThen(onOpenLibrary)} />
+            <NavItem icon={MediaFeedIcon} label="ChatGiZa Media" onClick={closeMobileThen(onOpenMedia)} />
+            <NavItem icon={LiveVisionIcon} label="Live Voice" onClick={closeMobileThen(onOpenLiveVision)} />
+
+            <NavItem
+              icon={KycIcon}
+              label="KYC"
+              onClick={() => setKycOpen((v) => !v)}
+              trailing={
+                <span className={`transition-transform ${kycOpen ? "rotate-180" : ""}`}>{ChevronDownIcon}</span>
+              }
+            />
+            {kycOpen && (
+              <div className="ml-4 space-y-0.5 border-l border-border pl-2">
+                <SubItem icon={PersonIcon} label="Personal KYC" onClick={closeMobileThen(() => onOpenComingSoon("Personal KYC"))} />
+                <SubItem icon={BuildingIcon} label="Company KYC" onClick={closeMobileThen(onOpenCompanyDashboard)} />
+              </div>
+            )}
 
             <SectionLabel>Products</SectionLabel>
             <NavItem icon={DesignIcon} label="Design" onClick={closeMobileThen(() => onOpenComingSoon("Design"))} />
