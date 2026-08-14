@@ -1916,42 +1916,61 @@ function ChatGizaInner() {
           )}
         </div>
 
-        {/* Persistent right-edge message navigator, matching ChatGPT's own
-            "jump to previous prompt" strip -- one small tick per question
-            asked, growing as the conversation grows, always visible (not
-            hidden behind a menu). Hover reveals a preview, click jumps
-            straight to that message, and the tick for whichever question is
-            currently in view (or was just asked) lights up. */}
-        {active && active.messages.some((m) => m.role === "user") && (
-          <div className="fixed right-1.5 top-1/2 z-30 hidden -translate-y-1/2 flex-col items-end gap-2.5 sm:flex">
-            {active.messages
-              .filter((m) => m.role === "user")
-              .map((m) => {
+        {/* Persistent right-edge message navigator, matching the reference
+            screenshot's behavior exactly: collapsed to small ticks by
+            default, and the full list of questions opens on its own the
+            moment the mouse passes over the strip -- no click needed to
+            open it. Only shows up once a conversation has grown past its
+            first question (a single question has nothing to navigate to).
+            Ticks sit at fixed percentages down a bounded track, spanning
+            the full conversation from first question (top) to latest
+            (bottom), so a long conversation can never push a tick outside
+            the viewport where it would be unreachable; the opened list
+            scrolls internally for the same reason. The tick (and list
+            entry) for whichever question is currently in view, or was just
+            asked, is highlighted; clicking any entry jumps straight to it. */}
+        {active && (() => {
+          const userMsgs = active.messages.filter((m) => m.role === "user");
+          if (userMsgs.length < 2) return null;
+          const jumpTo = (id: string) => {
+            setActiveQuestionId(id);
+            document.getElementById(`msg-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+          };
+          return (
+            <div className="group fixed right-1.5 top-24 bottom-24 z-30 hidden w-4 sm:block">
+              {userMsgs.map((m, i) => {
                 const isActiveQuestion = activeQuestionId === m.id;
+                const topPercent = (i / (userMsgs.length - 1)) * 100;
                 return (
-                  <div key={m.id} className="group relative flex items-center">
-                    <div className="pointer-events-none absolute right-5 max-w-[240px] truncate rounded-lg border border-border bg-surface px-3 py-1.5 text-xs text-foreground opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100">
-                      {m.content || "…"}
-                    </div>
-                    <button
-                      aria-label="Jump to this question"
-                      onClick={() => {
-                        setActiveQuestionId(m.id);
-                        document
-                          .getElementById(`msg-${m.id}`)
-                          ?.scrollIntoView({ behavior: "smooth", block: "center" });
-                      }}
-                      className={`h-[3px] rounded-full transition-all duration-150 ${
-                        isActiveQuestion
-                          ? "w-6 bg-foreground"
-                          : "w-4 bg-foreground/25 hover:w-6 hover:bg-foreground/70"
-                      }`}
-                    />
-                  </div>
+                  <span
+                    key={m.id}
+                    aria-hidden
+                    className={`absolute right-0 h-[3px] rounded-full transition-opacity duration-150 group-hover:opacity-0 ${
+                      isActiveQuestion ? "w-6 bg-foreground" : "w-4 bg-foreground/25"
+                    }`}
+                    style={{ top: `${topPercent}%`, transform: "translateY(-50%)" }}
+                  />
                 );
               })}
-          </div>
-        )}
+
+              <div className="pointer-events-none absolute right-5 top-0 max-h-full w-64 overflow-y-auto rounded-2xl border border-border bg-surface opacity-0 shadow-lg transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
+                <div className="py-1">
+                  {userMsgs.map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => jumpTo(m.id)}
+                      className={`block w-full truncate px-3 py-2 text-left text-xs hover:bg-surface-2 ${
+                        activeQuestionId === m.id ? "text-foreground" : "text-muted"
+                      }`}
+                    >
+                      {m.content || "…"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {!active ? (
           <div className="relative mx-auto flex w-full max-w-[var(--max-w-chat)] flex-1 flex-col items-center justify-end px-4 pb-3 sm:justify-center sm:pb-0">
