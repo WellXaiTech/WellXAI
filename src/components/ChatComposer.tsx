@@ -98,6 +98,12 @@ const ArrowUpIcon = (
   </svg>
 );
 
+const MicIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 3a3 3 0 0 0-3 3v4a3 3 0 1 0 6 0V6a3 3 0 0 0-3-3m0-2a5 5 0 0 1 5 5v4a5 5 0 0 1-10 0V6a5 5 0 0 1 5-5M3.055 11H5.07a7.002 7.002 0 0 0 13.858 0h2.016A9.004 9.004 0 0 1 13 18.945V23h-2v-4.055A9.004 9.004 0 0 1 3.055 11" />
+  </svg>
+);
+
 const WaveformIcon = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
     <rect x="1.4" y="9" width="2.6" height="6" rx="1.3" />
@@ -584,6 +590,23 @@ export default function ChatComposer({
     </button>
   );
 
+  // A second, separate mic entry point sitting right next to the blue
+  // waveform button -- not replacing it, per feedback.
+  const secondaryMicButton = (
+    <button
+      type="button"
+      aria-label="Hold to talk"
+      onPointerDown={startListening}
+      onPointerUp={stopListening}
+      onPointerLeave={stopListening}
+      onPointerCancel={stopListening}
+      disabled={disabled}
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      {MicIcon}
+    </button>
+  );
+
   const sendButton = (
     <button
       type="submit"
@@ -620,6 +643,7 @@ export default function ChatComposer({
         {attachMenu}
         {toolSelector}
         <div className="flex-1" />
+        {secondaryMicButton}
         {value.trim() || attachments.length > 0 ? sendButton : micButton}
       </div>
     </form>
