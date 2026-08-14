@@ -1953,7 +1953,7 @@ function ChatGizaInner() {
                 );
               })}
 
-              <div className="pointer-events-none absolute right-8 top-0 max-h-full w-64 overflow-y-auto rounded-2xl border border-border bg-surface opacity-0 shadow-lg transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
+              <div className="pointer-events-none absolute right-8 top-0 max-h-full w-52 overflow-y-auto rounded-xl border border-border/40 bg-surface opacity-0 shadow-lg transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
                 <div className="py-1">
                   {userMsgs.map((m) => (
                     <button
