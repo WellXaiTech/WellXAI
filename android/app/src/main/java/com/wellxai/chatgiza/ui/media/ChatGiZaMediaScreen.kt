@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Movie
@@ -277,7 +278,8 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
     ) {
       ChatGiZaHeader(
         topInset = topInset,
-        onAddClick = { showConnectSheet = true },
+        onMenuClick = { showConnectSheet = true },
+        onSearchClick = { searchOpen = !searchOpen },
         onNotificationsClick = { showNotifications = true }
       )
     }
@@ -320,9 +322,8 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
 
     MediaBottomNavigation(
       viewModel = viewModel,
-      searchOpen = searchOpen,
-      onSearchClick = { searchOpen = !searchOpen },
       onCreateClick = { showConnectSheet = true },
+      onNotificationsClick = { showNotifications = true },
       onProfileClick = {
         val uid = viewModel.userId
         if (uid != null) viewingProfile = ProfileTarget(uid, viewModel.userName ?: "You", viewModel.userImage)
@@ -412,7 +413,12 @@ private fun mediaGridGradient(seed: String): List<Color> =
 // =============================================================
 
 @Composable
-private fun ChatGiZaHeader(topInset: androidx.compose.ui.unit.Dp, onAddClick: () -> Unit, onNotificationsClick: () -> Unit) {
+private fun ChatGiZaHeader(
+  topInset: androidx.compose.ui.unit.Dp,
+  onMenuClick: () -> Unit,
+  onSearchClick: () -> Unit,
+  onNotificationsClick: () -> Unit
+) {
   Row(
     modifier = Modifier
       .fillMaxWidth()
@@ -422,12 +428,25 @@ private fun ChatGiZaHeader(topInset: androidx.compose.ui.unit.Dp, onAddClick: ()
       .padding(horizontal = 12.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    IconButton(onClick = onAddClick) {
-      Icon(Icons.Filled.Add, contentDescription = "Create", tint = Color.Black)
+    IconButton(onClick = onMenuClick) {
+      Icon(Icons.Filled.Menu, contentDescription = "Menu", tint = Color.Black)
     }
-    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-      Text(text = "ChatGiZa", color = Color.Black, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+    Spacer(modifier = Modifier.width(4.dp))
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      modifier = Modifier
+        .weight(1f)
+        .height(38.dp)
+        .clip(RoundedCornerShape(19.dp))
+        .background(Color(0xFFF0F0F0))
+        .clickable(onClick = onSearchClick)
+        .padding(horizontal = 12.dp)
+    ) {
+      Icon(Icons.Filled.Search, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+      Spacer(modifier = Modifier.width(6.dp))
+      Text("Find anything", color = Color.Gray, fontSize = 13.sp)
     }
+    Spacer(modifier = Modifier.width(4.dp))
     IconButton(onClick = onNotificationsClick) {
       NotificationBellIcon(modifier = Modifier.size(22.dp), tint = Color.Black)
     }
@@ -799,9 +818,8 @@ private fun MediaPost(
 @Composable
 private fun MediaBottomNavigation(
   viewModel: ChatViewModel,
-  searchOpen: Boolean,
-  onSearchClick: () -> Unit,
   onCreateClick: () -> Unit,
+  onNotificationsClick: () -> Unit,
   onProfileClick: () -> Unit,
   modifier: Modifier = Modifier
 ) {
@@ -821,17 +839,6 @@ private fun MediaBottomNavigation(
       tint = Color.Black
     )
 
-    // Opens your own profile grid -- the same real posts/images grid
-    // MediaProfileScreen already builds for any profile, just aimed at
-    // yourself, instead of a separate not-yet-built gallery screen.
-    IconButton(onClick = onProfileClick) {
-      Icon(
-        androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_add_photo),
-        contentDescription = "Media",
-        tint = Color.DarkGray
-      )
-    }
-
     IconButton(onClick = onCreateClick) {
       Icon(
         androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_send),
@@ -841,11 +848,8 @@ private fun MediaBottomNavigation(
       )
     }
 
-    IconButton(onClick = onSearchClick) {
-      com.wellxai.chatgiza.SearchIconCustom(
-        tint = if (searchOpen) Color.Black else Color.DarkGray,
-        modifier = Modifier.size(24.dp)
-      )
+    IconButton(onClick = onNotificationsClick) {
+      NotificationBellIcon(modifier = Modifier.size(22.dp), tint = Color.DarkGray)
     }
 
     if (viewModel.userImage != null) {
