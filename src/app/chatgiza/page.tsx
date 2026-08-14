@@ -1790,7 +1790,21 @@ function ChatGizaInner() {
       {codeOpen && <CodePanel onClose={() => setCodeOpen(false)} />}
 
       <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex items-center justify-end px-4 pt-3">
+        <div className="flex items-center justify-between px-4 pt-3">
+          <div className="flex items-center gap-2">
+            <span className="text-foreground">{NewChatBubbleIcon}</span>
+            <div className="flex items-center gap-1 rounded-full bg-surface-2 p-1">
+              <span className="rounded-full bg-surface px-3 py-1 text-sm font-medium text-foreground shadow-sm">
+                Chat
+              </span>
+              <button
+                onClick={() => setComingSoonTitle("Work")}
+                className="rounded-full px-3 py-1 text-sm font-medium text-muted transition-colors hover:text-foreground"
+              >
+                Work
+              </button>
+            </div>
+          </div>
           <button
             onClick={() => setActiveId(null)}
             aria-label="New chat"
@@ -1817,8 +1831,6 @@ function ChatGizaInner() {
             {showHeroShimmer && (
               <div className="hero-shimmer-bg" onAnimationEnd={() => setShowHeroShimmer(false)} />
             )}
-
-            <div className="relative z-10 mb-3 text-foreground">{NewChatBubbleIcon}</div>
 
             <h1 className="relative z-10 text-3xl font-semibold tracking-tight">Ready when you are.</h1>
 
