@@ -153,7 +153,7 @@ const NewChatBubbleIcon = (
 // Chat/Work tabs and New Chat button -- matches the reference: a "Share"
 // button and a "..." more-options menu, top-right.
 const TopBarShareIcon = (
-  <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+  <svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor">
     <path
       fillRule="evenodd"
       clipRule="evenodd"
