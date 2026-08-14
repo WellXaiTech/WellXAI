@@ -1937,7 +1937,7 @@ function ChatGizaInner() {
             document.getElementById(`msg-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
           };
           return (
-            <div className="group fixed right-1.5 top-24 bottom-24 z-30 hidden w-4 sm:block">
+            <div className="group fixed right-0 top-24 bottom-24 z-30 hidden w-16 sm:block">
               {userMsgs.map((m, i) => {
                 const isActiveQuestion = activeQuestionId === m.id;
                 const topPercent = (i / (userMsgs.length - 1)) * 100;
@@ -1945,7 +1945,7 @@ function ChatGizaInner() {
                   <span
                     key={m.id}
                     aria-hidden
-                    className={`absolute right-0 h-[3px] rounded-full transition-opacity duration-150 group-hover:opacity-0 ${
+                    className={`absolute right-2 h-[3px] rounded-full transition-all duration-150 ${
                       isActiveQuestion ? "w-6 bg-foreground" : "w-4 bg-foreground/25"
                     }`}
                     style={{ top: `${topPercent}%`, transform: "translateY(-50%)" }}
@@ -1953,7 +1953,7 @@ function ChatGizaInner() {
                 );
               })}
 
-              <div className="pointer-events-none absolute right-5 top-0 max-h-full w-64 overflow-y-auto rounded-2xl border border-border bg-surface opacity-0 shadow-lg transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
+              <div className="pointer-events-none absolute right-8 top-0 max-h-full w-64 overflow-y-auto rounded-2xl border border-border bg-surface opacity-0 shadow-lg transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
                 <div className="py-1">
                   {userMsgs.map((m) => (
                     <button
