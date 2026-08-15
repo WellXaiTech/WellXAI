@@ -4822,7 +4822,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
               onClick = { viewModel.closeAccountTabs(); viewModel.openAppLanguage() },
               modifier = Modifier.size(32.dp)
             ) {
-              Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_world), contentDescription = "Language", tint = Color.White, modifier = Modifier.size(20.dp))
+              Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_world), contentDescription = "Language", tint = Color.White, modifier = Modifier.size(23.dp))
             }
           }
         }
