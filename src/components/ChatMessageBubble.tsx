@@ -370,6 +370,7 @@ function ImageEditForm({ onSubmit, onCancel }: { onSubmit: (instruction: string)
 }
 
 export default function ChatMessageBubble({
+  id,
   role,
   content,
   attachments,
@@ -381,6 +382,7 @@ export default function ChatMessageBubble({
   onRegenerate,
   onDelete,
 }: {
+  id?: string;
   role: "user" | "assistant";
   content: string;
   attachments?: Attachment[];
@@ -585,6 +587,7 @@ export default function ChatMessageBubble({
             {content}
           </div>
         )}
+        {content && id && <p className="mt-0.5 select-text text-[10px] text-muted/60">ID: {id}</p>}
         {content && (
           <div className="mt-1 hidden items-center gap-1 group-hover:flex">
             <button
@@ -758,6 +761,7 @@ export default function ChatMessageBubble({
           )}
         </div>
       )}
+      {content && id && !isStreaming && <p className="mt-0.5 select-text text-[10px] text-muted/60">ID: {id}</p>}
       {!isStreaming && sources.length > 0 && <SourceTrail sources={sources} />}
       {!isStreaming && content && !imageUrl && !videoUrl && (
         <div className="toolbar mt-1">

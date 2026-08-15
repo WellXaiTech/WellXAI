@@ -98,6 +98,12 @@ const ArrowUpIcon = (
   </svg>
 );
 
+const StopIcon = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+    <rect x="5" y="5" width="14" height="14" rx="2" />
+  </svg>
+);
+
 const MicIcon = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
     <path d="M12 19v2m0-2a7 7 0 0 1-6.93-6M12 19a7 7 0 0 0 6.929-6M12 16a4 4 0 0 1-4-4V7a4 4 0 1 1 8 0v5a4 4 0 0 1-4 4Z" />
@@ -207,6 +213,7 @@ export default function ChatComposer({
   enabledTools,
   error,
   disabled,
+  onStop,
   onSubmit,
 }: {
   variant: "hero" | "bar";
@@ -220,6 +227,7 @@ export default function ChatComposer({
   enabledTools?: Record<string, boolean>;
   error: string | null;
   disabled: boolean;
+  onStop?: () => void;
   onSubmit: (e: React.FormEvent) => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -618,6 +626,17 @@ export default function ChatComposer({
     </button>
   );
 
+  const stopButton = (
+    <button
+      type="button"
+      aria-label="Stop generating"
+      onClick={onStop}
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-500"
+    >
+      {StopIcon}
+    </button>
+  );
+
   const formEl = (
     <form onSubmit={onSubmit} className="inner flex flex-col justify-between gap-2 px-4 pt-3 pb-2">
       {fileInputEl}
@@ -644,7 +663,7 @@ export default function ChatComposer({
         {toolSelector}
         <div className="flex-1" />
         {secondaryMicButton}
-        {value.trim() || attachments.length > 0 ? sendButton : micButton}
+        {disabled && onStop ? stopButton : value.trim() || attachments.length > 0 ? sendButton : micButton}
       </div>
     </form>
   );

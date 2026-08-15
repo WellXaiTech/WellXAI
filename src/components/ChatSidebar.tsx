@@ -54,6 +54,15 @@ const AutomationIcon = (
   </svg>
 );
 
+// Matches ARRANGED_PATH in the native Android app (MainActivity.kt) --
+// same "Arranged" feature, same icon on both.
+const ArrangedIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 9.667C2 6.26 4.686 3.5 8 3.5h8c3.314 0 6 2.76 6 6.167v6.166C22 19.24 19.314 22 16 22H8c-3.314 0-6-2.76-6-6.167z" />
+    <path d="M8 5L7 2m9 3l1-3m4.5 7h-19" />
+  </svg>
+);
+
 const GearIcon = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <circle cx="12" cy="12" r="3" />
@@ -99,9 +108,8 @@ const ProjectsIcon = (
 );
 
 const CodeIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M9 18l-6-6 6-6" />
-    <path d="M15 6l6 6-6 6" />
+  <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m7 8l-4 4l4 4m10-8l4 4l-2.5 2.5M14 4l-1.201 4.805m-.802 3.207l-2 7.988M3 3l18 18" />
   </svg>
 );
 
@@ -173,11 +181,9 @@ const LiveVisionIcon = (
   </svg>
 );
 
-const ImagesIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <rect x="3" y="3" width="18" height="18" rx="2" />
-    <circle cx="8.5" cy="8.5" r="1.5" />
-    <path d="M21 15l-5-5L5 21" />
+const PluginIcon = (
+  <svg width="20" height="20" viewBox="0 0 100 100" fill="currentColor">
+    <path d="M50.006,5.041c-0.029,0-0.059,0-0.088,0.001c-0.561,0.014-13.853,0.414-23.205,6.41c-1.637,1.05-2.114,3.228-1.064,4.865   c1.05,1.637,3.228,2.113,4.865,1.064c7.469-4.788,18.836-5.272,19.547-5.297c20.897,0.029,37.888,17.039,37.888,37.943   c0,20.921-17.021,37.942-37.942,37.942c-10.406,0-20.467-4.191-27.601-11.499c-6.906-7.073-10.579-16.434-10.343-26.331   c0.222-6.954,3.798-13.155,8.696-15.08c3.498-1.375,7.408-0.489,11.459,2.547c-4.586,7.064-3.787,16.63,2.401,22.819l5.644,5.644   c0.661,0.66,1.556,1.031,2.49,1.031s1.829-0.371,2.49-1.031l2.324-2.324l5.644,5.644c0.688,0.687,1.589,1.031,2.49,1.031   s1.802-0.344,2.49-1.031c1.375-1.376,1.375-3.605,0-4.98l-5.644-5.644l6.197-6.197l5.644,5.644c0.688,0.687,1.589,1.031,2.49,1.031   c0.901,0,1.802-0.344,2.49-1.031c1.375-1.376,1.375-3.605,0-4.98l-5.644-5.644l2.324-2.324c1.375-1.376,1.375-3.605,0-4.98   l-5.644-5.645c-3.444-3.443-8.023-5.34-12.892-5.34c-3.754,0-7.332,1.131-10.353,3.224c-8.311-6.604-15.315-5.457-18.977-4.018   c-7.556,2.97-12.844,11.574-13.159,21.438C4.739,61.78,9.123,72.949,17.365,81.39c8.452,8.656,20.349,13.621,32.64,13.621   c24.805,0,44.985-20.18,44.985-44.985S74.811,5.041,50.006,5.041z" />
   </svg>
 );
 
@@ -251,7 +257,7 @@ function NavItem({
   return (
     <button
       onClick={onClick}
-      className="flex h-10 w-full items-center gap-2.5 rounded-xl px-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-2"
+      className="flex h-10 w-full items-center gap-2.5 rounded-xl px-2 text-xs font-medium text-foreground transition-colors hover:bg-surface-2"
     >
       <span className="flex h-5 w-5 shrink-0 items-center justify-center text-muted">{icon}</span>
       {label}
@@ -324,24 +330,30 @@ function ConversationMenu({
   const moveTriggerRef = useRef<HTMLButtonElement>(null);
   const moveMenuRef = useRef<HTMLDivElement>(null);
   const [moveCoords, setMoveCoords] = useState<MenuCoords | null>(null);
+  const [prevOpen, setPrevOpen] = useState(open);
 
-  useEffect(() => {
+  // Adjusted during render (rather than an effect) since it's a pure reset
+  // keyed off `open` itself.
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (!open) {
       setMoveOpen(false);
       setConfirmDelete(false);
     }
-  }, [open]);
+  }
 
   useEffect(() => {
     if (!open) return;
     // Recompute on every open (not just the trigger button's own click) so a
     // long-press-triggered open still lands at the right anchor. Clamped so
     // the fixed-width panel never overflows off the right edge of narrow
-    // (mobile) viewports.
+    // (mobile) viewports. Reads live layout via getAnchor()/window, so it
+    // must stay an effect rather than a render-time computation.
     const anchor = getAnchor();
     if (anchor) {
       const menuWidth = 240;
       const left = Math.min(anchor.right + 4, window.innerWidth - menuWidth - 8);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCoords({ top: anchor.top, left });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -392,13 +404,6 @@ function ConversationMenu({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
-
-  const items: { label: string; icon: React.ReactNode; onClick: () => void }[] = [
-    { label: "Share", icon: ShareIcon, onClick: onShare },
-    { label: "Rename", icon: PencilIcon, onClick: onRename },
-    { label: pinned ? "Unpin chat" : "Pin chat", icon: pinned ? PinFilledIcon : PinIcon, onClick: onTogglePin },
-    { label: "Archive", icon: ArchiveIcon, onClick: onArchive },
-  ];
 
   return (
     <>
@@ -464,20 +469,52 @@ function ConversationMenu({
               </div>
             ) : (
               <>
-                {items.slice(0, 2).map((item) => (
-                  <button
-                    key={item.label}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      item.onClick();
-                      onOpenChange(false);
-                    }}
-                    className="menu-item"
-                  >
-                    <span className="icon">{item.icon}</span>
-                    <span>{item.label}</span>
-                  </button>
-                ))}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setConfirmDelete(true);
+                  }}
+                  className="menu-item delete"
+                >
+                  <span className="icon">{TrashIcon}</span>
+                  <span>Delete</span>
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRename();
+                    onOpenChange(false);
+                  }}
+                  className="menu-item"
+                >
+                  <span className="icon">{PencilIcon}</span>
+                  <span>Rename</span>
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTogglePin();
+                    onOpenChange(false);
+                  }}
+                  className="menu-item"
+                >
+                  <span className="icon">{pinned ? PinFilledIcon : PinIcon}</span>
+                  <span>{pinned ? "Unpin chat" : "Pin chat"}</span>
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onShare();
+                    onOpenChange(false);
+                  }}
+                  className="menu-item"
+                >
+                  <span className="icon">{ShareIcon}</span>
+                  <span>Share</span>
+                </button>
 
                 <button
                   ref={moveTriggerRef}
@@ -496,30 +533,16 @@ function ConversationMenu({
                   <span className="text-muted">{ChevronRightIcon}</span>
                 </button>
 
-                {items.slice(2, 4).map((item) => (
-                  <button
-                    key={item.label}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      item.onClick();
-                      onOpenChange(false);
-                    }}
-                    className="menu-item"
-                  >
-                    <span className="icon">{item.icon}</span>
-                    <span>{item.label}</span>
-                  </button>
-                ))}
-
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setConfirmDelete(true);
+                    onArchive();
+                    onOpenChange(false);
                   }}
-                  className="menu-item delete"
+                  className="menu-item"
                 >
-                  <span className="icon">{TrashIcon}</span>
-                  <span>Delete</span>
+                  <span className="icon">{ArchiveIcon}</span>
+                  <span>Archive</span>
                 </button>
               </>
             )}
@@ -713,6 +736,7 @@ export default function ChatSidebar({
   onOpenLibrary,
   onOpenMedia,
   onOpenLiveVision,
+  onOpenPlugins,
   onOpenProjects,
   onOpenCode,
   onOpenSearch,
@@ -739,6 +763,7 @@ export default function ChatSidebar({
   onOpenLibrary: () => void;
   onOpenMedia: () => void;
   onOpenLiveVision: () => void;
+  onOpenPlugins: () => void;
   onOpenProjects: () => void;
   onOpenCode: () => void;
   onOpenSearch: () => void;
@@ -768,6 +793,9 @@ export default function ChatSidebar({
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // Hydration escape hatch: localStorage isn't available during SSR, so
+    // this can't be a lazy useState initializer.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     setCollapsed(localStorage.getItem(COLLAPSED_KEY) === "1");
   }, []);
@@ -952,15 +980,16 @@ export default function ChatSidebar({
 
           <button
             onClick={closeMobileThen(onNewChat)}
-            className="mb-2 hidden h-10 w-full items-center gap-2 rounded-xl border border-border px-2 text-sm font-medium shadow-sm transition-all hover:bg-surface-2 hover:shadow-md sm:flex"
+            className="mb-2 hidden h-10 w-full items-center gap-2 rounded-xl border border-border px-2 text-xs font-medium shadow-sm transition-all hover:bg-surface-2 hover:shadow-md sm:flex"
           >
             <span className="flex h-5 w-5 shrink-0 items-center justify-center">{PencilIcon}</span>
             New chat
           </button>
           <div className="hidden sm:block">
             <NavItem icon={SearchIcon} label="Search chats" onClick={closeMobileThen(onOpenSearch)} />
+            <NavItem icon={ArrangedIcon} label="Arranged" onClick={closeMobileThen(onOpenScheduled)} />
             <NavItem icon={ProjectsIcon} label="Projects" onClick={closeMobileThen(onOpenProjects)} />
-            <NavItem icon={ImagesIcon} label="images" onClick={closeMobileThen(onOpenLibrary)} />
+            <NavItem icon={PluginIcon} label="Plugins" onClick={closeMobileThen(onOpenPlugins)} />
             <NavItem icon={LibraryIcon} label="Library" onClick={closeMobileThen(onOpenLibrary)} />
             <NavItem icon={MediaFeedIcon} label="ChatGiZa Media" onClick={closeMobileThen(onOpenMedia)} />
             <NavItem icon={LiveVisionIcon} label="Live Voice" onClick={closeMobileThen(onOpenLiveVision)} />
@@ -988,9 +1017,7 @@ export default function ChatSidebar({
 
         <div
           ref={historyAnchorRef}
-          className={
-            pinnedConversations.length > 0 || recentConversations.length > 0 ? "mt-3 border-t border-border pt-1" : ""
-          }
+          className={pinnedConversations.length > 0 || recentConversations.length > 0 ? "mt-3 pt-1" : ""}
         >
           {pinnedConversations.length > 0 && (
             <>
