@@ -61,14 +61,11 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.DarkMode
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Comment
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
@@ -252,7 +249,6 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
             commentsExpanded = expandedCommentsPostId == post.id,
             comments = viewModel.mediaComments[post.id],
             onLikeClick = { viewModel.toggleMediaPostLike(post.id) },
-            onDeleteClick = { viewModel.removeMediaPost(post.id) },
             onToggleComments = {
               if (expandedCommentsPostId == post.id) {
                 expandedCommentsPostId = null
@@ -598,15 +594,12 @@ private fun MediaPost(
   commentsExpanded: Boolean,
   comments: List<com.wellxai.chatgiza.ApiMediaComment>?,
   onLikeClick: () -> Unit,
-  onDeleteClick: () -> Unit,
   onToggleComments: () -> Unit,
   onOpenComposer: () -> Unit,
   onOpenProfile: () -> Unit
 ) {
   val context = LocalContext.current
   val pagerState = rememberPagerState(pageCount = { post.imageUrls.size })
-  var following by remember(post.id) { mutableStateOf(false) }
-  var moreMenuOpen by remember(post.id) { mutableStateOf(false) }
   var textExpanded by remember(post.id) { mutableStateOf(false) }
   val isLongText = post.text.length > MEDIA_POST_TEXT_PREVIEW_LENGTH
   val bg = if (isDark) Color.Black else Color.White
@@ -645,31 +638,6 @@ private fun MediaPost(
       Column(modifier = Modifier.weight(1f).clickable(onClick = onOpenProfile)) {
         Text(text = post.authorName, color = fg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         Text(text = formatMediaPostTimeAgo(post.createdAt), fontSize = 12.sp, color = Color.Gray)
-      }
-
-      if (!isOwnPost) {
-        OutlinedButton(onClick = { following = !following }) {
-          Text(text = if (following) "Following" else "Follow", fontSize = 12.sp)
-        }
-      }
-
-      Box {
-        IconButton(onClick = { if (isOwnPost) moreMenuOpen = true }) {
-          Icon(
-            painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_badge_seal),
-            contentDescription = "More",
-            tint = fg
-          )
-        }
-        DropdownMenu(expanded = moreMenuOpen, onDismissRequest = { moreMenuOpen = false }) {
-          DropdownMenuItem(
-            text = { Text("Delete post") },
-            onClick = {
-              moreMenuOpen = false
-              onDeleteClick()
-            }
-          )
-        }
       }
     }
 
@@ -1027,7 +995,12 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
                     contentAlignment = Alignment.Center
                   ) {
                     IconButton(onClick = { showExtraSettings = true }, modifier = Modifier.size(36.dp)) {
-                      Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = Color.White, modifier = Modifier.size(18.dp))
+                      Icon(
+                        painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_badge_seal),
+                        contentDescription = "Settings",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                      )
                     }
                   }
                 }
