@@ -63,6 +63,18 @@ class TokenStore(context: Context) {
       .apply()
   }
 
+  // Individual setters for updating just one field after the initial
+  // sign-in (e.g. renaming the account, changing the avatar) -- without
+  // these the local cache stays stale and getUserName()/getUserImage()
+  // revert to the sign-in value on the next app launch, undoing the change.
+  fun setUserName(name: String) {
+    prefs.edit().putString(KEY_NAME, name).apply()
+  }
+
+  fun setUserImage(image: String) {
+    prefs.edit().putString(KEY_IMAGE, image).apply()
+  }
+
   fun getHapticsEnabled(): Boolean = prefs.getBoolean(KEY_HAPTICS_ENABLED, true)
   fun setHapticsEnabled(value: Boolean) {
     prefs.edit().putBoolean(KEY_HAPTICS_ENABLED, value).apply()
