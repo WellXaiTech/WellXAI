@@ -4819,7 +4819,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
               Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_moon), contentDescription = "Toggle dark mode", tint = Color.White, modifier = Modifier.size(24.dp))
             }
             IconButton(
-              onClick = { viewModel.closeAccountTabs(); viewModel.openAppLanguage() },
+              onClick = { viewModel.leaveAccountTabsFor { viewModel.openAppLanguage() } },
               modifier = Modifier.size(32.dp)
             ) {
               Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_world), contentDescription = "Language", tint = Color.White, modifier = Modifier.size(23.dp))
@@ -4914,8 +4914,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             // used for "About Us" below) hands control back to
             // ProfileHubScreen so the check actually runs.
             onClick = {
-              viewModel.closeAccountTabs()
-              viewModel.openAvatarPicker()
+              viewModel.leaveAccountTabsFor { viewModel.openAvatarPicker() }
             }
           ) {
             if (selectedPreset != null) {
@@ -4948,7 +4947,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_share_link),
             label = "Collaborative Chat",
-            onClick = { viewModel.closeAccountTabs(); viewModel.openSharedConversations() }
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openSharedConversations() } }
           ) {}
           MyInfoRow(
             icon = Icons.Outlined.Business,
@@ -5040,7 +5039,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(
             icon = Icons.Outlined.QueryStats,
             label = "Data Dashboard",
-            onClick = { viewModel.closeAccountTabs(); viewModel.openDataDashboard() }
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openDataDashboard() } }
           ) {}
           MyInfoRow(icon = Icons.Outlined.Lock, label = "App Lock", onClick = { comingSoon("App Lock") }) {}
         }
@@ -5066,28 +5065,28 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_haptics),
             label = "Haptics",
-            onClick = { viewModel.closeAccountTabs(); viewModel.openHaptics() }
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openHaptics() } }
           ) {}
           MyInfoRow(
             iconContent = { c -> WidgetsIconCustom(tint = c, modifier = Modifier.size(20.dp)) },
             label = "Widgets",
-            onClick = { viewModel.closeAccountTabs(); viewModel.openWidgets() }
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openWidgets() } }
           ) {}
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_advanced),
             label = "Advanced",
-            onClick = { viewModel.closeAccountTabs(); viewModel.openAdvanced() }
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openAdvanced() } }
           ) {}
           // Moved here from Settings -> GiZa, which is being retired.
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_customize_sparkle),
             label = "Customize GiZa",
-            onClick = { viewModel.closeAccountTabs(); viewModel.openCustomize() }
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openCustomize() } }
           ) {}
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connectors),
             label = "Connectors",
-            onClick = { viewModel.closeAccountTabs(); viewModel.openConnectors() }
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openConnectors() } }
           ) {}
           MyInfoRow(icon = Icons.Outlined.Notifications, label = "Notification Settings", onClick = { comingSoon("Notification Settings") }) {}
           MyInfoRow(icon = Icons.Outlined.Email, label = "Email Subscriptions", onClick = { comingSoon("Email Subscriptions") }) {}
@@ -5099,14 +5098,14 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
         ) {
-          MyInfoRow(icon = Icons.Outlined.Language, label = "Language", onClick = { viewModel.closeAccountTabs(); viewModel.openAppLanguage() }) {
+          MyInfoRow(icon = Icons.Outlined.Language, label = "Language", onClick = { viewModel.leaveAccountTabsFor { viewModel.openAppLanguage() } }) {
             Text("English", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
           }
           // Moved here from Settings -> Voice, which is being retired.
           MyInfoRow(
             icon = Icons.Outlined.GraphicEq,
             label = "Voice",
-            onClick = { viewModel.closeAccountTabs(); viewModel.openVoice() }
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openVoice() } }
           ) {}
           MyInfoRow(
             icon = Icons.Filled.LightMode,
@@ -5116,10 +5115,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             // point too -- that one was dropped, this stays since it also
             // shows the current selection. Closes this dialog first, same
             // fix as Profile Picture above.
-            onClick = {
-              viewModel.closeAccountTabs()
-              viewModel.openAppearance()
-            }
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openAppearance() } }
           ) {
             Text(AppTheme.fromKey(viewModel.themeMode).label, color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
           }
@@ -5131,7 +5127,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(
             icon = Icons.AutoMirrored.Outlined.Article,
             label = "Open Source Licenses",
-            onClick = { viewModel.closeAccountTabs(); viewModel.openOpenSourceLicenses() }
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openOpenSourceLicenses() } }
           ) {}
           MyInfoRow(
             icon = Icons.Outlined.Archive,
@@ -5140,10 +5136,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             // DataControlsScreen is rendered from the root screen switch, not
             // from within this dialog, so it has to close first (same fix as
             // Profile Picture/Appearance above).
-            onClick = {
-              viewModel.closeAccountTabs()
-              viewModel.openDataControls()
-            }
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openDataControls() } }
           ) {}
           MyInfoRow(icon = Icons.Outlined.ThumbUp, label = "Rate Our App", onClick = { comingSoon("Rate Our App") }) {}
         }
