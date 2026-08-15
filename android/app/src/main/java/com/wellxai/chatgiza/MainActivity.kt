@@ -4817,9 +4817,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
       // Persistent identity row -- same avatar/name shown lower down on
       // the "My info" tab, surfaced here too so it's visible no matter
       // which tab is open, matching the reference layout. The pill under
-      // the name mirrors the reference's "Site: Bybit Global" tag -- here
-      // it shows the signed-in account's email since that's the one real
-      // identifying detail we have, rather than a fake placeholder.
+      // the name mirrors the reference's "Site: Bybit Global" tag.
       Row(verticalAlignment = Alignment.CenterVertically) {
         val headerPreset = AVATAR_PRESETS.find { it.id == viewModel.avatarPresetId }
         if (headerPreset != null) {
@@ -4837,15 +4835,13 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             fontSize = 20.sp,
             fontWeight = FontWeight.ExtraBold
           )
-          if (viewModel.userEmail != null) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Box(
-              modifier = Modifier
-                .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(6.dp))
-                .padding(horizontal = 8.dp, vertical = 3.dp)
-            ) {
-              Text(viewModel.userEmail!!, color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
-            }
+          Spacer(modifier = Modifier.height(4.dp))
+          Box(
+            modifier = Modifier
+              .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(6.dp))
+              .padding(horizontal = 8.dp, vertical = 3.dp)
+          ) {
+            Text("Site: ChatGiZa Global", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
           }
         }
       }
@@ -5159,6 +5155,22 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(icon = Icons.Outlined.EditNote, label = "User feedback", onClick = { comingSoon("User feedback") }) {}
           MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.Info, label = "About Us", onClick = { viewModel.closeAccountTabs(); viewModel.openAboutUs() }) {}
+          MyInfoDivider()
+          // Moved here from Settings -> Data & Information, grouped with
+          // Contact Support/User feedback/About Us above.
+          MyInfoRow(
+            icon = Icons.Outlined.Article,
+            label = "Open Source Licenses",
+            onClick = { viewModel.closeAccountTabs(); viewModel.openOpenSourceLicenses() }
+          ) {}
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.AutoMirrored.Outlined.Article, label = "Terms of Use", onClick = {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/terms")))
+          }) {}
+          MyInfoDivider()
+          MyInfoRow(icon = Icons.Outlined.Lock, label = "Privacy Policy", onClick = {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/privacy")))
+          }) {}
           MyInfoDivider()
           MyInfoRow(
             icon = Icons.Outlined.Archive,
@@ -8821,18 +8833,10 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         SettingsMenuRow("Collaborative Chat", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_share_link)) { viewModel.openSharedConversations() }
         SettingsDivider()
         SettingsMenuRow("Data Dashboard", icon = Icons.Outlined.QueryStats) { viewModel.openDataDashboard() }
-        SettingsDivider()
-        // Data Controls moved to Account -> General -> Storage management.
-        SettingsMenuRow("Open Source Licenses", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_files)) { viewModel.openOpenSourceLicenses() }
-        SettingsDivider()
-        SettingsMenuRow("Terms of Use", icon = Icons.AutoMirrored.Outlined.Article) {
-          context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/terms")))
-        }
-        SettingsDivider()
-        SettingsMenuRow("Privacy Policy", icon = Icons.Outlined.Lock) {
-          context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/privacy")))
-        }
       }
+      // Data Controls moved to Account -> General -> Storage management;
+      // Open Source Licenses / Terms of Use / Privacy Policy moved to
+      // Account -> General, alongside Contact Support/User feedback/About Us.
 
       // Report a Problem moved to the Profile Hub's About Us sheet --
       // this was its only row, so the whole Support section goes with it
