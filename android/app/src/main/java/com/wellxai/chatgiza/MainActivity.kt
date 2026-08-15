@@ -4925,11 +4925,9 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
               Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(32.dp))
             }
           }
-          MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.EditNote, label = "Nickname", onClick = { showNicknameEditor = true }) {
             Text(viewModel.userName?.takeIf { it.isNotBlank() } ?: "-", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
           }
-          MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.Tag, label = "UID", showChevron = false, onClick = {}) {
             Text(uid, color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp, fontFamily = FontFamily.Monospace)
             Spacer(modifier = Modifier.width(6.dp))
@@ -4943,15 +4941,12 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
               }
             )
           }
-          MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.Description, label = "Identity Verification", onClick = { comingSoon("Identity Verification") }) {
             Text("Lv.1 Verified", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
           }
-          MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.WorkspacePremium, label = "VIP level", onClick = { comingSoon("VIP level") }) {
             Text("Non-VIP", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
           }
-          MyInfoDivider()
           // Moved here from Settings -> Data & Information/Business,
           // replacing "My Fee Rates"/"Additional Verification" (crypto-
           // exchange placeholders that never applied to ChatGiZa).
@@ -4960,13 +4955,11 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             label = "Collaborative Chat",
             onClick = { viewModel.closeAccountTabs(); viewModel.openSharedConversations() }
           ) {}
-          MyInfoDivider()
           MyInfoRow(
             icon = Icons.Outlined.Business,
             label = "Advertise on ChatGiZa",
             onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/advertise"))) }
           ) {}
-          MyInfoDivider()
           MyInfoRow(icon = Icons.Filled.Person, label = "Subaccount", onClick = { comingSoon("Subaccount") }) {}
         }
 
@@ -4978,11 +4971,9 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             .padding(horizontal = 16.dp)
         ) {
           MyInfoRow(icon = Icons.Outlined.AlternateEmail, label = "Link Account", onClick = { comingSoon("Link Account") }) {}
-          MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.Business, label = "Affiliate's community", onClick = { comingSoon("Affiliate's community") }) {
             Text("Joined", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
           }
-          MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.SupportAgent, label = "Join Our Community", onClick = { comingSoon("Join Our Community") }) {}
         }
 
@@ -5018,15 +5009,12 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(icon = Icons.Outlined.Email, label = "Email", onClick = { comingSoon("Email") }) {
             Text("nic***@****", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
           }
-          MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.Smartphone, label = "Mobile", onClick = { comingSoon("Mobile") }) {
             Text("75****182", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
           }
-          MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.Lock, label = "Google 2FA Authentication", showChevron = false, onClick = {}) {
             Switch(checked = mockGoogle2fa, onCheckedChange = { mockGoogle2fa = it })
           }
-          MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.Tag, label = "Passkeys", onClick = { comingSoon("Passkeys") }) {}
         }
 
@@ -5052,18 +5040,14 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             .padding(horizontal = 16.dp)
         ) {
           MyInfoRow(icon = Icons.Outlined.Lock, label = "Change Password", onClick = { comingSoon("Change Password") }) {}
-          MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.ScreenShare, label = "Trusted Devices", onClick = { comingSoon("Trusted Devices") }) {}
-          MyInfoDivider()
           // Moved here from Settings -> Data & Information.
           MyInfoRow(
             icon = Icons.Outlined.QueryStats,
             label = "Data Dashboard",
             onClick = { viewModel.closeAccountTabs(); viewModel.openDataDashboard() }
           ) {}
-          MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.Lock, label = "App Lock", onClick = { comingSoon("App Lock") }) {}
-          MyInfoDivider()
           // Moved here from Settings, which is being retired -- this is
           // the only sign-out entry point left in the app now.
           MyInfoRow(
@@ -5097,34 +5081,28 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             label = "Haptics",
             onClick = { viewModel.closeAccountTabs(); viewModel.openHaptics() }
           ) {}
-          MyInfoDivider()
           MyInfoRow(
             iconContent = { c -> WidgetsIconCustom(tint = c, modifier = Modifier.size(20.dp)) },
             label = "Widgets",
             onClick = { viewModel.closeAccountTabs(); viewModel.openWidgets() }
           ) {}
-          MyInfoDivider()
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_advanced),
             label = "Advanced",
             onClick = { viewModel.closeAccountTabs(); viewModel.openAdvanced() }
           ) {}
-          MyInfoDivider()
           // Moved here from Settings -> GiZa, which is being retired.
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_customize_sparkle),
             label = "Customize GiZa",
             onClick = { viewModel.closeAccountTabs(); viewModel.openCustomize() }
           ) {}
-          MyInfoDivider()
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connectors),
             label = "Connectors",
             onClick = { viewModel.closeAccountTabs(); viewModel.openConnectors() }
           ) {}
-          MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.Notifications, label = "Notification Settings", onClick = { comingSoon("Notification Settings") }) {}
-          MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.Email, label = "Email Subscriptions", onClick = { comingSoon("Email Subscriptions") }) {}
         }
         Spacer(modifier = Modifier.height(20.dp))
@@ -5137,14 +5115,12 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(icon = Icons.Outlined.Language, label = "Language", onClick = { viewModel.closeAccountTabs(); viewModel.openAppLanguage() }) {
             Text("English", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
           }
-          MyInfoDivider()
           // Moved here from Settings -> Voice, which is being retired.
           MyInfoRow(
             icon = Icons.Outlined.GraphicEq,
             label = "Voice",
             onClick = { viewModel.closeAccountTabs(); viewModel.openVoice() }
           ) {}
-          MyInfoDivider()
           MyInfoRow(
             icon = Icons.Filled.LightMode,
             label = "Color Theme",
@@ -5160,9 +5136,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           ) {
             Text(AppTheme.fromKey(viewModel.themeMode).label, color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
           }
-          MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.ScreenShare, label = "Trade market overview", onClick = { comingSoon("Trade market overview") }) {}
-          MyInfoDivider()
           // Help Center/User feedback/About Us/Terms of Use/Privacy Policy
           // all collapsed into the single "About Us" entry point (Profile
           // Hub's footer link), which now also lists Help Center and User
@@ -5173,7 +5147,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             label = "Open Source Licenses",
             onClick = { viewModel.closeAccountTabs(); viewModel.openOpenSourceLicenses() }
           ) {}
-          MyInfoDivider()
           MyInfoRow(
             icon = Icons.Outlined.Archive,
             label = "Storage management",
@@ -5186,7 +5159,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
               viewModel.openDataControls()
             }
           ) {}
-          MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.ThumbUp, label = "Rate Our App", onClick = { comingSoon("Rate Our App") }) {}
         }
         Spacer(modifier = Modifier.height(20.dp))
@@ -5270,7 +5242,7 @@ private fun MyInfoRow(
       Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
     }
     Spacer(modifier = Modifier.width(14.dp))
-    Text(label, color = Color.White, fontSize = 15.sp, modifier = Modifier.weight(1f))
+    Text(label, color = Color.White, fontSize = 17.sp, modifier = Modifier.weight(1f))
     trailing()
     if (showChevron) {
       Spacer(modifier = Modifier.width(4.dp))
