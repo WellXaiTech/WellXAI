@@ -1656,6 +1656,10 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     activeConversationId = null
     messages = emptyList()
     loadHistory()
+    // Actually take the user into that identity's chat -- just updating
+    // state left them stuck on this same screen with nothing visibly
+    // happening, which read as the switch "not being accepted".
+    screen = AppScreen.Chat
   }
 
   fun switchToMainAccount() {
@@ -1666,6 +1670,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     activeConversationId = null
     messages = emptyList()
     loadHistory()
+    screen = AppScreen.Chat
   }
 
   // ChatGiZa Media is a real shared feed now (backend-backed via
