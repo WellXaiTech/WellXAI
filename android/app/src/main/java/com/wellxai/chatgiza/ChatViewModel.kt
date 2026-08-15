@@ -1351,6 +1351,26 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     screen = AppScreen.Account
   }
 
+  /** Real Stripe subscription checkout -- hands the caller a URL to open in
+   * the browser (same pre-authorized-link pattern as fetchBillingPortalUrl).
+   * Used to gate paid-tier features like longer post captions. */
+  fun startCheckout(tier: String, onResult: (String?) -> Unit) {
+    val token = tokenStore.getToken()
+    if (token == null) {
+      onResult(null)
+      return
+    }
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.startCheckout(token, tier)) {
+        is ApiResult.Success -> onResult(result.value)
+        is ApiResult.Failure -> {
+          errorMessage = result.message
+          onResult(null)
+        }
+      }
+    }
+  }
+
   fun onSignInStart() {
     signingIn = true
     errorMessage = null

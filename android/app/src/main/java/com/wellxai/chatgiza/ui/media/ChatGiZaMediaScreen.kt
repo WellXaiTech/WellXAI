@@ -416,6 +416,24 @@ private fun GizaProFloatingAgent(onClick: () -> Unit, modifier: Modifier = Modif
 
 data class ProfileTarget(val authorId: String, val authorName: String, val authorImage: String?)
 
+// A handful of solid colors, picked deterministically by name (same color
+// every time for a given account, varied across accounts) so an avatar-less
+// account gets a real identity-looking circle -- its initial, centered --
+// instead of a generic gray person-silhouette icon.
+private val MEDIA_AVATAR_COLORS = listOf(
+  Color(0xFF6D5DF6), Color(0xFFFF6B6B), Color(0xFF11998E),
+  Color(0xFFF7971E), Color(0xFFEE0979), Color(0xFF0072FF)
+)
+
+@Composable
+private fun MediaInitialAvatar(name: String, size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
+  val letter = name.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "?"
+  val bg = MEDIA_AVATAR_COLORS[kotlin.math.abs(name.hashCode()) % MEDIA_AVATAR_COLORS.size]
+  Box(modifier = modifier.size(size).clip(CircleShape).background(bg), contentAlignment = Alignment.Center) {
+    Text(letter, color = Color.White, fontWeight = FontWeight.Bold, fontSize = (size.value * 0.42f).sp)
+  }
+}
+
 // =============================================================
 // CHATGIZA HEADER
 // =============================================================
@@ -519,11 +537,10 @@ private fun MediaPost(
           contentScale = ContentScale.Crop
         )
       } else {
-        Icon(
-          Icons.Outlined.AccountCircle,
-          contentDescription = "Profile",
-          tint = Color.Gray,
-          modifier = Modifier.size(44.dp).clickable(onClick = onOpenProfile)
+        MediaInitialAvatar(
+          name = post.authorName,
+          size = 44.dp,
+          modifier = Modifier.clickable(onClick = onOpenProfile)
         )
       }
 
@@ -1083,7 +1100,7 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
                   contentScale = ContentScale.Crop
                 )
               } else {
-                Icon(Icons.Outlined.AccountCircle, contentDescription = target.authorName, tint = onBgDim, modifier = Modifier.fillMaxSize())
+                MediaInitialAvatar(name = target.authorName, size = 70.dp)
               }
             }
 
