@@ -5145,10 +5145,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             onClick = { viewModel.closeAccountTabs(); viewModel.openVoice() }
           ) {}
           MyInfoDivider()
-          MyInfoRow(icon = Icons.Outlined.AttachMoney, label = "Currency Display", onClick = { comingSoon("Currency Display") }) {
-            Text("USD", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
-          }
-          MyInfoDivider()
           MyInfoRow(
             icon = Icons.Filled.LightMode,
             label = "Color Theme",
@@ -5165,29 +5161,18 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             Text(AppTheme.fromKey(viewModel.themeMode).label, color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
           }
           MyInfoDivider()
-          MyInfoRow(icon = Icons.Outlined.HelpOutline, label = "Help Center", onClick = { comingSoon("Help Center") }) {}
-          MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.ScreenShare, label = "Trade market overview", onClick = { comingSoon("Trade market overview") }) {}
           MyInfoDivider()
-          MyInfoRow(icon = Icons.Outlined.EditNote, label = "User feedback", onClick = { comingSoon("User feedback") }) {}
-          MyInfoDivider()
-          MyInfoRow(icon = Icons.Outlined.Info, label = "About Us", onClick = { viewModel.closeAccountTabs(); viewModel.openAboutUs() }) {}
-          MyInfoDivider()
-          // Moved here from Settings -> Data & Information, grouped with
-          // Contact Support/User feedback/About Us above.
+          // Help Center/User feedback/About Us/Terms of Use/Privacy Policy
+          // all collapsed into the single "About Us" entry point (Profile
+          // Hub's footer link), which now also lists Help Center and User
+          // feedback alongside Terms/Privacy/Report a Problem -- see
+          // AboutUsDialog.
           MyInfoRow(
             icon = Icons.AutoMirrored.Outlined.Article,
             label = "Open Source Licenses",
             onClick = { viewModel.closeAccountTabs(); viewModel.openOpenSourceLicenses() }
           ) {}
-          MyInfoDivider()
-          MyInfoRow(icon = Icons.AutoMirrored.Outlined.Article, label = "Terms of Use", onClick = {
-            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/terms")))
-          }) {}
-          MyInfoDivider()
-          MyInfoRow(icon = Icons.Outlined.Lock, label = "Privacy Policy", onClick = {
-            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/privacy")))
-          }) {}
           MyInfoDivider()
           MyInfoRow(
             icon = Icons.Outlined.Archive,
@@ -5299,14 +5284,16 @@ private fun MyInfoDivider() {
   HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
 }
 
-// Terms of Use / Privacy Policy / Report a Problem, consolidated here so
-// they're reachable from the Profile Hub footer instead of only buried
-// in Settings. Report a Problem was moved out of Settings entirely (this
-// is now its only entry point); Terms of Use and Privacy Policy are
-// still in Settings too, since only Report a Problem was asked to move.
+// Terms of Use / Privacy Policy / Report a Problem / Help Center / User
+// feedback, all consolidated here -- the single "About Us" entry point
+// (Profile Hub footer link) they're all reachable from now that the
+// separate rows for each of these were removed from Account -> General.
 @Composable
 private fun AboutUsDialog(viewModel: ChatViewModel) {
   val context = LocalContext.current
+  fun comingSoon(label: String) {
+    Toast.makeText(context, "$label — coming soon", Toast.LENGTH_SHORT).show()
+  }
   Dialog(
     onDismissRequest = { viewModel.closeAboutUs() },
     properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -5348,6 +5335,10 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
           viewModel.closeAboutUs()
           viewModel.openReportProblem()
         }
+        HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+        AboutUsRow(icon = Icons.Outlined.HelpOutline, label = "Help Center") { comingSoon("Help Center") }
+        HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+        AboutUsRow(icon = Icons.Outlined.EditNote, label = "User feedback") { comingSoon("User feedback") }
       }
     }
   }
