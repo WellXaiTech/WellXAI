@@ -66,6 +66,7 @@ type Conversation = {
   pinned?: boolean;
   archived?: boolean;
   shared?: boolean;
+  shareId?: string;
 };
 
 type SendOverride = { conversationId: string; baseMessages: Message[] };
@@ -102,6 +103,14 @@ const USER_PLAN_KEY = "chatgiza:user-plan";
 const COMPANY_REQUESTS_KEY = "chatgiza:company-requests";
 const GREETED_SESSION_KEY = "chatgiza:greeted-this-session";
 const GREETING_TEXT = "Karibu sana! Nimefurahi kuwa na wewe leo. Naweza kukusaidia vipi?";
+
+// Longer, feature-specific explanations for the generic "Coming soon"
+// modal -- shown instead of the default one-line fallback when a key has
+// an entry here (see ComingSoonModal's `description` prop).
+const COMING_SOON_DESCRIPTIONS: Record<string, string> = {
+  Work:
+    "Work will be a separate space for your company's chats, kept apart from your personal ones. It will pull in your workspace's shared custom instructions (the ones your team sets up at chatgiza.com/workspace) automatically, so ChatGiZa already knows your company's context instead of you re-explaining it every time.",
+};
 
 const DEFAULT_PLUGINS: Record<PluginKey, boolean> = {
   web_search: true,
@@ -162,6 +171,11 @@ const TopBarShareIcon = (
     <path d="M5.5 2a.5.5 0 1 1 .001 1c-.678.003-1.21.014-1.65.05c-.605.05-.953.142-1.22.276a3.02 3.02 0 0 0-1.31 1.31c-.134.263-.226.61-.276 1.22c-.05.617-.051 1.41-.051 2.55v1.2c0 1.14 0 1.93.051 2.55c.05.605.142.953.276 1.22a3.02 3.02 0 0 0 1.31 1.31c.263.134.611.226 1.22.276c.617.05 1.41.051 2.55.051h1.2c1.14 0 1.93 0 2.55-.051c.605-.05.953-.142 1.22-.276a3 3 0 0 0 1.31-1.31c.134-.263.226-.611.276-1.22q.023-.295.035-.653a.507.507 0 0 1 .504-.493c.279 0 .505.228.496.507c-.033 1.05-.13 1.74-.42 2.31a4.03 4.03 0 0 1-1.75 1.75c-.856.436-1.98.436-4.22.436h-1.2c-2.24 0-3.36 0-4.22-.436a4.03 4.03 0 0 1-1.75-1.75c-.436-.856-.436-1.98-.436-4.22v-1.2c0-2.24 0-3.36.436-4.22a4.03 4.03 0 0 1 1.75-1.75c.732-.373 1.66-.427 3.32-.435z" />
   </svg>
 );
+
+// A fixed tick count for the right-edge scroll strip, not one per message --
+// a simple 0..1 scroll-position indicator, same idea as the minimap
+// scrollbar reference, without needing per-message DOM measurement.
+const SCROLL_STRIP_TICKS = Array.from({ length: 14 });
 
 const TopBarMoreDotsIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -370,6 +384,7 @@ function ChatGizaInner() {
   const [attachError, setAttachError] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<ComposerTool>(null);
   const [loading, setLoading] = useState(false);
+  const [canStop, setCanStop] = useState(false);
   const [streamingId, setStreamingId] = useState<string | null>(null);
   const [streamingTool, setStreamingTool] = useState<ComposerTool>(null);
   const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
@@ -425,9 +440,12 @@ function ChatGizaInner() {
   const [celebration, setCelebration] = useState<string | null>(null);
   const [showUpgradeNudge, setShowUpgradeNudge] = useState(false);
   const [topBarMenuOpen, setTopBarMenuOpen] = useState(false);
+  const [scrollFraction, setScrollFraction] = useState(0);
   const [greeting, setGreeting] = useState<string | null>(null);
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
+  const [activeQuestionTrackKey, setActiveQuestionTrackKey] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const autoSent = useRef(false);
   const historySyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pulledHistoryFor = useRef<string | null>(null);
@@ -443,6 +461,9 @@ function ChatGizaInner() {
   const pulledScheduledFor = useRef<string | null>(null);
 
   useEffect(() => {
+    // One-time hydration from browser storage after mount — can't run during
+    // SSR/the initial render, so this can't be a lazy useState initializer.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setProjects(loadJson(PROJECTS_KEY, []));
     setScheduledTasks(loadJson(SCHEDULED_KEY, []));
     setPluginsEnabled(loadJson(PLUGINS_KEY, DEFAULT_PLUGINS));
@@ -498,6 +519,7 @@ function ChatGizaInner() {
     if (activeId !== null) return;
     if (sessionStorage.getItem(GREETED_SESSION_KEY)) return;
     sessionStorage.setItem(GREETED_SESSION_KEY, "1");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setGreeting(GREETING_TEXT);
     speakText(GREETING_TEXT);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -528,6 +550,7 @@ function ChatGizaInner() {
       }
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setConversations(mergeConversations(nextConversations, [], nextDeletedIds));
     setDeletedIds(nextDeletedIds);
     setActiveId(null);
@@ -667,7 +690,6 @@ function ChatGizaInner() {
     return () => {
       if (twinSyncTimer.current) clearTimeout(twinSyncTimer.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [digitalTwin, signedIn]);
 
   // Same pull/push pattern, for plugins/notifications/privacy/location/company —
@@ -804,6 +826,7 @@ function ChatGizaInner() {
   useEffect(() => {
     const upgrade = searchParams.get("upgrade");
     if (upgrade === "cancelled") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUpgradeNotice("Checkout was cancelled — no charge was made.");
       window.history.replaceState(null, "", "/chatgiza");
       return;
@@ -823,7 +846,6 @@ function ChatGizaInner() {
         }
       })
       .catch(() => setUpgradeNotice("We couldn't confirm your payment yet. If you were charged, contact support."));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   useEffect(() => {
@@ -878,6 +900,7 @@ function ChatGizaInner() {
     // device or browser, since that profile data only ever lived in
     // localStorage. Existing accounts now never see this again, anywhere.
     if (signedIn && authSession?.user?.isNewAccount && !onboardingDismissed) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOnboardingOpen(true);
     }
   }, [signedIn, authSession?.user?.isNewAccount, onboardingDismissed]);
@@ -1035,9 +1058,6 @@ function ChatGizaInner() {
   // profile/memory state) so the scheduled-task interval below — whose effect
   // only runs once on mount — never sends with stale personalization data.
   const sendChatMessageRef = useRef<typeof sendChatMessage>(() => Promise.resolve());
-  useEffect(() => {
-    sendChatMessageRef.current = sendChatMessage;
-  });
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -1061,25 +1081,44 @@ function ChatGizaInner() {
       });
     }, 20000);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const active = conversations.find((c) => c.id === activeId) ?? null;
+
+  // Right-edge question navigator: defaults to the newest question whenever
+  // one is asked or the conversation is switched, then tracks scroll
+  // position (below) so the tick for whichever question is currently in
+  // view lights up as the user scrolls through the conversation. Adjusted
+  // during render (rather than an effect) since it's a pure derivation of
+  // `active`.
+  const activeQuestionKey = active ? `${active.id}:${active.messages.length}` : null;
+  if (activeQuestionKey !== activeQuestionTrackKey) {
+    setActiveQuestionTrackKey(activeQuestionKey);
+    const userMsgs = active?.messages.filter((m) => m.role === "user") ?? [];
+    const last = userMsgs[userMsgs.length - 1];
+    setActiveQuestionId(last ? last.id : null);
+  }
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [active?.messages, loading]);
 
-  // Right-edge question navigator: defaults to the newest question whenever
-  // one is asked or the conversation is switched, then tracks scroll
-  // position so the tick for whichever question is currently in view lights
-  // up as the user scrolls through the conversation.
-  useEffect(() => {
-    const userMsgs = active?.messages.filter((m) => m.role === "user") ?? [];
-    const last = userMsgs[userMsgs.length - 1];
-    setActiveQuestionId(last ? last.id : null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active?.id, active?.messages.length]);
+  // Drives the right-edge scroll-position strip -- a plain 0..1 fraction is
+  // enough to place the highlighted tick; no need to track per-message
+  // positions for a lightweight visual position indicator like this.
+  function handleChatScroll() {
+    const el = scrollRef.current;
+    if (!el) return;
+    const max = el.scrollHeight - el.clientHeight;
+    setScrollFraction(max > 0 ? el.scrollTop / max : 0);
+  }
+
+  function scrollToFraction(fraction: number) {
+    const el = scrollRef.current;
+    if (!el) return;
+    const max = el.scrollHeight - el.clientHeight;
+    el.scrollTo({ top: fraction * max, behavior: "smooth" });
+  }
 
   useEffect(() => {
     const container = scrollRef.current;
@@ -1110,15 +1149,6 @@ function ChatGizaInner() {
     container.addEventListener("scroll", onScroll, { passive: true });
     return () => container.removeEventListener("scroll", onScroll);
   }, [active?.id, active?.messages]);
-
-  useEffect(() => {
-    const q = searchParams.get("q");
-    if (q && !autoSent.current) {
-      autoSent.current = true;
-      handleSend(q, []);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
 
   async function handleAddFiles(files: FileList | null) {
     if (!files) return;
@@ -1206,6 +1236,16 @@ function ChatGizaInner() {
     const tool = activeTool && pluginsEnabled[activeTool as PluginKey] === false ? null : activeTool;
     return sendChatMessage(text, attachments, tool);
   }
+
+  // Kept below handleSend's declaration so it's not referenced before defined.
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q && !autoSent.current) {
+      autoSent.current = true;
+      handleSend(q, []);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   function handleEditMessage(messageId: string, newText: string) {
     if (guestQuotaExceeded()) return;
@@ -1423,11 +1463,15 @@ function ChatGizaInner() {
       override
     );
     setStreamingTool(tool);
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    setCanStop(true);
 
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           tool,
           conversationId,
@@ -1454,6 +1498,7 @@ function ChatGizaInner() {
       const decoder = new TextDecoder();
       let accumulated = "";
       let flushScheduled = false;
+      let stopped = false;
 
       function scheduleFlush() {
         if (flushScheduled) return;
@@ -1464,14 +1509,23 @@ function ChatGizaInner() {
         });
       }
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        accumulated += decoder.decode(value, { stream: true });
-        scheduleFlush();
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          accumulated += decoder.decode(value, { stream: true });
+          scheduleFlush();
+        }
+      } catch (streamErr) {
+        if (streamErr instanceof DOMException && streamErr.name === "AbortError") {
+          stopped = true;
+        } else {
+          throw streamErr;
+        }
       }
       // Final flush in case the last chunk arrived after the last scheduled frame.
       updateAssistantMessage(conversationId, assistantId, { content: accumulated });
+      if (stopped) return;
       const milestone = bumpCounterAndCheckMilestone("messages");
       if (milestone) setCelebration(milestone);
       if (typeof navigator !== "undefined" && navigator.vibrate) {
@@ -1488,13 +1542,28 @@ function ChatGizaInner() {
         new Notification("ChatGiZa", { body: "Your response is ready." });
       }
     } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") {
+        return;
+      }
       const message = e instanceof Error ? e.message : "Sorry, something went wrong. Please try again.";
       updateAssistantMessage(conversationId, assistantId, { content: message });
     } finally {
+      abortControllerRef.current = null;
+      setCanStop(false);
       setLoading(false);
       setStreamingId(null);
       setStreamingTool(null);
     }
+  }
+
+  // Kept below sendChatMessage's declaration so the ref always closes over
+  // the latest render's function.
+  useEffect(() => {
+    sendChatMessageRef.current = sendChatMessage;
+  });
+
+  function handleStopGenerating() {
+    abortControllerRef.current?.abort();
   }
 
   function renameConversation(id: string, title: string) {
@@ -1524,15 +1593,34 @@ function ChatGizaInner() {
   async function shareConversation(id: string) {
     const convo = conversations.find((c) => c.id === id);
     if (!convo) return;
-    const transcript = convo.messages
-      .filter((m) => m.content)
-      .map((m) => `${m.role === "user" ? "You" : "ChatGiZa"}: ${m.content}`)
-      .join("\n\n");
-    const text = `${convo.title}\n\n${transcript}`;
+
+    // Reuse the existing link instead of minting a new one on every click.
+    let shareId = convo.shareId;
+    if (!shareId) {
+      try {
+        const res = await fetch("/api/share", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: convo.title,
+            messages: convo.messages
+              .filter((m) => m.content)
+              .map((m) => ({ role: m.role, content: m.content })),
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Couldn't create a share link.");
+        shareId = data.id as string;
+      } catch {
+        return;
+      }
+    }
+
+    const url = `${window.location.origin}/share/${shareId}`;
     let shared = false;
     if (navigator.share) {
       try {
-        await navigator.share({ title: convo.title, text });
+        await navigator.share({ title: convo.title, url });
         shared = true;
       } catch {
         // user cancelled or share failed; fall through to clipboard copy
@@ -1540,19 +1628,25 @@ function ChatGizaInner() {
     }
     if (!shared) {
       try {
-        await navigator.clipboard.writeText(text);
+        await navigator.clipboard.writeText(url);
         shared = true;
       } catch {
         // clipboard unavailable; nothing more we can do here
       }
     }
     if (shared) {
-      setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, shared: true } : c)));
+      setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, shared: true, shareId } : c)));
     }
   }
 
   function unshareConversation(id: string) {
-    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, shared: false } : c)));
+    const convo = conversations.find((c) => c.id === id);
+    if (convo?.shareId) {
+      fetch(`/api/share/${convo.shareId}`, { method: "DELETE" }).catch(() => {});
+    }
+    setConversations((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, shared: false, shareId: undefined } : c))
+    );
   }
 
   function unarchiveConversation(id: string) {
@@ -1618,10 +1712,6 @@ function ChatGizaInner() {
     setScheduledTasks((prev) => prev.filter((t) => t.id !== id));
   }
 
-  function togglePlugin(key: PluginKey) {
-    setPluginsEnabled((prev) => ({ ...prev, [key]: !prev[key] }));
-  }
-
   const libraryItems = !signedIn ? [] : conversations.flatMap((c) =>
     c.messages
       .filter((m) => m.imageUrl || m.videoUrl)
@@ -1652,6 +1742,7 @@ function ChatGizaInner() {
         onOpenLibrary={() => setLibraryOpen(true)}
         onOpenMedia={() => setMediaFeedOpen(true)}
         onOpenLiveVision={() => setLiveVisionOpen(true)}
+        onOpenPlugins={() => setPluginsOpen(true)}
         onOpenProjects={() => setProjectsOpen(true)}
         onOpenCode={() => setCodeOpen(true)}
         onOpenSearch={() => setSearchOpen(true)}
@@ -1743,7 +1834,13 @@ function ChatGizaInner() {
         />
       )}
 
-      {comingSoonTitle && <ComingSoonModal title={comingSoonTitle} onClose={() => setComingSoonTitle(null)} />}
+      {comingSoonTitle && (
+        <ComingSoonModal
+          title={comingSoonTitle}
+          description={COMING_SOON_DESCRIPTIONS[comingSoonTitle]}
+          onClose={() => setComingSoonTitle(null)}
+        />
+      )}
 
       {signInPromptOpen && <SignInPromptModal onClose={() => setSignInPromptOpen(false)} />}
 
@@ -1839,7 +1936,7 @@ function ChatGizaInner() {
       )}
 
       {pluginsOpen && (
-        <PluginsPanel enabled={pluginsEnabled} onClose={() => setPluginsOpen(false)} onToggle={togglePlugin} />
+        <PluginsPanel onClose={() => setPluginsOpen(false)} onOpenComingSoon={setComingSoonTitle} />
       )}
 
       {codeOpen && <CodePanel onClose={() => setCodeOpen(false)} />}
@@ -2015,6 +2112,7 @@ function ChatGizaInner() {
                 enabledTools={pluginsEnabled}
                 error={attachError}
                 disabled={loading}
+                onStop={canStop ? handleStopGenerating : undefined}
                 onSubmit={(e) => {
                   e.preventDefault();
                   handleSend(input, pendingAttachments);
@@ -2039,6 +2137,7 @@ function ChatGizaInner() {
           <>
             <div
               ref={scrollRef}
+              onScroll={handleChatScroll}
               className="no-scrollbar mx-auto w-full max-w-[var(--content-width)] flex-1 overflow-y-auto px-4 py-8 space-y-4"
             >
               {active.messages.map((m) => {
@@ -2066,6 +2165,7 @@ function ChatGizaInner() {
                 ) : (
                   <div key={m.id} id={`msg-${m.id}`}>
                     <ChatMessageBubble
+                      id={m.id}
                       role={m.role}
                       content={m.content}
                       attachments={m.attachments}
@@ -2086,6 +2186,24 @@ function ChatGizaInner() {
               })}
             </div>
 
+            {active.messages.length > 2 && (
+              <div className="pointer-events-none fixed right-1.5 top-1/2 z-30 hidden -translate-y-1/2 flex-col items-end gap-1.5 sm:flex">
+                {SCROLL_STRIP_TICKS.map((_, i) => {
+                  const isActive = Math.round(scrollFraction * (SCROLL_STRIP_TICKS.length - 1)) === i;
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => scrollToFraction(i / (SCROLL_STRIP_TICKS.length - 1))}
+                      aria-label={`Jump to ${Math.round((i / (SCROLL_STRIP_TICKS.length - 1)) * 100)}%`}
+                      className={`pointer-events-auto rounded-full transition-all ${
+                        isActive ? "h-4 w-1 bg-foreground" : "h-2 w-1 bg-muted/40 hover:bg-muted"
+                      }`}
+                    />
+                  );
+                })}
+              </div>
+            )}
+
             <ChatComposer
               variant="bar"
               value={input}
@@ -2098,6 +2216,7 @@ function ChatGizaInner() {
               enabledTools={pluginsEnabled}
               error={attachError}
               disabled={loading}
+              onStop={canStop ? handleStopGenerating : undefined}
               onSubmit={(e) => {
                 e.preventDefault();
                 handleSend(input, pendingAttachments);
