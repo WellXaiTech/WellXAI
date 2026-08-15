@@ -14,6 +14,7 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import android.os.Build
 import android.os.Bundle
@@ -5585,6 +5586,11 @@ internal fun MediaPostVideoPlayer(url: String, modifier: Modifier = Modifier) {
       PlayerView(ctx).apply {
         this.player = player
         useController = true
+        // Default RESIZE_MODE_FIT letterboxes with hard black bars whenever
+        // the video's own aspect ratio doesn't match the post card's --
+        // ZOOM crops to fill instead, matching how post images already
+        // behave with ContentScale.Crop.
+        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
       }
     }
   )

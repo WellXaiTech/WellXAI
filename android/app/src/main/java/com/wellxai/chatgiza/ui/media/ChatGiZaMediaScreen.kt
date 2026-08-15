@@ -43,6 +43,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
@@ -82,6 +83,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -131,6 +133,8 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
   var searchQuery by remember { mutableStateOf("") }
   var viewingProfile by remember { mutableStateOf<ProfileTarget?>(null) }
   var showNotifications by remember { mutableStateOf(false) }
+  var fullscreenPostId by remember { mutableStateOf<String?>(null) }
+  var fullscreenPage by remember { mutableStateOf(0) }
 
   // "status"-destination posts predate the removal of the My Story row --
   // excluding them keeps any old ones from resurfacing in the feed now
@@ -243,7 +247,8 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
             },
             onDeleteClick = { viewModel.removeMediaPost(post.id) },
             onOpenComposer = { replyingToPost = post },
-            onOpenProfile = { viewingProfile = ProfileTarget(post.authorId, post.authorName, post.authorImage) }
+            onOpenProfile = { viewingProfile = ProfileTarget(post.authorId, post.authorName, post.authorImage) },
+            onOpenFullscreen = { page -> fullscreenPostId = post.id; fullscreenPage = page }
           )
         }
       }
@@ -348,6 +353,21 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
       modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = navHeight + 24.dp),
       onClick = { viewModel.selectTool("ai_agent") }
     )
+
+    val fullscreenPost = viewModel.mediaPosts.firstOrNull { it.id == fullscreenPostId }
+    if (fullscreenPost != null) {
+      MediaPostFullscreenViewer(
+        post = fullscreenPost,
+        initialPage = fullscreenPage,
+        onLikeClick = { viewModel.toggleMediaPostLike(fullscreenPost.id) },
+        onToggleComments = {
+          expandedCommentsPostId = fullscreenPost.id
+          viewModel.loadMediaComments(fullscreenPost.id)
+          fullscreenPostId = null
+        },
+        onDismiss = { fullscreenPostId = null }
+      )
+    }
   }
 
   if (showConnectSheet) {
@@ -466,7 +486,8 @@ private fun MediaPost(
   onToggleComments: () -> Unit,
   onOpenComposer: () -> Unit,
   onOpenProfile: () -> Unit,
-  onDeleteClick: () -> Unit
+  onDeleteClick: () -> Unit,
+  onOpenFullscreen: (Int) -> Unit
 ) {
   val context = LocalContext.current
   val pagerState = rememberPagerState(pageCount = { post.imageUrls.size })
@@ -600,7 +621,7 @@ private fun MediaPost(
         modifier = Modifier
           .fillMaxWidth()
           .padding(horizontal = 14.dp)
-          .aspectRatio(4f / 5f)
+          .aspectRatio(1f)
           .clip(mediaShape)
           .background(mediaBg)
           .border(1.dp, mediaBorder, mediaShape)
@@ -609,7 +630,7 @@ private fun MediaPost(
           AsyncImage(
             model = post.imageUrls[page],
             contentDescription = "Post image",
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().clickable { onOpenFullscreen(page) },
             contentScale = ContentScale.Crop
           )
         }
@@ -627,7 +648,7 @@ private fun MediaPost(
         modifier = Modifier
           .fillMaxWidth()
           .padding(horizontal = 14.dp)
-          .aspectRatio(4f / 5f)
+          .aspectRatio(1f)
           .clip(mediaShape)
           .background(mediaBg)
           .border(1.dp, mediaBorder, mediaShape)
@@ -640,105 +661,7 @@ private fun MediaPost(
     // ACTIONS
     // =====================================================
 
-    // Reddit-style dark pill row -- vote pill (up/down + count), comment
-    // pill (bubble + count), then plain circular repost/share icons --
-    // replacing the old Instagram-style heart/comment/repost/share/save
-    // row entirely, per explicit reference screenshots.
-    Row(
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp),
-      verticalAlignment = Alignment.CenterVertically
-    ) {
-      Row(
-        modifier = Modifier
-          .clip(RoundedCornerShape(percent = 50))
-          .background(Color(0xFF1A1A1A))
-          .padding(horizontal = 10.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Icon(
-          painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_upvote),
-          contentDescription = "Upvote",
-          tint = if (post.likedByMe) Color(0xFFFF4500) else Color.White,
-          modifier = Modifier.size(16.dp).clickable(onClick = onLikeClick)
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(text = post.likeCount.toString(), fontSize = 13.sp, color = Color.White, fontWeight = FontWeight.Medium)
-        Spacer(modifier = Modifier.width(6.dp))
-        Box(modifier = Modifier.width(1.dp).height(12.dp).background(Color.White.copy(alpha = 0.3f)))
-        Spacer(modifier = Modifier.width(6.dp))
-        // Visual-only for now -- no downvote backend built yet, matching
-        // how repost below has always been decorative.
-        Icon(
-          painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_downvote),
-          contentDescription = "Downvote",
-          tint = Color.White,
-          modifier = Modifier.size(16.dp).clickable {}
-        )
-      }
-
-      Spacer(modifier = Modifier.width(8.dp))
-
-      Row(
-        modifier = Modifier
-          .clip(RoundedCornerShape(percent = 50))
-          .background(Color(0xFF1A1A1A))
-          .clickable(onClick = onToggleComments)
-          .padding(horizontal = 10.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Icon(
-          painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_comment),
-          contentDescription = "Comment",
-          tint = Color.White,
-          modifier = Modifier.size(16.dp)
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(text = post.commentCount.toString(), fontSize = 13.sp, color = Color.White, fontWeight = FontWeight.Medium)
-      }
-
-      Spacer(modifier = Modifier.weight(1f))
-
-      // Visual-only for now -- no repost backend built yet.
-      Box(
-        modifier = Modifier
-          .size(32.dp)
-          .clip(CircleShape)
-          .background(Color(0xFF1A1A1A))
-          .clickable {},
-        contentAlignment = Alignment.Center
-      ) {
-        Icon(
-          painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_repost),
-          contentDescription = "Repost",
-          tint = Color.White,
-          modifier = Modifier.size(16.dp)
-        )
-      }
-
-      Spacer(modifier = Modifier.width(8.dp))
-
-      Box(
-        modifier = Modifier
-          .size(32.dp)
-          .clip(CircleShape)
-          .background(Color(0xFF1A1A1A))
-          .clickable {
-            val sendIntent = Intent(Intent.ACTION_SEND).apply {
-              type = "text/plain"
-              putExtra(Intent.EXTRA_TEXT, post.text)
-            }
-            context.startActivity(Intent.createChooser(sendIntent, "Share post"))
-          },
-        contentAlignment = Alignment.Center
-      ) {
-        Icon(
-          painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_share_nodes),
-          contentDescription = "Share",
-          tint = Color.White,
-          modifier = Modifier.size(16.dp)
-        )
-      }
-    }
+    MediaPostActionsRow(post = post, onLikeClick = onLikeClick, onToggleComments = onToggleComments)
 
     if (commentsExpanded) {
       Box(modifier = Modifier.padding(horizontal = 10.dp)) {
@@ -751,6 +674,195 @@ private fun MediaPost(
     // =====================================================
 
     androidx.compose.material3.HorizontalDivider(color = if (isDark) Color(0xFF2A2A2A) else Color.LightGray)
+  }
+}
+
+// Reddit-style dark pill row -- vote pill (up/down + count), comment pill
+// (bubble + count), then plain circular repost/share icons. Shared between
+// the feed card and the fullscreen image viewer so both stay in sync.
+@Composable
+private fun MediaPostActionsRow(post: ApiMediaPost, onLikeClick: () -> Unit, onToggleComments: () -> Unit) {
+  val context = LocalContext.current
+  Row(
+    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Row(
+      modifier = Modifier
+        .clip(RoundedCornerShape(percent = 50))
+        .background(Color(0xFF1A1A1A))
+        .padding(horizontal = 10.dp, vertical = 6.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Icon(
+        painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_upvote),
+        contentDescription = "Upvote",
+        tint = if (post.likedByMe) Color(0xFFFF4500) else Color.White,
+        modifier = Modifier.size(16.dp).clickable(onClick = onLikeClick)
+      )
+      Spacer(modifier = Modifier.width(6.dp))
+      Text(text = post.likeCount.toString(), fontSize = 13.sp, color = Color.White, fontWeight = FontWeight.Medium)
+      Spacer(modifier = Modifier.width(6.dp))
+      Box(modifier = Modifier.width(1.dp).height(12.dp).background(Color.White.copy(alpha = 0.3f)))
+      Spacer(modifier = Modifier.width(6.dp))
+      // Visual-only for now -- no downvote backend built yet, matching
+      // how repost below has always been decorative.
+      Icon(
+        painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_downvote),
+        contentDescription = "Downvote",
+        tint = Color.White,
+        modifier = Modifier.size(16.dp).clickable {}
+      )
+    }
+
+    Spacer(modifier = Modifier.width(8.dp))
+
+    Row(
+      modifier = Modifier
+        .clip(RoundedCornerShape(percent = 50))
+        .background(Color(0xFF1A1A1A))
+        .clickable(onClick = onToggleComments)
+        .padding(horizontal = 10.dp, vertical = 6.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Icon(
+        painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_comment),
+        contentDescription = "Comment",
+        tint = Color.White,
+        modifier = Modifier.size(16.dp)
+      )
+      Spacer(modifier = Modifier.width(6.dp))
+      Text(text = post.commentCount.toString(), fontSize = 13.sp, color = Color.White, fontWeight = FontWeight.Medium)
+    }
+
+    Spacer(modifier = Modifier.weight(1f))
+
+    // Visual-only for now -- no repost backend built yet.
+    Box(
+      modifier = Modifier
+        .size(32.dp)
+        .clip(CircleShape)
+        .background(Color(0xFF1A1A1A))
+        .clickable {},
+      contentAlignment = Alignment.Center
+    ) {
+      Icon(
+        painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_repost),
+        contentDescription = "Repost",
+        tint = Color.White,
+        modifier = Modifier.size(16.dp)
+      )
+    }
+
+    Spacer(modifier = Modifier.width(8.dp))
+
+    Box(
+      modifier = Modifier
+        .size(32.dp)
+        .clip(CircleShape)
+        .background(Color(0xFF1A1A1A))
+        .clickable {
+          val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, post.text)
+          }
+          context.startActivity(Intent.createChooser(sendIntent, "Share post"))
+        },
+      contentAlignment = Alignment.Center
+    ) {
+      Icon(
+        painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_share_nodes),
+        contentDescription = "Share",
+        tint = Color.White,
+        modifier = Modifier.size(16.dp)
+      )
+    }
+  }
+}
+
+// Fullscreen photo viewer -- close (X) / author name / "..." up top, the
+// image itself at natural fit (no crop, unlike the feed card), then the
+// caption and the same action pills as the feed card floating over a
+// gradient at the bottom. Matches the Reddit-style reference screenshot.
+@Composable
+private fun MediaPostFullscreenViewer(
+  post: ApiMediaPost,
+  initialPage: Int,
+  onLikeClick: () -> Unit,
+  onToggleComments: () -> Unit,
+  onDismiss: () -> Unit
+) {
+  BackHandler(onBack = onDismiss)
+  val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { post.imageUrls.size })
+  val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+  val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+  Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+    HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+      AsyncImage(
+        model = post.imageUrls[page],
+        contentDescription = "Post image",
+        modifier = Modifier.fillMaxSize(),
+        contentScale = ContentScale.Fit
+      )
+    }
+
+    Row(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(top = topInset)
+        .padding(horizontal = 12.dp, vertical = 8.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      IconButton(onClick = onDismiss, modifier = Modifier.size(36.dp)) {
+        Icon(Icons.Outlined.Close, contentDescription = "Close", tint = Color.White)
+      }
+      Spacer(modifier = Modifier.weight(1f))
+      Text(post.authorName, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+      Spacer(modifier = Modifier.weight(1f))
+      IconButton(modifier = Modifier.size(36.dp), onClick = {}) {
+        Icon(Icons.Filled.MoreVert, contentDescription = "More", tint = Color.White)
+      }
+    }
+
+    if (post.imageUrls.size > 1) {
+      Text(
+        text = "${pagerState.currentPage + 1}/${post.imageUrls.size}",
+        color = Color.White,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Medium,
+        modifier = Modifier
+          .align(Alignment.TopEnd)
+          .padding(top = topInset + 52.dp, end = 14.dp)
+          .clip(RoundedCornerShape(percent = 50))
+          .background(Color.Black.copy(alpha = 0.55f))
+          .padding(horizontal = 9.dp, vertical = 3.dp)
+      )
+    }
+
+    Column(
+      modifier = Modifier
+        .align(Alignment.BottomCenter)
+        .fillMaxWidth()
+        .background(
+          Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.9f)))
+        )
+        .padding(bottom = bottomInset)
+        .padding(horizontal = 14.dp, top = 40.dp, bottom = 12.dp)
+    ) {
+      if (post.text.isNotEmpty()) {
+        Text(
+          post.text,
+          color = Color.White,
+          fontSize = 13.sp,
+          lineHeight = 18.sp,
+          maxLines = 3,
+          overflow = TextOverflow.Ellipsis,
+          modifier = Modifier.padding(bottom = 8.dp)
+        )
+      }
+      MediaPostActionsRow(post = post, onLikeClick = onLikeClick, onToggleComments = onToggleComments)
+    }
   }
 }
 
@@ -857,8 +969,8 @@ private fun MediaBottomNavigation(
 }
 
 // =============================================================
-// PROFILE -- avatar, real post/follower/following counts, bio, and a
-// grid of that person's posts (tap a grid image to view it fullscreen).
+// PROFILE -- avatar, real post/follower/following counts, bio, and this
+// person's posts as full X-style cards (tap an image to view it fullscreen).
 // =============================================================
 
 @Composable
@@ -866,6 +978,8 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
   var showExtraSettings by remember { mutableStateOf(false) }
   var expandedCommentsPostId by remember { mutableStateOf<String?>(null) }
   var replyingToPost by remember { mutableStateOf<ApiMediaPost?>(null) }
+  var fullscreenPostId by remember { mutableStateOf<String?>(null) }
+  var fullscreenPage by remember { mutableStateOf(0) }
   BackHandler(enabled = !showExtraSettings) { onBack() }
   val context = LocalContext.current
   val isOwnProfile = target.authorId == viewModel.userId
@@ -1260,7 +1374,8 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
               },
               onDeleteClick = { viewModel.removeMediaPost(post.id) },
               onOpenComposer = { replyingToPost = post },
-              onOpenProfile = {}
+              onOpenProfile = {},
+              onOpenFullscreen = { page -> fullscreenPostId = post.id; fullscreenPage = page }
             )
             androidx.compose.material3.HorizontalDivider(color = onBgDim.copy(alpha = 0.1f))
           }
@@ -1275,6 +1390,21 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
         authorName = replyTarget.authorName,
         onDismiss = { replyingToPost = null },
         onSubmit = { text -> viewModel.addMediaComment(replyTarget.id, text) }
+      )
+    }
+
+    val fullscreenPost = viewModel.mediaPosts.firstOrNull { it.id == fullscreenPostId }
+    if (fullscreenPost != null) {
+      MediaPostFullscreenViewer(
+        post = fullscreenPost,
+        initialPage = fullscreenPage,
+        onLikeClick = { viewModel.toggleMediaPostLike(fullscreenPost.id) },
+        onToggleComments = {
+          expandedCommentsPostId = fullscreenPost.id
+          viewModel.loadMediaComments(fullscreenPost.id)
+          fullscreenPostId = null
+        },
+        onDismiss = { fullscreenPostId = null }
       )
     }
 
