@@ -92,6 +92,7 @@ sealed class AppScreen {
   object Connectors : AppScreen()
   object Profile : AppScreen()
   object ProfileHub : AppScreen()
+  object AccountSettings : AppScreen()
 }
 
 class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
@@ -883,6 +884,15 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeDataDashboard() {
+    screen = AppScreen.ProfileHub
+    returnToAccountTabsIfPending()
+  }
+
+  fun openAccountSettings() {
+    screen = AppScreen.AccountSettings
+  }
+
+  fun closeAccountSettings() {
     screen = AppScreen.ProfileHub
     returnToAccountTabsIfPending()
   }
