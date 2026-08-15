@@ -66,6 +66,11 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     console.error("Billing summary fetch failed:", err);
-    return NextResponse.json({ error: "Couldn't load billing details" }, { status: 500 });
+    // A stale/invalid Stripe customer id (deleted in the Stripe dashboard,
+    // or created under a different API key than the one live now) is a
+    // real possibility here since the id comes from KV, not a fresh Stripe
+    // lookup -- that's the same "never subscribed" empty state, not a
+    // failure worth alarming the user with a red error banner over.
+    return NextResponse.json({ subscription: null, invoices: [], paymentMethods: [], billingInfo: null });
   }
 }
