@@ -879,8 +879,13 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun leaveAccountTabsFor(open: () -> Unit) {
     accountTabsReturnPending = true
-    closeAccountTabs()
+    // screen changes first, then the dialog closes -- closing it first left
+    // a brief window where showAccountTabs was already false but screen
+    // hadn't moved off AppScreen.ProfileHub yet, flashing Profile Hub (with
+    // its "Enter GiZa Max" banner) underneath the dialog as it dismissed,
+    // on every single row tap.
     open()
+    closeAccountTabs()
   }
 
   private fun returnToAccountTabsIfPending() {
