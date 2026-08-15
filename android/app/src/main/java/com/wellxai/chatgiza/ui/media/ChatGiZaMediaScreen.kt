@@ -334,7 +334,6 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
     MediaBottomNavigation(
       viewModel = viewModel,
       onCreateClick = { showConnectSheet = true },
-      onNotificationsClick = { showNotifications = true },
       onProfileClick = {
         val uid = viewModel.userId
         if (uid != null) viewingProfile = ProfileTarget(uid, viewModel.userName ?: "You", viewModel.userImage)
@@ -812,10 +811,10 @@ private fun MediaPost(
 private fun MediaBottomNavigation(
   viewModel: ChatViewModel,
   onCreateClick: () -> Unit,
-  onNotificationsClick: () -> Unit,
   onProfileClick: () -> Unit,
   modifier: Modifier = Modifier
 ) {
+  val context = LocalContext.current
   Row(
     modifier = modifier
       .fillMaxWidth()
@@ -841,13 +840,24 @@ private fun MediaBottomNavigation(
       )
     }
 
-    IconButton(onClick = onNotificationsClick) {
+    // Replaces the old notifications shortcut here -- notifications are
+    // still reachable via the bell in ChatGiZaHeader up top. No jobs
+    // backend exists yet, so this is a clearly labeled placeholder
+    // rather than a dead icon.
+    Column(
+      horizontalAlignment = Alignment.CenterHorizontally,
+      modifier = Modifier.clickable {
+        Toast.makeText(context, "Jobs — coming soon", Toast.LENGTH_SHORT).show()
+      }
+    ) {
       Icon(
-        androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_bell),
-        contentDescription = null,
+        androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_jobs),
+        contentDescription = "Jobs",
         tint = Color.DarkGray,
         modifier = Modifier.size(22.dp)
       )
+      Spacer(modifier = Modifier.height(2.dp))
+      Text("Jobs", color = Color.DarkGray, fontSize = 10.sp)
     }
 
     if (viewModel.userImage != null) {
