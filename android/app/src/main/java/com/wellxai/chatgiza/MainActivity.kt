@@ -508,6 +508,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Haptics -> HapticsScreen(viewModel)
             is AppScreen.DataControls -> DataControlsScreen(viewModel)
             is AppScreen.DataDashboard -> DataDashboardScreen(viewModel)
+            is AppScreen.AccountSettings -> AccountSettingsScreen(viewModel)
             is AppScreen.ManageCloudStorage -> ManageCloudStorageScreen(viewModel)
             is AppScreen.Settings -> SettingsScreen(viewModel)
             is AppScreen.Projects -> ProjectsScreen(viewModel)
@@ -5042,6 +5043,11 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openDataDashboard() } }
           ) {}
           MyInfoRow(icon = Icons.Outlined.Lock, label = "App Lock", onClick = { comingSoon("App Lock") }) {}
+          MyInfoRow(
+            icon = Icons.Filled.Person,
+            label = "Account Settings",
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openAccountSettings() } }
+          ) {}
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -7520,6 +7526,69 @@ private fun DataControlsScreen(viewModel: ChatViewModel) {
       onConfirm = { viewModel.deleteAccount() },
       onDismiss = { confirmDeleteAccount = false }
     )
+  }
+}
+
+@Composable
+private fun AccountSettingsScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeAccountSettings() }
+  val context = LocalContext.current
+  var confirmDeleteAccount by remember { mutableStateOf(false) }
+  fun comingSoon(label: String) {
+    Toast.makeText(context, "$label — coming soon", Toast.LENGTH_SHORT).show()
+  }
+
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color(0xFF000000))
+      .statusBarsPadding()
+      .padding(horizontal = 16.dp)
+  ) {
+    DataControlsAppBar("Account Settings") { viewModel.closeAccountSettings() }
+    AccountSettingsRow(
+      icon = Icons.Outlined.Lock,
+      title = "Deactivate an Account",
+      description = "Something wrong with your account? Temporarily deactivate it while keeping your data intact.",
+      onClick = { comingSoon("Deactivate an Account") }
+    )
+    Spacer(modifier = Modifier.height(14.dp))
+    AccountSettingsRow(
+      icon = Icons.Outlined.PowerSettingsNew,
+      title = "Delete account",
+      description = "Permanently delete the current Main Account and all associated Subaccounts",
+      onClick = { confirmDeleteAccount = true }
+    )
+  }
+
+  if (confirmDeleteAccount) {
+    ConfirmDangerDialog(
+      title = "Delete account?",
+      message = "This permanently deletes your ChatGiZa account and all associated data. This can't be undone.",
+      onConfirm = { viewModel.deleteAccount() },
+      onDismiss = { confirmDeleteAccount = false }
+    )
+  }
+}
+
+@Composable
+private fun AccountSettingsRow(icon: ImageVector, title: String, description: String, onClick: () -> Unit) {
+  Column(
+    modifier = Modifier
+      .fillMaxWidth()
+      .clip(RoundedCornerShape(16.dp))
+      .background(Color.White.copy(alpha = 0.06f))
+      .clickable(onClick = onClick)
+      .padding(16.dp)
+  ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+      Spacer(modifier = Modifier.width(14.dp))
+      Text(title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+      Icon(Icons.Filled.ArrowForward, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+    }
+    Spacer(modifier = Modifier.height(10.dp))
+    Text(description, color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp, lineHeight = 20.sp)
   }
 }
 
