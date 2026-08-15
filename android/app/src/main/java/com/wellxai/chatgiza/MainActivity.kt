@@ -5067,11 +5067,19 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             Text("Dark Mode", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
           }
           MyInfoDivider()
-          MyInfoRow(icon = Icons.Outlined.Palette, label = "Color Preferences", onClick = { comingSoon("Color Preferences") }) {
-            Box(modifier = Modifier.size(14.dp).clip(RoundedCornerShape(3.dp)).background(Color(0xFF2ECC71)))
-            Spacer(modifier = Modifier.width(4.dp))
-            Box(modifier = Modifier.size(14.dp).clip(RoundedCornerShape(3.dp)).background(Color(0xFFE0345C)))
-          }
+          MyInfoRow(
+            icon = Icons.Outlined.Palette,
+            label = "Appearance",
+            // Moved here from Settings -> App, replacing the old
+            // placeholder "Color Preferences" row -- AppearanceScreen is
+            // rendered from the app's root screen switch, not from within
+            // this dialog's own composition, so it has to close first
+            // (same fix as Profile Picture above) for it to actually show.
+            onClick = {
+              viewModel.closeAccountTabs()
+              viewModel.openAppearance()
+            }
+          ) {}
           MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.Smartphone, label = "Always on (no screen lock)", showChevron = false, onClick = {}) {
             Switch(checked = mockAlwaysOn, onCheckedChange = { mockAlwaysOn = it })
@@ -8642,8 +8650,8 @@ private fun AccountScreen(viewModel: ChatViewModel) {
 
       SettingsSectionHeader("App")
       SettingsSection {
-        SettingsMenuRow("Appearance", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_appearance)) { viewModel.openAppearance() }
-        SettingsDivider()
+        // Moved to Account -> General ("Appearance", replacing the old
+        // placeholder "Color Preferences" row there) -- not duplicated here.
         SettingsMenuRow("Haptics", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_haptics)) { viewModel.openHaptics() }
         SettingsDivider()
         SettingsMenuRow("Widgets", iconContent = { c -> WidgetsIconCustom(tint = c, modifier = Modifier.size(22.dp)) }) { viewModel.openWidgets() }
