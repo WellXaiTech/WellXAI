@@ -312,7 +312,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun openAccount() {
     accountReturnScreen = screen
-    screen = AppScreen.Account
+    screen = AppScreen.ProfileHub
   }
 
   fun closeAccount() {
@@ -324,7 +324,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeCustomize() {
-    screen = AppScreen.Account
+    screen = AppScreen.ProfileHub
   }
 
   var firstNameInput by mutableStateOf("")
@@ -345,7 +345,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   // Remembers wherever EditProfile was opened from (Account, the
   // Profile Hub's Account tabs sheet) instead of hardcoding Account.
-  private var editProfileReturnScreen: AppScreen = AppScreen.Account
+  private var editProfileReturnScreen: AppScreen = AppScreen.ProfileHub
 
   fun openEditProfile() {
     editProfileReturnScreen = screen
@@ -368,7 +368,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         is ApiResult.Success -> {
           profileData = updated
           savingProfile = false
-          screen = AppScreen.Account
+          screen = AppScreen.ProfileHub
         }
         is ApiResult.Failure -> {
           errorMessage = result.message
@@ -383,7 +383,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeAppearance() {
-    screen = AppScreen.Account
+    screen = AppScreen.ProfileHub
   }
 
   fun openVoice() {
@@ -391,7 +391,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeVoice() {
-    screen = AppScreen.Account
+    screen = AppScreen.ProfileHub
   }
 
   var selectedVoiceId by mutableStateOf(tokenStore.getVoiceName())
@@ -503,7 +503,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   // Remembers wherever Report a Problem was opened from (Settings, the
   // Profile Hub's About Us sheet) instead of hardcoding Account, so
   // closing it returns to the actual screen the user came from.
-  private var reportProblemReturnScreen: AppScreen = AppScreen.Account
+  private var reportProblemReturnScreen: AppScreen = AppScreen.ProfileHub
 
   fun openReportProblem() {
     reportProblemReturnScreen = screen
@@ -519,7 +519,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeWidgets() {
-    screen = AppScreen.Account
+    screen = AppScreen.ProfileHub
   }
 
   fun openOpenSourceLicenses() {
@@ -527,7 +527,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeOpenSourceLicenses() {
-    screen = AppScreen.Account
+    screen = AppScreen.ProfileHub
   }
 
   fun openKidsMode() {
@@ -535,7 +535,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeKidsMode() {
-    screen = AppScreen.Account
+    screen = AppScreen.ProfileHub
   }
 
   fun openSharedConversations() {
@@ -543,7 +543,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeSharedConversations() {
-    screen = AppScreen.Account
+    screen = AppScreen.ProfileHub
   }
 
   // Idea #7: a shared AI chat session multiple people can join with a
@@ -647,7 +647,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeNsfwPreferences() {
-    screen = AppScreen.Account
+    screen = AppScreen.ProfileHub
   }
 
   fun openConnectors() {
@@ -655,7 +655,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeConnectors() {
-    screen = AppScreen.Account
+    screen = AppScreen.ProfileHub
   }
 
   fun openMediaProfile() {
@@ -663,7 +663,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeMediaProfile() {
-    screen = AppScreen.Account
+    screen = AppScreen.ProfileHub
   }
 
   // The account-hub screen opened by tapping the avatar at the top of
@@ -683,7 +683,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeHaptics() {
-    screen = AppScreen.Account
+    screen = AppScreen.ProfileHub
   }
 
   // "system" | "for_you" | "dark" | "light" — see AppTheme in MainActivity.kt.
@@ -836,7 +836,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeDataControls() {
-    screen = AppScreen.Account
+    screen = AppScreen.ProfileHub
   }
 
   fun openDataDashboard() {
@@ -844,7 +844,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeDataDashboard() {
-    screen = AppScreen.Account
+    screen = AppScreen.ProfileHub
   }
 
   fun openManageCloudStorage() {
@@ -958,7 +958,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   // Remembers wherever AppLanguage was opened from (Settings, the
   // Profile Hub's trending row) instead of hardcoding Account.
-  private var appLanguageReturnScreen: AppScreen = AppScreen.Account
+  private var appLanguageReturnScreen: AppScreen = AppScreen.ProfileHub
 
   fun openAppLanguage() {
     appLanguageReturnScreen = screen
@@ -974,7 +974,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeAdvanced() {
-    screen = AppScreen.Account
+    screen = AppScreen.ProfileHub
   }
 
   var pasteAsFileMode by mutableStateOf(tokenStore.getPasteAsFileMode())
@@ -1029,7 +1029,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         is ApiResult.Success -> {
           profileData = updated
           savingProfile = false
-          screen = AppScreen.Account
+          screen = AppScreen.ProfileHub
         }
         is ApiResult.Failure -> {
           errorMessage = result.message
@@ -1123,7 +1123,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   // open*/close* pairs it remembers where it was opened from instead of
   // hardcoding Account. Without this, opening it mid-call and closing it
   // would strand the user on Account instead of resuming Live Vision.
-  private var settingsReturnScreen: AppScreen = AppScreen.Account
+  private var settingsReturnScreen: AppScreen = AppScreen.ProfileHub
 
   fun openSettings() {
     settingsReturnScreen = screen
@@ -1206,7 +1206,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeProjects() {
-    screen = AppScreen.Account
+    screen = AppScreen.ProfileHub
   }
 
   fun onNewProjectNameChange(value: String) {
@@ -1247,7 +1247,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeScheduled() {
-    screen = AppScreen.Account
+    screen = AppScreen.ProfileHub
   }
 
   // Tapping "+" on a Tasks example (e.g. "Weekend ideas") sends its prompt
@@ -1399,7 +1399,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeBilling() {
-    screen = AppScreen.Account
+    screen = AppScreen.ProfileHub
   }
 
   /** Real Stripe subscription checkout -- hands the caller a URL to open in
