@@ -4838,7 +4838,21 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             .background(Color(0xFF141414))
             .padding(horizontal = 16.dp)
         ) {
-          MyInfoRow(icon = Icons.Outlined.AccountCircle, label = "Profile Picture", onClick = { viewModel.openAvatarPicker() }) {
+          MyInfoRow(
+            icon = Icons.Outlined.AccountCircle,
+            label = "Profile Picture",
+            // AvatarPickerDialog only ever renders from within
+            // ProfileHubScreen's own composition (see its showAvatarPicker
+            // check) -- opening it straight from here, still inside this
+            // separate AccountTabsDialog, set the flag but never actually
+            // showed anything. Closing this dialog first (same fix already
+            // used for "About Us" below) hands control back to
+            // ProfileHubScreen so the check actually runs.
+            onClick = {
+              viewModel.closeAccountTabs()
+              viewModel.openAvatarPicker()
+            }
+          ) {
             if (selectedPreset != null) {
               AvatarPresetThumbnail(selectedPreset, 32.dp)
             } else if (viewModel.userImage != null) {
