@@ -4816,7 +4816,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
               onClick = { viewModel.updateThemeMode(if (viewModel.themeMode == "light") "dark" else "light") },
               modifier = Modifier.size(32.dp)
             ) {
-              Icon(Icons.Filled.DarkMode, contentDescription = "Toggle dark mode", tint = Color.White, modifier = Modifier.size(20.dp))
+              Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_moon), contentDescription = "Toggle dark mode", tint = Color.White, modifier = Modifier.size(20.dp))
             }
             IconButton(
               onClick = { viewModel.closeAccountTabs(); viewModel.openAppLanguage() },
