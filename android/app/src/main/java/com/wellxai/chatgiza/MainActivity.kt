@@ -7559,7 +7559,7 @@ private fun AccountSettingsScreen(viewModel: ChatViewModel) {
     )
     Spacer(modifier = Modifier.height(14.dp))
     AccountSettingsRow(
-      icon = Icons.Outlined.PowerSettingsNew,
+      icon = Icons.Outlined.ReportProblem,
       title = "Delete account",
       description = "Permanently delete the current Main Account and all associated Subaccounts",
       onClick = { confirmDeleteAccount = true }
@@ -7590,7 +7590,7 @@ private fun AccountSettingsRow(icon: ImageVector, title: String, description: St
       Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
       Spacer(modifier = Modifier.width(14.dp))
       Text(title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-      Icon(Icons.Filled.ArrowForward, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+      Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
     }
     Spacer(modifier = Modifier.height(10.dp))
     Text(description, color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp, lineHeight = 20.sp)
@@ -7668,7 +7668,7 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
           cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
           decorationBox = { inner ->
             Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(Icons.Filled.Search, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(14.dp))
+              Icon(Icons.Outlined.Search, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(14.dp))
               Spacer(modifier = Modifier.width(6.dp))
               Box {
                 if (searchQuery.isEmpty()) {
@@ -7826,10 +7826,10 @@ private fun SwitchAccountRow(
     }
     if (manageMode) {
       IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
-        Icon(Icons.Outlined.Delete, contentDescription = "Delete", tint = Color(0xFFFF6B6B), modifier = Modifier.size(20.dp))
+        Icon(Icons.Outlined.Close, contentDescription = "Delete", tint = Color(0xFFFF6B6B), modifier = Modifier.size(20.dp))
       }
     } else if (selected) {
-      Icon(Icons.Filled.CheckCircle, contentDescription = "Active", tint = Color.White, modifier = Modifier.size(20.dp))
+      Icon(Icons.Filled.Check, contentDescription = "Active", tint = Color.White, modifier = Modifier.size(20.dp))
     }
   }
 }
