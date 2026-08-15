@@ -4900,8 +4900,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         Column(
           modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(Color(0xFF141414))
             .padding(horizontal = 16.dp)
         ) {
           MyInfoRow(
@@ -4977,8 +4975,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         Column(
           modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(Color(0xFF141414))
             .padding(horizontal = 16.dp)
         ) {
           MyInfoRow(icon = Icons.Outlined.AlternateEmail, label = "Link Account", onClick = { comingSoon("Link Account") }) {}
@@ -5017,8 +5013,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         Column(
           modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(Color(0xFF141414))
             .padding(horizontal = 16.dp)
         ) {
           MyInfoRow(icon = Icons.Outlined.Email, label = "Email", onClick = { comingSoon("Email") }) {
@@ -5042,8 +5036,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         Column(
           modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(Color(0xFF141414))
             .padding(horizontal = 16.dp)
         ) {
           MyInfoRow(icon = Icons.Outlined.Lock, label = "Fund Password", onClick = { comingSoon("Fund Password") }) {
@@ -5057,8 +5049,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         Column(
           modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(Color(0xFF141414))
             .padding(horizontal = 16.dp)
         ) {
           MyInfoRow(icon = Icons.Outlined.Lock, label = "Change Password", onClick = { comingSoon("Change Password") }) {}
@@ -5097,8 +5087,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         Column(
           modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(Color(0xFF141414))
             .padding(horizontal = 16.dp)
         ) {
           // Moved here from Settings -> App, replacing the crypto-exchange
@@ -5144,8 +5132,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         Column(
           modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(Color(0xFF141414))
             .padding(horizontal = 16.dp)
         ) {
           MyInfoRow(icon = Icons.Outlined.Language, label = "Language", onClick = { viewModel.closeAccountTabs(); viewModel.openAppLanguage() }) {
