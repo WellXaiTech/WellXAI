@@ -68,7 +68,9 @@ data class ApiProfile(
   // Bold public display name (e.g. "QUANTARA") shown on the Media
   // profile -- distinct from `nickname`, which only personalizes how the
   // AI addresses you in chat and is never shown to other users.
-  val displayName: String = ""
+  val displayName: String = "",
+  // Single link shown on the Media profile.
+  val link: String = ""
 )
 
 data class ProfileData(
@@ -1107,7 +1109,18 @@ object ChatGizaApi {
     }
   }
 
-  data class MediaUserProfile(val followerCount: Int, val followingCount: Int, val isFollowedByMe: Boolean, val bio: String, val displayName: String = "")
+  data class MediaUserProfile(
+    val followerCount: Int,
+    val followingCount: Int,
+    val isFollowedByMe: Boolean,
+    val bio: String,
+    val displayName: String = "",
+    val occupation: String = "",
+    val location: String = "",
+    val link: String = "",
+    val isVerified: Boolean = false,
+    val joinedAt: Long? = null
+  )
   data class FollowResult(val following: Boolean, val followerCount: Int)
 
   suspend fun getMediaUserProfile(token: String, userId: String): ApiResult<MediaUserProfile> = withContext(Dispatchers.IO) {
@@ -1129,7 +1142,12 @@ object ChatGizaApi {
             followingCount = json.optInt("followingCount", 0),
             isFollowedByMe = json.optBoolean("isFollowedByMe", false),
             bio = json.optString("bio", ""),
-            displayName = json.optString("displayName", "")
+            displayName = json.optString("displayName", ""),
+            occupation = json.optString("occupation", ""),
+            location = json.optString("location", ""),
+            link = json.optString("link", ""),
+            isVerified = json.optBoolean("isVerified", false),
+            joinedAt = if (json.isNull("joinedAt")) null else json.optLong("joinedAt")
           )
         )
       }
@@ -1378,7 +1396,8 @@ object ChatGizaApi {
         birthDate = profileObj.optString("birthDate", null),
         country = profileObj.optString("country", null),
         bio = profileObj.optString("bio", ""),
-        displayName = profileObj.optString("displayName", "")
+        displayName = profileObj.optString("displayName", ""),
+        link = profileObj.optString("link", "")
       ),
       memory = (0 until memoryArr.length()).map { memoryArr.getString(it) },
       memoryEnabled = obj.optBoolean("memoryEnabled", true),
@@ -1392,6 +1411,7 @@ object ChatGizaApi {
       .put("about", data.profile.about)
       .put("bio", data.profile.bio)
       .put("displayName", data.profile.displayName)
+      .put("link", data.profile.link)
     data.profile.role?.let { profileObj.put("role", it) }
     data.profile.fullName?.let { profileObj.put("fullName", it) }
     data.profile.birthDate?.let { profileObj.put("birthDate", it) }

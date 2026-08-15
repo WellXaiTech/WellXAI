@@ -6,9 +6,15 @@ create table if not exists users (
   email text,
   name text,
   image text,
+  -- Admin-only flag (no self-serve UI sets this) shown as the blue
+  -- checkmark on the ChatGiZa Media profile page.
+  is_verified boolean not null default false,
   created_at timestamptz not null default now(),
   last_seen_at timestamptz not null default now()
 );
+
+-- Run once for existing databases created before is_verified existed:
+-- alter table users add column if not exists is_verified boolean not null default false;
 
 create table if not exists workspaces (
   id uuid primary key default gen_random_uuid(),

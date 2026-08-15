@@ -1,6 +1,7 @@
 package com.wellxai.chatgiza.ui.media
 
 import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -45,12 +46,16 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.automirrored.outlined.ListAlt
 import androidx.compose.material.icons.filled.Person
@@ -990,21 +995,85 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
             // when nothing's been set.
             val displayName = (if (isOwnProfile) viewModel.profileData.profile.displayName else userProfile?.displayName.orEmpty())
               .ifBlank { target.authorName }
-            Text(
-              displayName,
-              color = onBg,
-              fontSize = 19.sp,
-              fontWeight = FontWeight.ExtraBold
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Text(
+                displayName,
+                color = onBg,
+                fontSize = 19.sp,
+                fontWeight = FontWeight.ExtraBold
+              )
+              // Admin-only flag (no self-serve UI sets it) -- real, not
+              // decorative, so it only shows once userProfile confirms it.
+              if (userProfile?.isVerified == true) {
+                Spacer(modifier = Modifier.width(4.dp))
+                Box(
+                  modifier = Modifier.size(16.dp).clip(CircleShape).background(Color(0xFF1D9BF0)),
+                  contentAlignment = Alignment.Center
+                ) {
+                  Icon(Icons.Filled.Check, contentDescription = "Verified", tint = Color.White, modifier = Modifier.size(11.dp))
+                }
+              }
+            }
             Text("@${target.authorName.lowercase().replace(" ", "")}", color = onBgDim, fontSize = 13.sp)
 
-            // Own profile reads bio live from the editable profileData so
-            // it updates the instant Edit Profile is saved; other profiles
-            // read the fetched snapshot from /api/media/users/[id].
+            // Own profile reads bio/occupation/location live from the
+            // editable profileData so they update the instant Edit Profile
+            // is saved; other profiles read the fetched snapshot from
+            // /api/media/users/[id].
             val bio = if (isOwnProfile) viewModel.profileData.profile.bio else userProfile?.bio.orEmpty()
             if (bio.isNotBlank()) {
               Spacer(modifier = Modifier.height(8.dp))
               Text(bio, color = onBg, fontSize = 14.sp, lineHeight = 19.sp)
+            }
+
+            val occupation = if (isOwnProfile) viewModel.profileData.profile.role.orEmpty() else userProfile?.occupation.orEmpty()
+            val location = if (isOwnProfile) viewModel.profileData.profile.country.orEmpty() else userProfile?.location.orEmpty()
+            if (occupation.isNotBlank() || location.isNotBlank()) {
+              Spacer(modifier = Modifier.height(8.dp))
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                if (occupation.isNotBlank()) {
+                  Icon(Icons.Outlined.WorkspacePremium, contentDescription = null, tint = onBgDim, modifier = Modifier.size(14.dp))
+                  Spacer(modifier = Modifier.width(4.dp))
+                  Text(occupation, color = onBgDim, fontSize = 13.sp)
+                }
+                if (occupation.isNotBlank() && location.isNotBlank()) Spacer(modifier = Modifier.width(12.dp))
+                if (location.isNotBlank()) {
+                  Icon(Icons.Outlined.LocationOn, contentDescription = null, tint = onBgDim, modifier = Modifier.size(14.dp))
+                  Spacer(modifier = Modifier.width(4.dp))
+                  Text(location, color = onBgDim, fontSize = 13.sp)
+                }
+              }
+            }
+
+            val link = if (isOwnProfile) viewModel.profileData.profile.link else userProfile?.link.orEmpty()
+            if (!link.isNullOrBlank()) {
+              Spacer(modifier = Modifier.height(6.dp))
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.clickable {
+                  runCatching {
+                    val url = if (link.startsWith("http")) link else "https://$link"
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                  }
+                }
+              ) {
+                Icon(Icons.Outlined.Link, contentDescription = null, tint = Color(0xFF1D9BF0), modifier = Modifier.size(14.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(link, color = Color(0xFF1D9BF0), fontSize = 13.sp)
+              }
+            }
+
+            val joinedAt = userProfile?.joinedAt
+            if (joinedAt != null) {
+              Spacer(modifier = Modifier.height(6.dp))
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.CalendarMonth, contentDescription = null, tint = onBgDim, modifier = Modifier.size(14.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                val formatted = remember(joinedAt) {
+                  java.text.SimpleDateFormat("MMMM yyyy", java.util.Locale.getDefault()).format(java.util.Date(joinedAt))
+                }
+                Text("Joined $formatted", color = onBgDim, fontSize = 13.sp)
+              }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
