@@ -4894,11 +4894,11 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
       Spacer(modifier = Modifier.height(24.dp))
 
       if (activeTab == "My info") {
-        // Matches the reference list -- real where it's just displaying
-        // data already on hand (Profile Picture opens the picker we
-        // already built; UID shows/copies the same derived id used on
-        // the main screen), a stub everywhere else. Nickname is shown
-        // read-only for now -- actual editing is a later pass.
+        // Identity only -- who you are, not app behavior or account
+        // security, which now live in Preference/Security respectively
+        // (see the reorganization pass that moved Advertise/Affiliate's
+        // community/Join Our Community/Link Account/Collaborative Chat
+        // out of here into where they actually belong).
         val selectedPreset = AVATAR_PRESETS.find { it.id == viewModel.avatarPresetId }
         Column(
           modifier = Modifier
@@ -4943,38 +4943,11 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
               }
             )
           }
-          // Moved here from Settings -> Data & Information/Business,
-          // replacing "My Fee Rates"/"Additional Verification" (crypto-
-          // exchange placeholders that never applied to ChatGiZa).
-          MyInfoRow(
-            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_share_link),
-            label = "Collaborative Chat",
-            onClick = { viewModel.leaveAccountTabsFor { viewModel.openSharedConversations() } }
-          ) {}
-          MyInfoRow(
-            icon = Icons.Outlined.Business,
-            label = "Advertise on ChatGiZa",
-            onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/advertise"))) }
-          ) {}
           MyInfoRow(
             icon = Icons.Filled.Person,
             label = "Subaccount",
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openSwitchAccount() } }
           ) {}
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        Column(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-        ) {
-          MyInfoRow(icon = Icons.Outlined.AlternateEmail, label = "Link Account", onClick = { comingSoon("Link Account") }) {}
-          MyInfoRow(icon = Icons.Outlined.Business, label = "Affiliate's community", onClick = { comingSoon("Affiliate's community") }) {
-            Text("Joined", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
-          }
-          MyInfoRow(icon = Icons.Outlined.SupportAgent, label = "Join Our Community", onClick = { comingSoon("Join Our Community") }) {}
         }
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -4995,9 +4968,9 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         }
         Spacer(modifier = Modifier.height(20.dp))
       } else if (activeTab == "Security") {
-        // Matches the reference list exactly -- entirely mock data and
-        // stub taps (nothing here connects to a real 2FA/password/device
-        // backend yet), same "don't go deeper" scope as My info.
+        // Account safety and access only. "Fund Password" (a crypto-
+        // exchange wallet concept -- ChatGiZa has no funds/wallet) was
+        // dropped outright rather than forced into any tab.
         var mockGoogle2fa by remember { mutableStateOf(true) }
 
         SecurityGroupHeader("Basic Protect", "Essential protection for everyday account activity.")
@@ -5016,19 +4989,9 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             Switch(checked = mockGoogle2fa, onCheckedChange = { mockGoogle2fa = it })
           }
           MyInfoRow(icon = Icons.Outlined.Tag, label = "Passkeys", onClick = { comingSoon("Passkeys") }) {}
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        SecurityGroupHeader("Advanced Protect", "Additional protection for key fund actions.")
-        Column(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-        ) {
-          MyInfoRow(icon = Icons.Outlined.Lock, label = "Fund Password", onClick = { comingSoon("Fund Password") }) {
-            Text("Not Setup", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
-          }
+          // Moved here from My info -- linking another account is an
+          // access/security action, not identity.
+          MyInfoRow(icon = Icons.Outlined.AlternateEmail, label = "Link Account", onClick = { comingSoon("Link Account") }) {}
         }
 
         Spacer(modifier = Modifier.height(18.dp))
@@ -5041,7 +5004,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         ) {
           MyInfoRow(icon = Icons.Outlined.Lock, label = "Change Password", onClick = { comingSoon("Change Password") }) {}
           MyInfoRow(icon = Icons.Outlined.ScreenShare, label = "Trusted Devices", onClick = { comingSoon("Trusted Devices") }) {}
-          // Moved here from Settings -> Data & Information.
           MyInfoRow(
             icon = Icons.Outlined.QueryStats,
             label = "Data Dashboard",
@@ -5065,14 +5027,26 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         }
         Spacer(modifier = Modifier.height(20.dp))
       } else if (activeTab == "Preference") {
+        // How the app behaves/feels for you -- AI persona and voice
+        // alongside the device-feel/notification settings that were
+        // already here.
         Column(
           modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
         ) {
-          // Moved here from Settings -> App, replacing the crypto-exchange
-          // placeholder rows (Withdrawal Address/Manage Crypto Withdrawal
-          // Limits/Route Deposits To) that never applied to ChatGiZa.
+          MyInfoRow(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_customize_sparkle),
+            label = "Customize GiZa",
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openCustomize() } }
+          ) {}
+          // Moved here from General -- how ChatGiZa sounds is a
+          // preference, alongside how it behaves (Customize GiZa above).
+          MyInfoRow(
+            icon = Icons.Outlined.GraphicEq,
+            label = "Voice",
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openVoice() } }
+          ) {}
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_haptics),
             label = "Haptics",
@@ -5084,17 +5058,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openWidgets() } }
           ) {}
           MyInfoRow(
-            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_advanced),
-            label = "Advanced",
-            onClick = { viewModel.leaveAccountTabsFor { viewModel.openAdvanced() } }
-          ) {}
-          // Moved here from Settings -> GiZa, which is being retired.
-          MyInfoRow(
-            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_customize_sparkle),
-            label = "Customize GiZa",
-            onClick = { viewModel.leaveAccountTabsFor { viewModel.openCustomize() } }
-          ) {}
-          MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connectors),
             label = "Connectors",
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openConnectors() } }
@@ -5104,6 +5067,9 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         }
         Spacer(modifier = Modifier.height(20.dp))
       } else if (activeTab == "General") {
+        // App-wide/about -- display settings, storage, legal, and the
+        // business/community links that don't belong under personal
+        // identity (My info) or account security (Security).
         Column(
           modifier = Modifier
             .fillMaxWidth()
@@ -5112,12 +5078,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(icon = Icons.Outlined.Language, label = "Language", onClick = { viewModel.leaveAccountTabsFor { viewModel.openAppLanguage() } }) {
             Text("English", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
           }
-          // Moved here from Settings -> Voice, which is being retired.
-          MyInfoRow(
-            icon = Icons.Outlined.GraphicEq,
-            label = "Voice",
-            onClick = { viewModel.leaveAccountTabsFor { viewModel.openVoice() } }
-          ) {}
           MyInfoRow(
             icon = Icons.Filled.LightMode,
             label = "Color Theme",
@@ -5130,6 +5090,11 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           ) {
             Text(AppTheme.fromKey(viewModel.themeMode).label, color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
           }
+          MyInfoRow(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_advanced),
+            label = "Advanced",
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openAdvanced() } }
+          ) {}
           // Help Center/User feedback/About Us/Terms of Use/Privacy Policy
           // all collapsed into the single "About Us" entry point (Profile
           // Hub's footer link), which now also lists Help Center and User
@@ -5150,6 +5115,31 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openDataControls() } }
           ) {}
           MyInfoRow(icon = Icons.Outlined.ThumbUp, label = "Rate Our App", onClick = { comingSoon("Rate Our App") }) {}
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Column(
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+        ) {
+          // Moved here from My info -- a feature entry point, not identity.
+          MyInfoRow(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_share_link),
+            label = "Collaborative Chat",
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openSharedConversations() } }
+          ) {}
+          // Moved here from My info -- business/community links, not identity.
+          MyInfoRow(
+            icon = Icons.Outlined.Business,
+            label = "Advertise on ChatGiZa",
+            onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/advertise"))) }
+          ) {}
+          MyInfoRow(icon = Icons.Outlined.Business, label = "Affiliate's community", onClick = { comingSoon("Affiliate's community") }) {
+            Text("Joined", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
+          }
+          MyInfoRow(icon = Icons.Outlined.SupportAgent, label = "Join Our Community", onClick = { comingSoon("Join Our Community") }) {}
         }
         Spacer(modifier = Modifier.height(20.dp))
       }
