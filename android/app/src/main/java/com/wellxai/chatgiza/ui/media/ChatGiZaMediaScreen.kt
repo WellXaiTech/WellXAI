@@ -4,8 +4,6 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -14,7 +12,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,10 +38,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -79,7 +74,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -112,10 +106,6 @@ import com.wellxai.chatgiza.MediaCommentComposerSheet
 import com.wellxai.chatgiza.MediaPostComments
 import com.wellxai.chatgiza.MediaPostVideoPlayer
 import com.wellxai.chatgiza.formatMediaPostTimeAgo
-import com.wellxai.chatgiza.uriToPostImageDataUrl
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 // =============================================================
 // CHATGIZA MEDIA -- white/monochrome feed screen (reference layout):
@@ -132,30 +122,6 @@ import kotlinx.coroutines.withContext
 fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeChatGizaMedia() }
 
-  val context = LocalContext.current
-  val screenScope = rememberCoroutineScope()
-  var postingStatus by remember { mutableStateOf(false) }
-  // Tapping "+" on My Story goes straight to the device's own photo picker
-  // instead of opening the full post composer first -- a real, one-tap
-  // way to post a status photo, not just a shortcut into ConnectWithChatGizaSheet.
-  val statusImagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-    if (uri != null) {
-      postingStatus = true
-      screenScope.launch {
-        val dataUrl = withContext(Dispatchers.IO) { uriToPostImageDataUrl(context, uri) }
-        if (dataUrl == null) {
-          postingStatus = false
-          Toast.makeText(context, "Couldn't read that photo", Toast.LENGTH_SHORT).show()
-          return@launch
-        }
-        viewModel.createMediaPost("", listOf(dataUrl), null, null, null, "status") { success ->
-          postingStatus = false
-          if (!success) Toast.makeText(context, "Couldn't post your status", Toast.LENGTH_SHORT).show()
-        }
-      }
-    }
-  }
-
   var showConnectSheet by remember { mutableStateOf(false) }
   var replyingToPost by remember { mutableStateOf<ApiMediaPost?>(null) }
   var expandedCommentsPostId by remember { mutableStateOf<String?>(null) }
@@ -164,15 +130,11 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
   var viewingProfile by remember { mutableStateOf<ProfileTarget?>(null) }
   var showNotifications by remember { mutableStateOf(false) }
 
-  // A post's destination ("post" == History/main feed, "status" == stories
-  // row, "both") decides which of these two lists it lands in -- a
-  // status-only post shouldn't show up in the scrollable feed, and a
-  // history-only post shouldn't show up as a story circle.
+  // "status"-destination posts predate the removal of the My Story row --
+  // excluding them keeps any old ones from resurfacing in the feed now
+  // that there's no stories UI to have shown them in the first place.
   val feedEligiblePosts = remember(viewModel.mediaPosts) {
     viewModel.mediaPosts.filter { it.destination != "status" }
-  }
-  val statusEligiblePosts = remember(viewModel.mediaPosts) {
-    viewModel.mediaPosts.filter { it.destination != "post" }
   }
   val visiblePosts = remember(feedEligiblePosts, searchQuery) {
     val q = searchQuery.trim()
@@ -217,17 +179,6 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
 
       item { Spacer(modifier = Modifier.height(if (showHeader) headerHeight else 0.dp)) }
-
-      item {
-        MediaStoriesRow(
-          myImage = viewModel.userImage,
-          posts = statusEligiblePosts,
-          isDark = isDark,
-          onMyStoryClick = { statusImagePicker.launch("image/*") },
-          onOpenProfile = { target -> viewingProfile = target }
-        )
-        androidx.compose.material3.HorizontalDivider(color = if (isDark) Color(0xFF2A2A2A) else Color(0xFFEDEDED))
-      }
 
       if (searchOpen) {
         item {
@@ -288,6 +239,7 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
                 viewModel.loadMediaComments(post.id)
               }
             },
+            onDeleteClick = { viewModel.removeMediaPost(post.id) },
             onOpenComposer = { replyingToPost = post },
             onOpenProfile = { viewingProfile = ProfileTarget(post.authorId, post.authorName, post.authorImage) }
           )
@@ -394,15 +346,6 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
       modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = navHeight + 24.dp),
       onClick = { viewModel.selectTool("ai_agent") }
     )
-
-    if (postingStatus) {
-      Box(
-        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)),
-        contentAlignment = Alignment.Center
-      ) {
-        CircularProgressIndicator(color = Color.White)
-      }
-    }
   }
 
   if (showConnectSheet) {
@@ -518,110 +461,6 @@ private fun ChatGiZaHeader(
 }
 
 // =============================================================
-// STORIES ROW -- "Your story" (tap opens the create sheet, same as "+")
-// followed by the most recent distinct posters. Monochrome ring instead
-// of Instagram's gradient to match this screen's black/white palette.
-// =============================================================
-
-@Composable
-private fun MediaStoriesRow(
-  myImage: String?,
-  posts: List<ApiMediaPost>,
-  isDark: Boolean,
-  onMyStoryClick: () -> Unit,
-  onOpenProfile: (ProfileTarget) -> Unit
-) {
-  val others = remember(posts) { posts.distinctBy { it.authorId }.take(15) }
-
-  Row(
-    modifier = Modifier
-      .fillMaxWidth()
-      .horizontalScroll(rememberScrollState())
-      .padding(horizontal = 12.dp, vertical = 10.dp),
-    horizontalArrangement = Arrangement.spacedBy(10.dp)
-  ) {
-    MediaStoryCard(
-      image = myImage,
-      label = "My story",
-      showAddBadge = true,
-      isDark = isDark,
-      onClick = onMyStoryClick
-    )
-    others.forEach { post ->
-      MediaStoryCard(
-        image = post.authorImage,
-        label = post.authorName,
-        showAddBadge = false,
-        isDark = isDark,
-        onClick = { onOpenProfile(ProfileTarget(post.authorId, post.authorName, post.authorImage)) }
-      )
-    }
-  }
-}
-
-// Card matching the WhatsApp Status-tab reference: a subtly-tinted card
-// with a circular avatar sitting in the upper portion (not full-bleed),
-// a "+" badge overlapping that circle's bottom-right corner for "My
-// story", and the name as its own line at the bottom of the card.
-@Composable
-private fun MediaStoryCard(image: String?, label: String, showAddBadge: Boolean, isDark: Boolean, onClick: () -> Unit) {
-  val fg = if (isDark) Color.White else Color.Black
-  val cardShape = RoundedCornerShape(12.dp)
-  Box(
-    modifier = Modifier
-      .width(64.dp)
-      .height(88.dp)
-      .clip(cardShape)
-      .background(if (isDark) Color(0xFF1A1A1A) else Color(0xFFF5F5F5))
-      .border(1.dp, if (isDark) Color(0xFF2E2E2E) else Color(0xFFE2E2E2), cardShape)
-      .clickable(onClick = onClick)
-  ) {
-    Box(
-      modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 22.dp),
-      contentAlignment = Alignment.BottomEnd
-    ) {
-      if (image != null) {
-        AsyncImage(
-          model = image,
-          contentDescription = label,
-          modifier = Modifier.size(34.dp).clip(CircleShape).border(1.dp, if (isDark) Color(0xFF3A3A3A) else Color(0xFFDADADA), CircleShape),
-          contentScale = ContentScale.Crop
-        )
-      } else {
-        Icon(
-          Icons.Outlined.AccountCircle,
-          contentDescription = label,
-          tint = Color.Gray,
-          modifier = Modifier.size(34.dp)
-        )
-      }
-      if (showAddBadge) {
-        Box(
-          modifier = Modifier
-            .size(15.dp)
-            .clip(CircleShape)
-            .background(fg)
-            .border(1.5.dp, if (isDark) Color(0xFF1A1A1A) else Color(0xFFF5F5F5), CircleShape),
-          contentAlignment = Alignment.Center
-        ) {
-          Icon(Icons.Filled.Add, contentDescription = null, tint = if (isDark) Color.Black else Color.White, modifier = Modifier.size(9.dp))
-        }
-      }
-    }
-
-    Text(
-      label,
-      color = fg,
-      fontSize = 10.sp,
-      fontWeight = FontWeight.SemiBold,
-      maxLines = 1,
-      overflow = TextOverflow.Ellipsis,
-      modifier = Modifier.align(Alignment.BottomStart).padding(6.dp)
-    )
-  }
-}
-
-// =============================================================
 // MEDIA POST
 // =============================================================
 
@@ -636,12 +475,14 @@ private fun MediaPost(
   onLikeClick: () -> Unit,
   onToggleComments: () -> Unit,
   onOpenComposer: () -> Unit,
-  onOpenProfile: () -> Unit
+  onOpenProfile: () -> Unit,
+  onDeleteClick: () -> Unit
 ) {
   val context = LocalContext.current
   val pagerState = rememberPagerState(pageCount = { post.imageUrls.size })
   var textExpanded by remember(post.id) { mutableStateOf(false) }
   var following by remember(post.id) { mutableStateOf(false) }
+  var moreMenuOpen by remember(post.id) { mutableStateOf(false) }
   val isLongText = post.text.length > MEDIA_POST_TEXT_PREVIEW_LENGTH
   val bg = if (isDark) Color.Black else Color.White
   val fg = if (isDark) Color.White else Color.Black
@@ -696,11 +537,36 @@ private fun MediaPost(
         Spacer(modifier = Modifier.width(2.dp))
       }
 
-      IconButton(
-        onClick = { Toast.makeText(context, "More — coming soon", Toast.LENGTH_SHORT).show() },
-        modifier = Modifier.size(36.dp)
-      ) {
-        Icon(Icons.Filled.MoreVert, contentDescription = "More", tint = fg)
+      Box {
+        IconButton(
+          onClick = { moreMenuOpen = true },
+          modifier = Modifier.size(36.dp)
+        ) {
+          Icon(Icons.Filled.MoreVert, contentDescription = "More", tint = fg)
+        }
+        androidx.compose.material3.DropdownMenu(
+          expanded = moreMenuOpen,
+          onDismissRequest = { moreMenuOpen = false },
+          modifier = Modifier.background(bg)
+        ) {
+          if (isOwnPost) {
+            androidx.compose.material3.DropdownMenuItem(
+              text = { Text("Delete", color = Color(0xFFFF4D4D)) },
+              onClick = {
+                moreMenuOpen = false
+                onDeleteClick()
+              }
+            )
+          } else {
+            androidx.compose.material3.DropdownMenuItem(
+              text = { Text("Report", color = fg) },
+              onClick = {
+                moreMenuOpen = false
+                Toast.makeText(context, "Report — coming soon", Toast.LENGTH_SHORT).show()
+              }
+            )
+          }
+        }
       }
     }
 
