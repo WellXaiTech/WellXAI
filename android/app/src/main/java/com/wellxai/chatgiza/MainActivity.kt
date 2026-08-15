@@ -10070,32 +10070,12 @@ private fun MessageActionBar(
     }
   }
 
-  Row(
-    modifier = Modifier.horizontalScroll(rememberScrollState()),
-    horizontalArrangement = Arrangement.spacedBy(2.dp)
-  ) {
-    ActionBarItemShell("Copy", Color(0xFFA8A8A8), onClick = {
-      clipboard.setText(AnnotatedString(cleanContent))
-    }) { tint -> CopyIconCustom(tint = tint, modifier = Modifier.size(22.dp)) }
-    ActionBarItem(Icons.Outlined.Language, "Translate on-device", onClick = onTranslate)
-    if (cleanContent.length >= MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH) {
-      ActionBarExtraItem(
-        label = if (pushState == "pushed") "Sent" else "Extra",
-        tint = if (pushState == "pushed") accent else Color(0xFFA8A8A8),
-        connected = chatGizaMediaConnected,
-        onNotConnected = {
-          Toast.makeText(
-            context,
-            "Connect ChatGiZa with Extra Media first — Extra > + > Connect With ChatGiZa",
-            Toast.LENGTH_LONG
-          ).show()
-        },
-        onOpen = { extraStage = "options" }
-      )
-    }
-    // Read Aloud/Stop is available on the user's own messages too (not just
-    // AI replies) -- lets them hear a message spoken back in the selected
-    // voice to check pronunciation, e.g. for Kiswahili/Sheng.
+  // Read Aloud/Stop is available on the user's own messages too (not just
+  // AI replies) -- lets them hear a message spoken back in the selected
+  // voice to check pronunciation, e.g. for Kiswahili/Sheng. Pulled out to a
+  // local lambda since it sits in a different spot in the row for user vs.
+  // AI messages (see below) rather than one fixed position for both.
+  val readAloudItem: @Composable () -> Unit = {
     if (isSpeaking) {
       ActionBarItem(
         painter = androidx.compose.ui.res.painterResource(R.drawable.ic_stop),
@@ -10108,7 +10088,30 @@ private fun MessageActionBar(
         SpeakerIconCustom(tint = tint, modifier = Modifier.size(20.dp))
       }
     }
-    if (!isUser) {
+  }
+
+  Row(
+    modifier = Modifier.horizontalScroll(rememberScrollState()),
+    horizontalArrangement = Arrangement.spacedBy(2.dp)
+  ) {
+    ActionBarItemShell("Copy", Color(0xFFA8A8A8), onClick = {
+      clipboard.setText(AnnotatedString(cleanContent))
+    }) { tint -> CopyIconCustom(tint = tint, modifier = Modifier.size(22.dp)) }
+    if (isUser) {
+      ActionBarItem(Icons.Outlined.Language, "Translate on-device", onClick = onTranslate)
+      readAloudItem()
+    } else {
+      // Trimmed to the essentials shown inline (matching the generated-
+      // image/video reply row: Copy/Share/Like/Dislike/Read Aloud/
+      // Regenerate) -- Translate, Extra, and PDF export moved into "More"
+      // below instead of crowding the row for every single reply.
+      ActionBarItem(androidx.compose.ui.res.painterResource(R.drawable.ic_share), "Share") {
+        val intent = Intent(Intent.ACTION_SEND).apply {
+          type = "text/plain"
+          putExtra(Intent.EXTRA_TEXT, cleanContent)
+        }
+        context.startActivity(Intent.createChooser(intent, null))
+      }
       ActionBarItem(
         painter = androidx.compose.ui.res.painterResource(R.drawable.ic_thumbs_up),
         label = "Like",
@@ -10120,29 +10123,48 @@ private fun MessageActionBar(
         tint = if (reaction == "down") accent else Color(0xFFA8A8A8),
         rotation = 180f
       ) { reaction = if (reaction == "down") null else "down" }
-      ActionBarItem(androidx.compose.ui.res.painterResource(R.drawable.ic_share), "Share") {
-        val intent = Intent(Intent.ACTION_SEND).apply {
-          type = "text/plain"
-          putExtra(Intent.EXTRA_TEXT, cleanContent)
-        }
-        context.startActivity(Intent.createChooser(intent, null))
-      }
-      ActionBarItem(Icons.Outlined.PictureAsPdf, "PDF") {
-        runCatching {
-          val file = generateReplyPdf(context, "ChatGiZa reply", cleanContent)
-          val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-          val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "application/pdf"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-          }
-          context.startActivity(Intent.createChooser(intent, null))
-        }
-      }
+      readAloudItem()
       ActionBarItem(androidx.compose.ui.res.painterResource(R.drawable.ic_regenerate), "Regenerate", size = 18.dp, onClick = onRegenerate)
       Box {
         ActionBarItem(Icons.Outlined.MoreHoriz, "More") { moreOpen = true }
         DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }) {
+          DropdownMenuItem(
+            text = { Text("Translate on-device") },
+            onClick = { moreOpen = false; onTranslate() }
+          )
+          if (cleanContent.length >= MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH) {
+            DropdownMenuItem(
+              text = { Text(if (pushState == "pushed") "Sent to Extra Media" else "Send to Extra Media") },
+              onClick = {
+                moreOpen = false
+                if (chatGizaMediaConnected) {
+                  extraStage = "options"
+                } else {
+                  Toast.makeText(
+                    context,
+                    "Connect ChatGiZa with Extra Media first — Extra > + > Connect With ChatGiZa",
+                    Toast.LENGTH_LONG
+                  ).show()
+                }
+              }
+            )
+          }
+          DropdownMenuItem(
+            text = { Text("Export as PDF") },
+            onClick = {
+              moreOpen = false
+              runCatching {
+                val file = generateReplyPdf(context, "ChatGiZa reply", cleanContent)
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                  type = "application/pdf"
+                  putExtra(Intent.EXTRA_STREAM, uri)
+                  addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                context.startActivity(Intent.createChooser(intent, null))
+              }
+            }
+          )
           DropdownMenuItem(
             text = { Text("Delete", color = Color(0xFFFF3B30)) },
             onClick = { moreOpen = false; onDelete() }
