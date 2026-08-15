@@ -4816,7 +4816,10 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
 
       // Persistent identity row -- same avatar/name shown lower down on
       // the "My info" tab, surfaced here too so it's visible no matter
-      // which tab is open, matching the reference layout.
+      // which tab is open, matching the reference layout. The pill under
+      // the name mirrors the reference's "Site: Bybit Global" tag -- here
+      // it shows the signed-in account's email since that's the one real
+      // identifying detail we have, rather than a fake placeholder.
       Row(verticalAlignment = Alignment.CenterVertically) {
         val headerPreset = AVATAR_PRESETS.find { it.id == viewModel.avatarPresetId }
         if (headerPreset != null) {
@@ -4827,12 +4830,24 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           Icon(Icons.Outlined.AccountCircle, contentDescription = "Profile", tint = Color.White, modifier = Modifier.size(50.dp))
         }
         Spacer(modifier = Modifier.width(12.dp))
-        Text(
-          (viewModel.avatarName ?: viewModel.userName ?: "You").uppercase(),
-          color = Color.White,
-          fontSize = 20.sp,
-          fontWeight = FontWeight.ExtraBold
-        )
+        Column {
+          Text(
+            (viewModel.avatarName ?: viewModel.userName ?: "You").uppercase(),
+            color = Color.White,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.ExtraBold
+          )
+          if (viewModel.userEmail != null) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Box(
+              modifier = Modifier
+                .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(6.dp))
+                .padding(horizontal = 8.dp, vertical = 3.dp)
+            ) {
+              Text(viewModel.userEmail!!, color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+            }
+          }
+        }
       }
 
       Spacer(modifier = Modifier.height(20.dp))
