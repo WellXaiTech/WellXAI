@@ -4411,6 +4411,11 @@ internal fun formatMediaPostTimeAgo(createdAt: Long): String {
 // every real social feed handles long text, and keeps the feed scannable.
 internal const val MEDIA_POST_TEXT_PREVIEW_LENGTH = 180
 
+// Free-tier caption cap in the composer -- writing past this needs an active
+// GiZa Pro subscription (any tier). Only gates NEW posts; it isn't retroactive
+// against older, already-published captions longer than this.
+internal const val MEDIA_POST_FREE_CAPTION_LIMIT = 150
+
 // Matches the web composer's cap (ChatGizaMediaFeed.tsx) so both clients
 // enforce the same limit rather than one silently accepting more than the
 // other can render.
@@ -5841,10 +5846,16 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
   var videoUri by remember { mutableStateOf<Uri?>(null) }
   var sentiment by remember { mutableStateOf<String?>(null) }
   var posting by remember { mutableStateOf(false) }
+  var openingCheckout by remember { mutableStateOf(false) }
   // A failed post used to fail completely silently -- the button just went
   // back to "Post" with nothing else happening, which read as "stuck" or
   // "not doing anything" rather than "failed, here's why."
-  LaunchedEffect(Unit) { viewModel.clearMediaError() }
+  LaunchedEffect(Unit) {
+    viewModel.clearMediaError()
+    if (viewModel.billingSummary == null) viewModel.loadBilling()
+  }
+  val hasGizaPro = viewModel.billingSummary?.subscription != null
+  val overFreeCaptionLimit = !hasGizaPro && text.length > MEDIA_POST_FREE_CAPTION_LIMIT
 
   val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
     if (uris.isNotEmpty()) {
@@ -5878,7 +5889,8 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
     }
   }
 
-  val canPost = (text.isNotBlank() || imageUris.isNotEmpty() || videoUri != null) && !posting && !viewModel.uploadingMediaVideo
+  val canPost = (text.isNotBlank() || imageUris.isNotEmpty() || videoUri != null) &&
+    !posting && !viewModel.uploadingMediaVideo && !overFreeCaptionLimit
 
   Box(
     modifier = Modifier
@@ -6000,6 +6012,53 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
               cursorBrush = SolidColor(Color(0xFFFFC94A)),
               modifier = Modifier.fillMaxWidth()
             )
+          }
+        }
+
+        if (text.isNotEmpty()) {
+          Spacer(modifier = Modifier.height(6.dp))
+          Text(
+            "${text.length}/$MEDIA_POST_FREE_CAPTION_LIMIT",
+            color = if (overFreeCaptionLimit) Color(0xFFEA3943) else Color(0xFF7A7A7A),
+            fontSize = 12.sp,
+            modifier = Modifier.fillMaxWidth()
+          )
+        }
+
+        if (overFreeCaptionLimit) {
+          Spacer(modifier = Modifier.height(8.dp))
+          Column(
+            modifier = Modifier
+              .fillMaxWidth()
+              .clip(RoundedCornerShape(12.dp))
+              .background(Color(0xFFFFC94A).copy(alpha = 0.1f))
+              .padding(14.dp)
+          ) {
+            Text(
+              "Captions over $MEDIA_POST_FREE_CAPTION_LIMIT characters need GiZa Pro.",
+              color = Color.White,
+              fontSize = 13.sp
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Button(
+              onClick = {
+                openingCheckout = true
+                viewModel.startCheckout("starter") { url ->
+                  openingCheckout = false
+                  if (url != null) {
+                    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+                  } else {
+                    viewModel.reportMediaError("Couldn't start checkout — try again")
+                  }
+                }
+              },
+              enabled = !openingCheckout,
+              colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC94A)),
+              shape = RoundedCornerShape(20.dp),
+              contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp)
+            ) {
+              Text(if (openingCheckout) "Opening…" else "Upgrade to GiZa Pro", color = Color.Black, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+            }
           }
         }
 

@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe, getOrCreatePriceId, getOrCreateCustomer, PLAN_TIERS, type PlanTier } from "@/lib/stripe";
 import { auth } from "@/auth";
+import { getMobileUserId } from "@/lib/mobileAuth";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId = session?.user?.id ?? (await getMobileUserId(req));
+  if (!userId) {
     return NextResponse.json({ error: "Please sign in before upgrading." }, { status: 401 });
   }
 
@@ -19,7 +21,7 @@ export async function POST(req: NextRequest) {
     const priceId = await getOrCreatePriceId(tier);
     const origin = req.headers.get("origin") ?? req.nextUrl.origin;
     const stripe = getStripe();
-    const customerId = await getOrCreateCustomer(session.user.id, session.user.email, session.user.name);
+    const customerId = await getOrCreateCustomer(userId, session?.user?.email, session?.user?.name);
 
     // `client_reference_id` ties the completed payment back to this account
     // server-side (see /api/checkout/verify), which is what lets the IP-based
@@ -34,7 +36,7 @@ export async function POST(req: NextRequest) {
       success_url: `${origin}/chatgiza?upgrade=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/chatgiza?upgrade=cancelled`,
       metadata: { tier },
-      client_reference_id: session.user.id,
+      client_reference_id: userId,
     });
 
     return NextResponse.json({ url: checkoutSession.url });

@@ -952,6 +952,28 @@ object ChatGizaApi {
    * signed into the site (the app's own sign-in is a bearer token, not a
    * browser cookie, so a bare app-URL handoff previously landed on a blank,
    * signed-out page). */
+  suspend fun startCheckout(token: String, tier: String): ApiResult<String> = withContext(Dispatchers.IO) {
+    try {
+      val body = JSONObject().put("tier", tier).toString()
+      val request = Request.Builder()
+        .url("$BASE_URL/api/checkout")
+        .header("Authorization", "Bearer $token")
+        .post(body.toRequestBody(JSON))
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val url = JSONObject(text).optString("url", "")
+        if (url.isEmpty()) return@withContext ApiResult.Failure("No checkout URL returned")
+        ApiResult.Success(url)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
   suspend fun getBillingPortalUrl(token: String): ApiResult<String> = withContext(Dispatchers.IO) {
     try {
       val request = Request.Builder()
