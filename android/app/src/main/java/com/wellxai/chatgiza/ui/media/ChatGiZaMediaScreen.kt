@@ -875,7 +875,10 @@ private fun MediaBottomNavigation(
         androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_messages_bubble),
         contentDescription = "Messages",
         tint = Color.DarkGray,
-        modifier = Modifier.size(22.dp)
+        // Not square (the source glyph is taller than wide) -- an explicit
+        // width/height keeps that ratio instead of a uniform size()
+        // shrinking it down to fit a square box.
+        modifier = Modifier.size(width = 20.8.dp, height = 26.dp)
       )
     }
 
