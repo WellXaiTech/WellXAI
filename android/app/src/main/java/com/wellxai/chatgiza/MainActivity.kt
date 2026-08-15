@@ -5406,7 +5406,7 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
           .clip(RoundedCornerShape(50))
           .background(Color(0xFFB8862E))
           .clickable {
-            viewModel.updateAvatarPreset(selected)
+            viewModel.updateAvatarPreset(selected, AVATAR_PRESETS.find { it.id == selected }?.emoji)
             viewModel.updateAvatarName(nameInput.trim().ifBlank { null })
             viewModel.closeAvatarPicker()
           }
