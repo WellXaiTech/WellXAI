@@ -860,6 +860,14 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var showAccountTabs by mutableStateOf(false)
     private set
 
+  // Which of the 4 tabs (My info/Security/Preference/General) is showing --
+  // held here, not as remember{} inside AccountTabsDialog, because that
+  // composable is fully removed from composition every time the dialog
+  // closes (leaveAccountTabsFor to open Color Theme, etc.) and re-added
+  // when it reopens, which reset a remember{} back to "My info" every
+  // time, undoing whichever tab the user had actually been on.
+  var activeAccountTab by mutableStateOf("My info")
+
   fun openAccountTabs() {
     showAccountTabs = true
   }
