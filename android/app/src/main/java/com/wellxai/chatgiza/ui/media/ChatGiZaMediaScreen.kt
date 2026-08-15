@@ -747,7 +747,11 @@ private fun MediaPost(
           context.startActivity(Intent.createChooser(sendIntent, "Share post"))
         }
       ) {
-        Icon(imageVector = Icons.Filled.Send, contentDescription = "Share", tint = Color.Black)
+        Icon(
+          painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_share_nodes),
+          contentDescription = "Share",
+          tint = Color.Black
+        )
       }
 
       // Visual-only for now -- no saved-posts list built yet.
@@ -981,7 +985,12 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
                 },
               contentAlignment = Alignment.Center
             ) {
-              Icon(Icons.Filled.Send, contentDescription = "Share", tint = onBg, modifier = Modifier.size(18.dp))
+              Icon(
+                painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_share_nodes),
+                contentDescription = "Share",
+                tint = onBg,
+                modifier = Modifier.size(18.dp)
+              )
             }
           }
         }
