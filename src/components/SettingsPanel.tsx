@@ -9,6 +9,7 @@ import type { AssistantColor } from "@/lib/assistantColor";
 import type { ChatFont } from "@/lib/chatFont";
 import type { ReduceMotion } from "@/lib/reduceMotion";
 import { COUNTRIES, COUNTRY_CODES } from "@/lib/countries";
+import { checkBirthDate, getMaxBirthDate } from "@/lib/ageGate";
 import {
   getStoredVoiceURI,
   setStoredVoiceURI,
@@ -32,6 +33,8 @@ export type Profile = {
   fullName?: string;
   birthDate?: string;
   country?: string;
+  // Public-facing (shown on the ChatGiZa Media profile page).
+  link?: string;
 };
 
 export type PrivacyPrefs = {
@@ -498,6 +501,7 @@ export default function SettingsPanel({
   const [fullName, setFullName] = useState(profile.fullName ?? session?.user?.name ?? "");
   const [birthDate, setBirthDate] = useState(profile.birthDate ?? "");
   const [country, setCountry] = useState(profile.country ?? "");
+  const [link, setLink] = useState(profile.link ?? "");
   const [newFact, setNewFact] = useState("");
   const [confirmClear, setConfirmClear] = useState(false);
   const [confirmArchiveAll, setConfirmArchiveAll] = useState(false);
@@ -684,8 +688,11 @@ export default function SettingsPanel({
   const voiceLanguages = Array.from(new Set(voices.map((v) => v.lang))).sort();
   const filteredVoices = voiceLang ? voices.filter((v) => v.lang === voiceLang) : voices;
 
+  const birthDateCheck = checkBirthDate(birthDate);
+
   function saveProfile() {
-    onProfileChange({ nickname, about, role, fullName, birthDate, country });
+    if (!birthDateCheck.ok) return;
+    onProfileChange({ nickname, about, role, fullName, birthDate, country, link });
   }
 
   function updatePrivacy(patch: Partial<PrivacyPrefs>) {
@@ -1558,14 +1565,17 @@ export default function SettingsPanel({
               />
 
               <label className="mb-1 block text-xs text-muted">Date of birth</label>
-              <input
-                type="date"
-                value={birthDate}
-                onChange={(e) => setBirthDate(e.target.value)}
-                onBlur={saveProfile}
-                max={new Date().toISOString().slice(0, 10)}
-                className="mb-4 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
-              />
+              <div className="mb-4">
+                <input
+                  type="date"
+                  value={birthDate}
+                  onChange={(e) => setBirthDate(e.target.value)}
+                  onBlur={saveProfile}
+                  max={getMaxBirthDate()}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+                />
+                {!birthDateCheck.ok && <p className="mt-1 text-xs text-red-500">{birthDateCheck.reason}</p>}
+              </div>
 
               <label className="mb-1 block text-xs text-muted">Country</label>
               <div className="mb-4">
@@ -1573,7 +1583,7 @@ export default function SettingsPanel({
                   value={country}
                   onChange={(c) => {
                     setCountry(c);
-                    onProfileChange({ nickname, about, role, fullName, birthDate, country: c });
+                    if (birthDateCheck.ok) onProfileChange({ nickname, about, role, fullName, birthDate, country: c, link });
                   }}
                   options={[
                     { value: "", label: "Select…" },
@@ -1597,7 +1607,7 @@ export default function SettingsPanel({
                   value={role}
                   onChange={(v) => {
                     setRole(v);
-                    onProfileChange({ nickname, about, role: v, fullName, birthDate, country });
+                    if (birthDateCheck.ok) onProfileChange({ nickname, about, role: v, fullName, birthDate, country, link });
                   }}
                   options={[
                     { value: "", label: "Select…" },
@@ -1613,6 +1623,15 @@ export default function SettingsPanel({
                   ]}
                 />
               </div>
+
+              <label className="mb-1 block text-xs text-muted">Link (shown on your ChatGiZa Media profile)</label>
+              <input
+                value={link}
+                onChange={(e) => setLink(e.target.value)}
+                onBlur={saveProfile}
+                placeholder="yoursite.com"
+                className="mb-4 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+              />
 
               <h3 className="mb-1 text-sm font-semibold">Instructions for GiZa</h3>
               <p className="mb-3 text-xs text-muted">GiZa will keep these in mind across every conversation.</p>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { kv } from "@vercel/kv";
 import { auth } from "@/auth";
 import { getMobileUserId } from "@/lib/mobileAuth";
+import { checkBirthDate } from "@/lib/ageGate";
 
 type ProfileData = {
   profile: {
@@ -19,6 +20,10 @@ type ProfileData = {
     // "QUANTARA"), distinct from `nickname` -- nickname personalizes how
     // the AI addresses you in chat, displayName is what other users see.
     displayName?: string;
+    // Single link shown on the Media profile (e.g. a website or socials
+    // page) -- plain text, not validated as a URL since it's just
+    // displayed, never followed server-side.
+    link?: string;
   };
   memory: string[];
   memoryEnabled: boolean;
@@ -26,7 +31,7 @@ type ProfileData = {
 };
 
 const DEFAULT_PROFILE_DATA: ProfileData = {
-  profile: { nickname: "", about: "", bio: "", displayName: "" },
+  profile: { nickname: "", about: "", bio: "", displayName: "", link: "" },
   memory: [],
   memoryEnabled: true,
   language: "",
@@ -69,6 +74,11 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
+  const birthDateCheck = checkBirthDate(body.profile?.birthDate);
+  if (!birthDateCheck.ok) {
+    return NextResponse.json({ error: birthDateCheck.reason }, { status: 400 });
+  }
+
   const data: ProfileData = {
     profile: {
       nickname: typeof body.profile?.nickname === "string" ? body.profile.nickname : "",
@@ -79,6 +89,7 @@ export async function PUT(req: NextRequest) {
       country: typeof body.profile?.country === "string" ? body.profile.country : undefined,
       bio: typeof body.profile?.bio === "string" ? body.profile.bio.slice(0, 150) : "",
       displayName: typeof body.profile?.displayName === "string" ? body.profile.displayName.slice(0, 60) : "",
+      link: typeof body.profile?.link === "string" ? body.profile.link.slice(0, 100) : "",
     },
     memory: Array.isArray(body.memory) ? body.memory.filter((m: unknown) => typeof m === "string") : [],
     memoryEnabled: typeof body.memoryEnabled === "boolean" ? body.memoryEnabled : true,
