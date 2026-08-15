@@ -848,7 +848,7 @@ private fun MediaPostFullscreenViewer(
           Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.9f)))
         )
         .padding(bottom = bottomInset)
-        .padding(horizontal = 14.dp, top = 40.dp, bottom = 12.dp)
+        .padding(start = 14.dp, end = 14.dp, top = 40.dp, bottom = 12.dp)
     ) {
       if (post.text.isNotEmpty()) {
         Text(
