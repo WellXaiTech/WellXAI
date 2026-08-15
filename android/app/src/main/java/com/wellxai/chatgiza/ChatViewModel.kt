@@ -93,6 +93,7 @@ sealed class AppScreen {
   object Profile : AppScreen()
   object ProfileHub : AppScreen()
   object AccountSettings : AppScreen()
+  object SwitchAccount : AppScreen()
 }
 
 class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
@@ -268,6 +269,24 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var savingDigitalTwin by mutableStateOf(false)
     private set
 
+  // Up to 5 lightweight sub-identities per signed-in account (see
+  // /api/subaccounts), each with its own separate ChatGiZa conversation
+  // history -- switching just changes which history activeSubaccountId
+  // scopes loadHistory()/saveHistory() calls to; everything else about the
+  // account (profile, billing, Account Settings) stays shared. Declared
+  // before init{} since loadHistory() (called from there) reads
+  // activeSubaccountId immediately.
+  var activeSubaccountId by mutableStateOf(tokenStore.getActiveSubaccountId())
+    private set
+  var activeSubaccountName by mutableStateOf(tokenStore.getActiveSubaccountName())
+    private set
+  var subaccounts by mutableStateOf<List<ApiSubaccount>>(emptyList())
+    private set
+  var loadingSubaccounts by mutableStateOf(false)
+    private set
+  var subaccountError by mutableStateOf<String?>(null)
+    private set
+
   init {
     if (tokenStore.getToken() != null) {
       userId = tokenStore.getUserId()
@@ -281,6 +300,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
       loadSettings()
       loadProjects()
       loadScheduled()
+      loadSubaccounts()
     } else {
       screen = AppScreen.SignedOut
     }
@@ -893,6 +913,15 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeAccountSettings() {
+    screen = AppScreen.ProfileHub
+    returnToAccountTabsIfPending()
+  }
+
+  fun openSwitchAccount() {
+    screen = AppScreen.SwitchAccount
+  }
+
+  fun closeSwitchAccount() {
     screen = AppScreen.ProfileHub
     returnToAccountTabsIfPending()
   }
@@ -1563,7 +1592,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     val token = tokenStore.getToken() ?: return
     loadingHistory = true
     viewModelScope.launch {
-      when (val result = ChatGizaApi.getHistory(token)) {
+      when (val result = ChatGizaApi.getHistory(token, activeSubaccountId)) {
         is ApiResult.Success -> {
           conversations = sortConversations(result.value.conversations)
           deletedIds = result.value.deletedIds
@@ -1576,6 +1605,67 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun openHistory() {
     screen = AppScreen.History
+  }
+
+  fun loadSubaccounts() {
+    val token = tokenStore.getToken() ?: return
+    loadingSubaccounts = true
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.getSubaccounts(token)) {
+        is ApiResult.Success -> subaccounts = result.value
+        is ApiResult.Failure -> subaccountError = result.message
+      }
+      loadingSubaccounts = false
+    }
+  }
+
+  fun createSubaccount(name: String) {
+    val token = tokenStore.getToken() ?: return
+    val trimmed = name.trim()
+    if (trimmed.isBlank() || subaccounts.size >= 5) return
+    subaccountError = null
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.createSubaccount(token, trimmed, null)) {
+        is ApiResult.Success -> subaccounts = subaccounts + result.value
+        is ApiResult.Failure -> subaccountError = result.message
+      }
+    }
+  }
+
+  fun deleteSubaccount(id: String) {
+    val token = tokenStore.getToken() ?: return
+    subaccounts = subaccounts.filter { it.id != id }
+    if (activeSubaccountId == id) switchToMainAccount()
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.deleteSubaccount(token, id)) {
+        is ApiResult.Failure -> subaccountError = result.message
+        else -> {}
+      }
+    }
+  }
+
+  // Switching clears whatever's currently loaded and re-fetches history
+  // scoped to the new identity -- otherwise the previous identity's
+  // messages would flash on screen under the new one until the load
+  // finishes.
+  fun switchToSubaccount(sub: ApiSubaccount) {
+    activeSubaccountId = sub.id
+    activeSubaccountName = sub.name
+    tokenStore.setActiveSubaccount(sub.id, sub.name)
+    conversations = emptyList()
+    activeConversationId = null
+    messages = emptyList()
+    loadHistory()
+  }
+
+  fun switchToMainAccount() {
+    activeSubaccountId = null
+    activeSubaccountName = null
+    tokenStore.setActiveSubaccount(null, null)
+    conversations = emptyList()
+    activeConversationId = null
+    messages = emptyList()
+    loadHistory()
   }
 
   // ChatGiZa Media is a real shared feed now (backend-backed via
@@ -1785,7 +1875,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
       messages = emptyList()
     }
     viewModelScope.launch {
-      val result = ChatGizaApi.saveHistory(token, updated, updatedDeleted)
+      val result = ChatGizaApi.saveHistory(token, updated, updatedDeleted, activeSubaccountId)
       if (result is ApiResult.Failure) errorMessage = result.message
     }
   }
@@ -1799,7 +1889,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     activeConversationId = null
     messages = emptyList()
     viewModelScope.launch {
-      val result = ChatGizaApi.saveHistory(token, emptyList(), updatedDeleted)
+      val result = ChatGizaApi.saveHistory(token, emptyList(), updatedDeleted, activeSubaccountId)
       if (result is ApiResult.Failure) errorMessage = result.message
     }
   }
@@ -1831,7 +1921,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     val updated = conversations.map { if (it.id == id) it.copy(title = trimmed) else it }
     conversations = updated
     viewModelScope.launch {
-      val result = ChatGizaApi.saveHistory(token, updated, deletedIds)
+      val result = ChatGizaApi.saveHistory(token, updated, deletedIds, activeSubaccountId)
       if (result is ApiResult.Failure) errorMessage = result.message
     }
   }
@@ -1841,7 +1931,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     val updated = sortConversations(conversations.map { if (it.id == id) it.copy(pinned = !it.pinned) else it })
     conversations = updated
     viewModelScope.launch {
-      val result = ChatGizaApi.saveHistory(token, updated, deletedIds)
+      val result = ChatGizaApi.saveHistory(token, updated, deletedIds, activeSubaccountId)
       if (result is ApiResult.Failure) errorMessage = result.message
     }
   }
@@ -1966,7 +2056,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
       } else {
         conversations.map { if (it.id == conversationId) updated else it }
       }
-      val saveResult = ChatGizaApi.saveHistory(token, conversations, deletedIds)
+      val saveResult = ChatGizaApi.saveHistory(token, conversations, deletedIds, activeSubaccountId)
       if (saveResult is ApiResult.Failure) errorMessage = saveResult.message
     }
   }
@@ -2028,7 +2118,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         pinned = conversations.find { it.id == conversationId }?.pinned ?: false
       )
       conversations = conversations.map { if (it.id == conversationId) updated else it }
-      val saveResult = ChatGizaApi.saveHistory(token, conversations, deletedIds)
+      val saveResult = ChatGizaApi.saveHistory(token, conversations, deletedIds, activeSubaccountId)
       if (saveResult is ApiResult.Failure) errorMessage = saveResult.message
     }
   }
@@ -2047,7 +2137,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     )
     conversations = conversations.map { if (it.id == conversationId) updated else it }
     viewModelScope.launch {
-      val saveResult = ChatGizaApi.saveHistory(token, conversations, deletedIds)
+      val saveResult = ChatGizaApi.saveHistory(token, conversations, deletedIds, activeSubaccountId)
       if (saveResult is ApiResult.Failure) errorMessage = saveResult.message
     }
   }

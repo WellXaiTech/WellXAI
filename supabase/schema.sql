@@ -16,6 +16,20 @@ create table if not exists users (
 -- Run once for existing databases created before is_verified existed:
 -- alter table users add column if not exists is_verified boolean not null default false;
 
+-- Lightweight sub-identities under one signed-in Google account (up to 5,
+-- enforced in the API, not here) -- each gets its own name/avatar and its
+-- own separate ChatGiZa conversation history (scoped in KV by owner_id +
+-- subaccount id, see src/app/api/history/route.ts), while everything else
+-- about the account (email, billing, Account Settings) stays shared.
+create table if not exists subaccounts (
+  id text primary key,
+  owner_id text not null references users(id) on delete cascade,
+  name text not null,
+  avatar_preset_id text,
+  created_at timestamptz not null default now()
+);
+create index if not exists subaccounts_owner_id_idx on subaccounts(owner_id);
+
 create table if not exists workspaces (
   id uuid primary key default gen_random_uuid(),
   name text not null,

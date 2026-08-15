@@ -28,6 +28,8 @@ data class ApiConversation(
 
 data class HistorySnapshot(val conversations: List<ApiConversation>, val deletedIds: Map<String, Long>)
 
+data class ApiSubaccount(val id: String, val name: String, val avatarPresetId: String?)
+
 data class TwinData(val summary: String, val updatedAt: Long)
 
 data class LatestVersionInfo(val runNumber: Int, val downloadUrl: String)
@@ -352,13 +354,13 @@ object ChatGizaApi {
       }
     }
 
-  suspend fun getHistory(token: String): ApiResult<HistorySnapshot> = withContext(Dispatchers.IO) {
+  suspend fun getHistory(token: String, subaccountId: String? = null): ApiResult<HistorySnapshot> = withContext(Dispatchers.IO) {
     try {
-      val request = Request.Builder()
+      val builder = Request.Builder()
         .url("$BASE_URL/api/history")
         .header("Authorization", "Bearer $token")
-        .get()
-        .build()
+      if (subaccountId != null) builder.header("X-Subaccount-Id", subaccountId)
+      val request = builder.get().build()
       client.newCall(request).execute().use { response ->
         val text = response.body?.string().orEmpty()
         if (!response.isSuccessful) {
@@ -381,7 +383,12 @@ object ChatGizaApi {
     }
   }
 
-  suspend fun saveHistory(token: String, conversations: List<ApiConversation>, deletedIds: Map<String, Long>): ApiResult<Unit> =
+  suspend fun saveHistory(
+    token: String,
+    conversations: List<ApiConversation>,
+    deletedIds: Map<String, Long>,
+    subaccountId: String? = null
+  ): ApiResult<Unit> =
     withContext(Dispatchers.IO) {
       try {
         val arr = JSONArray()
@@ -389,11 +396,11 @@ object ChatGizaApi {
         val deletedObj = JSONObject()
         for ((k, v) in deletedIds) deletedObj.put(k, v)
         val payload = JSONObject().put("conversations", arr).put("deletedIds", deletedObj).toString().toRequestBody(JSON)
-        val request = Request.Builder()
+        val builder = Request.Builder()
           .url("$BASE_URL/api/history")
           .header("Authorization", "Bearer $token")
-          .put(payload)
-          .build()
+        if (subaccountId != null) builder.header("X-Subaccount-Id", subaccountId)
+        val request = builder.put(payload).build()
         client.newCall(request).execute().use { response ->
           if (!response.isSuccessful) {
             val text = response.body?.string().orEmpty()
@@ -410,6 +417,73 @@ object ChatGizaApi {
     try {
       val request = Request.Builder()
         .url("$BASE_URL/api/account")
+        .header("Authorization", "Bearer $token")
+        .delete()
+        .build()
+      client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          val text = response.body?.string().orEmpty()
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun getSubaccounts(token: String): ApiResult<List<ApiSubaccount>> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/subaccounts")
+        .header("Authorization", "Bearer $token")
+        .get()
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val arr = JSONObject(text).optJSONArray("subaccounts") ?: JSONArray()
+        val list = (0 until arr.length()).map { i ->
+          val o = arr.getJSONObject(i)
+          val avatarPresetId = if (o.isNull("avatar_preset_id")) null else o.optString("avatar_preset_id", "").ifBlank { null }
+          ApiSubaccount(o.getString("id"), o.getString("name"), avatarPresetId)
+        }
+        ApiResult.Success(list)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun createSubaccount(token: String, name: String, avatarPresetId: String?): ApiResult<ApiSubaccount> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject().put("name", name).apply {
+        if (avatarPresetId != null) put("avatarPresetId", avatarPresetId)
+      }.toString().toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/subaccounts")
+        .header("Authorization", "Bearer $token")
+        .post(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val json = JSONObject(text)
+        ApiResult.Success(ApiSubaccount(json.getString("id"), json.getString("name"), avatarPresetId))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun deleteSubaccount(token: String, id: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/subaccounts/$id")
         .header("Authorization", "Bearer $token")
         .delete()
         .build()
