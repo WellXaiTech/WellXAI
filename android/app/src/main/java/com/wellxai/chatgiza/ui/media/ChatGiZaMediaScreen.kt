@@ -60,6 +60,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Comment
@@ -71,6 +72,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -150,6 +152,15 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
     else feedEligiblePosts.filter { it.text.contains(q, ignoreCase = true) || it.authorName.contains(q, ignoreCase = true) }
   }
 
+  // Extra Media's own light/dark toggle (Extra Settings), independent of
+  // the main app's appearance setting -- flips backgrounds white<->black
+  // and icon/text black<->white across this whole section, leaving
+  // deliberately-dark accents (vote/comment pills, photo overlays, the
+  // fullscreen image viewer) unchanged since those aren't the page theme.
+  val isDark = viewModel.extraDarkMode
+  val bg = if (isDark) Color.Black else Color.White
+  val fg = if (isDark) Color.White else Color.Black
+
   var showHeader by remember { mutableStateOf(true) }
   val listState = rememberLazyListState()
   var previousScrollPosition by remember { mutableIntStateOf(0) }
@@ -173,7 +184,7 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
   val headerHeight = 70.dp + topInset
   val navHeight = 70.dp + bottomInset
 
-  Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
+  Box(modifier = Modifier.fillMaxSize().background(bg)) {
 
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
 
@@ -183,10 +194,11 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
         MediaStoriesRow(
           myImage = viewModel.userImage,
           posts = statusEligiblePosts,
+          isDark = isDark,
           onMyStoryClick = { showConnectSheet = true },
           onOpenProfile = { target -> viewingProfile = target }
         )
-        androidx.compose.material3.HorizontalDivider(color = Color(0xFFEDEDED))
+        androidx.compose.material3.HorizontalDivider(color = if (isDark) Color(0xFF2A2A2A) else Color(0xFFEDEDED))
       }
 
       if (searchOpen) {
@@ -198,7 +210,7 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
               .padding(horizontal = 14.dp, vertical = 8.dp)
               .height(38.dp)
               .clip(RoundedCornerShape(19.dp))
-              .background(Color(0xFFF0F0F0))
+              .background(if (isDark) Color(0xFF1F1F1F) else Color(0xFFF0F0F0))
               .padding(horizontal = 12.dp)
           ) {
             Icon(Icons.Filled.Search, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
@@ -211,8 +223,8 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 singleLine = true,
-                textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 13.sp),
-                cursorBrush = SolidColor(Color.Black),
+                textStyle = androidx.compose.ui.text.TextStyle(color = fg, fontSize = 13.sp),
+                cursorBrush = SolidColor(fg),
                 modifier = Modifier.fillMaxWidth()
               )
             }
@@ -224,7 +236,7 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
         item {
           Box(modifier = Modifier.fillMaxWidth().padding(vertical = 60.dp), contentAlignment = Alignment.Center) {
             if (viewModel.loadingMediaPosts) {
-              CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(28.dp))
+              CircularProgressIndicator(color = fg, modifier = Modifier.size(28.dp))
             } else if (searchQuery.isNotEmpty()) {
               Text("No matches.", color = Color.Gray, fontSize = 14.sp)
             }
@@ -235,6 +247,7 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
         items(visiblePosts, key = { it.id }) { post ->
           MediaPost(
             post = post,
+            isDark = isDark,
             isOwnPost = post.authorId == viewModel.userId,
             commentsExpanded = expandedCommentsPostId == post.id,
             comments = viewModel.mediaComments[post.id],
@@ -278,6 +291,7 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
     ) {
       ChatGiZaHeader(
         topInset = topInset,
+        isDark = isDark,
         onMenuClick = { showConnectSheet = true },
         onSearchClick = { searchOpen = !searchOpen },
         onNotificationsClick = { showNotifications = true }
@@ -299,7 +313,7 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
           modifier = Modifier
             .padding(horizontal = 40.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(Color.White)
+            .background(bg)
             .clickable(
               indication = null,
               interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -310,11 +324,11 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
           Icon(
             androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_bell),
             contentDescription = null,
-            tint = Color.Black,
+            tint = fg,
             modifier = Modifier.size(32.dp)
           )
           Spacer(modifier = Modifier.height(12.dp))
-          Text("No notifications yet", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+          Text("No notifications yet", color = fg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
           Spacer(modifier = Modifier.height(4.dp))
           Text("We'll let you know when something happens.", color = Color.Gray, fontSize = 12.sp)
         }
@@ -327,6 +341,7 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
 
     MediaBottomNavigation(
       viewModel = viewModel,
+      isDark = isDark,
       onCreateClick = { showConnectSheet = true },
       onProfileClick = {
         val uid = viewModel.userId
@@ -419,21 +434,24 @@ private fun mediaGridGradient(seed: String): List<Color> =
 @Composable
 private fun ChatGiZaHeader(
   topInset: androidx.compose.ui.unit.Dp,
+  isDark: Boolean,
   onMenuClick: () -> Unit,
   onSearchClick: () -> Unit,
   onNotificationsClick: () -> Unit
 ) {
+  val bg = if (isDark) Color.Black else Color.White
+  val fg = if (isDark) Color.White else Color.Black
   Row(
     modifier = Modifier
       .fillMaxWidth()
-      .background(Color.White)
+      .background(bg)
       .padding(top = topInset)
       .height(70.dp)
       .padding(horizontal = 12.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
     IconButton(onClick = onMenuClick) {
-      Icon(Icons.Filled.Menu, contentDescription = "Menu", tint = Color.Black)
+      Icon(Icons.Filled.Menu, contentDescription = "Menu", tint = fg)
     }
     Spacer(modifier = Modifier.width(4.dp))
     Row(
@@ -442,8 +460,8 @@ private fun ChatGiZaHeader(
         .weight(1f)
         .height(46.dp)
         .clip(RoundedCornerShape(23.dp))
-        .background(Color(0xFFF0F0F0))
-        .border(width = 1.5.dp, color = Color(0xFFD6D6D6), shape = RoundedCornerShape(23.dp))
+        .background(if (isDark) Color(0xFF1F1F1F) else Color(0xFFF0F0F0))
+        .border(width = 1.5.dp, color = if (isDark) Color(0xFF3A3A3A) else Color(0xFFD6D6D6), shape = RoundedCornerShape(23.dp))
         .clickable(onClick = onSearchClick)
         .padding(horizontal = 14.dp)
     ) {
@@ -456,7 +474,7 @@ private fun ChatGiZaHeader(
       Icon(
         androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_bell),
         contentDescription = null,
-        tint = Color.Black,
+        tint = fg,
         modifier = Modifier.size(22.dp)
       )
     }
@@ -473,6 +491,7 @@ private fun ChatGiZaHeader(
 private fun MediaStoriesRow(
   myImage: String?,
   posts: List<ApiMediaPost>,
+  isDark: Boolean,
   onMyStoryClick: () -> Unit,
   onOpenProfile: (ProfileTarget) -> Unit
 ) {
@@ -489,6 +508,7 @@ private fun MediaStoriesRow(
       image = myImage,
       label = "My story",
       showAddBadge = true,
+      isDark = isDark,
       onClick = onMyStoryClick
     )
     others.forEach { post ->
@@ -496,6 +516,7 @@ private fun MediaStoriesRow(
         image = post.authorImage,
         label = post.authorName,
         showAddBadge = false,
+        isDark = isDark,
         onClick = { onOpenProfile(ProfileTarget(post.authorId, post.authorName, post.authorImage)) }
       )
     }
@@ -507,15 +528,16 @@ private fun MediaStoriesRow(
 // a "+" badge overlapping that circle's bottom-right corner for "My
 // story", and the name as its own line at the bottom of the card.
 @Composable
-private fun MediaStoryCard(image: String?, label: String, showAddBadge: Boolean, onClick: () -> Unit) {
+private fun MediaStoryCard(image: String?, label: String, showAddBadge: Boolean, isDark: Boolean, onClick: () -> Unit) {
+  val fg = if (isDark) Color.White else Color.Black
   val cardShape = RoundedCornerShape(14.dp)
   Box(
     modifier = Modifier
       .width(84.dp)
       .height(112.dp)
       .clip(cardShape)
-      .background(Color(0xFFF5F5F5))
-      .border(1.dp, Color(0xFFE2E2E2), cardShape)
+      .background(if (isDark) Color(0xFF1A1A1A) else Color(0xFFF5F5F5))
+      .border(1.dp, if (isDark) Color(0xFF2E2E2E) else Color(0xFFE2E2E2), cardShape)
       .clickable(onClick = onClick)
   ) {
     Box(
@@ -526,7 +548,7 @@ private fun MediaStoryCard(image: String?, label: String, showAddBadge: Boolean,
         AsyncImage(
           model = image,
           contentDescription = label,
-          modifier = Modifier.size(46.dp).clip(CircleShape).border(1.dp, Color(0xFFDADADA), CircleShape),
+          modifier = Modifier.size(46.dp).clip(CircleShape).border(1.dp, if (isDark) Color(0xFF3A3A3A) else Color(0xFFDADADA), CircleShape),
           contentScale = ContentScale.Crop
         )
       } else {
@@ -542,18 +564,18 @@ private fun MediaStoryCard(image: String?, label: String, showAddBadge: Boolean,
           modifier = Modifier
             .size(19.dp)
             .clip(CircleShape)
-            .background(Color.White)
-            .border(1.5.dp, Color(0xFFF5F5F5), CircleShape),
+            .background(fg)
+            .border(1.5.dp, if (isDark) Color(0xFF1A1A1A) else Color(0xFFF5F5F5), CircleShape),
           contentAlignment = Alignment.Center
         ) {
-          Icon(Icons.Filled.Add, contentDescription = null, tint = Color.Black, modifier = Modifier.size(11.dp))
+          Icon(Icons.Filled.Add, contentDescription = null, tint = if (isDark) Color.Black else Color.White, modifier = Modifier.size(11.dp))
         }
       }
     }
 
     Text(
       label,
-      color = Color.Black,
+      color = fg,
       fontSize = 11.sp,
       fontWeight = FontWeight.SemiBold,
       maxLines = 1,
@@ -571,6 +593,7 @@ private fun MediaStoryCard(image: String?, label: String, showAddBadge: Boolean,
 @Composable
 private fun MediaPost(
   post: ApiMediaPost,
+  isDark: Boolean,
   isOwnPost: Boolean,
   commentsExpanded: Boolean,
   comments: List<com.wellxai.chatgiza.ApiMediaComment>?,
@@ -586,8 +609,10 @@ private fun MediaPost(
   var moreMenuOpen by remember(post.id) { mutableStateOf(false) }
   var textExpanded by remember(post.id) { mutableStateOf(false) }
   val isLongText = post.text.length > MEDIA_POST_TEXT_PREVIEW_LENGTH
+  val bg = if (isDark) Color.Black else Color.White
+  val fg = if (isDark) Color.White else Color.Black
 
-  Column(modifier = Modifier.fillMaxWidth().background(Color.White)) {
+  Column(modifier = Modifier.fillMaxWidth().background(bg)) {
 
     // =====================================================
     // POST HEADER
@@ -618,7 +643,7 @@ private fun MediaPost(
       Spacer(modifier = Modifier.width(10.dp))
 
       Column(modifier = Modifier.weight(1f).clickable(onClick = onOpenProfile)) {
-        Text(text = post.authorName, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text(text = post.authorName, color = fg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         Text(text = formatMediaPostTimeAgo(post.createdAt), fontSize = 12.sp, color = Color.Gray)
       }
 
@@ -633,7 +658,7 @@ private fun MediaPost(
           Icon(
             painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_badge_seal),
             contentDescription = "More",
-            tint = Color.Black
+            tint = fg
           )
         }
         DropdownMenu(expanded = moreMenuOpen, onDismissRequest = { moreMenuOpen = false }) {
@@ -779,7 +804,7 @@ private fun MediaPost(
 
     if (commentsExpanded) {
       Box(modifier = Modifier.padding(horizontal = 10.dp)) {
-        MediaPostComments(comments = comments, onOpenComposer = onOpenComposer)
+        MediaPostComments(comments = comments, isDark = isDark, onOpenComposer = onOpenComposer)
       }
     }
 
@@ -793,7 +818,7 @@ private fun MediaPost(
         text = buildAnnotatedString {
           append(shownText)
           if (isLongText && !textExpanded) {
-            withStyle(SpanStyle(color = Color.Black, fontWeight = FontWeight.Bold)) {
+            withStyle(SpanStyle(color = fg, fontWeight = FontWeight.Bold)) {
               append(" ... more")
             }
           }
@@ -802,7 +827,7 @@ private fun MediaPost(
           .fillMaxWidth()
           .padding(start = 14.dp, end = 14.dp, bottom = 16.dp)
           .let { if (isLongText) it.clickable { textExpanded = !textExpanded } else it },
-        color = Color.Black,
+        color = fg,
         fontSize = 14.sp,
         lineHeight = 20.sp
       )
@@ -812,7 +837,7 @@ private fun MediaPost(
     // POST DIVIDER
     // =====================================================
 
-    androidx.compose.material3.HorizontalDivider(color = Color.LightGray)
+    androidx.compose.material3.HorizontalDivider(color = if (isDark) Color(0xFF2A2A2A) else Color.LightGray)
   }
 }
 
@@ -823,32 +848,37 @@ private fun MediaPost(
 @Composable
 private fun MediaBottomNavigation(
   viewModel: ChatViewModel,
+  isDark: Boolean,
   onCreateClick: () -> Unit,
   onProfileClick: () -> Unit,
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
+  val bg = if (isDark) Color.Black else Color.White
+  val fg = if (isDark) Color.White else Color.Black
   Row(
     modifier = modifier
       .fillMaxWidth()
-      .background(Color.White)
+      .background(bg)
       .navigationBarsPadding()
       .height(70.dp),
     horizontalArrangement = Arrangement.SpaceAround,
     verticalAlignment = Alignment.CenterVertically
   ) {
+    val muted = if (isDark) Color.Gray else Color.DarkGray
+
     // Home -- this screen itself, so it's always shown "active".
     Icon(
       androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_home),
       contentDescription = "Home",
-      tint = Color.Black
+      tint = fg
     )
 
     IconButton(onClick = onCreateClick) {
       Icon(
         androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_send),
         contentDescription = "Create",
-        tint = Color.Black,
+        tint = fg,
         modifier = Modifier.size(26.dp)
       )
     }
@@ -872,11 +902,11 @@ private fun MediaBottomNavigation(
       Icon(
         androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_jobs),
         contentDescription = "Jobs",
-        tint = Color.DarkGray,
+        tint = muted,
         modifier = Modifier.size(22.dp)
       )
       Spacer(modifier = Modifier.height(2.dp))
-      Text("Jobs", color = Color.DarkGray, fontSize = 10.sp)
+      Text("Jobs", color = muted, fontSize = 10.sp)
     }
 
     // No messaging backend exists yet, so this is a clearly labeled
@@ -887,7 +917,7 @@ private fun MediaBottomNavigation(
       Icon(
         androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_messages_bubble),
         contentDescription = "Messages",
-        tint = Color.DarkGray,
+        tint = muted,
         // Not square (the source glyph is taller than wide) -- an explicit
         // width/height keeps that ratio instead of a uniform size()
         // shrinking it down to fit a square box.
@@ -906,7 +936,7 @@ private fun MediaBottomNavigation(
       Icon(
         Icons.Filled.Person,
         contentDescription = "Profile",
-        tint = Color.DarkGray,
+        tint = muted,
         modifier = Modifier.clickable(onClick = onProfileClick)
       )
     }
@@ -932,13 +962,13 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
   LaunchedEffect(target.authorId) { viewModel.loadMediaUserProfile(target.authorId) }
   val userProfile = viewModel.mediaUserProfiles[target.authorId]
   val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-  // Dark, matching the rest of the app -- this screen (and the grid
-  // thumbnails' placeholder) was left over from an earlier all-white
-  // pass on the Media feed and read as visually disconnected from
-  // everywhere else in the app.
-  val bg = Color(0xFF161616)
-  val onBg = Color.White
-  val onBgDim = Color(0xFFA8A8A8)
+  // Follows Extra's own light/dark toggle (Extra Settings) -- defaults to
+  // dark, matching the rest of the app, same reasoning as before this
+  // toggle existed.
+  val isDark = viewModel.extraDarkMode
+  val bg = if (isDark) Color(0xFF161616) else Color.White
+  val onBg = if (isDark) Color.White else Color.Black
+  val onBgDim = if (isDark) Color(0xFFA8A8A8) else Color(0xFF6B6B6B)
 
   Box(modifier = Modifier.fillMaxSize().background(bg)) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -1332,8 +1362,9 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
 private fun ExtraSettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
   BackHandler { onBack() }
   val context = LocalContext.current
-  val bg = Color(0xFF161616)
-  val onBg = Color.White
+  val isDark = viewModel.extraDarkMode
+  val bg = if (isDark) Color(0xFF161616) else Color.White
+  val onBg = if (isDark) Color.White else Color.Black
   val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
   Box(modifier = Modifier.fillMaxSize().background(bg)) {
@@ -1353,7 +1384,14 @@ private fun ExtraSettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
         Text("Extra Settings", color = onBg, fontSize = 18.sp, fontWeight = FontWeight.Bold)
       }
       Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
-        ExtraSettingsRow(Icons.Outlined.AccountCircle, "Profile", onBg) { viewModel.openCustomize() }
+        // Not viewModel.openCustomize() -- that jumps into the main app's
+        // own screen stack, and its back button then lands in Ask's
+        // settings instead of returning here, per explicit bug report.
+        // Extra Settings stays self-contained until a real Extra-scoped
+        // profile editor exists.
+        ExtraSettingsRow(Icons.Outlined.AccountCircle, "Profile", onBg) {
+          Toast.makeText(context, "Profile — coming soon", Toast.LENGTH_SHORT).show()
+        }
         ExtraSettingsRow(Icons.Outlined.WorkspacePremium, "Premium", onBg) {
           Toast.makeText(context, "Premium — coming soon", Toast.LENGTH_SHORT).show()
         }
@@ -1368,6 +1406,18 @@ private fun ExtraSettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
         }
         ExtraSettingsRow(Icons.Outlined.Movie, "Creator Studio", onBg) {
           Toast.makeText(context, "Creator Studio — coming soon", Toast.LENGTH_SHORT).show()
+        }
+        androidx.compose.material3.HorizontalDivider(color = onBg.copy(alpha = 0.12f), modifier = Modifier.padding(vertical = 8.dp))
+        // Extra's own light/dark toggle -- independent of the main app's
+        // appearance setting, per explicit request.
+        Row(
+          modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Icon(Icons.Outlined.DarkMode, contentDescription = null, tint = onBg, modifier = Modifier.size(22.dp))
+          Spacer(modifier = Modifier.width(18.dp))
+          Text("Dark Mode", color = onBg, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+          Switch(checked = isDark, onCheckedChange = { viewModel.updateExtraDarkMode(it) })
         }
       }
     }

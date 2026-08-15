@@ -4416,13 +4416,17 @@ internal const val MEDIA_POST_TEXT_PREVIEW_LENGTH = 180
 private const val MEDIA_MAX_IMAGES_PER_POST = 10
 
 @Composable
-internal fun MediaPostComments(comments: List<ApiMediaComment>?, onOpenComposer: () -> Unit) {
+internal fun MediaPostComments(comments: List<ApiMediaComment>?, isDark: Boolean = true, onOpenComposer: () -> Unit) {
+  val fg = if (isDark) Color.White else Color.Black
+  val overlay = fg.copy(alpha = 0.04f)
+  val dividerOverlay = fg.copy(alpha = 0.06f)
+  val composerBg = fg.copy(alpha = 0.06f)
   Column(
     modifier = Modifier
       .fillMaxWidth()
       .padding(top = 10.dp)
       .clip(RoundedCornerShape(14.dp))
-      .background(Color.White.copy(alpha = 0.04f))
+      .background(overlay)
       .padding(12.dp)
   ) {
     when {
@@ -4451,19 +4455,19 @@ internal fun MediaPostComments(comments: List<ApiMediaComment>?, onOpenComposer:
               Icon(
                 Icons.Outlined.AccountCircle,
                 contentDescription = "Profile",
-                tint = Color.White,
+                tint = fg,
                 modifier = Modifier.size(24.dp)
               )
             }
             Spacer(modifier = Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {
-              Text(comment.authorName, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+              Text(comment.authorName, color = fg, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
               Spacer(modifier = Modifier.height(2.dp))
-              Text(comment.text, color = Color.White.copy(alpha = 0.85f), fontSize = 13.sp, lineHeight = 17.sp)
+              Text(comment.text, color = fg.copy(alpha = 0.85f), fontSize = 13.sp, lineHeight = 17.sp)
             }
           }
           if (index < comments.lastIndex) {
-            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.06f)))
+            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(dividerOverlay))
           }
         }
       }
@@ -4476,7 +4480,7 @@ internal fun MediaPostComments(comments: List<ApiMediaComment>?, onOpenComposer:
       modifier = Modifier
         .fillMaxWidth()
         .clip(RoundedCornerShape(20.dp))
-        .background(Color.White.copy(alpha = 0.06f))
+        .background(composerBg)
         .clickable(onClick = onOpenComposer)
         .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {

@@ -707,6 +707,14 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     tokenStore.setHapticsEnabled(value)
   }
 
+  var extraDarkMode by mutableStateOf(tokenStore.getExtraDarkMode())
+    private set
+
+  fun updateExtraDarkMode(value: Boolean) {
+    extraDarkMode = value
+    tokenStore.setExtraDarkMode(value)
+  }
+
   fun updateHapticsOnPress(value: Boolean) {
     hapticsOnPress = value
     tokenStore.setHapticsOnPress(value)

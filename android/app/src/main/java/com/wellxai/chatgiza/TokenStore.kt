@@ -68,6 +68,13 @@ class TokenStore(context: Context) {
     prefs.edit().putBoolean(KEY_HAPTICS_ENABLED, value).apply()
   }
 
+  // Extra Media's own light/dark toggle -- independent of the main app's
+  // appearance setting, scoped to Extra per explicit request.
+  fun getExtraDarkMode(): Boolean = prefs.getBoolean(KEY_EXTRA_DARK_MODE, false)
+  fun setExtraDarkMode(value: Boolean) {
+    prefs.edit().putBoolean(KEY_EXTRA_DARK_MODE, value).apply()
+  }
+
   fun getHapticsOnPress(): Boolean = prefs.getBoolean(KEY_HAPTICS_ON_PRESS, true)
   fun setHapticsOnPress(value: Boolean) {
     prefs.edit().putBoolean(KEY_HAPTICS_ON_PRESS, value).apply()
@@ -232,6 +239,7 @@ class TokenStore(context: Context) {
     private const val KEY_EMAIL = "user_email"
     private const val KEY_IMAGE = "user_image"
     private const val KEY_HAPTICS_ENABLED = "haptics_enabled"
+    private const val KEY_EXTRA_DARK_MODE = "extra_dark_mode"
     private const val KEY_HAPTICS_ON_PRESS = "haptics_on_press"
     private const val KEY_HAPTICS_ON_RESPONSE = "haptics_on_response"
     private const val KEY_PASTE_AS_FILE_MODE = "paste_as_file_mode"
