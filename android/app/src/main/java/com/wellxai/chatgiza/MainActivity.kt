@@ -4944,7 +4944,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             )
           }
           MyInfoRow(
-            icon = Icons.Filled.Person,
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_switch_account),
             label = "Subaccount",
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openSwitchAccount() } }
           ) {}
