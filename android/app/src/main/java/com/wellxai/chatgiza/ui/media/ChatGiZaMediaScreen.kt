@@ -45,12 +45,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircle
-import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Link
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
@@ -710,67 +707,102 @@ private fun MediaPost(
     // ACTIONS
     // =====================================================
 
+    // Reddit-style dark pill row -- vote pill (up/down + count), comment
+    // pill (bubble + count), then plain circular repost/share icons --
+    // replacing the old Instagram-style heart/comment/repost/share/save
+    // row entirely, per explicit reference screenshots.
     Row(
       modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp),
       verticalAlignment = Alignment.CenterVertically
     ) {
-      IconButton(onClick = onLikeClick) {
-        if (post.likedByMe) {
-          Icon(imageVector = Icons.Filled.Favorite, contentDescription = "Like", tint = Color.Red)
-        } else {
-          Icon(
-            painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_heart),
-            contentDescription = "Like",
-            tint = Color.Black
-          )
-        }
+      Row(
+        modifier = Modifier
+          .clip(RoundedCornerShape(percent = 50))
+          .background(Color(0xFF1A1A1A))
+          .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Icon(
+          painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_upvote),
+          contentDescription = "Upvote",
+          tint = if (post.likedByMe) Color(0xFFFF4500) else Color.White,
+          modifier = Modifier.size(16.dp).clickable(onClick = onLikeClick)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(text = post.likeCount.toString(), fontSize = 13.sp, color = Color.White, fontWeight = FontWeight.Medium)
+        Spacer(modifier = Modifier.width(6.dp))
+        Box(modifier = Modifier.width(1.dp).height(12.dp).background(Color.White.copy(alpha = 0.3f)))
+        Spacer(modifier = Modifier.width(6.dp))
+        // Visual-only for now -- no downvote backend built yet, matching
+        // how repost below has always been decorative.
+        Icon(
+          painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_downvote),
+          contentDescription = "Downvote",
+          tint = Color.White,
+          modifier = Modifier.size(16.dp).clickable {}
+        )
       }
-      Text(text = post.likeCount.toString(), fontSize = 13.sp, color = Color.Black)
 
-      Spacer(modifier = Modifier.width(12.dp))
+      Spacer(modifier = Modifier.width(8.dp))
 
-      IconButton(onClick = onToggleComments) {
+      Row(
+        modifier = Modifier
+          .clip(RoundedCornerShape(percent = 50))
+          .background(Color(0xFF1A1A1A))
+          .clickable(onClick = onToggleComments)
+          .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
         Icon(
           painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_comment),
           contentDescription = "Comment",
-          tint = if (commentsExpanded) Color.Black else Color.DarkGray
+          tint = Color.White,
+          modifier = Modifier.size(16.dp)
         )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(text = post.commentCount.toString(), fontSize = 13.sp, color = Color.White, fontWeight = FontWeight.Medium)
       }
-      Text(text = post.commentCount.toString(), fontSize = 13.sp, color = Color.Black)
-
-      Spacer(modifier = Modifier.width(12.dp))
-
-      // Visual-only for now -- no repost backend built yet.
-      IconButton(onClick = {}) {
-        Icon(painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_repost), contentDescription = "Repost", tint = Color.DarkGray)
-      }
-      Text(text = "0", fontSize = 13.sp, color = Color.Black)
 
       Spacer(modifier = Modifier.weight(1f))
 
-      IconButton(
-        onClick = {
-          val sendIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, post.text)
-          }
-          context.startActivity(Intent.createChooser(sendIntent, "Share post"))
-        }
+      // Visual-only for now -- no repost backend built yet.
+      Box(
+        modifier = Modifier
+          .size(32.dp)
+          .clip(CircleShape)
+          .background(Color(0xFF1A1A1A))
+          .clickable {},
+        contentAlignment = Alignment.Center
+      ) {
+        Icon(
+          painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_repost),
+          contentDescription = "Repost",
+          tint = Color.White,
+          modifier = Modifier.size(16.dp)
+        )
+      }
+
+      Spacer(modifier = Modifier.width(8.dp))
+
+      Box(
+        modifier = Modifier
+          .size(32.dp)
+          .clip(CircleShape)
+          .background(Color(0xFF1A1A1A))
+          .clickable {
+            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+              type = "text/plain"
+              putExtra(Intent.EXTRA_TEXT, post.text)
+            }
+            context.startActivity(Intent.createChooser(sendIntent, "Share post"))
+          },
+        contentAlignment = Alignment.Center
       ) {
         Icon(
           painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_share_nodes),
           contentDescription = "Share",
-          tint = Color.Black
-        )
-      }
-
-      // Visual-only for now -- no saved-posts list built yet.
-      var saved by remember(post.id) { mutableStateOf(false) }
-      IconButton(onClick = { saved = !saved }) {
-        Icon(
-          imageVector = if (saved) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-          contentDescription = "Save",
-          tint = Color.Black
+          tint = Color.White,
+          modifier = Modifier.size(16.dp)
         )
       }
     }
