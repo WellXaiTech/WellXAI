@@ -78,10 +78,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -395,22 +395,6 @@ private fun GizaProFloatingAgent(onClick: () -> Unit, modifier: Modifier = Modif
 }
 
 data class ProfileTarget(val authorId: String, val authorName: String, val authorImage: String?)
-
-// A few gradients for the profile grid's text-only-post tiles, picked
-// deterministically by post id (same gradient every time for a given
-// post, but varied across posts) instead of one flat color for all of
-// them.
-private val MEDIA_GRID_GRADIENTS = listOf(
-  listOf(Color(0xFF6D5DF6), Color(0xFF2979FF)),
-  listOf(Color(0xFFFF6B6B), Color(0xFFFF9F43)),
-  listOf(Color(0xFF11998E), Color(0xFF38EF7D)),
-  listOf(Color(0xFFF7971E), Color(0xFFFFD200)),
-  listOf(Color(0xFFEE0979), Color(0xFFFF6A00)),
-  listOf(Color(0xFF00C6FF), Color(0xFF0072FF))
-)
-
-private fun mediaGridGradient(seed: String): List<Color> =
-  MEDIA_GRID_GRADIENTS[kotlin.math.abs(seed.hashCode()) % MEDIA_GRID_GRADIENTS.size]
 
 // =============================================================
 // CHATGIZA HEADER
@@ -879,10 +863,10 @@ private fun MediaBottomNavigation(
 
 @Composable
 internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget, onBack: () -> Unit) {
-  var fullscreenImage by remember { mutableStateOf<String?>(null) }
   var showExtraSettings by remember { mutableStateOf(false) }
-  BackHandler(enabled = fullscreenImage != null) { fullscreenImage = null }
-  BackHandler(enabled = fullscreenImage == null && !showExtraSettings) { onBack() }
+  var expandedCommentsPostId by remember { mutableStateOf<String?>(null) }
+  var replyingToPost by remember { mutableStateOf<ApiMediaPost?>(null) }
+  BackHandler(enabled = !showExtraSettings) { onBack() }
   val context = LocalContext.current
   val isOwnProfile = target.authorId == viewModel.userId
   val authorPosts = remember(viewModel.mediaPosts, target.authorId) {
@@ -1190,14 +1174,61 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
             }
           }
           Spacer(modifier = Modifier.height(16.dp))
-          Text(
-            "Posts",
-            color = onBg,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(horizontal = 16.dp)
-          )
-          Spacer(modifier = Modifier.height(10.dp))
+          // Icon tab row matching X's profile (Posts / Replies / Reposts /
+          // Media / Articles / Likes) -- only Posts is backed by real data
+          // right now, the rest are visual-only, same convention as the
+          // repost/share icons on the feed's own post cards.
+          Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Box(
+              modifier = Modifier.padding(bottom = 10.dp).drawBehind {
+                drawLine(
+                  color = onBg,
+                  start = androidx.compose.ui.geometry.Offset(0f, size.height + 8.dp.toPx()),
+                  end = androidx.compose.ui.geometry.Offset(size.width, size.height + 8.dp.toPx()),
+                  strokeWidth = 2.dp.toPx()
+                )
+              }
+            ) {
+              Icon(Icons.AutoMirrored.Outlined.ListAlt, contentDescription = "Posts", tint = onBg, modifier = Modifier.size(20.dp))
+            }
+            Icon(
+              Icons.Outlined.Comment,
+              contentDescription = "Replies",
+              tint = onBgDim,
+              modifier = Modifier.size(20.dp).clickable {
+                Toast.makeText(context, "Replies — coming soon", Toast.LENGTH_SHORT).show()
+              }
+            )
+            Icon(
+              painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_repost),
+              contentDescription = "Reposts",
+              tint = onBgDim,
+              modifier = Modifier.size(20.dp).clickable {
+                Toast.makeText(context, "Reposts — coming soon", Toast.LENGTH_SHORT).show()
+              }
+            )
+            Icon(
+              Icons.Outlined.Movie,
+              contentDescription = "Media",
+              tint = onBgDim,
+              modifier = Modifier.size(20.dp).clickable {
+                Toast.makeText(context, "Media — coming soon", Toast.LENGTH_SHORT).show()
+              }
+            )
+            Icon(
+              Icons.Outlined.BookmarkBorder,
+              contentDescription = "Likes",
+              tint = onBgDim,
+              modifier = Modifier.size(20.dp).clickable {
+                Toast.makeText(context, "Likes — coming soon", Toast.LENGTH_SHORT).show()
+              }
+            )
+          }
+          Spacer(modifier = Modifier.height(4.dp))
           androidx.compose.material3.HorizontalDivider(color = onBgDim.copy(alpha = 0.15f))
         }
         if (authorPosts.isEmpty()) {
@@ -1207,79 +1238,44 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
             }
           }
         } else {
-          items(authorPosts.chunked(3)) { rowPosts ->
-            Row(modifier = Modifier.fillMaxWidth()) {
-              rowPosts.forEach { post ->
-                val thumb = post.imageUrls.firstOrNull()
-                Box(
-                  modifier = Modifier
-                    .weight(1f)
-                    .aspectRatio(1f)
-                    .padding(1.dp)
-                    .then(if (thumb != null) Modifier.clickable { fullscreenImage = thumb } else Modifier)
-                ) {
-                  if (thumb != null) {
-                    AsyncImage(
-                      model = thumb,
-                      contentDescription = null,
-                      modifier = Modifier.fillMaxSize(),
-                      contentScale = ContentScale.Crop
-                    )
-                  } else {
-                    // A flat gray tile for every text-only post read as a
-                    // wall of near-white boxes in the grid -- this picks
-                    // one of a few gradients deterministically from the
-                    // post id instead, so it's still the same tile every
-                    // time you look at this post, but the grid as a whole
-                    // isn't monotone.
-                    Box(
-                      modifier = Modifier
-                        .fillMaxSize()
-                        .background(Brush.linearGradient(mediaGridGradient(post.id))),
-                      contentAlignment = Alignment.Center
-                    ) {
-                      Text(
-                        post.text.take(24),
-                        fontSize = 10.sp,
-                        color = Color.White,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 3,
-                        modifier = Modifier.padding(6.dp)
-                      )
-                    }
-                  }
+          // Full X-style post cards (caption above image, rounded/bordered
+          // media, Reddit-pill actions) instead of the old Instagram-style
+          // square-thumbnail grid -- this profile's feed should read the
+          // same as the main Extra feed, not a separate compressed view.
+          items(authorPosts, key = { it.id }) { post ->
+            MediaPost(
+              post = post,
+              isDark = isDark,
+              isOwnPost = isOwnProfile,
+              commentsExpanded = expandedCommentsPostId == post.id,
+              comments = viewModel.mediaComments[post.id],
+              onLikeClick = { viewModel.toggleMediaPostLike(post.id) },
+              onToggleComments = {
+                if (expandedCommentsPostId == post.id) {
+                  expandedCommentsPostId = null
+                } else {
+                  expandedCommentsPostId = post.id
+                  viewModel.loadMediaComments(post.id)
                 }
-              }
-              repeat(3 - rowPosts.size) { Box(modifier = Modifier.weight(1f)) }
-            }
+              },
+              onDeleteClick = { viewModel.removeMediaPost(post.id) },
+              onOpenComposer = { replyingToPost = post },
+              onOpenProfile = {}
+            )
+            androidx.compose.material3.HorizontalDivider(color = onBgDim.copy(alpha = 0.1f))
           }
         }
         item { Spacer(modifier = Modifier.height(24.dp)) }
       }
     }
 
-    val zoomedImage = fullscreenImage
-    if (zoomedImage != null) {
-      Box(
-        modifier = Modifier
-          .fillMaxSize()
-          .background(Color.Black)
-          .clickable { fullscreenImage = null },
-        contentAlignment = Alignment.Center
-      ) {
-        AsyncImage(
-          model = zoomedImage,
-          contentDescription = null,
-          modifier = Modifier.fillMaxWidth(),
-          contentScale = ContentScale.Fit
-        )
-        IconButton(
-          onClick = { fullscreenImage = null },
-          modifier = Modifier.align(Alignment.TopStart).padding(top = topInset, start = 4.dp)
-        ) {
-          Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Close", tint = Color.White)
-        }
-      }
+    val replyTarget = replyingToPost
+    if (replyTarget != null) {
+      MediaCommentComposerSheet(
+        authorName = replyTarget.authorName,
+        onDismiss = { replyingToPost = null },
+        onSubmit = { text -> viewModel.addMediaComment(replyTarget.id, text) }
+      )
     }
 
     if (showExtraSettings) {
