@@ -654,9 +654,20 @@ private fun MediaPost(
         }
       }
 
+      // No per-post search exists yet, so this is a clearly labeled
+      // placeholder rather than a dead icon, same pattern as Jobs/Messages
+      // in the bottom nav.
+      IconButton(onClick = { Toast.makeText(context, "Search — coming soon", Toast.LENGTH_SHORT).show() }) {
+        Icon(Icons.Filled.Search, contentDescription = "Search", tint = Color.Black)
+      }
+
       Box {
         IconButton(onClick = { if (isOwnPost) moreMenuOpen = true }) {
-          Icon(Icons.Filled.MoreVert, contentDescription = "More", tint = Color.Black)
+          Icon(
+            painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_badge_seal),
+            contentDescription = "More",
+            tint = Color.Black
+          )
         }
         DropdownMenu(expanded = moreMenuOpen, onDismissRequest = { moreMenuOpen = false }) {
           DropdownMenuItem(
