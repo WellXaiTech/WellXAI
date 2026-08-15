@@ -4940,11 +4940,20 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             Text("Non-VIP", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
           }
           MyInfoDivider()
-          MyInfoRow(icon = Icons.Outlined.AttachMoney, label = "My Fee Rates", onClick = { comingSoon("My Fee Rates") }) {}
+          // Moved here from Settings -> Data & Information/Business,
+          // replacing "My Fee Rates"/"Additional Verification" (crypto-
+          // exchange placeholders that never applied to ChatGiZa).
+          MyInfoRow(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_share_link),
+            label = "Collaborative Chat",
+            onClick = { viewModel.closeAccountTabs(); viewModel.openSharedConversations() }
+          ) {}
           MyInfoDivider()
-          MyInfoRow(icon = Icons.Outlined.Archive, label = "Additional Verification", onClick = { comingSoon("Additional Verification") }) {
-            Text("0 cases", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
-          }
+          MyInfoRow(
+            icon = Icons.Outlined.Business,
+            label = "Advertise on ChatGiZa",
+            onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/advertise"))) }
+          ) {}
           MyInfoDivider()
           MyInfoRow(icon = Icons.Filled.Person, label = "Subaccount", onClick = { comingSoon("Subaccount") }) {}
         }
@@ -5062,6 +5071,13 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(icon = Icons.Outlined.ScreenShare, label = "Trusted Devices", onClick = { comingSoon("Trusted Devices") }) {}
           MyInfoDivider()
           MyInfoRow(icon = Icons.Filled.Person, label = "Account Settings", onClick = { viewModel.closeAccountTabs(); viewModel.openAccount() }) {}
+          MyInfoDivider()
+          // Moved here from Settings -> Data & Information.
+          MyInfoRow(
+            icon = Icons.Outlined.QueryStats,
+            label = "Data Dashboard",
+            onClick = { viewModel.closeAccountTabs(); viewModel.openDataDashboard() }
+          ) {}
           MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.Lock, label = "App Lock", onClick = { comingSoon("App Lock") }) {}
         }
@@ -8874,22 +8890,12 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         SettingsMenuRow("Voice", icon = Icons.Outlined.GraphicEq) { viewModel.openVoice() }
       }
 
-      SettingsSectionHeader("Business")
-      SettingsSection {
-        SettingsMenuRow("Advertise on ChatGiZa", icon = Icons.Outlined.Business) {
-          context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/advertise")))
-        }
-      }
-
-      SettingsSectionHeader("Data & Information")
-      SettingsSection {
-        SettingsMenuRow("Collaborative Chat", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_share_link)) { viewModel.openSharedConversations() }
-        SettingsDivider()
-        SettingsMenuRow("Data Dashboard", icon = Icons.Outlined.QueryStats) { viewModel.openDataDashboard() }
-      }
-      // Data Controls moved to Account -> General -> Storage management;
-      // Open Source Licenses / Terms of Use / Privacy Policy moved to
-      // Account -> General, alongside Contact Support/User feedback/About Us.
+      // "Business" (Advertise on ChatGiZa) and "Data & Information"
+      // (Collaborative Chat) moved to Account -> My info; Data Dashboard
+      // moved to Account -> Security. Data Controls moved to Account ->
+      // General -> Storage management; Open Source Licenses / Terms of Use
+      // / Privacy Policy moved to Account -> General, alongside Contact
+      // Support/User feedback/About Us. None of these are duplicated here.
 
       // Report a Problem moved to the Profile Hub's About Us sheet --
       // this was its only row, so the whole Support section goes with it
