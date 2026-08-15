@@ -5063,8 +5063,19 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             Text("USD", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
           }
           MyInfoDivider()
-          MyInfoRow(icon = Icons.Filled.LightMode, label = "Color Theme", onClick = { comingSoon("Color Theme") }) {
-            Text("Dark Mode", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+          MyInfoRow(
+            icon = Icons.Filled.LightMode,
+            label = "Color Theme",
+            // Opens the same Theme section inside Appearance (now a 2x2
+            // grid of mini previews) rather than a separate screen -- one
+            // real theme picker, reached two ways. Closes this dialog
+            // first, same fix as Profile Picture/Appearance above.
+            onClick = {
+              viewModel.closeAccountTabs()
+              viewModel.openAppearance()
+            }
+          ) {
+            Text(AppTheme.fromKey(viewModel.themeMode).label, color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
           }
           MyInfoDivider()
           MyInfoRow(
@@ -6746,38 +6757,86 @@ private enum class AppTheme(val key: String, val label: String, val icon: ImageV
   }
 }
 
+// Mini mockup of what the app roughly looks like under each theme --
+// header bar, a row of icon dots, a search-style pill, a couple of text
+// lines, then a small list where the last column carries the red/green
+// accent colors the app itself uses (matching the reference design).
+@Composable
+private fun ThemeMockupPreview(bg: Color, panel: Color, modifier: Modifier = Modifier) {
+  Box(
+    modifier = modifier
+      .aspectRatio(0.82f)
+      .clip(RoundedCornerShape(18.dp))
+      .background(bg)
+      .padding(10.dp)
+  ) {
+    Column(modifier = Modifier.fillMaxSize()) {
+      Box(modifier = Modifier.fillMaxWidth().height(22.dp).clip(RoundedCornerShape(6.dp)).background(panel))
+      Spacer(modifier = Modifier.height(8.dp))
+      Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        repeat(4) { Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(panel)) }
+      }
+      Spacer(modifier = Modifier.height(8.dp))
+      Box(modifier = Modifier.fillMaxWidth().height(14.dp).clip(RoundedCornerShape(999.dp)).background(panel))
+      Spacer(modifier = Modifier.height(6.dp))
+      Box(modifier = Modifier.fillMaxWidth(0.55f).height(3.dp).clip(RoundedCornerShape(2.dp)).background(panel))
+      Spacer(modifier = Modifier.weight(1f))
+      val rowColors = listOf(Color(0xFFE0345C), Color(0xFF2ECC71), Color(0xFFE0345C))
+      Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        rowColors.forEach { accent ->
+          Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            Box(modifier = Modifier.weight(1f).height(12.dp).clip(RoundedCornerShape(3.dp)).background(panel))
+            Box(modifier = Modifier.weight(1f).height(12.dp).clip(RoundedCornerShape(3.dp)).background(panel))
+            Box(modifier = Modifier.weight(1f).height(12.dp).clip(RoundedCornerShape(3.dp)).background(accent))
+          }
+        }
+      }
+    }
+  }
+}
+
 @Composable
 private fun ThemeCard(theme: AppTheme, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-  val bg by animateColorAsState(
-    targetValue = if (selected) colorScheme.onBackground else colorScheme.onBackground.copy(alpha = 0.10f),
+  val borderColor by animateColorAsState(
+    targetValue = if (selected) colorScheme.onBackground else Color.Transparent,
     animationSpec = tween(250),
-    label = "themeCardBg"
+    label = "themeCardBorder"
   )
-  val iconTint by animateColorAsState(
-    targetValue = if (selected) colorScheme.background else colorScheme.onBackground.copy(alpha = 0.55f),
-    animationSpec = tween(250),
-    label = "themeCardIcon"
-  )
-  Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+  Column(
+    modifier = modifier.clickable(onClick = onClick),
+    horizontalAlignment = Alignment.CenterHorizontally
+  ) {
     Box(
       modifier = Modifier
         .fillMaxWidth()
-        .aspectRatio(1.6f)
-        .clip(RoundedCornerShape(24.dp))
-        .background(bg)
-        .clickable(onClick = onClick),
-      contentAlignment = Alignment.Center
+        .clip(RoundedCornerShape(20.dp))
+        .border(2.dp, borderColor, RoundedCornerShape(20.dp))
+        .background(colorScheme.onBackground.copy(alpha = 0.05f))
+        .padding(6.dp)
     ) {
-      Icon(theme.icon, contentDescription = theme.label, tint = iconTint, modifier = Modifier.size(22.dp))
+      when (theme) {
+        AppTheme.LIGHT -> ThemeMockupPreview(bg = Color.White, panel = Color(0xFFEDEDED), modifier = Modifier.fillMaxWidth())
+        AppTheme.DARK -> ThemeMockupPreview(bg = Color(0xFF161616), panel = Color(0xFF2E2E2E), modifier = Modifier.fillMaxWidth())
+        AppTheme.FOR_YOU -> ThemeMockupPreview(bg = Color(0xFF2A2A2A), panel = Color(0xFF3F3F3F), modifier = Modifier.fillMaxWidth())
+        AppTheme.SYSTEM ->
+          Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))) {
+            ThemeMockupPreview(bg = Color.White, panel = Color(0xFFEDEDED), modifier = Modifier.weight(1f))
+            ThemeMockupPreview(bg = Color(0xFF161616), panel = Color(0xFF2E2E2E), modifier = Modifier.weight(1f))
+          }
+      }
     }
     Spacer(modifier = Modifier.height(10.dp))
-    Text(
-      theme.label,
-      color = colorScheme.onBackground,
-      fontSize = 14.sp,
-      fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-      maxLines = 1
-    )
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      Icon(theme.icon, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.7f), modifier = Modifier.size(15.dp))
+      Spacer(modifier = Modifier.width(5.dp))
+      Text(
+        theme.label,
+        color = colorScheme.onBackground,
+        fontSize = 14.sp,
+        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+        maxLines = 1
+      )
+    }
   }
 }
 
@@ -6856,15 +6915,24 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
 
       Spacer(modifier = Modifier.height(24.dp))
       Text("Theme", color = colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-      Spacer(modifier = Modifier.height(10.dp))
-      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        AppTheme.entries.forEach { theme ->
-          ThemeCard(
-            theme = theme,
-            selected = selectedTheme == theme,
-            onClick = { viewModel.updateThemeMode(theme.key) },
-            modifier = Modifier.weight(1f)
-          )
+      Spacer(modifier = Modifier.height(14.dp))
+      // Reference layout: a 2x2 grid of mini app-preview cards instead of
+      // a single row of plain icon chips -- same 4 AppTheme entries and
+      // the same updateThemeMode(theme.key) underneath, just a richer
+      // preview of what each one actually looks like.
+      val themeOrder = listOf(AppTheme.LIGHT, AppTheme.DARK, AppTheme.FOR_YOU, AppTheme.SYSTEM)
+      Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        themeOrder.chunked(2).forEach { rowThemes ->
+          Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            rowThemes.forEach { theme ->
+              ThemeCard(
+                theme = theme,
+                selected = selectedTheme == theme,
+                onClick = { viewModel.updateThemeMode(theme.key) },
+                modifier = Modifier.weight(1f)
+              )
+            }
+          }
         }
       }
 
