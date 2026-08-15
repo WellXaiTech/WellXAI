@@ -100,6 +100,7 @@ import kotlin.math.roundToInt
 import coil.compose.AsyncImage
 import com.wellxai.chatgiza.ApiMediaPost
 import com.wellxai.chatgiza.ChatViewModel
+import com.wellxai.chatgiza.ChatGizaMediaPostComposerScreen
 import com.wellxai.chatgiza.ConnectWithChatGizaSheet
 import com.wellxai.chatgiza.MEDIA_POST_TEXT_PREVIEW_LENGTH
 import com.wellxai.chatgiza.MediaCommentComposerSheet
@@ -123,6 +124,7 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeChatGizaMedia() }
 
   var showConnectSheet by remember { mutableStateOf(false) }
+  var showPostComposer by remember { mutableStateOf(false) }
   var replyingToPost by remember { mutableStateOf<ApiMediaPost?>(null) }
   var expandedCommentsPostId by remember { mutableStateOf<String?>(null) }
   var searchOpen by remember { mutableStateOf(false) }
@@ -321,7 +323,7 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
     MediaBottomNavigation(
       viewModel = viewModel,
       isDark = isDark,
-      onCreateClick = { showConnectSheet = true },
+      onCreateClick = { showPostComposer = true },
       onProfileClick = {
         val uid = viewModel.userId
         if (uid != null) viewingProfile = ProfileTarget(uid, viewModel.userName ?: "You", viewModel.userImage)
@@ -350,6 +352,10 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
 
   if (showConnectSheet) {
     ConnectWithChatGizaSheet(viewModel, onDismiss = { showConnectSheet = false })
+  }
+
+  if (showPostComposer) {
+    ChatGizaMediaPostComposerScreen(viewModel, onDismiss = { showPostComposer = false })
   }
 }
 
