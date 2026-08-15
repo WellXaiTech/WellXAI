@@ -4919,11 +4919,11 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             }
           ) {
             if (selectedPreset != null) {
-              AvatarPresetThumbnail(selectedPreset, 32.dp)
+              AvatarPresetThumbnail(selectedPreset, 40.dp)
             } else if (viewModel.userImage != null) {
-              AsyncImage(model = viewModel.userImage, contentDescription = null, modifier = Modifier.size(32.dp).clip(CircleShape))
+              AsyncImage(model = viewModel.userImage, contentDescription = null, modifier = Modifier.size(40.dp).clip(CircleShape))
             } else {
-              Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(32.dp))
+              Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(40.dp))
             }
           }
           MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_id_badge), label = "Nickname", onClick = { showNicknameEditor = true }) {
@@ -4941,12 +4941,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
                 Toast.makeText(context, "UID copied", Toast.LENGTH_SHORT).show()
               }
             )
-          }
-          MyInfoRow(icon = Icons.Outlined.Description, label = "Identity Verification", onClick = { comingSoon("Identity Verification") }) {
-            Text("Lv.1 Verified", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
-          }
-          MyInfoRow(icon = Icons.Outlined.WorkspacePremium, label = "VIP level", onClick = { comingSoon("VIP level") }) {
-            Text("Non-VIP", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
           }
           // Moved here from Settings -> Data & Information/Business,
           // replacing "My Fee Rates"/"Additional Verification" (crypto-
