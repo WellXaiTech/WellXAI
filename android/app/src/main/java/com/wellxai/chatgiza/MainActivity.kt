@@ -5160,7 +5160,18 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.Info, label = "About Us", onClick = { viewModel.closeAccountTabs(); viewModel.openAboutUs() }) {}
           MyInfoDivider()
-          MyInfoRow(icon = Icons.Outlined.Archive, label = "Storage management", onClick = { comingSoon("Storage management") }) {}
+          MyInfoRow(
+            icon = Icons.Outlined.Archive,
+            label = "Storage management",
+            // Data Controls now lives here instead of its own Settings row --
+            // DataControlsScreen is rendered from the root screen switch, not
+            // from within this dialog, so it has to close first (same fix as
+            // Profile Picture/Appearance above).
+            onClick = {
+              viewModel.closeAccountTabs()
+              viewModel.openDataControls()
+            }
+          ) {}
           MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.ThumbUp, label = "Rate Our App", onClick = { comingSoon("Rate Our App") }) {}
         }
@@ -8812,8 +8823,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         SettingsDivider()
         SettingsMenuRow("Data Dashboard", icon = Icons.Outlined.QueryStats) { viewModel.openDataDashboard() }
         SettingsDivider()
-        SettingsMenuRow("Data Controls", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_data_controls)) { viewModel.openDataControls() }
-        SettingsDivider()
+        // Data Controls moved to Account -> General -> Storage management.
         SettingsMenuRow("Open Source Licenses", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_files)) { viewModel.openOpenSourceLicenses() }
         SettingsDivider()
         SettingsMenuRow("Terms of Use", icon = Icons.AutoMirrored.Outlined.Article) {
