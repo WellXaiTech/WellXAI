@@ -5076,8 +5076,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         }
         Spacer(modifier = Modifier.height(20.dp))
       } else if (activeTab == "Preference") {
-        // Same "don't go deeper" scope as My info/Security -- mock data,
-        // stub taps.
         Column(
           modifier = Modifier
             .fillMaxWidth()
@@ -5085,13 +5083,26 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             .background(Color(0xFF141414))
             .padding(horizontal = 16.dp)
         ) {
-          MyInfoRow(icon = Icons.Filled.Person, label = "Withdrawal Address", onClick = { comingSoon("Withdrawal Address") }) {}
+          // Moved here from Settings -> App, replacing the crypto-exchange
+          // placeholder rows (Withdrawal Address/Manage Crypto Withdrawal
+          // Limits/Route Deposits To) that never applied to ChatGiZa.
+          MyInfoRow(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_haptics),
+            label = "Haptics",
+            onClick = { viewModel.closeAccountTabs(); viewModel.openHaptics() }
+          ) {}
           MyInfoDivider()
-          MyInfoRow(icon = Icons.Outlined.Lock, label = "Manage Crypto Withdrawal Limits", onClick = { comingSoon("Manage Crypto Withdrawal Limits") }) {}
+          MyInfoRow(
+            iconContent = { c -> WidgetsIconCustom(tint = c, modifier = Modifier.size(20.dp)) },
+            label = "Widgets",
+            onClick = { viewModel.closeAccountTabs(); viewModel.openWidgets() }
+          ) {}
           MyInfoDivider()
-          MyInfoRow(icon = Icons.Outlined.Autorenew, label = "Route Deposits To", onClick = { comingSoon("Route Deposits To") }) {
-            Text("Funding Account", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
-          }
+          MyInfoRow(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_advanced),
+            label = "Advanced",
+            onClick = { viewModel.closeAccountTabs(); viewModel.openAdvanced() }
+          ) {}
           MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.Notifications, label = "Notification Settings", onClick = { comingSoon("Notification Settings") }) {}
           MyInfoDivider()
@@ -5246,7 +5257,9 @@ private fun SecurityGroupHeader(title: String, subtitle: String? = null) {
 
 @Composable
 private fun MyInfoRow(
-  icon: ImageVector,
+  icon: ImageVector? = null,
+  painter: androidx.compose.ui.graphics.painter.Painter? = null,
+  iconContent: (@Composable (Color) -> Unit)? = null,
   label: String,
   showChevron: Boolean = true,
   onClick: () -> Unit,
@@ -5259,7 +5272,14 @@ private fun MyInfoRow(
       .padding(vertical = 14.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    Icon(icon, contentDescription = null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(20.dp))
+    val tint = Color.White.copy(alpha = 0.8f)
+    if (iconContent != null) {
+      iconContent(tint)
+    } else if (painter != null) {
+      Icon(painter, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+    } else if (icon != null) {
+      Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+    }
     Spacer(modifier = Modifier.width(14.dp))
     Text(label, color = Color.White, fontSize = 15.sp, modifier = Modifier.weight(1f))
     trailing()
@@ -8833,17 +8853,10 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.4f))
       }
 
-      SettingsSectionHeader("App")
-      SettingsSection {
-        // Moved to Account -> General ("Appearance", replacing the old
-        // placeholder "Color Preferences" row there) -- not duplicated here.
-        SettingsMenuRow("Haptics", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_haptics)) { viewModel.openHaptics() }
-        SettingsDivider()
-        SettingsMenuRow("Widgets", iconContent = { c -> WidgetsIconCustom(tint = c, modifier = Modifier.size(22.dp)) }) { viewModel.openWidgets() }
-        SettingsDivider()
-        // Moved to Account -> General ("Language") -- not duplicated here.
-        SettingsMenuRow("Advanced", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_advanced)) { viewModel.openAdvanced() }
-      }
+      // "App" section (Haptics/Widgets/Advanced) moved to Account ->
+      // Preference, replacing the crypto-exchange placeholder rows there
+      // (Appearance/Language were already moved to Account -> General
+      // earlier) -- no longer duplicated here.
 
       SettingsSectionHeader("GiZa")
       SettingsSection {
