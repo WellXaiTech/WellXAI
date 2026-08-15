@@ -888,97 +888,124 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
 
   Box(modifier = Modifier.fillMaxSize().background(bg)) {
     Column(modifier = Modifier.fillMaxSize()) {
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(top = topInset)
-          .height(56.dp)
-          .padding(horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
-          Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = onBg, modifier = Modifier.size(20.dp))
-        }
-        Row(
-          modifier = Modifier.weight(1f),
-          horizontalArrangement = Arrangement.Center,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Text(
-            target.authorName,
-            color = onBg,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold
-          )
-          Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = null, tint = onBg, modifier = Modifier.size(18.dp))
-        }
-        if (isOwnProfile) {
-          IconButton(onClick = { showExtraSettings = true }, modifier = Modifier.size(40.dp)) {
-            MediaMenuIcon(modifier = Modifier.size(20.dp), tint = onBg)
-          }
-        } else {
-          Spacer(modifier = Modifier.size(40.dp))
-        }
-      }
-
       LazyColumn(modifier = Modifier.fillMaxSize()) {
         item {
-          Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
+          // Banner -- the account's own photo, cropped wide and dimmed,
+          // standing in for a dedicated banner image (no separate banner
+          // field exists yet). Back/menu controls float over it and the
+          // avatar overlaps its bottom edge, matching the reference
+          // profile-header layout.
+          Box(modifier = Modifier.fillMaxWidth().height(130.dp)) {
             if (target.authorImage != null) {
               AsyncImage(
                 model = target.authorImage,
-                contentDescription = target.authorName,
-                modifier = Modifier.size(84.dp).clip(CircleShape),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
               )
+              Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)))
             } else {
-              Icon(Icons.Outlined.AccountCircle, contentDescription = target.authorName, tint = onBgDim, modifier = Modifier.size(84.dp))
+              Box(modifier = Modifier.fillMaxSize().background(Color(0xFF2A2A2A)))
             }
-            Spacer(modifier = Modifier.width(20.dp))
+
             Row(
-              modifier = Modifier.weight(1f),
-              horizontalArrangement = Arrangement.SpaceEvenly
+              modifier = Modifier.fillMaxWidth().padding(top = topInset).padding(8.dp),
+              horizontalArrangement = Arrangement.SpaceBetween
             ) {
-              Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("${authorPosts.size}", color = onBg, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Text("Posts", color = onBgDim, fontSize = 13.sp)
+              Box(
+                modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)),
+                contentAlignment = Alignment.Center
+              ) {
+                IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
+                  Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(18.dp))
+                }
               }
-              Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("${userProfile?.followerCount ?: 0}", color = onBg, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Text("Followers", color = onBgDim, fontSize = 13.sp)
+              if (isOwnProfile) {
+                Box(
+                  modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)),
+                  contentAlignment = Alignment.Center
+                ) {
+                  IconButton(onClick = { showExtraSettings = true }, modifier = Modifier.size(36.dp)) {
+                    MediaMenuIcon(modifier = Modifier.size(16.dp), tint = Color.White)
+                  }
+                }
               }
-              Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("${userProfile?.followingCount ?: 0}", color = onBg, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Text("Following", color = onBgDim, fontSize = 13.sp)
+            }
+
+            Box(
+              modifier = Modifier
+                .align(Alignment.BottomStart)
+                .offset(x = 16.dp, y = 36.dp)
+                .size(76.dp)
+                .clip(CircleShape)
+                .background(bg)
+                .padding(3.dp)
+            ) {
+              if (target.authorImage != null) {
+                AsyncImage(
+                  model = target.authorImage,
+                  contentDescription = target.authorName,
+                  modifier = Modifier.fillMaxSize().clip(CircleShape),
+                  contentScale = ContentScale.Crop
+                )
+              } else {
+                Icon(Icons.Outlined.AccountCircle, contentDescription = target.authorName, tint = onBgDim, modifier = Modifier.fillMaxSize())
               }
             }
           }
         }
+        item { Spacer(modifier = Modifier.height(44.dp)) }
         item {
           Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
             // The bold display name (e.g. "QUANTARA") is a separate,
-            // user-set field shown here -- target.authorName (the header
-            // above) stays the account's real/login name, this is what
-            // other users see as the account's public identity. Falls
-            // back to authorName when nothing's been set.
+            // user-set field shown here -- target.authorName stays the
+            // account's real/login name, this is what other users see as
+            // the account's public identity. Falls back to authorName
+            // when nothing's been set.
             val displayName = (if (isOwnProfile) viewModel.profileData.profile.displayName else userProfile?.displayName.orEmpty())
               .ifBlank { target.authorName }
             Text(
               displayName,
               color = onBg,
-              fontSize = 15.sp,
-              fontWeight = FontWeight.SemiBold
+              fontSize = 19.sp,
+              fontWeight = FontWeight.ExtraBold
             )
+            Text("@${target.authorName.lowercase().replace(" ", "")}", color = onBgDim, fontSize = 13.sp)
+
             // Own profile reads bio live from the editable profileData so
             // it updates the instant Edit Profile is saved; other profiles
             // read the fetched snapshot from /api/media/users/[id].
             val bio = if (isOwnProfile) viewModel.profileData.profile.bio else userProfile?.bio.orEmpty()
             if (bio.isNotBlank()) {
-              Spacer(modifier = Modifier.height(4.dp))
-              Text(bio, color = onBgDim, fontSize = 13.sp, lineHeight = 18.sp)
+              Spacer(modifier = Modifier.height(8.dp))
+              Text(bio, color = onBg, fontSize = 14.sp, lineHeight = 19.sp)
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Text(
+                buildAnnotatedString {
+                  withStyle(SpanStyle(color = onBg, fontWeight = FontWeight.Bold)) { append("${userProfile?.followingCount ?: 0}") }
+                  withStyle(SpanStyle(color = onBgDim)) { append(" Following") }
+                },
+                fontSize = 13.sp
+              )
+              Spacer(modifier = Modifier.width(14.dp))
+              Text(
+                buildAnnotatedString {
+                  withStyle(SpanStyle(color = onBg, fontWeight = FontWeight.Bold)) { append("${userProfile?.followerCount ?: 0}") }
+                  withStyle(SpanStyle(color = onBgDim)) { append(" Followers") }
+                },
+                fontSize = 13.sp
+              )
+              Spacer(modifier = Modifier.width(14.dp))
+              Text(
+                buildAnnotatedString {
+                  withStyle(SpanStyle(color = onBg, fontWeight = FontWeight.Bold)) { append("${authorPosts.size}") }
+                  withStyle(SpanStyle(color = onBgDim)) { append(" Posts") }
+                },
+                fontSize = 13.sp
+              )
             }
           }
         }
@@ -1032,6 +1059,14 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
             }
           }
           Spacer(modifier = Modifier.height(16.dp))
+          Text(
+            "Posts",
+            color = onBg,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 16.dp)
+          )
+          Spacer(modifier = Modifier.height(10.dp))
           androidx.compose.material3.HorizontalDivider(color = onBgDim.copy(alpha = 0.15f))
         }
         if (authorPosts.isEmpty()) {
