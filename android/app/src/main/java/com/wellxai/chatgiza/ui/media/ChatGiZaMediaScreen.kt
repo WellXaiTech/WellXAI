@@ -7,7 +7,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -61,6 +60,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Comment
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
@@ -84,14 +84,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -466,26 +463,6 @@ private fun ChatGiZaHeader(
   }
 }
 
-// Hand-drawn three-line "hamburger" menu glyph -- opens Account/Settings
-// from your own profile header, matching the reference layout's
-// top-right menu icon.
-@Composable
-private fun MediaMenuIcon(modifier: Modifier = Modifier, tint: Color = Color.Black) {
-  Canvas(modifier = modifier) {
-    val scale = size.width / 24f
-    val strokeW = 1.8f * scale
-    listOf(5.5f, 12f, 18.5f).forEach { y ->
-      drawLine(
-        color = tint,
-        start = Offset(3.5f * scale, y * scale),
-        end = Offset(20.5f * scale, y * scale),
-        strokeWidth = strokeW,
-        cap = StrokeCap.Round
-      )
-    }
-  }
-}
-
 // =============================================================
 // STORIES ROW -- "Your story" (tap opens the create sheet, same as "+")
 // followed by the most recent distinct posters. Monochrome ring instead
@@ -649,13 +626,6 @@ private fun MediaPost(
         OutlinedButton(onClick = { following = !following }) {
           Text(text = if (following) "Following" else "Follow", fontSize = 12.sp)
         }
-      }
-
-      // No per-post search exists yet, so this is a clearly labeled
-      // placeholder rather than a dead icon, same pattern as Jobs/Messages
-      // in the bottom nav.
-      IconButton(onClick = { Toast.makeText(context, "Search — coming soon", Toast.LENGTH_SHORT).show() }) {
-        Icon(Icons.Filled.Search, contentDescription = "Search", tint = Color.Black)
       }
 
       Box {
@@ -1005,12 +975,30 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
                 }
               }
               if (isOwnProfile) {
-                Box(
-                  modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)),
-                  contentAlignment = Alignment.Center
-                ) {
-                  IconButton(onClick = { showExtraSettings = true }, modifier = Modifier.size(36.dp)) {
-                    MediaMenuIcon(modifier = Modifier.size(16.dp), tint = Color.White)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                  Box(
+                    modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    IconButton(
+                      onClick = { Toast.makeText(context, "Search — coming soon", Toast.LENGTH_SHORT).show() },
+                      modifier = Modifier.size(36.dp)
+                    ) {
+                      Icon(
+                        painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_media_profile_search),
+                        contentDescription = "Search",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                      )
+                    }
+                  }
+                  Box(
+                    modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    IconButton(onClick = { showExtraSettings = true }, modifier = Modifier.size(36.dp)) {
+                      Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = Color.White, modifier = Modifier.size(18.dp))
+                    }
                   }
                 }
               }
