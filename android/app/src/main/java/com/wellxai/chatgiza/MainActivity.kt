@@ -509,6 +509,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.DataControls -> DataControlsScreen(viewModel)
             is AppScreen.DataDashboard -> DataDashboardScreen(viewModel)
             is AppScreen.AccountSettings -> AccountSettingsScreen(viewModel)
+            is AppScreen.SwitchAccount -> SwitchAccountScreen(viewModel)
             is AppScreen.ManageCloudStorage -> ManageCloudStorageScreen(viewModel)
             is AppScreen.Settings -> SettingsScreen(viewModel)
             is AppScreen.Projects -> ProjectsScreen(viewModel)
@@ -4955,7 +4956,11 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             label = "Advertise on ChatGiZa",
             onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/advertise"))) }
           ) {}
-          MyInfoRow(icon = Icons.Filled.Person, label = "Subaccount", onClick = { comingSoon("Subaccount") }) {}
+          MyInfoRow(
+            icon = Icons.Filled.Person,
+            label = "Subaccount",
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openSwitchAccount() } }
+          ) {}
         }
 
         Spacer(modifier = Modifier.height(14.dp))
@@ -7589,6 +7594,243 @@ private fun AccountSettingsRow(icon: ImageVector, title: String, description: St
     }
     Spacer(modifier = Modifier.height(10.dp))
     Text(description, color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp, lineHeight = 20.sp)
+  }
+}
+
+private fun derivedUid(id: String): String =
+  (kotlin.math.abs(id.hashCode().toLong()) % 100_000_000L).toString().padStart(8, '0')
+
+@Composable
+private fun SwitchAccountScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeSwitchAccount() }
+  var searchQuery by remember { mutableStateOf("") }
+  var manageMode by remember { mutableStateOf(false) }
+  var showCreateDialog by remember { mutableStateOf(false) }
+  var confirmDeleteId by remember { mutableStateOf<String?>(null) }
+  LaunchedEffect(Unit) { viewModel.loadSubaccounts() }
+
+  val filteredSubaccounts = remember(viewModel.subaccounts, searchQuery) {
+    if (searchQuery.isBlank()) viewModel.subaccounts
+    else viewModel.subaccounts.filter { it.name.contains(searchQuery, ignoreCase = true) }
+  }
+  val mainUid = remember(viewModel.userId) { derivedUid(viewModel.userId.orEmpty()) }
+
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color(0xFF000000))
+      .statusBarsPadding()
+      .padding(horizontal = 16.dp)
+      .verticalScroll(rememberScrollState())
+  ) {
+    Row(
+      modifier = Modifier.fillMaxWidth().padding(top = 26.dp, bottom = 20.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Text("Switch/Create Account", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+      IconButton(onClick = { viewModel.closeSwitchAccount() }, modifier = Modifier.size(28.dp)) {
+        Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.White)
+      }
+    }
+
+    Text("Main Account", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+    Spacer(modifier = Modifier.height(8.dp))
+    SwitchAccountRow(
+      name = (viewModel.userName ?: "You").uppercase(),
+      uid = mainUid,
+      selected = viewModel.activeSubaccountId == null,
+      manageMode = false,
+      onClick = { if (viewModel.activeSubaccountId != null) viewModel.switchToMainAccount() },
+      onDelete = {}
+    ) { tint ->
+      if (viewModel.userImage != null) {
+        AsyncImage(model = viewModel.userImage, contentDescription = null, modifier = Modifier.size(40.dp).clip(CircleShape))
+      } else {
+        Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = tint, modifier = Modifier.size(40.dp))
+      }
+    }
+
+    Spacer(modifier = Modifier.height(20.dp))
+
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+      Text("Subaccount", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp, modifier = Modifier.weight(1f))
+      Box(
+        modifier = Modifier
+          .clip(RoundedCornerShape(50))
+          .background(Color.White.copy(alpha = 0.08f))
+          .padding(horizontal = 12.dp, vertical = 6.dp)
+      ) {
+        BasicTextField(
+          value = searchQuery,
+          onValueChange = { searchQuery = it },
+          singleLine = true,
+          textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 13.sp),
+          cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
+          decorationBox = { inner ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(Icons.Filled.Search, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(14.dp))
+              Spacer(modifier = Modifier.width(6.dp))
+              Box {
+                if (searchQuery.isEmpty()) {
+                  Text("Search", color = Color.White.copy(alpha = 0.35f), fontSize = 13.sp)
+                }
+                inner()
+              }
+            }
+          }
+        )
+      }
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+
+    if (viewModel.loadingSubaccounts && viewModel.subaccounts.isEmpty()) {
+      Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(22.dp))
+      }
+    } else if (filteredSubaccounts.isEmpty()) {
+      Text(
+        if (viewModel.subaccounts.isEmpty()) "No subaccounts yet -- create one below." else "No matches.",
+        color = Color.White.copy(alpha = 0.4f),
+        fontSize = 13.sp,
+        modifier = Modifier.padding(vertical = 16.dp)
+      )
+    } else {
+      Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        filteredSubaccounts.forEach { sub ->
+          SwitchAccountRow(
+            name = sub.name.uppercase(),
+            uid = derivedUid(sub.id),
+            selected = viewModel.activeSubaccountId == sub.id,
+            manageMode = manageMode,
+            onClick = { viewModel.switchToSubaccount(sub) },
+            onDelete = { confirmDeleteId = sub.id }
+          ) { tint ->
+            val preset = AVATAR_PRESETS.find { it.id == sub.avatarPresetId }
+            if (preset != null) {
+              AvatarPresetThumbnail(preset, 40.dp, name = null)
+            } else {
+              Box(
+                modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+              ) {
+                Text(sub.name.take(1).uppercase(), color = tint, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    viewModel.subaccountError?.let {
+      Spacer(modifier = Modifier.height(8.dp))
+      Text(it, color = Color(0xFFFF6B6B), fontSize = 12.sp)
+    }
+
+    Spacer(modifier = Modifier.height(24.dp))
+
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+      Box(
+        modifier = Modifier
+          .weight(1f)
+          .clip(RoundedCornerShape(50))
+          .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(50))
+          .clickable { manageMode = !manageMode }
+          .padding(vertical = 14.dp),
+        contentAlignment = Alignment.Center
+      ) {
+        Text(if (manageMode) "Done" else "Manage", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+      }
+      Box(
+        modifier = Modifier
+          .weight(1f)
+          .clip(RoundedCornerShape(50))
+          .background(Color(0xFFFF9D2E))
+          .clickable {
+            if (viewModel.subaccounts.size >= 5) return@clickable
+            showCreateDialog = true
+          }
+          .padding(vertical = 14.dp),
+        contentAlignment = Alignment.Center
+      ) {
+        Text("Create", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+      }
+    }
+  }
+
+  if (showCreateDialog) {
+    var nameInput by remember { mutableStateOf("") }
+    AlertDialog(
+      onDismissRequest = { showCreateDialog = false },
+      title = { Text("Create Subaccount") },
+      text = {
+        OutlinedTextField(
+          value = nameInput,
+          onValueChange = { nameInput = it },
+          singleLine = true,
+          placeholder = { Text("Name") },
+          shape = RoundedCornerShape(12.dp)
+        )
+      },
+      confirmButton = {
+        TextButton(onClick = {
+          viewModel.createSubaccount(nameInput)
+          showCreateDialog = false
+        }) { Text("Create", fontWeight = FontWeight.Bold) }
+      },
+      dismissButton = {
+        TextButton(onClick = { showCreateDialog = false }) { Text("Cancel") }
+      }
+    )
+  }
+
+  confirmDeleteId?.let { id ->
+    val name = viewModel.subaccounts.find { it.id == id }?.name ?: "this subaccount"
+    ConfirmDangerDialog(
+      title = "Delete $name?",
+      message = "This removes the subaccount and its separate chat history. This can't be undone.",
+      onConfirm = { viewModel.deleteSubaccount(id) },
+      onDismiss = { confirmDeleteId = null }
+    )
+  }
+}
+
+@Composable
+private fun SwitchAccountRow(
+  name: String,
+  uid: String,
+  selected: Boolean,
+  manageMode: Boolean,
+  onClick: () -> Unit,
+  onDelete: () -> Unit,
+  avatar: @Composable (Color) -> Unit
+) {
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .clip(RoundedCornerShape(14.dp))
+      .background(Color.White.copy(alpha = 0.06f))
+      .border(
+        if (selected) 1.5.dp else 0.dp,
+        if (selected) Color.White else Color.Transparent,
+        RoundedCornerShape(14.dp)
+      )
+      .clickable(enabled = !manageMode, onClick = onClick)
+      .padding(14.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    avatar(Color.White.copy(alpha = 0.7f))
+    Spacer(modifier = Modifier.width(12.dp))
+    Column(modifier = Modifier.weight(1f)) {
+      Text(name, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+      Text("UID: $uid", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
+    }
+    if (manageMode) {
+      IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+        Icon(Icons.Outlined.Delete, contentDescription = "Delete", tint = Color(0xFFFF6B6B), modifier = Modifier.size(20.dp))
+      }
+    } else if (selected) {
+      Icon(Icons.Filled.CheckCircle, contentDescription = "Active", tint = Color.White, modifier = Modifier.size(20.dp))
+    }
   }
 }
 

@@ -5,12 +5,22 @@ import { getMobileUserId } from "@/lib/mobileAuth";
 
 type DeletedIds = Record<string, number>;
 
-function keyFor(userId: string) {
-  return `chatgiza:history:${userId}`;
+// An optional X-Subaccount-Id header namespaces history under a lightweight
+// sub-identity (see /api/subaccounts) instead of the signed-in account's own
+// history. It's just a suffix on a key already prefixed by the
+// server-verified userId, so an arbitrary/unowned value here can only ever
+// affect that same user's own data -- no separate ownership check needed.
+function subaccountSuffix(req: NextRequest): string {
+  const raw = req.headers.get("x-subaccount-id")?.trim();
+  return raw ? `:${raw}` : "";
 }
 
-function deletedIdsKeyFor(userId: string) {
-  return `chatgiza:history-deleted:${userId}`;
+function keyFor(userId: string, suffix: string) {
+  return `chatgiza:history:${userId}${suffix}`;
+}
+
+function deletedIdsKeyFor(userId: string, suffix: string) {
+  return `chatgiza:history-deleted:${userId}${suffix}`;
 }
 
 export async function GET(req: NextRequest) {
@@ -19,11 +29,12 @@ export async function GET(req: NextRequest) {
   if (!userId) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
+  const suffix = subaccountSuffix(req);
 
   try {
     const [conversations, deletedIds] = await Promise.all([
-      kv.get(keyFor(userId)),
-      kv.get<DeletedIds>(deletedIdsKeyFor(userId)),
+      kv.get(keyFor(userId, suffix)),
+      kv.get<DeletedIds>(deletedIdsKeyFor(userId, suffix)),
     ]);
     return NextResponse.json({ conversations: conversations ?? [], deletedIds: deletedIds ?? {} });
   } catch (err) {
@@ -39,6 +50,7 @@ export async function PUT(req: NextRequest) {
   if (!userId) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
+  const suffix = subaccountSuffix(req);
 
   const body = await req.json().catch(() => null);
   if (!Array.isArray(body?.conversations)) {
@@ -49,8 +61,8 @@ export async function PUT(req: NextRequest) {
 
   try {
     await Promise.all([
-      kv.set(keyFor(userId), body.conversations),
-      kv.set(deletedIdsKeyFor(userId), deletedIds),
+      kv.set(keyFor(userId, suffix), body.conversations),
+      kv.set(deletedIdsKeyFor(userId, suffix), deletedIds),
     ]);
     return NextResponse.json({ ok: true });
   } catch (err) {
