@@ -4767,7 +4767,6 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
 // screen); the rest are stub taps.
 @Composable
 private fun AccountTabsDialog(viewModel: ChatViewModel) {
-  var activeTab by remember { mutableStateOf("My info") }
   var showNicknameEditor by remember { mutableStateOf(false) }
   var nicknameText by remember(viewModel.userName) { mutableStateOf(viewModel.userName ?: "") }
   val context = LocalContext.current
@@ -4783,13 +4782,18 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
     onDismissRequest = { viewModel.closeAccountTabs() },
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
-    Column(
+    Box(
       modifier = Modifier
         .fillMaxSize()
         .background(Color(0xFF000000))
+    ) {
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
         .statusBarsPadding()
         .verticalScroll(rememberScrollState())
         .padding(horizontal = 16.dp)
+        .padding(bottom = if (viewModel.activeAccountTab == "My info") 76.dp else 0.dp)
     ) {
       Spacer(modifier = Modifier.height(12.dp))
       Row(verticalAlignment = Alignment.CenterVertically) {
@@ -4874,17 +4878,17 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         listOf("My info", "Security", "Preference", "General").forEach { tab ->
           Column(
             modifier = Modifier.clickable {
-              activeTab = tab
+              viewModel.activeAccountTab = tab
             }
           ) {
             Text(
               tab,
-              color = if (activeTab == tab) Color.White else Color.White.copy(alpha = 0.4f),
+              color = if (viewModel.activeAccountTab == tab) Color.White else Color.White.copy(alpha = 0.4f),
               fontSize = 15.sp,
-              fontWeight = if (activeTab == tab) FontWeight.Bold else FontWeight.Normal
+              fontWeight = if (viewModel.activeAccountTab == tab) FontWeight.Bold else FontWeight.Normal
             )
             Spacer(modifier = Modifier.height(6.dp))
-            if (activeTab == tab) {
+            if (viewModel.activeAccountTab == tab) {
               Box(modifier = Modifier.width(28.dp).height(2.dp).background(Color.White))
             }
           }
@@ -4893,7 +4897,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
 
       Spacer(modifier = Modifier.height(24.dp))
 
-      if (activeTab == "My info") {
+      if (viewModel.activeAccountTab == "My info") {
         // Identity only -- who you are, not app behavior or account
         // security, which now live in Preference/Security respectively
         // (see the reorganization pass that moved Advertise/Affiliate's
@@ -4950,24 +4954,10 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           ) {}
         }
 
+        // Log Out itself is pinned to the very bottom of the screen (see
+        // the Box wrapper below), not flowing right after this content.
         Spacer(modifier = Modifier.height(20.dp))
-
-        Box(
-          modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(50))
-            .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(50))
-            .clickable {
-              viewModel.closeAccountTabs()
-              viewModel.signOut()
-            }
-            .padding(vertical = 14.dp),
-          contentAlignment = Alignment.Center
-        ) {
-          Text("Log Out", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-        }
-        Spacer(modifier = Modifier.height(20.dp))
-      } else if (activeTab == "Security") {
+      } else if (viewModel.activeAccountTab == "Security") {
         // Account safety and access only. "Fund Password" (a crypto-
         // exchange wallet concept -- ChatGiZa has no funds/wallet) was
         // dropped outright rather than forced into any tab.
@@ -5026,7 +5016,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           Text(" android", color = Color.White.copy(alpha = 0.35f), fontSize = 12.sp)
         }
         Spacer(modifier = Modifier.height(20.dp))
-      } else if (activeTab == "Preference") {
+      } else if (viewModel.activeAccountTab == "Preference") {
         // How the app behaves/feels for you -- AI persona and voice
         // alongside the device-feel/notification settings that were
         // already here.
@@ -5066,7 +5056,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(icon = Icons.Outlined.Email, label = "Email Subscriptions", onClick = { comingSoon("Email Subscriptions") }) {}
         }
         Spacer(modifier = Modifier.height(20.dp))
-      } else if (activeTab == "General") {
+      } else if (viewModel.activeAccountTab == "General") {
         // App-wide/about -- display settings, storage, legal, and the
         // business/community links that don't belong under personal
         // identity (My info) or account security (Security).
@@ -5143,6 +5133,33 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         }
         Spacer(modifier = Modifier.height(20.dp))
       }
+    }
+
+    if (viewModel.activeAccountTab == "My info") {
+      Box(
+        modifier = Modifier
+          .align(Alignment.BottomCenter)
+          .fillMaxWidth()
+          .background(Color(0xFF000000))
+          .navigationBarsPadding()
+          .padding(horizontal = 16.dp, vertical = 10.dp)
+      ) {
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(50))
+            .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(50))
+            .clickable {
+              viewModel.closeAccountTabs()
+              viewModel.signOut()
+            }
+            .padding(vertical = 10.dp),
+          contentAlignment = Alignment.Center
+        ) {
+          Text("Log Out", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        }
+      }
+    }
     }
     if (showNicknameEditor) {
       AlertDialog(
