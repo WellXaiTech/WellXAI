@@ -846,9 +846,15 @@ private fun MediaBottomNavigation(
     // rather than a dead icon.
     Column(
       horizontalAlignment = Alignment.CenterHorizontally,
-      modifier = Modifier.clickable {
-        Toast.makeText(context, "Jobs — coming soon", Toast.LENGTH_SHORT).show()
-      }
+      // Only slot in this row with a label under the icon -- without this
+      // top padding, centering the taller icon+label block as a whole
+      // pushes the icon itself noticeably above where the other (label-less)
+      // icons sit, since those are centered on their own, shorter bounds.
+      modifier = Modifier
+        .padding(top = 15.dp)
+        .clickable {
+          Toast.makeText(context, "Jobs — coming soon", Toast.LENGTH_SHORT).show()
+        }
     ) {
       Icon(
         androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_jobs),
