@@ -860,6 +860,19 @@ private fun MediaBottomNavigation(
       Text("Jobs", color = Color.DarkGray, fontSize = 10.sp)
     }
 
+    // No messaging backend exists yet, so this is a clearly labeled
+    // placeholder rather than a dead icon, same as Jobs above.
+    IconButton(
+      onClick = { Toast.makeText(context, "Messages — coming soon", Toast.LENGTH_SHORT).show() }
+    ) {
+      Icon(
+        androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_messages_bubble),
+        contentDescription = "Messages",
+        tint = Color.DarkGray,
+        modifier = Modifier.size(22.dp)
+      )
+    }
+
     if (viewModel.userImage != null) {
       AsyncImage(
         model = viewModel.userImage,
