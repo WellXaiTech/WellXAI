@@ -4791,26 +4791,40 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
     ) {
       Spacer(modifier = Modifier.height(12.dp))
       Row(verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = { viewModel.closeAccountTabs() }, modifier = Modifier.size(32.dp)) {
-          Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
-        }
-        Spacer(modifier = Modifier.width(20.dp))
-        Text("Account", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.weight(1f))
-        // Quick dark-mode toggle -- flips between the two ends of the same
-        // theme system Color Theme/Appearance use (updateThemeMode), not a
-        // separate setting of its own.
-        IconButton(
-          onClick = { viewModel.updateThemeMode(if (viewModel.themeMode == "light") "dark" else "light") },
-          modifier = Modifier.size(32.dp)
-        ) {
-          Icon(Icons.Filled.DarkMode, contentDescription = "Toggle dark mode", tint = Color.White, modifier = Modifier.size(20.dp))
-        }
-        IconButton(
-          onClick = { viewModel.closeAccountTabs(); viewModel.openAppLanguage() },
-          modifier = Modifier.size(32.dp)
-        ) {
-          Icon(Icons.Outlined.Language, contentDescription = "Language", tint = Color.White, modifier = Modifier.size(20.dp))
+        // "User Center" is centered across the whole header width (between
+        // the back button and the world icon), not just after the back
+        // button -- a Box overlay since Row's SpaceBetween alone can't
+        // center against the full width while the end icons take unequal
+        // space.
+        Box(modifier = Modifier.fillMaxWidth()) {
+          Text(
+            "User Center",
+            color = Color.White,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.Center)
+          )
+          Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            IconButton(onClick = { viewModel.closeAccountTabs() }, modifier = Modifier.size(32.dp)) {
+              Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            // Quick dark-mode toggle -- flips between the two ends of the
+            // same theme system Color Theme/Appearance use
+            // (updateThemeMode), not a separate setting of its own.
+            IconButton(
+              onClick = { viewModel.updateThemeMode(if (viewModel.themeMode == "light") "dark" else "light") },
+              modifier = Modifier.size(32.dp)
+            ) {
+              Icon(Icons.Filled.DarkMode, contentDescription = "Toggle dark mode", tint = Color.White, modifier = Modifier.size(20.dp))
+            }
+            IconButton(
+              onClick = { viewModel.closeAccountTabs(); viewModel.openAppLanguage() },
+              modifier = Modifier.size(32.dp)
+            ) {
+              Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_world), contentDescription = "Language", tint = Color.White, modifier = Modifier.size(20.dp))
+            }
+          }
         }
       }
 
