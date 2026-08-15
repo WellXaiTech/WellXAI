@@ -5159,7 +5159,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           // Moved here from Settings -> Data & Information, grouped with
           // Contact Support/User feedback/About Us above.
           MyInfoRow(
-            icon = Icons.Outlined.Article,
+            icon = Icons.AutoMirrored.Outlined.Article,
             label = "Open Source Licenses",
             onClick = { viewModel.closeAccountTabs(); viewModel.openOpenSourceLicenses() }
           ) {}
