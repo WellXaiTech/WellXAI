@@ -641,6 +641,7 @@ private fun MediaPost(
   val context = LocalContext.current
   val pagerState = rememberPagerState(pageCount = { post.imageUrls.size })
   var textExpanded by remember(post.id) { mutableStateOf(false) }
+  var following by remember(post.id) { mutableStateOf(false) }
   val isLongText = post.text.length > MEDIA_POST_TEXT_PREVIEW_LENGTH
   val bg = if (isDark) Color.Black else Color.White
   val fg = if (isDark) Color.White else Color.Black
@@ -648,13 +649,14 @@ private fun MediaPost(
   Column(modifier = Modifier.fillMaxWidth().background(bg)) {
 
     // =====================================================
-    // POST HEADER
+    // POST HEADER -- Follow + "..." menu pinned to the far
+    // trailing edge, matching the reference screenshot.
     // =====================================================
 
     Row(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(start = 14.dp, end = 8.dp, top = 12.dp, bottom = 10.dp),
+        .padding(start = 14.dp, end = 4.dp, top = 12.dp, bottom = 10.dp),
       verticalAlignment = Alignment.CenterVertically
     ) {
       if (post.authorImage != null) {
@@ -679,10 +681,56 @@ private fun MediaPost(
         Text(text = post.authorName, color = fg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         Text(text = formatMediaPostTimeAgo(post.createdAt), fontSize = 12.sp, color = Color.Gray)
       }
+
+      if (!isOwnPost) {
+        OutlinedButton(
+          onClick = { following = !following },
+          shape = RoundedCornerShape(percent = 50),
+          colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = fg),
+          border = androidx.compose.foundation.BorderStroke(1.dp, fg.copy(alpha = 0.4f)),
+          contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+          modifier = Modifier.height(30.dp)
+        ) {
+          Text(if (following) "Following" else "Follow", fontSize = 12.sp)
+        }
+        Spacer(modifier = Modifier.width(2.dp))
+      }
+
+      IconButton(
+        onClick = { Toast.makeText(context, "More — coming soon", Toast.LENGTH_SHORT).show() },
+        modifier = Modifier.size(36.dp)
+      ) {
+        Icon(Icons.Filled.MoreVert, contentDescription = "More", tint = fg)
+      }
     }
 
     // =====================================================
-    // LARGE MEDIA CAROUSEL / VIDEO
+    // CAPTION -- ABOVE THE IMAGE, right under the header.
+    // =====================================================
+
+    if (post.text.isNotEmpty()) {
+      val shownText = if (isLongText && !textExpanded) post.text.take(MEDIA_POST_TEXT_PREVIEW_LENGTH) else post.text
+      Text(
+        text = buildAnnotatedString {
+          append(shownText)
+          if (isLongText && !textExpanded) {
+            withStyle(SpanStyle(color = fg, fontWeight = FontWeight.Bold)) {
+              append(" ... more")
+            }
+          }
+        },
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(start = 14.dp, end = 14.dp, bottom = 12.dp)
+          .let { if (isLongText) it.clickable { textExpanded = !textExpanded } else it },
+        color = fg,
+        fontSize = 14.sp,
+        lineHeight = 20.sp
+      )
+    }
+
+    // =====================================================
+    // LARGE MEDIA CAROUSEL / VIDEO -- stays at the bottom.
     // =====================================================
 
     if (post.imageUrls.isNotEmpty()) {
@@ -814,31 +862,6 @@ private fun MediaPost(
       Box(modifier = Modifier.padding(horizontal = 10.dp)) {
         MediaPostComments(comments = comments, isDark = isDark, onOpenComposer = onOpenComposer)
       }
-    }
-
-    // =====================================================
-    // CAPTION -- BELOW IMAGE + ACTIONS
-    // =====================================================
-
-    if (post.text.isNotEmpty()) {
-      val shownText = if (isLongText && !textExpanded) post.text.take(MEDIA_POST_TEXT_PREVIEW_LENGTH) else post.text
-      Text(
-        text = buildAnnotatedString {
-          append(shownText)
-          if (isLongText && !textExpanded) {
-            withStyle(SpanStyle(color = fg, fontWeight = FontWeight.Bold)) {
-              append(" ... more")
-            }
-          }
-        },
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(start = 14.dp, end = 14.dp, bottom = 16.dp)
-          .let { if (isLongText) it.clickable { textExpanded = !textExpanded } else it },
-        color = fg,
-        fontSize = 14.sp,
-        lineHeight = 20.sp
-      )
     }
 
     // =====================================================
