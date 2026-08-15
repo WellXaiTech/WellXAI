@@ -325,6 +325,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeCustomize() {
     screen = AppScreen.ProfileHub
+    returnToAccountTabsIfPending()
   }
 
   var firstNameInput by mutableStateOf("")
@@ -384,6 +385,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeAppearance() {
     screen = AppScreen.ProfileHub
+    returnToAccountTabsIfPending()
   }
 
   fun openVoice() {
@@ -392,6 +394,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeVoice() {
     screen = AppScreen.ProfileHub
+    returnToAccountTabsIfPending()
   }
 
   var selectedVoiceId by mutableStateOf(tokenStore.getVoiceName())
@@ -520,6 +523,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeWidgets() {
     screen = AppScreen.ProfileHub
+    returnToAccountTabsIfPending()
   }
 
   fun openOpenSourceLicenses() {
@@ -528,6 +532,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeOpenSourceLicenses() {
     screen = AppScreen.ProfileHub
+    returnToAccountTabsIfPending()
   }
 
   fun openKidsMode() {
@@ -544,6 +549,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeSharedConversations() {
     screen = AppScreen.ProfileHub
+    returnToAccountTabsIfPending()
   }
 
   // Idea #7: a shared AI chat session multiple people can join with a
@@ -656,6 +662,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeConnectors() {
     screen = AppScreen.ProfileHub
+    returnToAccountTabsIfPending()
   }
 
   fun openMediaProfile() {
@@ -684,6 +691,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeHaptics() {
     screen = AppScreen.ProfileHub
+    returnToAccountTabsIfPending()
   }
 
   // "system" | "for_you" | "dark" | "light" — see AppTheme in MainActivity.kt.
@@ -813,6 +821,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeAvatarPicker() {
     showAvatarPicker = false
+    returnToAccountTabsIfPending()
   }
 
   var showAboutUs by mutableStateOf(false)
@@ -824,6 +833,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeAboutUs() {
     showAboutUs = false
+    returnToAccountTabsIfPending()
   }
 
   var showAccountTabs by mutableStateOf(false)
@@ -837,12 +847,35 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     showAccountTabs = false
   }
 
+  // Screens like Color Theme/App Language/Data Controls close this dialog
+  // first (see comments on the rows that call this) then navigate away --
+  // without remembering that, closing THAT screen just landed on a bare
+  // Profile Hub instead of back where the user actually was, looking like
+  // the app "went back to the beginning". Each of those screens' close
+  // functions calls returnToAccountTabsIfPending() to reopen the dialog
+  // instead, only when it was actually left via this path.
+  private var accountTabsReturnPending = false
+
+  fun leaveAccountTabsFor(open: () -> Unit) {
+    accountTabsReturnPending = true
+    closeAccountTabs()
+    open()
+  }
+
+  private fun returnToAccountTabsIfPending() {
+    if (accountTabsReturnPending) {
+      accountTabsReturnPending = false
+      showAccountTabs = true
+    }
+  }
+
   fun openDataControls() {
     screen = AppScreen.DataControls
   }
 
   fun closeDataControls() {
     screen = AppScreen.ProfileHub
+    returnToAccountTabsIfPending()
   }
 
   fun openDataDashboard() {
@@ -851,6 +884,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeDataDashboard() {
     screen = AppScreen.ProfileHub
+    returnToAccountTabsIfPending()
   }
 
   fun openManageCloudStorage() {
@@ -973,6 +1007,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeAppLanguage() {
     screen = appLanguageReturnScreen
+    returnToAccountTabsIfPending()
   }
 
   fun openAdvanced() {
@@ -981,6 +1016,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeAdvanced() {
     screen = AppScreen.ProfileHub
+    returnToAccountTabsIfPending()
   }
 
   var pasteAsFileMode by mutableStateOf(tokenStore.getPasteAsFileMode())
