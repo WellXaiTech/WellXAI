@@ -952,6 +952,32 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
                 Icon(Icons.Outlined.AccountCircle, contentDescription = target.authorName, tint = onBgDim, modifier = Modifier.fillMaxSize())
               }
             }
+
+            // Share, at the same row as the avatar (right-aligned instead
+            // of left), matching the reference profile header.
+            Box(
+              modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = (-16).dp, y = 36.dp)
+                .size(40.dp)
+                .clip(CircleShape)
+                .border(1.dp, onBgDim.copy(alpha = 0.4f), CircleShape)
+                .clickable {
+                  val shareText = buildString {
+                    append(target.authorName)
+                    if (isOwnProfile && viewModel.profileData.profile.bio.isNotBlank()) append(" — ${viewModel.profileData.profile.bio}")
+                    append("\n\nFollow me on ChatGiZa!")
+                  }
+                  val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, shareText)
+                  }
+                  context.startActivity(Intent.createChooser(sendIntent, "Share profile"))
+                },
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(Icons.Filled.Send, contentDescription = "Share", tint = onBg, modifier = Modifier.size(18.dp))
+            }
           }
         }
         item { Spacer(modifier = Modifier.height(44.dp)) }
@@ -1046,16 +1072,16 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
               modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
               horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-              androidx.compose.material3.Button(
-                onClick = { viewModel.toggleFollowMediaUser(target.authorId) },
-                modifier = Modifier.weight(1f)
-              ) { Text(if (following) "Following" else "Follow") }
               OutlinedButton(
                 onClick = {},
                 colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = onBg),
                 border = androidx.compose.foundation.BorderStroke(1.dp, onBgDim.copy(alpha = 0.4f)),
                 modifier = Modifier.weight(1f)
               ) { Text("Message") }
+              androidx.compose.material3.Button(
+                onClick = { viewModel.toggleFollowMediaUser(target.authorId) },
+                modifier = Modifier.weight(1f)
+              ) { Text(if (following) "Following" else "Follow") }
             }
           }
           Spacer(modifier = Modifier.height(16.dp))
