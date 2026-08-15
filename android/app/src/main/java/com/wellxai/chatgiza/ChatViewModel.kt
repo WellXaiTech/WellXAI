@@ -769,6 +769,25 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     }
   }
 
+  // Renames the real account (users.name), read everywhere userName is --
+  // the persistent Account header, ChatGiZa Media posts/profile, etc. --
+  // not just a device-local label.
+  var nameUpdateError by mutableStateOf<String?>(null)
+    private set
+
+  fun updateUserName(name: String) {
+    val trimmed = name.trim()
+    if (trimmed.isBlank()) return
+    val token = tokenStore.getToken() ?: return
+    nameUpdateError = null
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.updateName(token, trimmed)) {
+        is ApiResult.Success -> userName = trimmed
+        is ApiResult.Failure -> nameUpdateError = result.message
+      }
+    }
+  }
+
   // A custom name for the chosen avatar, shown as a small label over it
   // wherever it renders.
   var avatarName by mutableStateOf(tokenStore.getAvatarName())

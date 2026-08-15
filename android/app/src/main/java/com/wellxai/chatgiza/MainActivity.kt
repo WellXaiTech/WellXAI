@@ -4766,6 +4766,8 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
 @Composable
 private fun AccountTabsDialog(viewModel: ChatViewModel) {
   var activeTab by remember { mutableStateOf("My info") }
+  var showNicknameEditor by remember { mutableStateOf(false) }
+  var nicknameText by remember(viewModel.userName) { mutableStateOf(viewModel.userName ?: "") }
   val context = LocalContext.current
   val clipboard = LocalClipboardManager.current
   val uid = remember(viewModel.userId) {
@@ -4912,7 +4914,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             }
           }
           MyInfoDivider()
-          MyInfoRow(icon = Icons.Outlined.EditNote, label = "Nickname", onClick = { comingSoon("Nickname") }) {
+          MyInfoRow(icon = Icons.Outlined.EditNote, label = "Nickname", onClick = { showNicknameEditor = true }) {
             Text(viewModel.userName?.takeIf { it.isNotBlank() } ?: "-", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
           }
           MyInfoDivider()
@@ -5189,6 +5191,44 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         }
         Spacer(modifier = Modifier.height(20.dp))
       }
+    }
+    if (showNicknameEditor) {
+      AlertDialog(
+        onDismissRequest = { showNicknameEditor = false },
+        title = { Text("Nickname") },
+        text = {
+          Column {
+            OutlinedTextField(
+              value = nicknameText,
+              onValueChange = { nicknameText = it },
+              singleLine = true,
+              shape = RoundedCornerShape(12.dp)
+            )
+            // This becomes the account's real display name -- shown
+            // everywhere userName is, ChatGiZa Media posts/profile
+            // included, not just here.
+            Text(
+              "This is the name shown across your whole account.",
+              color = Color.White.copy(alpha = 0.5f),
+              fontSize = 12.sp,
+              modifier = Modifier.padding(top = 8.dp)
+            )
+          }
+        },
+        confirmButton = {
+          TextButton(onClick = {
+            viewModel.updateUserName(nicknameText)
+            showNicknameEditor = false
+          }) {
+            Text("Save", fontWeight = FontWeight.Bold)
+          }
+        },
+        dismissButton = {
+          TextButton(onClick = { showNicknameEditor = false }) {
+            Text("Cancel")
+          }
+        }
+      )
     }
   }
 }
