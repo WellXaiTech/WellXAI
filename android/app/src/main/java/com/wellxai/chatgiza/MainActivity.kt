@@ -5020,10 +5020,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           }
           MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.Tag, label = "Passkeys", onClick = { comingSoon("Passkeys") }) {}
-          MyInfoDivider()
-          MyInfoRow(icon = Icons.Outlined.Bolt, label = "Anti-phishing Code", onClick = { comingSoon("Anti-phishing Code") }) {
-            Text("470765", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
-          }
         }
 
         Spacer(modifier = Modifier.height(18.dp))
@@ -5039,21 +5035,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(icon = Icons.Outlined.Lock, label = "Fund Password", onClick = { comingSoon("Fund Password") }) {
             Text("Not Setup", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
           }
-          MyInfoDivider()
-          MyInfoRow(icon = Icons.Outlined.Description, label = "Secure Transaction Approval", onClick = { comingSoon("Secure Transaction Approval") }) {}
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        SecurityGroupHeader("Scenario-based protection", "Extra protection for specific scenarios.")
-        Column(
-          modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(Color(0xFF141414))
-            .padding(horizontal = 16.dp)
-        ) {
-          MyInfoRow(icon = Icons.Outlined.Lock, label = "Withdrawal Security", onClick = { comingSoon("Withdrawal Security") }) {}
         }
 
         Spacer(modifier = Modifier.height(18.dp))
@@ -5126,7 +5107,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         }
         Spacer(modifier = Modifier.height(20.dp))
       } else if (activeTab == "General") {
-        var mockAlwaysOn by remember { mutableStateOf(false) }
         Column(
           modifier = Modifier
             .fillMaxWidth()
@@ -5145,10 +5125,11 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(
             icon = Icons.Filled.LightMode,
             label = "Color Theme",
-            // Opens the same Theme section inside Appearance (now a 2x2
-            // grid of mini previews) rather than a separate screen -- one
-            // real theme picker, reached two ways. Closes this dialog
-            // first, same fix as Profile Picture/Appearance above.
+            // Opens AppearanceScreen's Theme section (a 2x2 grid of mini
+            // previews). This was the "Appearance" row's duplicate entry
+            // point too -- that one was dropped, this stays since it also
+            // shows the current selection. Closes this dialog first, same
+            // fix as Profile Picture above.
             onClick = {
               viewModel.closeAccountTabs()
               viewModel.openAppearance()
@@ -5157,29 +5138,9 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             Text(AppTheme.fromKey(viewModel.themeMode).label, color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
           }
           MyInfoDivider()
-          MyInfoRow(
-            icon = Icons.Outlined.Palette,
-            label = "Appearance",
-            // Moved here from Settings -> App, replacing the old
-            // placeholder "Color Preferences" row -- AppearanceScreen is
-            // rendered from the app's root screen switch, not from within
-            // this dialog's own composition, so it has to close first
-            // (same fix as Profile Picture above) for it to actually show.
-            onClick = {
-              viewModel.closeAccountTabs()
-              viewModel.openAppearance()
-            }
-          ) {}
-          MyInfoDivider()
-          MyInfoRow(icon = Icons.Outlined.Smartphone, label = "Always on (no screen lock)", showChevron = false, onClick = {}) {
-            Switch(checked = mockAlwaysOn, onCheckedChange = { mockAlwaysOn = it })
-          }
-          MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.HelpOutline, label = "Help Center", onClick = { comingSoon("Help Center") }) {}
           MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.ScreenShare, label = "Trade market overview", onClick = { comingSoon("Trade market overview") }) {}
-          MyInfoDivider()
-          MyInfoRow(icon = Icons.Outlined.Headset, label = "Contact Support", onClick = { comingSoon("Contact Support") }) {}
           MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.EditNote, label = "User feedback", onClick = { comingSoon("User feedback") }) {}
           MyInfoDivider()
