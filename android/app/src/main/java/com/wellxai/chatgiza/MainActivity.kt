@@ -5715,7 +5715,7 @@ internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () ->
 // posts go through /api/media/posts as plain JSON (no blob storage
 // provisioned yet), so a full-resolution photo would both blow past the
 // request size the backend accepts and bloat every other user's feed load.
-private fun uriToPostImageDataUrl(context: android.content.Context, uri: Uri): String? {
+internal fun uriToPostImageDataUrl(context: android.content.Context, uri: Uri): String? {
   return try {
     val maxDim = 1080
     // Decoding a full camera-resolution photo straight to a Bitmap before
