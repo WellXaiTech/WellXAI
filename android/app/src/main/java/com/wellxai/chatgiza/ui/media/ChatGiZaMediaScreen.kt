@@ -85,6 +85,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
@@ -543,63 +544,83 @@ private fun MediaStoriesRow(
       .fillMaxWidth()
       .horizontalScroll(rememberScrollState())
       .padding(horizontal = 12.dp, vertical = 10.dp),
-    horizontalArrangement = Arrangement.spacedBy(14.dp)
+    horizontalArrangement = Arrangement.spacedBy(10.dp)
   ) {
-    val storyShape = RoundedCornerShape(14.dp)
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(60.dp).clickable(onClick = onMyStoryClick)) {
-      Box(contentAlignment = Alignment.BottomEnd) {
-        if (myImage != null) {
-          AsyncImage(
-            model = myImage,
-            contentDescription = "Your story",
-            modifier = Modifier.size(52.dp).clip(storyShape).border(1.dp, Color(0xFFDADADA), storyShape),
-            contentScale = ContentScale.Crop
-          )
-        } else {
-          Icon(Icons.Outlined.AccountCircle, contentDescription = "Your story", tint = Color.Gray, modifier = Modifier.size(52.dp))
-        }
+    MediaStoryCard(
+      image = myImage,
+      label = "My story",
+      showAddBadge = true,
+      onClick = onMyStoryClick
+    )
+    others.forEach { post ->
+      MediaStoryCard(
+        image = post.authorImage,
+        label = post.authorName,
+        showAddBadge = false,
+        onClick = { onOpenProfile(ProfileTarget(post.authorId, post.authorName, post.authorImage)) }
+      )
+    }
+  }
+}
+
+// Card matching the WhatsApp Status-tab reference: a subtly-tinted card
+// with a circular avatar sitting in the upper portion (not full-bleed),
+// a "+" badge overlapping that circle's bottom-right corner for "My
+// story", and the name as its own line at the bottom of the card.
+@Composable
+private fun MediaStoryCard(image: String?, label: String, showAddBadge: Boolean, onClick: () -> Unit) {
+  val cardShape = RoundedCornerShape(14.dp)
+  Box(
+    modifier = Modifier
+      .width(104.dp)
+      .height(140.dp)
+      .clip(cardShape)
+      .background(Color(0xFFF5F5F5))
+      .border(1.dp, Color(0xFFE2E2E2), cardShape)
+      .clickable(onClick = onClick)
+  ) {
+    Box(
+      modifier = Modifier.align(Alignment.TopCenter).padding(top = 20.dp),
+      contentAlignment = Alignment.BottomEnd
+    ) {
+      if (image != null) {
+        AsyncImage(
+          model = image,
+          contentDescription = label,
+          modifier = Modifier.size(64.dp).clip(CircleShape).border(1.dp, Color(0xFFDADADA), CircleShape),
+          contentScale = ContentScale.Crop
+        )
+      } else {
+        Icon(
+          Icons.Outlined.AccountCircle,
+          contentDescription = label,
+          tint = Color.Gray,
+          modifier = Modifier.size(64.dp)
+        )
+      }
+      if (showAddBadge) {
         Box(
           modifier = Modifier
-            .size(19.dp)
+            .size(24.dp)
             .clip(CircleShape)
-            .background(Color.Black)
-            .border(2.dp, Color.White, CircleShape),
+            .background(Color.White)
+            .border(1.5.dp, Color(0xFFF5F5F5), CircleShape),
           contentAlignment = Alignment.Center
         ) {
-          Icon(Icons.Filled.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(11.dp))
+          Icon(Icons.Filled.Add, contentDescription = null, tint = Color.Black, modifier = Modifier.size(14.dp))
         }
       }
-      Spacer(modifier = Modifier.height(4.dp))
-      Text("Your story", color = Color.Black, fontSize = 11.sp, maxLines = 1, softWrap = false)
     }
-    others.forEach { post ->
-      Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-          .width(60.dp)
-          .clickable { onOpenProfile(ProfileTarget(post.authorId, post.authorName, post.authorImage)) }
-      ) {
-        Box(
-          modifier = Modifier.size(56.dp).clip(storyShape).background(Color.Black).padding(2.5.dp),
-          contentAlignment = Alignment.Center
-        ) {
-          if (post.authorImage != null) {
-            AsyncImage(
-              model = post.authorImage,
-              contentDescription = post.authorName,
-              modifier = Modifier.size(49.dp).clip(RoundedCornerShape(11.dp)).border(2.dp, Color.White, RoundedCornerShape(11.dp)),
-              contentScale = ContentScale.Crop
-            )
-          } else {
-            Box(modifier = Modifier.size(49.dp).clip(RoundedCornerShape(11.dp)).background(Color(0xFFEDEDED)).border(2.dp, Color.White, RoundedCornerShape(11.dp)), contentAlignment = Alignment.Center) {
-              Icon(Icons.Outlined.AccountCircle, contentDescription = post.authorName, tint = Color.Gray, modifier = Modifier.size(36.dp))
-            }
-          }
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(post.authorName, color = Color.Black, fontSize = 11.sp, maxLines = 1, softWrap = false)
-      }
-    }
+
+    Text(
+      label,
+      color = Color.Black,
+      fontSize = 12.sp,
+      fontWeight = FontWeight.SemiBold,
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis,
+      modifier = Modifier.align(Alignment.BottomStart).padding(10.dp)
+    )
   }
 }
 
