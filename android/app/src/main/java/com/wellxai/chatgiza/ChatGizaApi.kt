@@ -444,6 +444,30 @@ object ChatGizaApi {
     }
   }
 
+  // Points users.image (the real account avatar, read everywhere userImage
+  // is -- ChatGiZa Media posts/profile included) at a preset avatar's
+  // Twemoji image, so picking one in the picker isn't only visible in the
+  // couple of screens that check the local preset id directly.
+  suspend fun updateAvatar(token: String, imageUrl: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject().put("image", imageUrl).toString().toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/profile/avatar")
+        .header("Authorization", "Bearer $token")
+        .put(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          val text = response.body?.string().orEmpty()
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
   suspend fun saveProfile(token: String, data: ProfileData): ApiResult<Unit> = withContext(Dispatchers.IO) {
     try {
       val payload = profileDataToJson(data).toString().toRequestBody(JSON)

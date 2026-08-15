@@ -26,6 +26,27 @@ data class UiMessage(val id: String, val role: String, val content: String, val 
 
 fun newPairId(): String = "Q-" + UUID.randomUUID().toString().replace("-", "").take(6).uppercase()
 
+// Renders a single emoji (including multi-codepoint ZWJ sequences like
+// "man technologist") as its Twemoji CDN image URL -- lets a preset avatar
+// become a real, sharable image URL for users.image without rendering or
+// uploading anything ourselves. Verified against the live CDN for every
+// entry in AVATAR_PRESETS before relying on this (variation selectors like
+// U+FE0F must be kept when the source string has one, e.g. "male sign" in
+// the turban/doctor presets -- Twemoji's filenames require it there but
+// omit it everywhere else, which is exactly what preserving the emoji
+// string's own codepoints as-is produces).
+fun emojiToTwemojiUrl(emoji: String): String {
+  val codepoints = mutableListOf<Int>()
+  var i = 0
+  while (i < emoji.length) {
+    val cp = emoji.codePointAt(i)
+    codepoints.add(cp)
+    i += Character.charCount(cp)
+  }
+  val hex = codepoints.joinToString("-") { Integer.toHexString(it) }
+  return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/$hex.png"
+}
+
 // `text` is folded into the outgoing message text (PDF/plain-text files);
 // `imageDataUrls` are sent as vision image parts alongside it (a rendered
 // PDF's pages). A file only ever populates one of the two. `previewBitmap`
@@ -726,15 +747,26 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   // A locally-picked preset avatar, overriding the Google-account photo
-  // wherever the app shows an avatar. Device-local only -- there's no
-  // backend field for this yet, so it won't follow the account to
-  // another device.
+  // wherever the app shows an avatar (the couple of screens that check
+  // this id directly). [emoji], when given, is also pushed to the real
+  // account avatar (users.image via /api/profile/avatar) as its Twemoji
+  // image, so the choice shows up everywhere userImage is read too --
+  // ChatGiZa Media posts/profile included -- not just those screens.
   var avatarPresetId by mutableStateOf(tokenStore.getAvatarPresetId())
     private set
 
-  fun updateAvatarPreset(id: String?) {
+  fun updateAvatarPreset(id: String?, emoji: String? = null) {
     avatarPresetId = id
     tokenStore.setAvatarPresetId(id)
+    if (emoji == null) return
+    val token = tokenStore.getToken() ?: return
+    val imageUrl = emojiToTwemojiUrl(emoji)
+    viewModelScope.launch {
+      when (ChatGizaApi.updateAvatar(token, imageUrl)) {
+        is ApiResult.Success -> userImage = imageUrl
+        is ApiResult.Failure -> {}
+      }
+    }
   }
 
   // A custom name for the chosen avatar, shown as a small label over it
