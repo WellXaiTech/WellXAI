@@ -763,7 +763,10 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     val imageUrl = emojiToTwemojiUrl(emoji)
     viewModelScope.launch {
       when (ChatGizaApi.updateAvatar(token, imageUrl)) {
-        is ApiResult.Success -> userImage = imageUrl
+        is ApiResult.Success -> {
+          userImage = imageUrl
+          tokenStore.setUserImage(imageUrl)
+        }
         is ApiResult.Failure -> {}
       }
     }
@@ -782,7 +785,10 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     nameUpdateError = null
     viewModelScope.launch {
       when (val result = ChatGizaApi.updateName(token, trimmed)) {
-        is ApiResult.Success -> userName = trimmed
+        is ApiResult.Success -> {
+          userName = trimmed
+          tokenStore.setUserName(trimmed)
+        }
         is ApiResult.Failure -> nameUpdateError = result.message
       }
     }

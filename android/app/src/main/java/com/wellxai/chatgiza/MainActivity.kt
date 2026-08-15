@@ -4926,10 +4926,10 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
               Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(40.dp))
             }
           }
-          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_id_badge), label = "Nickname", onClick = { showNicknameEditor = true }) {
+          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_id_lines), label = "Nickname", onClick = { showNicknameEditor = true }) {
             Text(viewModel.userName?.takeIf { it.isNotBlank() } ?: "-", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
           }
-          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_id_rounded), label = "UID", showChevron = false, onClick = {}) {
+          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_id_rounded), iconSize = 26.dp, label = "UID", showChevron = false, onClick = {}) {
             Text(uid, color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp, fontFamily = FontFamily.Monospace)
             Spacer(modifier = Modifier.width(6.dp))
             Icon(
@@ -5216,6 +5216,7 @@ private fun MyInfoRow(
   icon: ImageVector? = null,
   painter: androidx.compose.ui.graphics.painter.Painter? = null,
   iconContent: (@Composable (Color) -> Unit)? = null,
+  iconSize: androidx.compose.ui.unit.Dp = 20.dp,
   label: String,
   showChevron: Boolean = true,
   onClick: () -> Unit,
@@ -5232,9 +5233,9 @@ private fun MyInfoRow(
     if (iconContent != null) {
       iconContent(tint)
     } else if (painter != null) {
-      Icon(painter, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+      Icon(painter, contentDescription = null, tint = tint, modifier = Modifier.size(iconSize))
     } else if (icon != null) {
-      Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+      Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(iconSize))
     }
     Spacer(modifier = Modifier.width(14.dp))
     Text(label, color = Color.White, fontSize = 17.sp, modifier = Modifier.weight(1f))
