@@ -4928,7 +4928,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_id_badge), label = "Nickname", onClick = { showNicknameEditor = true }) {
             Text(viewModel.userName?.takeIf { it.isNotBlank() } ?: "-", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
           }
-          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_electronic_id), label = "UID", showChevron = false, onClick = {}) {
+          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_id_rounded), label = "UID", showChevron = false, onClick = {}) {
             Text(uid, color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp, fontFamily = FontFamily.Monospace)
             Spacer(modifier = Modifier.width(6.dp))
             Icon(
