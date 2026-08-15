@@ -468,6 +468,29 @@ object ChatGizaApi {
     }
   }
 
+  // Points users.name (the real account display name, read everywhere
+  // userName is -- ChatGiZa Media posts/profile included) at the nickname
+  // the user typed, so it's not just a device-local label.
+  suspend fun updateName(token: String, name: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject().put("name", name).toString().toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/profile/name")
+        .header("Authorization", "Bearer $token")
+        .put(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          val text = response.body?.string().orEmpty()
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
   suspend fun saveProfile(token: String, data: ProfileData): ApiResult<Unit> = withContext(Dispatchers.IO) {
     try {
       val payload = profileDataToJson(data).toString().toRequestBody(JSON)
