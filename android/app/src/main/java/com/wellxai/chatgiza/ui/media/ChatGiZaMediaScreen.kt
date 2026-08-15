@@ -533,22 +533,22 @@ private fun MediaStoryCard(image: String?, label: String, showAddBadge: Boolean,
   val cardShape = RoundedCornerShape(14.dp)
   Box(
     modifier = Modifier
-      .width(104.dp)
-      .height(140.dp)
+      .width(84.dp)
+      .height(112.dp)
       .clip(cardShape)
       .background(Color(0xFFF5F5F5))
       .border(1.dp, Color(0xFFE2E2E2), cardShape)
       .clickable(onClick = onClick)
   ) {
     Box(
-      modifier = Modifier.align(Alignment.TopCenter).padding(top = 20.dp),
+      modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 30.dp),
       contentAlignment = Alignment.BottomEnd
     ) {
       if (image != null) {
         AsyncImage(
           model = image,
           contentDescription = label,
-          modifier = Modifier.size(64.dp).clip(CircleShape).border(1.dp, Color(0xFFDADADA), CircleShape),
+          modifier = Modifier.size(46.dp).clip(CircleShape).border(1.dp, Color(0xFFDADADA), CircleShape),
           contentScale = ContentScale.Crop
         )
       } else {
@@ -556,19 +556,19 @@ private fun MediaStoryCard(image: String?, label: String, showAddBadge: Boolean,
           Icons.Outlined.AccountCircle,
           contentDescription = label,
           tint = Color.Gray,
-          modifier = Modifier.size(64.dp)
+          modifier = Modifier.size(46.dp)
         )
       }
       if (showAddBadge) {
         Box(
           modifier = Modifier
-            .size(24.dp)
+            .size(19.dp)
             .clip(CircleShape)
             .background(Color.White)
             .border(1.5.dp, Color(0xFFF5F5F5), CircleShape),
           contentAlignment = Alignment.Center
         ) {
-          Icon(Icons.Filled.Add, contentDescription = null, tint = Color.Black, modifier = Modifier.size(14.dp))
+          Icon(Icons.Filled.Add, contentDescription = null, tint = Color.Black, modifier = Modifier.size(11.dp))
         }
       }
     }
@@ -576,11 +576,11 @@ private fun MediaStoryCard(image: String?, label: String, showAddBadge: Boolean,
     Text(
       label,
       color = Color.Black,
-      fontSize = 12.sp,
+      fontSize = 11.sp,
       fontWeight = FontWeight.SemiBold,
       maxLines = 1,
       overflow = TextOverflow.Ellipsis,
-      modifier = Modifier.align(Alignment.BottomStart).padding(10.dp)
+      modifier = Modifier.align(Alignment.BottomStart).padding(8.dp)
     )
   }
 }
