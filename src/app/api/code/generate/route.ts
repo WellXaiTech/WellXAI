@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateCode } from "@/lib/ai";
+import { auth } from "@/auth";
+import { getMobileUserId } from "@/lib/mobileAuth";
 
 export async function POST(req: NextRequest) {
+  const session = await auth();
+  const userId = session?.user?.id ?? (await getMobileUserId(req));
+  if (!userId) {
+    return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  }
+
   const body = await req.json().catch(() => null);
   const prompt = body?.prompt as string | undefined;
 

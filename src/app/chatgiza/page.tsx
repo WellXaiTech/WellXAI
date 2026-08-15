@@ -172,11 +172,6 @@ const TopBarShareIcon = (
   </svg>
 );
 
-// A fixed tick count for the right-edge scroll strip, not one per message --
-// a simple 0..1 scroll-position indicator, same idea as the minimap
-// scrollbar reference, without needing per-message DOM measurement.
-const SCROLL_STRIP_TICKS = Array.from({ length: 14 });
-
 const TopBarMoreDotsIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
     <circle cx="5" cy="12" r="1.6" />
@@ -440,10 +435,8 @@ function ChatGizaInner() {
   const [celebration, setCelebration] = useState<string | null>(null);
   const [showUpgradeNudge, setShowUpgradeNudge] = useState(false);
   const [topBarMenuOpen, setTopBarMenuOpen] = useState(false);
-  const [scrollFraction, setScrollFraction] = useState(0);
   const [greeting, setGreeting] = useState<string | null>(null);
-  const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
-  const [activeQuestionTrackKey, setActiveQuestionTrackKey] = useState<string | null>(null);
+  const [activeNavMessageId, setActiveNavMessageId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const autoSent = useRef(false);
@@ -1085,59 +1078,38 @@ function ChatGizaInner() {
 
   const active = conversations.find((c) => c.id === activeId) ?? null;
 
-  // Right-edge question navigator: defaults to the newest question whenever
-  // one is asked or the conversation is switched, then tracks scroll
-  // position (below) so the tick for whichever question is currently in
-  // view lights up as the user scrolls through the conversation. Adjusted
-  // during render (rather than an effect) since it's a pure derivation of
-  // `active`.
-  const activeQuestionKey = active ? `${active.id}:${active.messages.length}` : null;
-  if (activeQuestionKey !== activeQuestionTrackKey) {
-    setActiveQuestionTrackKey(activeQuestionKey);
-    const userMsgs = active?.messages.filter((m) => m.role === "user") ?? [];
-    const last = userMsgs[userMsgs.length - 1];
-    setActiveQuestionId(last ? last.id : null);
-  }
-
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [active?.messages, loading]);
 
-  // Drives the right-edge scroll-position strip -- a plain 0..1 fraction is
-  // enough to place the highlighted tick; no need to track per-message
-  // positions for a lightweight visual position indicator like this.
-  function handleChatScroll() {
-    const el = scrollRef.current;
-    if (!el) return;
-    const max = el.scrollHeight - el.clientHeight;
-    setScrollFraction(max > 0 ? el.scrollTop / max : 0);
-  }
-
-  function scrollToFraction(fraction: number) {
-    const el = scrollRef.current;
-    if (!el) return;
-    const max = el.scrollHeight - el.clientHeight;
-    el.scrollTo({ top: fraction * max, behavior: "smooth" });
-  }
-
+  // Right-edge conversation navigator: one marker per message (both user
+  // and assistant), evenly spaced down a fixed track. Whichever message is
+  // closest to the vertical center of the scroll container is "active" --
+  // recomputed on every scroll (rAF-throttled) and once up front so it's
+  // correct before the user scrolls at all.
   useEffect(() => {
     const container = scrollRef.current;
-    const userMsgs = active?.messages.filter((m) => m.role === "user") ?? [];
-    if (!container || userMsgs.length === 0) return;
+    const msgs = active?.messages ?? [];
+    if (!container || msgs.length === 0) return;
 
     let ticking = false;
     const updateActiveFromScroll = () => {
       ticking = false;
       const containerRect = container.getBoundingClientRect();
-      const focusLine = containerRect.top + containerRect.height * 0.35;
-      let currentId = userMsgs[0].id;
-      for (const m of userMsgs) {
+      const center = containerRect.top + containerRect.height / 2;
+      let closestId = msgs[0].id;
+      let closestDistance = Infinity;
+      for (const m of msgs) {
         const el = document.getElementById(`msg-${m.id}`);
-        if (el && el.getBoundingClientRect().top <= focusLine) {
-          currentId = m.id;
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        const distance = Math.abs(rect.top + rect.height / 2 - center);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestId = m.id;
         }
       }
-      setActiveQuestionId(currentId);
+      setActiveNavMessageId(closestId);
     };
 
     const onScroll = () => {
@@ -1146,6 +1118,7 @@ function ChatGizaInner() {
       requestAnimationFrame(updateActiveFromScroll);
     };
 
+    updateActiveFromScroll();
     container.addEventListener("scroll", onScroll, { passive: true });
     return () => container.removeEventListener("scroll", onScroll);
   }, [active?.id, active?.messages]);
@@ -2013,61 +1986,36 @@ function ChatGizaInner() {
           )}
         </div>
 
-        {/* Persistent right-edge message navigator, matching the reference
-            screenshot's behavior exactly: collapsed to small ticks by
-            default, and the full list of questions opens on its own the
-            moment the mouse passes over the strip -- no click needed to
-            open it. Only shows up once a conversation has grown past its
-            first question (a single question has nothing to navigate to).
-            Ticks sit at fixed percentages down a bounded track, spanning
-            the full conversation from first question (top) to latest
-            (bottom), so a long conversation can never push a tick outside
-            the viewport where it would be unreachable; the opened list
-            scrolls internally for the same reason. The tick (and list
-            entry) for whichever question is currently in view, or was just
-            asked, is highlighted; clicking any entry jumps straight to it. */}
-        {active && (() => {
-          const userMsgs = active.messages.filter((m) => m.role === "user");
-          if (userMsgs.length < 2) return null;
-          const jumpTo = (id: string) => {
-            setActiveQuestionId(id);
-            document.getElementById(`msg-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-          };
-          return (
-            <div className="group fixed right-0 top-24 bottom-24 z-30 hidden w-16 sm:block">
-              {userMsgs.map((m, i) => {
-                const isActiveQuestion = activeQuestionId === m.id;
-                const topPercent = (i / (userMsgs.length - 1)) * 100;
-                return (
-                  <span
-                    key={m.id}
-                    aria-hidden
-                    className={`absolute right-2 h-[3px] rounded-full transition-all duration-150 ${
-                      isActiveQuestion ? "w-6 bg-foreground" : "w-4 bg-foreground/25"
-                    }`}
-                    style={{ top: `${topPercent}%`, transform: "translateY(-50%)" }}
-                  />
-                );
-              })}
-
-              <div className="pointer-events-none absolute right-8 top-0 max-h-full w-52 overflow-y-auto rounded-xl border border-border/40 bg-surface opacity-0 shadow-lg transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
-                <div className="py-1">
-                  {userMsgs.map((m) => (
-                    <button
-                      key={m.id}
-                      onClick={() => jumpTo(m.id)}
-                      className={`block w-full truncate px-3 py-2 text-left text-xs hover:bg-surface-2 ${
-                        activeQuestionId === m.id ? "text-foreground" : "text-muted"
-                      }`}
-                    >
-                      {m.content || "…"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          );
-        })()}
+        {/* Right-edge conversation navigator -- one marker per message
+            (user and assistant), evenly spaced down a fixed track so a
+            long conversation never pushes a marker outside the viewport.
+            The marker for whichever message is currently centered in the
+            scroll container is highlighted (see the scroll effect above);
+            clicking any marker jumps straight to that message. */}
+        {active && active.messages.length >= 2 && (
+          <nav
+            aria-label="Conversation navigation"
+            className="fixed right-2 top-24 bottom-24 z-30 hidden w-4 flex-col items-end justify-between sm:flex"
+          >
+            {active.messages.map((m) => {
+              const isActive = activeNavMessageId === m.id;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveNavMessageId(m.id);
+                    document.getElementById(`msg-${m.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  }}
+                  aria-label={`Jump to ${m.role === "user" ? "your message" : "reply"}: ${m.content.slice(0, 40) || "…"}`}
+                  className={`ml-auto rounded-full transition-all duration-150 ${
+                    isActive ? "h-[3px] w-5 bg-foreground" : "h-[2px] w-3.5 bg-foreground/25 hover:bg-foreground/50"
+                  }`}
+                />
+              );
+            })}
+          </nav>
+        )}
 
         {!active ? (
           <div className="relative mx-auto flex w-full max-w-[var(--max-w-chat)] flex-1 flex-col items-center justify-end px-4 pb-3 sm:justify-center sm:pb-0">
@@ -2137,7 +2085,6 @@ function ChatGizaInner() {
           <>
             <div
               ref={scrollRef}
-              onScroll={handleChatScroll}
               className="no-scrollbar mx-auto w-full max-w-[var(--content-width)] flex-1 overflow-y-auto px-4 py-8 space-y-4"
             >
               {active.messages.map((m) => {
@@ -2185,24 +2132,6 @@ function ChatGizaInner() {
                 );
               })}
             </div>
-
-            {active.messages.length > 2 && (
-              <div className="pointer-events-none fixed right-1.5 top-1/2 z-30 hidden -translate-y-1/2 flex-col items-end gap-1.5 sm:flex">
-                {SCROLL_STRIP_TICKS.map((_, i) => {
-                  const isActive = Math.round(scrollFraction * (SCROLL_STRIP_TICKS.length - 1)) === i;
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => scrollToFraction(i / (SCROLL_STRIP_TICKS.length - 1))}
-                      aria-label={`Jump to ${Math.round((i / (SCROLL_STRIP_TICKS.length - 1)) * 100)}%`}
-                      className={`pointer-events-auto rounded-full transition-all ${
-                        isActive ? "h-4 w-1 bg-foreground" : "h-2 w-1 bg-muted/40 hover:bg-muted"
-                      }`}
-                    />
-                  );
-                })}
-              </div>
-            )}
 
             <ChatComposer
               variant="bar"

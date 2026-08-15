@@ -10,7 +10,7 @@ export default function ComingSoonModal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-6" onClick={onClose}>
       <div
         className="card w-full max-w-sm rounded-2xl p-5 text-center"
         onClick={(e) => e.stopPropagation()}

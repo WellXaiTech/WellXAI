@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { COUNTRIES } from "@/lib/countries";
+import { checkBirthDate, getMaxBirthDate } from "@/lib/ageGate";
 
 export default function OnboardingModal({
   defaultName,
@@ -15,7 +16,7 @@ export default function OnboardingModal({
   const [fullName, setFullName] = useState(defaultName);
   const [birthDate, setBirthDate] = useState("");
   const [country, setCountry] = useState("");
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const birthDateCheck = checkBirthDate(birthDate);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6" onClick={onSkip}>
@@ -34,13 +35,16 @@ export default function OnboardingModal({
         />
 
         <label className="mb-1 block text-xs text-muted">Date of birth</label>
-        <input
-          type="date"
-          value={birthDate}
-          onChange={(e) => setBirthDate(e.target.value)}
-          max={todayIso}
-          className="mb-4 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
-        />
+        <div className="mb-4">
+          <input
+            type="date"
+            value={birthDate}
+            onChange={(e) => setBirthDate(e.target.value)}
+            max={getMaxBirthDate()}
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+          />
+          {!birthDateCheck.ok && <p className="mt-1 text-xs text-red-500">{birthDateCheck.reason}</p>}
+        </div>
 
         <label className="mb-1 block text-xs text-muted">Country</label>
         <select
@@ -58,7 +62,8 @@ export default function OnboardingModal({
 
         <button
           onClick={() => onSave(fullName.trim(), birthDate, country)}
-          className="btn-primary mb-2 w-full rounded-full py-2.5 text-sm font-medium hover:opacity-85"
+          disabled={!birthDateCheck.ok}
+          className="btn-primary mb-2 w-full rounded-full py-2.5 text-sm font-medium hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Continue
         </button>
