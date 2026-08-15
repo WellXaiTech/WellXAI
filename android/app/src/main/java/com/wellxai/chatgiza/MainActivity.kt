@@ -4794,9 +4794,48 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         }
         Spacer(modifier = Modifier.width(20.dp))
         Text("Account", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.weight(1f))
+        // Quick dark-mode toggle -- flips between the two ends of the same
+        // theme system Color Theme/Appearance use (updateThemeMode), not a
+        // separate setting of its own.
+        IconButton(
+          onClick = { viewModel.updateThemeMode(if (viewModel.themeMode == "light") "dark" else "light") },
+          modifier = Modifier.size(32.dp)
+        ) {
+          Icon(Icons.Filled.DarkMode, contentDescription = "Toggle dark mode", tint = Color.White, modifier = Modifier.size(20.dp))
+        }
+        IconButton(
+          onClick = { viewModel.closeAccountTabs(); viewModel.openAppLanguage() },
+          modifier = Modifier.size(32.dp)
+        ) {
+          Icon(Icons.Outlined.Language, contentDescription = "Language", tint = Color.White, modifier = Modifier.size(20.dp))
+        }
       }
 
-      Spacer(modifier = Modifier.height(24.dp))
+      Spacer(modifier = Modifier.height(20.dp))
+
+      // Persistent identity row -- same avatar/name shown lower down on
+      // the "My info" tab, surfaced here too so it's visible no matter
+      // which tab is open, matching the reference layout.
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        val headerPreset = AVATAR_PRESETS.find { it.id == viewModel.avatarPresetId }
+        if (headerPreset != null) {
+          AvatarPresetThumbnail(headerPreset, 50.dp, name = null)
+        } else if (viewModel.userImage != null) {
+          AsyncImage(model = viewModel.userImage, contentDescription = "Profile", modifier = Modifier.size(50.dp).clip(CircleShape))
+        } else {
+          Icon(Icons.Outlined.AccountCircle, contentDescription = "Profile", tint = Color.White, modifier = Modifier.size(50.dp))
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+          (viewModel.avatarName ?: viewModel.userName ?: "You").uppercase(),
+          color = Color.White,
+          fontSize = 20.sp,
+          fontWeight = FontWeight.ExtraBold
+        )
+      }
+
+      Spacer(modifier = Modifier.height(20.dp))
 
       Row(
         modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
