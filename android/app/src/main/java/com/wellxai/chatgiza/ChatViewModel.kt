@@ -1658,7 +1658,13 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     loadHistory()
     // Actually take the user into that identity's chat -- just updating
     // state left them stuck on this same screen with nothing visibly
-    // happening, which read as the switch "not being accepted".
+    // happening, which read as the switch "not being accepted". This is a
+    // deliberate jump to Chat, not a "close and go back" -- clear any
+    // pending reopen-Account-tabs flag (set if Switch/Create Account was
+    // reached via the Subaccount row) so it doesn't fire later on some
+    // unrelated screen close and flash Profile Hub before "correcting"
+    // itself back to where the user actually navigated.
+    accountTabsReturnPending = false
     screen = AppScreen.Chat
   }
 
@@ -1670,6 +1676,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     activeConversationId = null
     messages = emptyList()
     loadHistory()
+    accountTabsReturnPending = false
     screen = AppScreen.Chat
   }
 
