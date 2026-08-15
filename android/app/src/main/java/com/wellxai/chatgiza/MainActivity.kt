@@ -4584,7 +4584,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
           Text("UID: $uid", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp, fontFamily = FontFamily.Monospace)
           Spacer(modifier = Modifier.width(6.dp))
           Icon(
-            Icons.Outlined.ContentCopy,
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_copy),
             contentDescription = "Copy UID",
             tint = Color.White.copy(alpha = 0.5f),
             modifier = Modifier.size(12.dp).clickable {
@@ -4938,7 +4938,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             Text(uid, color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp, fontFamily = FontFamily.Monospace)
             Spacer(modifier = Modifier.width(6.dp))
             Icon(
-              Icons.Outlined.ContentCopy,
+              painter = androidx.compose.ui.res.painterResource(R.drawable.ic_copy),
               contentDescription = "Copy UID",
               tint = Color.White.copy(alpha = 0.5f),
               modifier = Modifier.size(15.dp).clickable {
@@ -8576,7 +8576,7 @@ private fun CollabChatScreen(viewModel: ChatViewModel) {
         ) {
           Text(session.code, color = Color.White, fontSize = 13.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
           Spacer(Modifier.width(6.dp))
-          Icon(Icons.Outlined.ContentCopy, contentDescription = "Copy code", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(14.dp))
+          Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_copy), contentDescription = "Copy code", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(14.dp))
         }
       }
     }
