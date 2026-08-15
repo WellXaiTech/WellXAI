@@ -5043,14 +5043,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             onClick = { viewModel.closeAccountTabs(); viewModel.openDataDashboard() }
           ) {}
           MyInfoRow(icon = Icons.Outlined.Lock, label = "App Lock", onClick = { comingSoon("App Lock") }) {}
-          // Moved here from Settings, which is being retired -- this is
-          // the only sign-out entry point left in the app now.
-          MyInfoRow(
-            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_logout),
-            label = "Sign out",
-            showChevron = false,
-            onClick = { viewModel.signOut() }
-          ) {}
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -5131,7 +5123,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           ) {
             Text(AppTheme.fromKey(viewModel.themeMode).label, color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
           }
-          MyInfoRow(icon = Icons.Outlined.ScreenShare, label = "Trade market overview", onClick = { comingSoon("Trade market overview") }) {}
           // Help Center/User feedback/About Us/Terms of Use/Privacy Policy
           // all collapsed into the single "About Us" entry point (Profile
           // Hub's footer link), which now also lists Help Center and User
