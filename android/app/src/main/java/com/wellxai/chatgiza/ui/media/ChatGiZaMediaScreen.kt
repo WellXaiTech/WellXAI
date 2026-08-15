@@ -308,7 +308,12 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
             .padding(28.dp),
           horizontalAlignment = Alignment.CenterHorizontally
         ) {
-          NotificationBellIcon(modifier = Modifier.size(32.dp), tint = Color.Black)
+          Icon(
+            androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_bell),
+            contentDescription = null,
+            tint = Color.Black,
+            modifier = Modifier.size(32.dp)
+          )
           Spacer(modifier = Modifier.height(12.dp))
           Text("No notifications yet", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
           Spacer(modifier = Modifier.height(4.dp))
@@ -450,57 +455,13 @@ private fun ChatGiZaHeader(
     }
     Spacer(modifier = Modifier.width(4.dp))
     IconButton(onClick = onNotificationsClick) {
-      NotificationBellIcon(modifier = Modifier.size(22.dp), tint = Color.Black)
+      Icon(
+        androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_bell),
+        contentDescription = null,
+        tint = Color.Black,
+        modifier = Modifier.size(22.dp)
+      )
     }
-  }
-}
-
-// Hand-drawn -- no notifications backend exists yet, so this is a clearly
-// labeled placeholder ("No notifications yet") rather than a dead icon.
-@Composable
-private fun NotificationBellIcon(modifier: Modifier = Modifier, tint: Color = Color.Black) {
-  Canvas(modifier = modifier) {
-    val scale = size.width / 24f
-    val strokeW = 1.6f * scale
-    drawArc(
-      color = tint,
-      startAngle = 180f,
-      sweepAngle = 180f,
-      useCenter = false,
-      topLeft = Offset(4.5f * scale, 3f * scale),
-      size = Size(15f * scale, 15f * scale),
-      style = Stroke(width = strokeW, cap = StrokeCap.Round, join = StrokeJoin.Round)
-    )
-    drawLine(
-      color = tint,
-      start = Offset(4.5f * scale, 10.5f * scale),
-      end = Offset(3f * scale, 17f * scale),
-      strokeWidth = strokeW,
-      cap = StrokeCap.Round
-    )
-    drawLine(
-      color = tint,
-      start = Offset(19.5f * scale, 10.5f * scale),
-      end = Offset(21f * scale, 17f * scale),
-      strokeWidth = strokeW,
-      cap = StrokeCap.Round
-    )
-    drawLine(
-      color = tint,
-      start = Offset(3f * scale, 17f * scale),
-      end = Offset(21f * scale, 17f * scale),
-      strokeWidth = strokeW,
-      cap = StrokeCap.Round
-    )
-    drawArc(
-      color = tint,
-      startAngle = 0f,
-      sweepAngle = 180f,
-      useCenter = false,
-      topLeft = Offset(9.5f * scale, 17f * scale),
-      size = Size(5f * scale, 5f * scale),
-      style = Stroke(width = strokeW, cap = StrokeCap.Round, join = StrokeJoin.Round)
-    )
   }
 }
 
@@ -872,7 +833,12 @@ private fun MediaBottomNavigation(
     }
 
     IconButton(onClick = onNotificationsClick) {
-      NotificationBellIcon(modifier = Modifier.size(22.dp), tint = Color.DarkGray)
+      Icon(
+        androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_bell),
+        contentDescription = null,
+        tint = Color.DarkGray,
+        modifier = Modifier.size(22.dp)
+      )
     }
 
     if (viewModel.userImage != null) {
