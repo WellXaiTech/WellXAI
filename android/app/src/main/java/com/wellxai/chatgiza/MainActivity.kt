@@ -4854,8 +4854,8 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           Spacer(modifier = Modifier.height(4.dp))
           Box(
             modifier = Modifier
-              .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(5.dp))
-              .padding(horizontal = 6.dp, vertical = 2.dp)
+              .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
+              .padding(horizontal = 5.dp, vertical = 1.5.dp)
           ) {
             Text("Site: ChatGiZa Global", color = Color.White.copy(alpha = 0.6f), fontSize = 9.sp)
           }
