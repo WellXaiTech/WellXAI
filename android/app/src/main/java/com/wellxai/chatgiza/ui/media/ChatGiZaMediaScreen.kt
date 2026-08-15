@@ -602,28 +602,54 @@ private fun MediaPost(
     }
 
     // =====================================================
-    // LARGE MEDIA CAROUSEL / VIDEO -- stays at the bottom.
+    // LARGE MEDIA CAROUSEL / VIDEO -- inset with rounded corners and a
+    // bordered background instead of full-bleed, matching how X frames
+    // an attached image/video rather than the old edge-to-edge look.
     // =====================================================
 
+    val mediaShape = RoundedCornerShape(16.dp)
+    val mediaBorder = if (isDark) Color(0xFF2E2E2E) else Color(0xFFE2E2E2)
+    val mediaBg = if (isDark) Color(0xFF141414) else Color(0xFFF2F2F2)
+
     if (post.imageUrls.isNotEmpty()) {
-      HorizontalPager(state = pagerState, modifier = Modifier.fillMaxWidth().aspectRatio(4f / 5f)) { page ->
-        AsyncImage(
-          model = post.imageUrls[page],
-          contentDescription = "Post image",
-          modifier = Modifier.fillMaxSize(),
-          contentScale = ContentScale.Crop
-        )
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(horizontal = 14.dp)
+          .aspectRatio(4f / 5f)
+          .clip(mediaShape)
+          .background(mediaBg)
+          .border(1.dp, mediaBorder, mediaShape)
+      ) {
+        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+          AsyncImage(
+            model = post.imageUrls[page],
+            contentDescription = "Post image",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+          )
+        }
       }
       if (post.imageUrls.size > 1) {
         Text(
           text = "${pagerState.currentPage + 1}/${post.imageUrls.size}",
-          modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
           fontSize = 12.sp,
           color = Color.Gray
         )
       }
     } else if (post.videoUrl != null) {
-      MediaPostVideoPlayer(url = post.videoUrl, modifier = Modifier.fillMaxWidth().aspectRatio(4f / 5f))
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(horizontal = 14.dp)
+          .aspectRatio(4f / 5f)
+          .clip(mediaShape)
+          .background(mediaBg)
+          .border(1.dp, mediaBorder, mediaShape)
+      ) {
+        MediaPostVideoPlayer(url = post.videoUrl, modifier = Modifier.fillMaxSize())
+      }
     }
 
     // =====================================================
