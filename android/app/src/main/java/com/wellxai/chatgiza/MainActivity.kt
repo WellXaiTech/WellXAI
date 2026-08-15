@@ -8789,8 +8789,7 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         SettingsDivider()
         SettingsMenuRow("Widgets", iconContent = { c -> WidgetsIconCustom(tint = c, modifier = Modifier.size(22.dp)) }) { viewModel.openWidgets() }
         SettingsDivider()
-        SettingsMenuRow("App Language", icon = Icons.Outlined.Language) { viewModel.openAppLanguage() }
-        SettingsDivider()
+        // Moved to Account -> General ("Language") -- not duplicated here.
         SettingsMenuRow("Advanced", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_advanced)) { viewModel.openAdvanced() }
       }
 
