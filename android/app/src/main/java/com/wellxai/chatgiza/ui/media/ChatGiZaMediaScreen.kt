@@ -4,6 +4,8 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -77,6 +79,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -109,6 +112,10 @@ import com.wellxai.chatgiza.MediaCommentComposerSheet
 import com.wellxai.chatgiza.MediaPostComments
 import com.wellxai.chatgiza.MediaPostVideoPlayer
 import com.wellxai.chatgiza.formatMediaPostTimeAgo
+import com.wellxai.chatgiza.uriToPostImageDataUrl
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 // =============================================================
 // CHATGIZA MEDIA -- white/monochrome feed screen (reference layout):
@@ -124,6 +131,30 @@ import com.wellxai.chatgiza.formatMediaPostTimeAgo
 @Composable
 fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeChatGizaMedia() }
+
+  val context = LocalContext.current
+  val screenScope = rememberCoroutineScope()
+  var postingStatus by remember { mutableStateOf(false) }
+  // Tapping "+" on My Story goes straight to the device's own photo picker
+  // instead of opening the full post composer first -- a real, one-tap
+  // way to post a status photo, not just a shortcut into ConnectWithChatGizaSheet.
+  val statusImagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    if (uri != null) {
+      postingStatus = true
+      screenScope.launch {
+        val dataUrl = withContext(Dispatchers.IO) { uriToPostImageDataUrl(context, uri) }
+        if (dataUrl == null) {
+          postingStatus = false
+          Toast.makeText(context, "Couldn't read that photo", Toast.LENGTH_SHORT).show()
+          return@launch
+        }
+        viewModel.createMediaPost("", listOf(dataUrl), null, null, null, "status") { success ->
+          postingStatus = false
+          if (!success) Toast.makeText(context, "Couldn't post your status", Toast.LENGTH_SHORT).show()
+        }
+      }
+    }
+  }
 
   var showConnectSheet by remember { mutableStateOf(false) }
   var replyingToPost by remember { mutableStateOf<ApiMediaPost?>(null) }
@@ -192,7 +223,7 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
           myImage = viewModel.userImage,
           posts = statusEligiblePosts,
           isDark = isDark,
-          onMyStoryClick = { showConnectSheet = true },
+          onMyStoryClick = { statusImagePicker.launch("image/*") },
           onOpenProfile = { target -> viewingProfile = target }
         )
         androidx.compose.material3.HorizontalDivider(color = if (isDark) Color(0xFF2A2A2A) else Color(0xFFEDEDED))
@@ -363,6 +394,15 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
       modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = navHeight + 24.dp),
       onClick = { viewModel.selectTool("ai_agent") }
     )
+
+    if (postingStatus) {
+      Box(
+        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)),
+        contentAlignment = Alignment.Center
+      ) {
+        CircularProgressIndicator(color = Color.White)
+      }
+    }
   }
 
   if (showConnectSheet) {
@@ -526,25 +566,25 @@ private fun MediaStoriesRow(
 @Composable
 private fun MediaStoryCard(image: String?, label: String, showAddBadge: Boolean, isDark: Boolean, onClick: () -> Unit) {
   val fg = if (isDark) Color.White else Color.Black
-  val cardShape = RoundedCornerShape(14.dp)
+  val cardShape = RoundedCornerShape(12.dp)
   Box(
     modifier = Modifier
-      .width(84.dp)
-      .height(112.dp)
+      .width(64.dp)
+      .height(88.dp)
       .clip(cardShape)
       .background(if (isDark) Color(0xFF1A1A1A) else Color(0xFFF5F5F5))
       .border(1.dp, if (isDark) Color(0xFF2E2E2E) else Color(0xFFE2E2E2), cardShape)
       .clickable(onClick = onClick)
   ) {
     Box(
-      modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 30.dp),
+      modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 22.dp),
       contentAlignment = Alignment.BottomEnd
     ) {
       if (image != null) {
         AsyncImage(
           model = image,
           contentDescription = label,
-          modifier = Modifier.size(46.dp).clip(CircleShape).border(1.dp, if (isDark) Color(0xFF3A3A3A) else Color(0xFFDADADA), CircleShape),
+          modifier = Modifier.size(34.dp).clip(CircleShape).border(1.dp, if (isDark) Color(0xFF3A3A3A) else Color(0xFFDADADA), CircleShape),
           contentScale = ContentScale.Crop
         )
       } else {
@@ -552,19 +592,19 @@ private fun MediaStoryCard(image: String?, label: String, showAddBadge: Boolean,
           Icons.Outlined.AccountCircle,
           contentDescription = label,
           tint = Color.Gray,
-          modifier = Modifier.size(46.dp)
+          modifier = Modifier.size(34.dp)
         )
       }
       if (showAddBadge) {
         Box(
           modifier = Modifier
-            .size(19.dp)
+            .size(15.dp)
             .clip(CircleShape)
             .background(fg)
             .border(1.5.dp, if (isDark) Color(0xFF1A1A1A) else Color(0xFFF5F5F5), CircleShape),
           contentAlignment = Alignment.Center
         ) {
-          Icon(Icons.Filled.Add, contentDescription = null, tint = if (isDark) Color.Black else Color.White, modifier = Modifier.size(11.dp))
+          Icon(Icons.Filled.Add, contentDescription = null, tint = if (isDark) Color.Black else Color.White, modifier = Modifier.size(9.dp))
         }
       }
     }
@@ -572,11 +612,11 @@ private fun MediaStoryCard(image: String?, label: String, showAddBadge: Boolean,
     Text(
       label,
       color = fg,
-      fontSize = 11.sp,
+      fontSize = 10.sp,
       fontWeight = FontWeight.SemiBold,
       maxLines = 1,
       overflow = TextOverflow.Ellipsis,
-      modifier = Modifier.align(Alignment.BottomStart).padding(8.dp)
+      modifier = Modifier.align(Alignment.BottomStart).padding(6.dp)
     )
   }
 }
