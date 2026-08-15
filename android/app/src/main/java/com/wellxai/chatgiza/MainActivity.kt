@@ -2377,7 +2377,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
         if (hasCameraPermission) launchCamera() else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
       }
       QuickActionChip(icon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_customize_sparkle), contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(22.dp)) }, label = "Customize GiZa") {
-        viewModel.openAccount()
+        viewModel.openCustomize()
       }
     }
   }
@@ -4542,7 +4542,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
       IconButton(onClick = { comingSoon("Support") }, modifier = Modifier.size(36.dp)) {
         Icon(Icons.Outlined.Headset, contentDescription = "Support", tint = Color.White)
       }
-      IconButton(onClick = { viewModel.openAccount() }, modifier = Modifier.size(36.dp)) {
+      IconButton(onClick = { viewModel.openAccountTabs() }, modifier = Modifier.size(36.dp)) {
         SettingsHexIconCustom(tint = Color.White, modifier = Modifier.size(24.dp))
       }
       IconButton(onClick = { comingSoon("Share profile") }, modifier = Modifier.size(36.dp)) {
@@ -5051,8 +5051,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.ScreenShare, label = "Trusted Devices", onClick = { comingSoon("Trusted Devices") }) {}
           MyInfoDivider()
-          MyInfoRow(icon = Icons.Filled.Person, label = "Account Settings", onClick = { viewModel.closeAccountTabs(); viewModel.openAccount() }) {}
-          MyInfoDivider()
           // Moved here from Settings -> Data & Information.
           MyInfoRow(
             icon = Icons.Outlined.QueryStats,
@@ -5061,6 +5059,15 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           ) {}
           MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.Lock, label = "App Lock", onClick = { comingSoon("App Lock") }) {}
+          MyInfoDivider()
+          // Moved here from Settings, which is being retired -- this is
+          // the only sign-out entry point left in the app now.
+          MyInfoRow(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_logout),
+            label = "Sign out",
+            showChevron = false,
+            onClick = { viewModel.signOut() }
+          ) {}
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -5101,6 +5108,19 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             onClick = { viewModel.closeAccountTabs(); viewModel.openAdvanced() }
           ) {}
           MyInfoDivider()
+          // Moved here from Settings -> GiZa, which is being retired.
+          MyInfoRow(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_customize_sparkle),
+            label = "Customize GiZa",
+            onClick = { viewModel.closeAccountTabs(); viewModel.openCustomize() }
+          ) {}
+          MyInfoDivider()
+          MyInfoRow(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connectors),
+            label = "Connectors",
+            onClick = { viewModel.closeAccountTabs(); viewModel.openConnectors() }
+          ) {}
+          MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.Notifications, label = "Notification Settings", onClick = { comingSoon("Notification Settings") }) {}
           MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.Email, label = "Email Subscriptions", onClick = { comingSoon("Email Subscriptions") }) {}
@@ -5117,6 +5137,13 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(icon = Icons.Outlined.Language, label = "Language", onClick = { viewModel.closeAccountTabs(); viewModel.openAppLanguage() }) {
             Text("English", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
           }
+          MyInfoDivider()
+          // Moved here from Settings -> Voice, which is being retired.
+          MyInfoRow(
+            icon = Icons.Outlined.GraphicEq,
+            label = "Voice",
+            onClick = { viewModel.closeAccountTabs(); viewModel.openVoice() }
+          ) {}
           MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.AttachMoney, label = "Currency Display", onClick = { comingSoon("Currency Display") }) {
             Text("USD", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
@@ -8783,7 +8810,6 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
 @Composable
 private fun AccountScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeAccount() }
-  val context = LocalContext.current
   Scaffold(
     containerColor = Color.Transparent
   ) { padding ->
@@ -8794,90 +8820,22 @@ private fun AccountScreen(viewModel: ChatViewModel) {
         .verticalScroll(rememberScrollState())
         .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
+      // This screen is retired -- every row it used to have (Edit Profile,
+      // Customize GiZa, Connectors, Voice, Advertise/Collaborative Chat/
+      // Data Dashboard, Data Controls, Open Source Licenses/Terms/Privacy,
+      // Sign out, and everything moved before that) now lives in the
+      // Account tabs dialog instead (Kids Mode and NSFW Preferences were
+      // dropped outright, not moved). Nothing navigates to openAccount()
+      // anymore -- the gear icon and the "Customize GiZa" quick action
+      // both go elsewhere now -- so this is unreachable; kept only so
+      // AppScreen.Account/openAccount/closeAccount don't need to be torn
+      // out of the sealed class and back-stack logic elsewhere.
       Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
         Text("Settings", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
       }
-
-      // The Extra Media profile view (avatar, real post count, grid of
-      // your posts) now lives only in Extra's own bottom nav -- this top
-      // row goes back to being Edit Profile, its original destination,
-      // instead of duplicating what Extra already has.
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(14.dp))
-          .clickable(onClick = { viewModel.openEditProfile() })
-          .padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        if (viewModel.userImage != null) {
-          AsyncImage(
-            model = viewModel.userImage,
-            contentDescription = "Profile",
-            modifier = Modifier.size(44.dp).clip(CircleShape)
-          )
-        } else {
-          Icon(Icons.Outlined.AccountCircle, contentDescription = "Profile", tint = colorScheme.onBackground, modifier = Modifier.size(44.dp))
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-          Text(viewModel.userName ?: "You", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-          Text("Edit Profile", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 13.sp)
-        }
-        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.4f))
-      }
-
-      // "App" section (Haptics/Widgets/Advanced) moved to Account ->
-      // Preference, replacing the crypto-exchange placeholder rows there
-      // (Appearance/Language were already moved to Account -> General
-      // earlier) -- no longer duplicated here.
-
-      SettingsSectionHeader("GiZa")
-      SettingsSection {
-        SettingsMenuRow("Customize GiZa", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_customize_sparkle)) { viewModel.openCustomize() }
-        SettingsDivider()
-        SettingsMenuRow("Connectors", painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connectors)) { viewModel.openConnectors() }
-        SettingsDivider()
-        SettingsMenuRow("Kids Mode", iconContent = { c -> KidsModeIconCustom(tint = c, modifier = Modifier.size(22.dp)) }) { viewModel.openKidsMode() }
-        SettingsDivider()
-        SettingsMenuRow("NSFW Preferences", icon = Icons.Outlined.NoAdultContent) { viewModel.openNsfwPreferences() }
-      }
-
-      SettingsSectionHeader("Voice")
-      SettingsSection {
-        SettingsMenuRow("Voice", icon = Icons.Outlined.GraphicEq) { viewModel.openVoice() }
-      }
-
-      // "Business" (Advertise on ChatGiZa) and "Data & Information"
-      // (Collaborative Chat) moved to Account -> My info; Data Dashboard
-      // moved to Account -> Security. Data Controls moved to Account ->
-      // General -> Storage management; Open Source Licenses / Terms of Use
-      // / Privacy Policy moved to Account -> General, alongside Contact
-      // Support/User feedback/About Us. None of these are duplicated here.
-
-      // Report a Problem moved to the Profile Hub's About Us sheet --
-      // this was its only row, so the whole Support section goes with it
-      // rather than leaving an empty header behind.
-
-      Spacer(modifier = Modifier.height(16.dp))
-      Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = { viewModel.signOut() }),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.onBackground.copy(alpha = 0.06f))
-      ) {
-        Row(
-          modifier = Modifier.padding(16.dp),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_logout), contentDescription = null, tint = Color(0xFFFF6B6B))
-          Spacer(modifier = Modifier.width(14.dp))
-          Text("Sign out", color = Color(0xFFFF6B6B), fontSize = 16.sp, fontWeight = FontWeight.Medium)
-        }
-      }
-
       Spacer(modifier = Modifier.height(40.dp))
       SettingsVersionFooter(viewModel)
       Spacer(modifier = Modifier.height(24.dp))
