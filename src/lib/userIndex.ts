@@ -74,10 +74,26 @@ export async function recordUserSeen(
 // key to `users` (workspace members, api keys, media posts/comments), since
 // not every caller path (e.g. the native app's bearer-token auth) goes
 // through auth.ts's jwt callback first.
+//
+// Some callers (workspace.ts) always pass an empty image, since they run on
+// code paths that don't have it handy. If one of those calls happens to be
+// what first creates a user's row, `image` used to be stuck empty forever --
+// every later call, even ones carrying the real image (e.g. media post
+// creation), was a no-op against an existing row. Backfilling a still-empty
+// image here (without ever overwriting a real one) closes that gap.
 export async function ensureUserExists(id: string, email: string, name: string, image: string): Promise<void> {
-  await supabaseAdmin
-    .from("users")
-    .upsert({ id, email: email || null, name: name || null, image: image || null }, { onConflict: "id", ignoreDuplicates: true });
+  const { data: existing } = await supabaseAdmin.from("users").select("image").eq("id", id).maybeSingle();
+
+  if (!existing) {
+    await supabaseAdmin
+      .from("users")
+      .upsert({ id, email: email || null, name: name || null, image: image || null }, { onConflict: "id" });
+    return;
+  }
+
+  if (image && !existing.image) {
+    await supabaseAdmin.from("users").update({ image }).eq("id", id);
+  }
 }
 
 export async function countUsers(): Promise<number> {
