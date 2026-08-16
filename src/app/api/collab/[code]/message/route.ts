@@ -28,6 +28,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cod
   }
 
   const { code } = await params;
+  const key = collabKey(code);
   const body = await req.json().catch(() => ({}));
   const content = typeof body.content === "string" ? body.content.trim() : "";
   const displayName = typeof body.displayName === "string" && body.displayName.trim() ? body.displayName.trim().slice(0, 40) : "Someone";
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cod
   }
 
   try {
-    const data = await kv.get<CollabSession>(collabKey(code));
+    const data = await kv.get<CollabSession>(key);
     if (!data) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
@@ -54,6 +55,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cod
       createdAt: Date.now(),
     });
 
+    // Persisted here, before the (slow) AI call below, instead of only once
+    // at the very end -- two participants posting close together used to
+    // both read the same pre-update session, and whichever of their final
+    // writes landed last would silently overwrite the other's message and
+    // reply. Writing the user's own message right away shrinks that race
+    // window from "however long the AI reply takes" down to one KV round
+    // trip, and the reply is layered onto a freshly re-read copy below so
+    // it doesn't clobber anything another participant added in between.
+    await kv.set(key, data);
+
     // Each speaker's name is prefixed so the model can tell participants
     // apart in a multi-person thread instead of treating them as one
     // undifferentiated "user".
@@ -64,15 +75,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cod
 
     const replyText = await collectStream(streamChatReply(history, null, {}));
 
-    data.messages.push({
+    const assistantMessage = {
       id: crypto.randomUUID(),
-      role: "assistant",
+      role: "assistant" as const,
       content: replyText,
       createdAt: Date.now(),
-    });
+    };
 
-    await kv.set(collabKey(code), data);
-    return NextResponse.json({ session: data });
+    const latest = (await kv.get<CollabSession>(key)) ?? data;
+    latest.messages.push(assistantMessage);
+    await kv.set(key, latest);
+
+    return NextResponse.json({ session: latest });
   } catch (err) {
     console.error("Collab message error", err);
     const message = err instanceof Error ? err.message : "Failed to send message";
