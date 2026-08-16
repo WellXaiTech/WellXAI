@@ -8346,6 +8346,7 @@ private fun OpenSourceLicensesScreen(viewModel: ChatViewModel) {
 // Lets the user pick which existing conversation it lands in, instead of it
 // silently dropping into whatever chat happened to be open or always
 // starting a fresh one -- same as any real chat app's share target.
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ShareTargetPickerScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.cancelPendingShare() }
