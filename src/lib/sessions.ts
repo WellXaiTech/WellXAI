@@ -1,11 +1,22 @@
 import { kv } from "@vercel/kv";
+import { getIpLocation } from "@/lib/ipType";
 
 export type DeviceSession = {
   id: string;
   device: string;
   os: string;
   signedInAt: number;
+  ip: string;
+  location: string;
+  platform: "web" | "mobile";
 };
+
+/** First hop of X-Forwarded-For is the original client behind Vercel's proxy. */
+export function clientIpFromHeaders(h: Headers): string {
+  const xff = h.get("x-forwarded-for");
+  if (xff) return xff.split(",")[0].trim();
+  return h.get("x-real-ip") ?? "unknown";
+}
 
 function sessionsKey(userId: string) {
   return `chatgiza:sessions:${userId}`;
@@ -39,10 +50,18 @@ export function labelDevice(userAgent: string | null): { device: string; os: str
   return { device: `${browser} · ${device}`, os };
 }
 
-export async function recordSession(userId: string, sessionId: string, userAgent: string | null): Promise<void> {
+export async function recordSession(
+  userId: string,
+  sessionId: string,
+  userAgent: string | null,
+  ip: string,
+  platform: "web" | "mobile",
+  deviceLabel?: string | null
+): Promise<void> {
   try {
-    const { device, os } = labelDevice(userAgent);
-    const entry: DeviceSession = { id: sessionId, device, os, signedInAt: Date.now() };
+    const { device, os } = deviceLabel ? { device: deviceLabel, os: platform === "mobile" ? "Android" : "Unknown OS" } : labelDevice(userAgent);
+    const location = await getIpLocation(ip);
+    const entry: DeviceSession = { id: sessionId, device, os, signedInAt: Date.now(), ip, location, platform };
     const existing = (await kv.get<DeviceSession[]>(sessionsKey(userId))) ?? [];
     const next = [entry, ...existing.filter((s) => s.id !== sessionId)].slice(0, MAX_SESSIONS);
     await kv.set(sessionsKey(userId), next);

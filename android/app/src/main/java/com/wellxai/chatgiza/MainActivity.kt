@@ -189,6 +189,7 @@ import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Comment
+import androidx.compose.material.icons.outlined.Computer
 import androidx.compose.material.icons.automirrored.outlined.TrendingFlat
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.AddBox
@@ -525,6 +526,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.SharedConversations -> SharedConversationsScreen(viewModel)
             is AppScreen.CollabChat -> CollabChatScreen(viewModel)
             is AppScreen.Community -> CommunityScreen(viewModel)
+            is AppScreen.TrustedDevices -> TrustedDevicesScreen(viewModel)
             is AppScreen.NsfwPreferences -> NsfwPreferencesScreen(viewModel)
             is AppScreen.Connectors -> ConnectorsScreen(viewModel)
             is AppScreen.Profile -> {
@@ -5054,7 +5056,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           ) {
             Text("Manage on Google", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
           }
-          MyInfoRow(icon = Icons.Outlined.ScreenShare, label = "Trusted Devices", onClick = { comingSoon("Trusted Devices") }) {}
+          MyInfoRow(icon = Icons.Outlined.ScreenShare, label = "Trusted Devices", onClick = { viewModel.leaveAccountTabsFor { viewModel.openTrustedDevices() } }) {}
           MyInfoRow(
             icon = Icons.Outlined.QueryStats,
             label = "Data Dashboard",
@@ -8991,6 +8993,129 @@ private fun CommunityScreen(viewModel: ChatViewModel) {
         Icon(Icons.Filled.ArrowUpward, contentDescription = "Send", tint = Color.Black, modifier = Modifier.size(18.dp))
       }
     }
+  }
+}
+
+private fun formatSessionTime(epochMillis: Long): String {
+  val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
+  sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+  return "${sdf.format(java.util.Date(epochMillis))} +0000 UTC"
+}
+
+// Real Security > Trusted Devices list, replacing what used to be a
+// "coming soon" row -- backed by src/lib/sessions.ts, which every web
+// and native sign-in now writes an entry into (see ChatGizaApi.mobileAuth
+// and src/auth.ts). Deleting a row here calls /api/sessions/revoke,
+// which also kills that device's live token/cookie server-side, not
+// just this list.
+@Composable
+private fun TrustedDevicesScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeTrustedDevices() }
+  var confirmRevoke by remember { mutableStateOf<DeviceSession?>(null) }
+
+  Column(modifier = Modifier.fillMaxSize().background(Color(0xFF000000)).statusBarsPadding()) {
+    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+      Text(
+        "Trusted Devices",
+        color = Color.White,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.align(Alignment.Center)
+      )
+      IconButton(onClick = { viewModel.closeTrustedDevices() }, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(24.dp))
+      }
+    }
+
+    Text(
+      "These devices have been authorized to allow logging into your account.",
+      color = Color.White.copy(alpha = 0.5f),
+      fontSize = 13.sp,
+      modifier = Modifier.padding(horizontal = 16.dp)
+    )
+    Spacer(Modifier.height(8.dp))
+    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
+    val error = viewModel.trustedDevicesError
+    if (error != null) {
+      Text(error, color = Color(0xFFFF6B6B), fontSize = 12.sp, modifier = Modifier.padding(16.dp))
+    }
+
+    if (viewModel.trustedDevicesLoading && viewModel.trustedDevices.isEmpty()) {
+      Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(28.dp))
+      }
+    } else if (viewModel.trustedDevices.isEmpty()) {
+      Text(
+        "No sign-ins recorded yet.",
+        color = Color.White.copy(alpha = 0.4f),
+        fontSize = 13.sp,
+        modifier = Modifier.padding(16.dp)
+      )
+    } else {
+      LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+      ) {
+        items(viewModel.trustedDevices, key = { it.id }) { device ->
+          val isCurrent = device.id == viewModel.trustedDevicesCurrentId
+          Column(modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(
+                if (device.platform == "mobile") Icons.Outlined.Smartphone else Icons.Outlined.Computer,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.8f),
+                modifier = Modifier.size(20.dp)
+              )
+              Spacer(Modifier.width(10.dp))
+              Text(device.device, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+              if (isCurrent) {
+                Text(
+                  "This device",
+                  color = Color.White.copy(alpha = 0.4f),
+                  fontSize = 11.sp,
+                  modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.White.copy(alpha = 0.08f))
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                )
+              } else if (viewModel.isRevokingDevice(device.id)) {
+                CircularProgressIndicator(color = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+              } else {
+                IconButton(onClick = { confirmRevoke = device }, modifier = Modifier.size(32.dp)) {
+                  DeleteIcon(tint = Color.White.copy(alpha = 0.5f))
+                }
+              }
+            }
+            Spacer(Modifier.height(6.dp))
+            Text("Time: ${formatSessionTime(device.signedInAt)}", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
+            Text("Login Location: ${device.location}", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
+            Text("IP Address: ${device.ip}", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
+          }
+          HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
+        }
+      }
+    }
+  }
+
+  val target = confirmRevoke
+  if (target != null) {
+    AlertDialog(
+      onDismissRequest = { confirmRevoke = null },
+      title = { Text("Remove this device?") },
+      text = { Text("${target.device} will be signed out and will need to sign in again.") },
+      confirmButton = {
+        TextButton(onClick = {
+          viewModel.revokeTrustedDevice(target.id)
+          confirmRevoke = null
+        }) {
+          Text("Remove", color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold)
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = { confirmRevoke = null }) { Text("Cancel") }
+      }
+    )
   }
 }
 

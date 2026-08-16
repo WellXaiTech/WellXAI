@@ -78,7 +78,7 @@ type StorageItem = {
   createdAt?: number;
 };
 
-type DeviceSession = { id: string; device: string; os: string; signedInAt: number };
+type DeviceSession = { id: string; device: string; os: string; signedInAt: number; ip?: string; location?: string };
 
 type BillingSummary = {
   subscription: { tier: string | null; planName: string; currentPeriodEnd: number | null; cancelAtPeriodEnd: boolean } | null;
@@ -1466,6 +1466,13 @@ export default function SettingsPanel({
                             {s.device} · {s.os}
                           </p>
                           <p className="text-xs text-muted">{formatDateTime(s.signedInAt)}</p>
+                          {(s.location || s.ip) && (
+                            <p className="text-xs text-muted">
+                              {s.location ? s.location : null}
+                              {s.location && s.ip ? " · " : null}
+                              {s.ip ? s.ip : null}
+                            </p>
+                          )}
                           {s.id === currentSessionId && (
                             <span className="mt-1 inline-block rounded-full border border-border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted">
                               Current session

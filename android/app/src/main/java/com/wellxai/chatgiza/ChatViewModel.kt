@@ -89,6 +89,7 @@ sealed class AppScreen {
   object SharedConversations : AppScreen()
   object CollabChat : AppScreen()
   object Community : AppScreen()
+  object TrustedDevices : AppScreen()
   object NsfwPreferences : AppScreen()
   object Connectors : AppScreen()
   object Profile : AppScreen()
@@ -743,6 +744,59 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         is ApiResult.Failure -> communityError = result.message
       }
       communitySending = false
+    }
+  }
+
+  // Real Security > Trusted Devices list -- previously a "coming soon"
+  // placeholder. Backed by the same sessions.ts sign-in log used by the
+  // web Security tab, extended with IP/location and mobile sign-ins.
+  var trustedDevices by mutableStateOf<List<DeviceSession>>(emptyList())
+    private set
+  var trustedDevicesLoading by mutableStateOf(false)
+    private set
+  var trustedDevicesCurrentId by mutableStateOf<String?>(null)
+    private set
+  var trustedDevicesError by mutableStateOf<String?>(null)
+    private set
+  private var revokingDeviceId by mutableStateOf<String?>(null)
+
+  fun isRevokingDevice(id: String) = revokingDeviceId == id
+
+  fun openTrustedDevices() {
+    screen = AppScreen.TrustedDevices
+    loadTrustedDevices()
+  }
+
+  fun closeTrustedDevices() {
+    returnToAccountTabsIfPending()
+    screen = AppScreen.ProfileHub
+  }
+
+  fun loadTrustedDevices() {
+    val token = tokenStore.getToken() ?: return
+    trustedDevicesLoading = true
+    trustedDevicesError = null
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.getSessions(token)) {
+        is ApiResult.Success -> {
+          trustedDevices = result.value.sessions
+          trustedDevicesCurrentId = result.value.currentSessionId
+        }
+        is ApiResult.Failure -> trustedDevicesError = result.message
+      }
+      trustedDevicesLoading = false
+    }
+  }
+
+  fun revokeTrustedDevice(id: String) {
+    val token = tokenStore.getToken() ?: return
+    revokingDeviceId = id
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.revokeSession(token, id)) {
+        is ApiResult.Success -> trustedDevices = trustedDevices.filter { it.id != id }
+        is ApiResult.Failure -> trustedDevicesError = result.message
+      }
+      revokingDeviceId = null
     }
   }
 

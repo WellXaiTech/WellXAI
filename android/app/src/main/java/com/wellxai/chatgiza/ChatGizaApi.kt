@@ -66,6 +66,18 @@ data class CommunityMessage(
   val createdAt: Long
 )
 
+// Backs the Trusted Devices screen -- one entry per sign-in, web or
+// mobile, recorded server-side in src/lib/sessions.ts.
+data class DeviceSession(
+  val id: String,
+  val device: String,
+  val os: String,
+  val signedInAt: Long,
+  val ip: String,
+  val location: String,
+  val platform: String
+)
+
 data class ApiProfile(
   val nickname: String = "",
   val about: String = "",
@@ -208,7 +220,10 @@ object ChatGizaApi {
 
   suspend fun mobileAuth(idToken: String): ApiResult<AuthResult> = withContext(Dispatchers.IO) {
     try {
-      val body = JSONObject().put("idToken", idToken).toString().toRequestBody(JSON)
+      // Device model (e.g. "TECNO CK6") is what the Trusted Devices list
+      // shows for this sign-in -- sent once here, at token-mint time, not
+      // on every request.
+      val body = JSONObject().put("idToken", idToken).put("deviceModel", android.os.Build.MODEL ?: "").toString().toRequestBody(JSON)
       val request = Request.Builder().url("$BASE_URL/api/mobile/auth").post(body).build()
       client.newCall(request).execute().use { response ->
         val text = response.body?.string().orEmpty()
@@ -1091,6 +1106,58 @@ object ChatGizaApi {
         val text = response.body?.string().orEmpty()
         if (!response.isSuccessful) return@withContext ApiResult.Failure(errorMessage(text, response.code))
         ApiResult.Success(communityMessagesFromJson(JSONObject(text).getJSONArray("messages")))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  data class SessionsResult(val sessions: List<DeviceSession>, val currentSessionId: String?)
+
+  suspend fun getSessions(token: String): ApiResult<SessionsResult> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/sessions")
+        .header("Authorization", "Bearer $token")
+        .get()
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        val json = JSONObject(text)
+        val arr = json.getJSONArray("sessions")
+        val sessions = (0 until arr.length()).map { i ->
+          val s = arr.getJSONObject(i)
+          DeviceSession(
+            id = s.optString("id", java.util.UUID.randomUUID().toString()),
+            device = s.optString("device", "Unknown device"),
+            os = s.optString("os", "Unknown OS"),
+            signedInAt = s.optLong("signedInAt", System.currentTimeMillis()),
+            ip = s.optString("ip", "unknown"),
+            location = s.optString("location", "Unknown"),
+            platform = s.optString("platform", "web")
+          )
+        }
+        val currentSessionId = if (json.has("currentSessionId") && !json.isNull("currentSessionId")) json.optString("currentSessionId") else null
+        ApiResult.Success(SessionsResult(sessions, currentSessionId))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun revokeSession(token: String, sessionId: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject().put("sessionId", sessionId).toString().toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/sessions/revoke")
+        .header("Authorization", "Bearer $token")
+        .post(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        ApiResult.Success(Unit)
       }
     } catch (e: Exception) {
       ApiResult.Failure(e.message ?: "Network error")

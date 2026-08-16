@@ -1,4 +1,5 @@
 import { mintMobileToken } from "@/lib/mobileAuth";
+import { recordSession, clientIpFromHeaders } from "@/lib/sessions";
 
 // Verifies a Google ID token obtained natively (Android Credential Manager)
 // the same way the web "google-one-tap" Credentials provider does (see
@@ -25,11 +26,24 @@ export async function POST(request: Request) {
     return Response.json({ error: "Incomplete Google profile" }, { status: 401 });
   }
 
+  // Minted fresh on every native sign-in (not reused across app
+  // reinstalls/logins), same as the web JWT callback's per-sign-in
+  // sessionId -- each one is its own row on the Trusted Devices list.
+  const sessionId = crypto.randomUUID();
+  const deviceModel = typeof body?.deviceModel === "string" && body.deviceModel.trim() ? body.deviceModel.trim().slice(0, 60) : null;
+  try {
+    const ip = clientIpFromHeaders(request.headers);
+    await recordSession(payload.sub, sessionId, request.headers.get("user-agent"), ip, "mobile", deviceModel);
+  } catch (err) {
+    console.error("recordSession (mobile) failed:", err);
+  }
+
   const token = await mintMobileToken({
     sub: payload.sub,
     email: payload.email,
     name: payload.name ?? null,
     picture: payload.picture ?? null,
+    sessionId,
   });
 
   return Response.json({

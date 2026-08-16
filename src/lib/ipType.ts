@@ -44,3 +44,41 @@ export async function isMobileIp(ip: string): Promise<boolean> {
     return false;
   }
 }
+
+function ipGeoKey(ip: string) {
+  return `chatgiza:ip-geo:${ip}`;
+}
+
+/**
+ * Best-effort "City Country" label for an IP, shown on the Trusted
+ * Devices / Sessions list next to each sign-in. Same ip-api.com lookup
+ * as isMobileIp above (cached separately since it asks for different
+ * fields), and just as best-effort: an inconclusive or failed lookup
+ * shows "Unknown" rather than blocking the sign-in it's attached to.
+ */
+export async function getIpLocation(ip: string): Promise<string> {
+  if (!ip || ip === "unknown") return "Unknown";
+
+  try {
+    const cached = await kv.get<string>(ipGeoKey(ip));
+    if (cached) return cached;
+  } catch {
+    // Cache is an optimization — fall through to a fresh lookup either way.
+  }
+
+  try {
+    const res = await fetch(`http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,city,country`);
+    if (!res.ok) return "Unknown";
+    const data = await res.json();
+    const location = data.status === "success" ? [data.city, data.country].filter(Boolean).join(" ") || "Unknown" : "Unknown";
+    try {
+      await kv.set(ipGeoKey(ip), location, { ex: CACHE_TTL_SECONDS });
+    } catch {
+      // Non-fatal — just means we look this IP up again next time.
+    }
+    return location;
+  } catch (err) {
+    console.error("IP geolocation lookup failed:", err);
+    return "Unknown";
+  }
+}

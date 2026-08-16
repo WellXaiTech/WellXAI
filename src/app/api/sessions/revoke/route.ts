@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { getMobileUserId } from "@/lib/mobileAuth";
 import { revokeSession } from "@/lib/sessions";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId = session?.user?.id ?? (await getMobileUserId(req));
+  if (!userId) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
 
@@ -14,6 +16,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
   }
 
-  await revokeSession(session.user.id, sessionId);
+  await revokeSession(userId, sessionId);
   return NextResponse.json({ ok: true });
 }
