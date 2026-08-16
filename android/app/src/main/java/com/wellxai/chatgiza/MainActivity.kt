@@ -50,6 +50,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -7259,8 +7261,30 @@ private fun VoiceScreen(viewModel: ChatViewModel) {
       // Richer-palette orb, sized up as the screen's hero avatar -- see
       // VoiceLibraryHeroOrb's own doc comment for why it isn't just
       // OrinVoiceBadge reused directly.
+      val heartbeatScale = remember { Animatable(1f) }
+      val heartbeatScope = rememberCoroutineScope()
       Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        VoiceLibraryHeroOrb(modifier = Modifier.size(110.dp), tint = Color.White)
+        VoiceLibraryHeroOrb(
+          modifier = Modifier
+            .size(110.dp)
+            .graphicsLayer {
+              scaleX = heartbeatScale.value
+              scaleY = heartbeatScale.value
+            }
+            .clickable(
+              indication = null,
+              interactionSource = remember { MutableInteractionSource() }
+            ) {
+              heartbeatScope.launch {
+                // Two-beat "lub-dub" heartbeat pulse on tap.
+                heartbeatScale.animateTo(1.18f, tween(140, easing = FastOutSlowInEasing))
+                heartbeatScale.animateTo(1f, tween(160, easing = FastOutSlowInEasing))
+                heartbeatScale.animateTo(1.1f, tween(120, easing = FastOutSlowInEasing))
+                heartbeatScale.animateTo(1f, tween(180, easing = FastOutSlowInEasing))
+              }
+            },
+          tint = Color.White
+        )
       }
 
       Spacer(modifier = Modifier.height(24.dp))
