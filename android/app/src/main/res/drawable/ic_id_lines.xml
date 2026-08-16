@@ -4,7 +4,7 @@
     android:viewportWidth="183.0"
     android:viewportHeight="116.0">
 
-    <!-- Only the evenOdd illustration path -- the plain rounded-rect
+    <!-- Only the evenOdd illustration path; the plain rounded-rect
          "background" path from the original two-layer Jumio asset is
          dropped. A single-tint Icon(tint=...) flattens both paths to the
          exact same color, so keeping both just filled the card-with-cutout
