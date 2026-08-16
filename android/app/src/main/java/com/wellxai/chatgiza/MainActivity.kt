@@ -4572,7 +4572,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
         lineHeight = 14.sp
       )
       Spacer(modifier = Modifier.height(8.dp))
-      HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+      HorizontalDivider(modifier = Modifier.fillMaxWidth(0.45f), color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
       Spacer(modifier = Modifier.height(6.dp))
       Text("Current plan: Free", color = Color.White.copy(alpha = 0.4f), fontSize = 10.sp)
       Spacer(modifier = Modifier.height(8.dp))
@@ -4589,7 +4589,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
             .clip(RoundedCornerShape(50))
             .background(Color(0xFFFF9D2E))
             .clickable { comingSoon("Enter GiZa Max") }
-            .padding(horizontal = 20.dp, vertical = 7.dp)
+            .padding(horizontal = 12.dp, vertical = 4.dp)
         ) {
           Text("Enter GiZa Max", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
