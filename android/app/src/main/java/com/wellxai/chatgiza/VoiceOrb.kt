@@ -177,6 +177,43 @@ fun OrinVoiceBadge(modifier: Modifier = Modifier, tint: Color) {
   }
 }
 
+/** Same shader-based animated sphere as [OrinVoiceBadge], but for any
+ * voice's own colors instead of Orin's fixed blue/purple -- used as a big
+ * hero avatar for whichever voice is currently selected on the plain
+ * Settings > Voice screen. Same API-level guard and shader-failure
+ * fallback to the plain cloud glyph. */
+@Composable
+fun VoiceHeroOrb(
+  modifier: Modifier = Modifier,
+  tint: Color,
+  anchor: Color,
+  colorA: Color,
+  colorB: Color,
+  colorC: Color,
+  seedPhase: Float = 0.42f
+) {
+  var failed by remember { mutableStateOf(false) }
+
+  if (!failed && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    VoiceOrb(
+      modifier = modifier,
+      seedPhase = seedPhase,
+      anchor = anchor,
+      colorA = colorA,
+      colorB = colorB,
+      colorC = colorC,
+      onError = { failed = true }
+    )
+  } else {
+    androidx.compose.material3.Icon(
+      painter = painterResource(R.drawable.ic_cloud),
+      contentDescription = "Voice orb",
+      tint = tint,
+      modifier = modifier
+    )
+  }
+}
+
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
 private fun VoiceOrb(
