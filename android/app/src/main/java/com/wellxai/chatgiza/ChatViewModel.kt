@@ -1491,6 +1491,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeScheduled() {
+    returnToAccountTabsIfPending()
     screen = AppScreen.ProfileHub
   }
 

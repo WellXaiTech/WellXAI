@@ -4596,34 +4596,6 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
       }
     }
 
-    Spacer(modifier = Modifier.height(14.dp))
-    Text("Trending services", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
-    Spacer(modifier = Modifier.height(10.dp))
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-      ProfileHubTrendingItem(label = "Automations", onClick = { comingSoon("Automations") }) { tint ->
-        Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_automations), contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
-      }
-      ProfileHubTrendingItem(label = "Connectors", onClick = { comingSoon("Connectors") }) { tint ->
-        Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connectors), contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
-      }
-      ProfileHubTrendingItem(label = "Language", onClick = { viewModel.openAppLanguage() }) { tint ->
-        Icon(Icons.Outlined.Language, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
-      }
-    }
-
-    Spacer(modifier = Modifier.height(12.dp))
-    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-      Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-          .clip(RoundedCornerShape(50))
-          .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(50))
-          .clickable { comingSoon("All Services") }
-          .padding(horizontal = 20.dp, vertical = 7.dp)
-      ) {
-        Text("All Services", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-      }
-    }
   }
 
   // Pinned to the very bottom of the screen instead of just flowing
@@ -4983,6 +4955,11 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connectors),
             label = "Connectors",
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openConnectors() } }
+          ) {}
+          MyInfoRow(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_automations),
+            label = "Automations",
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openScheduled() } }
           ) {}
           MyInfoRow(icon = Icons.Outlined.Notifications, label = "Notification Settings", onClick = { comingSoon("Notification Settings") }) {}
           MyInfoRow(icon = Icons.Outlined.Email, label = "Email Subscriptions", onClick = { comingSoon("Email Subscriptions") }) {}
@@ -5533,23 +5510,6 @@ private fun BouncingAvatarThumbnail(preset: AvatarPreset, size: Dp, modifier: Mo
     label = "scale"
   )
   AvatarPresetThumbnail(preset, size, modifier.graphicsLayer(scaleX = scale, scaleY = scale))
-}
-
-@Composable
-private fun ProfileHubTrendingItem(label: String, onClick: () -> Unit, icon: @Composable (Color) -> Unit) {
-  Column(
-    horizontalAlignment = Alignment.CenterHorizontally,
-    modifier = Modifier.clickable(onClick = onClick)
-  ) {
-    Box(
-      modifier = Modifier.size(40.dp),
-      contentAlignment = Alignment.Center
-    ) {
-      icon(Color.White)
-    }
-    Spacer(modifier = Modifier.height(4.dp))
-    Text(label, color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
-  }
 }
 
 @Composable
