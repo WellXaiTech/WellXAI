@@ -4530,7 +4530,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
         modifier = Modifier
           .clip(RoundedCornerShape(50))
           .background(Color.White.copy(alpha = 0.1f))
-          .padding(horizontal = 6.dp, vertical = 5.dp)
+          .padding(horizontal = 4.dp, vertical = 2.dp)
       ) {
         Icon(Icons.Filled.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
         Spacer(modifier = Modifier.width(4.dp))
@@ -4543,7 +4543,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
           .clip(RoundedCornerShape(50))
           .background(Color.White.copy(alpha = 0.1f))
           .clickable { comingSoon("Plan") }
-          .padding(horizontal = 6.dp, vertical = 5.dp)
+          .padding(horizontal = 4.dp, vertical = 2.dp)
       ) {
         Text("Free plan", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
         Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(13.dp))
