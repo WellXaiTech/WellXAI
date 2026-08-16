@@ -1,4 +1,5 @@
 import { encode, decode } from "next-auth/jwt";
+import { isRevoked } from "@/lib/sessions";
 
 // The native Android app has no browser session cookie, so it authenticates
 // with a standalone bearer token instead — minted here using Auth.js's own
@@ -15,6 +16,7 @@ export type MobileTokenPayload = {
   email?: string | null;
   name?: string | null;
   picture?: string | null;
+  sessionId?: string;
 };
 
 export async function mintMobileToken(payload: MobileTokenPayload): Promise<string> {
@@ -34,10 +36,28 @@ export async function verifyMobileToken(token: string): Promise<MobileTokenPaylo
   }
 }
 
-/** Returns the signed-in user id from a mobile bearer token, or null if absent/invalid. */
-export async function getMobileUserId(request: Request): Promise<string | null> {
+/**
+ * Returns the decoded token payload, or null if absent/invalid/revoked.
+ * Checks the Trusted Devices revocation list the same way the web JWT
+ * callback does (see src/auth.ts) -- there's no server-side token store to
+ * invalidate directly, so this is what makes deleting a device on the
+ * Trusted Devices screen actually sign that device out, not just remove it
+ * from the list.
+ */
+export async function getMobilePayload(request: Request): Promise<MobileTokenPayload | null> {
   const authHeader = request.headers.get("authorization");
   if (!authHeader?.startsWith("Bearer ")) return null;
   const payload = await verifyMobileToken(authHeader.slice(7));
+  if (!payload?.sub) return null;
+  if (payload.sessionId) {
+    const revoked = await isRevoked(payload.sub, payload.sessionId);
+    if (revoked) return null;
+  }
+  return payload;
+}
+
+/** Returns the signed-in user id from a mobile bearer token, or null if absent/invalid/revoked. */
+export async function getMobileUserId(request: Request): Promise<string | null> {
+  const payload = await getMobilePayload(request);
   return payload?.sub ?? null;
 }

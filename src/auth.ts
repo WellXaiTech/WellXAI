@@ -5,7 +5,7 @@ import { kv } from "@vercel/kv";
 import { headers } from "next/headers";
 import { sendMailBestEffort } from "@/lib/mailer";
 import { welcomeEmail } from "@/lib/emailTemplates";
-import { recordSession, isRevoked } from "@/lib/sessions";
+import { recordSession, isRevoked, clientIpFromHeaders } from "@/lib/sessions";
 import { recordUserSeen } from "@/lib/userIndex";
 import { verifySsoLoginToken } from "@/lib/sso";
 
@@ -56,8 +56,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           token.isNewAccount = false;
         }
         try {
-          const ua = (await headers()).get("user-agent");
-          await recordSession(sub as string, token.sessionId as string, ua);
+          const h = await headers();
+          const ua = h.get("user-agent");
+          const ip = clientIpFromHeaders(h);
+          await recordSession(sub as string, token.sessionId as string, ua, ip, "web");
         } catch (err) {
           console.error("recordSession failed:", err);
         }
