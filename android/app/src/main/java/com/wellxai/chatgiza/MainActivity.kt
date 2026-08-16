@@ -4527,10 +4527,15 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
     Row {
       Row(
         verticalAlignment = Alignment.CenterVertically,
+        // A fixed height, not just small padding, is what actually
+        // controls how tall this looks -- Text's own line box (font
+        // ascent/descent) is taller than its visible glyphs, so shrinking
+        // vertical padding alone left the background just as tall.
         modifier = Modifier
+          .height(20.dp)
           .clip(RoundedCornerShape(50))
           .background(Color.White.copy(alpha = 0.1f))
-          .padding(horizontal = 4.dp, vertical = 2.dp)
+          .padding(horizontal = 4.dp)
       ) {
         Icon(Icons.Filled.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
         Spacer(modifier = Modifier.width(4.dp))
@@ -4540,10 +4545,11 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
       Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
+          .height(20.dp)
           .clip(RoundedCornerShape(50))
           .background(Color.White.copy(alpha = 0.1f))
           .clickable { comingSoon("Plan") }
-          .padding(horizontal = 4.dp, vertical = 2.dp)
+          .padding(horizontal = 4.dp)
       ) {
         Text("Free plan", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
         Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(13.dp))
