@@ -8940,7 +8940,7 @@ private fun CommunityScreen(viewModel: ChatViewModel) {
             if (isMe) "You" else msg.authorName,
             color = Color.White.copy(alpha = 0.4f),
             fontSize = 11.sp,
-            modifier = Modifier.padding(bottom = 2.dp, horizontal = 4.dp)
+            modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 2.dp)
           )
           Box(
             modifier = Modifier
