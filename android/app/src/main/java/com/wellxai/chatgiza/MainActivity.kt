@@ -4961,7 +4961,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         // Account safety and access only. "Fund Password" (a crypto-
         // exchange wallet concept -- ChatGiZa has no funds/wallet) was
         // dropped outright rather than forced into any tab.
-        var mockGoogle2fa by remember { mutableStateOf(true) }
 
         SecurityGroupHeader("Basic Protect", "Essential protection for everyday account activity.")
         Column(
@@ -4975,8 +4974,22 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(icon = Icons.Outlined.Smartphone, label = "Mobile", onClick = { comingSoon("Mobile") }) {
             Text("75****182", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
           }
-          MyInfoRow(icon = Icons.Outlined.Lock, label = "Google 2FA Authentication", showChevron = false, onClick = {}) {
-            Switch(checked = mockGoogle2fa, onCheckedChange = { mockGoogle2fa = it })
+          // Sign-in here is Google-only -- ChatGiZa has no account password
+          // or its own 2FA to toggle, and can't read whether the user's
+          // Google account has 2FA on. A fake in-app switch used to sit here
+          // (local state only, no backend, reset to "on" every recompose);
+          // this instead sends them to where their sign-in's real 2FA
+          // actually lives and can actually be changed.
+          MyInfoRow(
+            icon = Icons.Outlined.Lock,
+            label = "Google 2FA Authentication",
+            onClick = {
+              runCatching {
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://myaccount.google.com/security")))
+              }
+            }
+          ) {
+            Text("Manage on Google", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
           }
           MyInfoRow(icon = Icons.Outlined.Tag, label = "Passkeys", onClick = { comingSoon("Passkeys") }) {}
           // Moved here from My info -- linking another account is an
