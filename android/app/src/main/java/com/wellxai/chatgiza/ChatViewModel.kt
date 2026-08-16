@@ -218,9 +218,12 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var showScreenshotSharePrompt by mutableStateOf(false)
     private set
 
-  /** Only worth offering when there's an actual conversation to share. */
+  /** Offered on any screen, not just an active chat -- was previously
+   * gated to `messages.isNotEmpty()`, so a screenshot taken anywhere other
+   * than an in-progress conversation with messages never showed this at
+   * all, per explicit request to have it work app-wide instead. */
   fun onScreenshotTaken() {
-    if (messages.isNotEmpty()) showScreenshotSharePrompt = true
+    showScreenshotSharePrompt = true
   }
 
   fun dismissScreenshotSharePrompt() {
