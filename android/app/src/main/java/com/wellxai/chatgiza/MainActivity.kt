@@ -5036,7 +5036,21 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
         ) {
-          MyInfoRow(icon = Icons.Outlined.Lock, label = "Change Password", onClick = { comingSoon("Change Password") }) {}
+          // Same reasoning as "Google 2FA Authentication" above -- sign-in
+          // here is Google-only, so there's no ChatGiZa account password to
+          // change. Sends them to where their real sign-in credential
+          // actually lives instead of a "coming soon" dead end.
+          MyInfoRow(
+            icon = Icons.Outlined.Lock,
+            label = "Change Password",
+            onClick = {
+              runCatching {
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://myaccount.google.com/signinoptions/password")))
+              }
+            }
+          ) {
+            Text("Manage on Google", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+          }
           MyInfoRow(icon = Icons.Outlined.ScreenShare, label = "Trusted Devices", onClick = { comingSoon("Trusted Devices") }) {}
           MyInfoRow(
             icon = Icons.Outlined.QueryStats,
