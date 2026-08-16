@@ -528,6 +528,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Community -> CommunityScreen(viewModel)
             is AppScreen.TrustedDevices -> TrustedDevicesScreen(viewModel)
             is AppScreen.StorageManagement -> StorageManagementScreen(viewModel)
+            is AppScreen.SubaccountSettings -> SubaccountSettingsScreen(viewModel)
             is AppScreen.NsfwPreferences -> NsfwPreferencesScreen(viewModel)
             is AppScreen.Connectors -> ConnectorsScreen(viewModel)
             is AppScreen.Profile -> {
@@ -7743,12 +7744,12 @@ private fun AccountSettingsRow(icon: ImageVector, title: String, description: St
 private fun derivedUid(id: String): String =
   (kotlin.math.abs(id.hashCode().toLong()) % 100_000_000L).toString().padStart(8, '0')
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SwitchAccountScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeSwitchAccount() }
-  var manageMode by remember { mutableStateOf(false) }
   var showCreateDialog by remember { mutableStateOf(false) }
-  var confirmDeleteId by remember { mutableStateOf<String?>(null) }
+  var moreSheetTarget by remember { mutableStateOf<ApiSubaccount?>(null) }
   LaunchedEffect(Unit) { viewModel.loadSubaccounts() }
 
   val mainUid = remember(viewModel.userId) { derivedUid(viewModel.userId.orEmpty()) }
@@ -7780,9 +7781,7 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
       name = (viewModel.userName ?: "You").uppercase(),
       uid = mainUid,
       selected = viewModel.activeSubaccountId == null,
-      manageMode = false,
-      onClick = { if (viewModel.activeSubaccountId != null) viewModel.switchToMainAccount() },
-      onDelete = {}
+      onClick = { if (viewModel.activeSubaccountId != null) viewModel.switchToMainAccount() }
     ) { tint ->
       if (viewModel.userImage != null) {
         AsyncImage(model = viewModel.userImage, contentDescription = null, modifier = Modifier.size(40.dp).clip(CircleShape))
@@ -7793,32 +7792,19 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
 
     Spacer(modifier = Modifier.height(20.dp))
 
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-      Box(
-        modifier = Modifier
-          .weight(1f)
-          .clip(RoundedCornerShape(50))
-          .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(50))
-          .clickable { manageMode = !manageMode }
-          .padding(vertical = 14.dp),
-        contentAlignment = Alignment.Center
-      ) {
-        Text(if (manageMode) "Done" else "Manage", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-      }
-      Box(
-        modifier = Modifier
-          .weight(1f)
-          .clip(RoundedCornerShape(50))
-          .background(Color(0xFFFF9D2E))
-          .clickable {
-            if (viewModel.subaccounts.size >= 5) return@clickable
-            showCreateDialog = true
-          }
-          .padding(vertical = 14.dp),
-        contentAlignment = Alignment.Center
-      ) {
-        Text("Create Subaccount", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-      }
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .clip(RoundedCornerShape(50))
+        .background(Color(0xFFFF9D2E))
+        .clickable {
+          if (viewModel.subaccounts.size >= 5) return@clickable
+          showCreateDialog = true
+        }
+        .padding(vertical = 14.dp),
+      contentAlignment = Alignment.Center
+    ) {
+      Text("Create Subaccount", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold)
     }
 
     Spacer(modifier = Modifier.height(24.dp))
@@ -7844,9 +7830,8 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
             name = sub.name.uppercase(),
             uid = derivedUid(sub.id),
             selected = viewModel.activeSubaccountId == sub.id,
-            manageMode = manageMode,
             onClick = { viewModel.switchToSubaccount(sub) },
-            onDelete = { confirmDeleteId = sub.id }
+            onMore = { moreSheetTarget = sub }
           ) { tint ->
             val preset = AVATAR_PRESETS.find { it.id == sub.avatarPresetId }
             if (preset != null) {
@@ -7898,14 +7883,26 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
     )
   }
 
-  confirmDeleteId?.let { id ->
-    val name = viewModel.subaccounts.find { it.id == id }?.name ?: "this subaccount"
-    ConfirmDangerDialog(
-      title = "Delete $name?",
-      message = "This removes the subaccount and its separate chat history. This can't be undone.",
-      onConfirm = { viewModel.deleteSubaccount(id) },
-      onDismiss = { confirmDeleteId = null }
-    )
+  val moreTarget = moreSheetTarget
+  if (moreTarget != null) {
+    ModalBottomSheet(onDismissRequest = { moreSheetTarget = null }, containerColor = Color(0xFF161616)) {
+      Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
+          Text("More", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+          IconButton(onClick = { moreSheetTarget = null }, modifier = Modifier.size(28.dp)) {
+            Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.White)
+          }
+        }
+        SubaccountMoreRow("Settings") {
+          moreSheetTarget = null
+          viewModel.openSubaccountSettings(moreTarget)
+        }
+        SubaccountMoreRow("Account Switch") {
+          moreSheetTarget = null
+          viewModel.switchToSubaccount(moreTarget)
+        }
+      }
+    }
   }
 }
 
@@ -7914,9 +7911,8 @@ private fun SwitchAccountRow(
   name: String,
   uid: String,
   selected: Boolean,
-  manageMode: Boolean,
   onClick: () -> Unit,
-  onDelete: () -> Unit,
+  onMore: (() -> Unit)? = null,
   avatar: @Composable (Color) -> Unit
 ) {
   Row(
@@ -7929,7 +7925,7 @@ private fun SwitchAccountRow(
         if (selected) Color.White else Color.Transparent,
         RoundedCornerShape(14.dp)
       )
-      .clickable(enabled = !manageMode, onClick = onClick)
+      .clickable(onClick = onClick)
       .padding(14.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
@@ -7939,13 +7935,121 @@ private fun SwitchAccountRow(
       Text(name, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
       Text("UID: $uid", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
     }
-    if (manageMode) {
-      IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
-        Icon(Icons.Outlined.Close, contentDescription = "Delete", tint = Color(0xFFFF6B6B), modifier = Modifier.size(20.dp))
-      }
-    } else if (selected) {
+    if (selected) {
       Icon(Icons.Filled.Check, contentDescription = "Active", tint = Color.White, modifier = Modifier.size(20.dp))
     }
+    if (onMore != null) {
+      IconButton(onClick = onMore, modifier = Modifier.size(28.dp)) {
+        Icon(Icons.Outlined.MoreHoriz, contentDescription = "More", tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(20.dp))
+      }
+    }
+  }
+}
+
+@Composable
+private fun SubaccountMoreRow(label: String, onClick: () -> Unit) {
+  Row(
+    modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Text(label, color = Color.White, fontSize = 16.sp, modifier = Modifier.weight(1f))
+    Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
+  }
+}
+
+// Reached via SwitchAccountScreen's "More > Settings" -- only real, backed
+// actions: rename (PATCH /api/subaccounts/[id]) and delete. No Freeze/
+// Login Management/Forced Log Out rows -- those are Bybit-specific
+// security features with no ChatGiZa equivalent, and this app doesn't
+// ship fake toggles that don't do anything.
+@Composable
+private fun SubaccountSettingsScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeSubaccountSettings() }
+  val sub = viewModel.subaccountSettingsTarget
+  var showRename by remember { mutableStateOf(false) }
+  var renameText by remember(sub?.name) { mutableStateOf(sub?.name ?: "") }
+  var confirmDelete by remember { mutableStateOf(false) }
+
+  if (sub == null) {
+    LaunchedEffect(Unit) { viewModel.closeSubaccountSettings() }
+    return
+  }
+
+  Column(modifier = Modifier.fillMaxSize().background(Color(0xFF000000)).statusBarsPadding()) {
+    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+      Text(
+        sub.name,
+        color = Color.White,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.align(Alignment.Center)
+      )
+      IconButton(onClick = { viewModel.closeSubaccountSettings() }, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(24.dp))
+      }
+    }
+
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clickable { renameText = sub.name; showRename = true }
+          .padding(vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Text("Nickname", color = Color.White, fontSize = 16.sp, modifier = Modifier.weight(1f))
+        Text(sub.name, color = Color.White.copy(alpha = 0.4f), fontSize = 14.sp)
+        Spacer(Modifier.width(6.dp))
+        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
+      }
+      HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clickable { confirmDelete = true }
+          .padding(vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Text("Delete Subaccount", color = Color(0xFFFF6B6B), fontSize = 16.sp, modifier = Modifier.weight(1f))
+        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color(0xFFFF6B6B).copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+      }
+    }
+  }
+
+  if (showRename) {
+    AlertDialog(
+      onDismissRequest = { showRename = false },
+      title = { Text("Nickname") },
+      text = {
+        OutlinedTextField(
+          value = renameText,
+          onValueChange = { renameText = it },
+          singleLine = true,
+          shape = RoundedCornerShape(12.dp)
+        )
+      },
+      confirmButton = {
+        TextButton(onClick = {
+          viewModel.renameSubaccount(sub.id, renameText)
+          showRename = false
+        }) { Text("Save", fontWeight = FontWeight.Bold) }
+      },
+      dismissButton = {
+        TextButton(onClick = { showRename = false }) { Text("Cancel") }
+      }
+    )
+  }
+
+  if (confirmDelete) {
+    ConfirmDangerDialog(
+      title = "Delete ${sub.name}?",
+      message = "This removes the subaccount and its separate chat history. This can't be undone.",
+      onConfirm = {
+        viewModel.deleteSubaccount(sub.id)
+        viewModel.closeSubaccountSettings()
+      },
+      onDismiss = { confirmDelete = false }
+    )
   }
 }
 

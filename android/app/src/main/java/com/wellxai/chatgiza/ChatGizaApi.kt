@@ -505,6 +505,26 @@ object ChatGizaApi {
     }
   }
 
+  suspend fun renameSubaccount(token: String, id: String, name: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject().put("name", name).toString().toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/subaccounts/$id")
+        .header("Authorization", "Bearer $token")
+        .patch(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          val text = response.body?.string().orEmpty()
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
   suspend fun deleteSubaccount(token: String, id: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
     try {
       val request = Request.Builder()
