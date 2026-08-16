@@ -7631,7 +7631,25 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
       }
     }
 
-    Spacer(modifier = Modifier.height(20.dp))
+    Spacer(modifier = Modifier.height(24.dp))
+
+    // Everything subaccount-related (rules, create, list) grouped together
+    // below Main Account, instead of the Create button sitting between the
+    // two sections.
+    Text("Subaccounts", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+    Spacer(modifier = Modifier.height(8.dp))
+    Text(
+      "You can create up to 5 subaccounts. Each one has its own separate chat history.",
+      color = Color.White.copy(alpha = 0.4f),
+      fontSize = 12.sp,
+      lineHeight = 16.sp,
+      modifier = Modifier
+        .fillMaxWidth()
+        .clip(RoundedCornerShape(12.dp))
+        .background(Color.White.copy(alpha = 0.05f))
+        .padding(12.dp)
+    )
+    Spacer(modifier = Modifier.height(12.dp))
 
     Box(
       modifier = Modifier
@@ -7648,10 +7666,7 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
       Text("Create Subaccount", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold)
     }
 
-    Spacer(modifier = Modifier.height(24.dp))
-
-    Text("Subaccounts", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
-    Spacer(modifier = Modifier.height(8.dp))
+    Spacer(modifier = Modifier.height(16.dp))
 
     if (viewModel.loadingSubaccounts && viewModel.subaccounts.isEmpty()) {
       Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
