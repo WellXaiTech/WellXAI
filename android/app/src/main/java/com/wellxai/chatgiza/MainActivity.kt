@@ -1397,42 +1397,6 @@ private fun SettingsHexIconCustom(tint: Color, modifier: Modifier = Modifier) {
   }
 }
 
-// Profile Hub's top-bar "share" icon (pasted stroke SVG, viewBox
-// 164x102) -- a person-badge bracket (open right side, head circle,
-// shoulder curve) with a left/right double-arrow swap glyph, replacing
-// the generic Share icon. The pasted viewBox has a lot of empty margin
-// around the actual glyph (it only occupies roughly x:53-113, y:27-89),
-// so this translates that content to the origin before scaling instead
-// of scaling the full 164x102 box, or the glyph would render tiny and
-// off-center.
-private val SHARE_BRACKET_LEFT_PATH = PathParser().parsePathString("M78.5 27.5H67C58.7 27.5 53 33.2 53 42V70C53 78.8 58.7 84.5 67 84.5H78.5").toPath()
-private val SHARE_BRACKET_RIGHT_PATH = PathParser().parsePathString("M109 59V42C109 33.2 103.3 27.5 95 27.5H78.5").toPath()
-private val SHARE_SHOULDER_PATH = PathParser().parsePathString("M65.2 69.7C67.4 62.9 73.4 59.1 81.4 59.1C87.8 59.1 92.7 61.5 96.5 65.8").toPath()
-private val SHARE_ARROW_RIGHT_LINE_PATH = PathParser().parsePathString("M89.2 66.2H112.7").toPath()
-private val SHARE_ARROW_RIGHT_HEAD_PATH = PathParser().parsePathString("M103.3 57.5L112.7 66.2L103.3 74.9").toPath()
-private val SHARE_ARROW_LEFT_LINE_PATH = PathParser().parsePathString("M112.7 80.1H89.2").toPath()
-private val SHARE_ARROW_LEFT_HEAD_PATH = PathParser().parsePathString("M98.6 71.4L89.2 80.1L98.6 88.8").toPath()
-
-@Composable
-private fun ProfileSwitchIconCustom(tint: Color, modifier: Modifier = Modifier) {
-  Canvas(modifier = modifier) {
-    scale(size.width / 60f, pivot = Offset.Zero) {
-      translate(left = -53f, top = -27.5f) {
-        val strokeThin = Stroke(width = 5.8f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        val strokeThick = Stroke(width = 6f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        drawPath(SHARE_BRACKET_LEFT_PATH, color = tint, style = strokeThin)
-        drawPath(SHARE_BRACKET_RIGHT_PATH, color = tint, style = strokeThin)
-        drawCircle(color = tint, radius = 8.9f, center = Offset(81.5f, 48.8f), style = strokeThin)
-        drawPath(SHARE_SHOULDER_PATH, color = tint, style = strokeThin)
-        drawPath(SHARE_ARROW_RIGHT_LINE_PATH, color = tint, style = strokeThick)
-        drawPath(SHARE_ARROW_RIGHT_HEAD_PATH, color = tint, style = strokeThick)
-        drawPath(SHARE_ARROW_LEFT_LINE_PATH, color = tint, style = strokeThick)
-        drawPath(SHARE_ARROW_LEFT_HEAD_PATH, color = tint, style = strokeThick)
-      }
-    }
-  }
-}
-
 // Invite Friends icon (pasted stroke SVG, viewBox 24x24) -- one person
 // (head circle + open shoulder arc) with a "+" cross and a "$" glyph
 // near the bottom-right, matching the user's corrected reference (a
@@ -4558,8 +4522,13 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
       IconButton(onClick = { viewModel.openAccountTabs() }, modifier = Modifier.size(36.dp)) {
         SettingsHexIconCustom(tint = Color.White, modifier = Modifier.size(24.dp))
       }
-      IconButton(onClick = { comingSoon("Share profile") }, modifier = Modifier.size(36.dp)) {
-        ProfileSwitchIconCustom(tint = Color.White, modifier = Modifier.size(24.dp))
+      IconButton(onClick = { viewModel.openSwitchAccount() }, modifier = Modifier.size(36.dp)) {
+        Icon(
+          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_switch_account),
+          contentDescription = "Subaccount",
+          tint = Color.White,
+          modifier = Modifier.size(24.dp)
+        )
       }
     }
 
