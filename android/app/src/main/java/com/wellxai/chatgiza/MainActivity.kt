@@ -4802,6 +4802,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
 private fun AccountTabsDialog(viewModel: ChatViewModel) {
   var showNicknameEditor by remember { mutableStateOf(false) }
   var nicknameText by remember(viewModel.userName) { mutableStateOf(viewModel.userName ?: "") }
+  var showRateDialog by remember { mutableStateOf(false) }
   val context = LocalContext.current
   val clipboard = LocalClipboardManager.current
   val uid = remember(viewModel.userId) {
@@ -5167,7 +5168,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             // Profile Picture/Appearance above).
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openDataControls() } }
           ) {}
-          MyInfoRow(icon = Icons.Outlined.ThumbUp, label = "Rate Our App", onClick = { comingSoon("Rate Our App") }) {}
+          MyInfoRow(icon = Icons.Outlined.ThumbUp, label = "Rate Our App", onClick = { showRateDialog = true }) {}
         }
 
         Spacer(modifier = Modifier.height(14.dp))
@@ -5264,6 +5265,33 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         dismissButton = {
           TextButton(onClick = { showNicknameEditor = false }) {
             Text("Cancel")
+          }
+        }
+      )
+    }
+    if (showRateDialog) {
+      AlertDialog(
+        onDismissRequest = { showRateDialog = false },
+        title = { Text("Enjoying ChatGiZa?", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+        text = { Text("Rate us on Google Play Store.", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+        confirmButton = {
+          TextButton(onClick = {
+            showRateDialog = false
+            val uri = Uri.parse("market://details?id=${context.packageName}")
+            val playStoreIntent = Intent(Intent.ACTION_VIEW, uri).apply {
+              setPackage("com.android.vending")
+            }
+            runCatching { context.startActivity(playStoreIntent) }.onFailure {
+              val webUri = Uri.parse("https://play.google.com/store/apps/details?id=${context.packageName}")
+              runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, webUri)) }
+            }
+          }) {
+            Text("Rate Now", color = Color(0xFFF59E0B), fontWeight = FontWeight.Bold)
+          }
+        },
+        dismissButton = {
+          TextButton(onClick = { showRateDialog = false }) {
+            Text("Later")
           }
         }
       )
