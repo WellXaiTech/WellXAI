@@ -7746,16 +7746,11 @@ private fun derivedUid(id: String): String =
 @Composable
 private fun SwitchAccountScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeSwitchAccount() }
-  var searchQuery by remember { mutableStateOf("") }
   var manageMode by remember { mutableStateOf(false) }
   var showCreateDialog by remember { mutableStateOf(false) }
   var confirmDeleteId by remember { mutableStateOf<String?>(null) }
   LaunchedEffect(Unit) { viewModel.loadSubaccounts() }
 
-  val filteredSubaccounts = remember(viewModel.subaccounts, searchQuery) {
-    if (searchQuery.isBlank()) viewModel.subaccounts
-    else viewModel.subaccounts.filter { it.name.contains(searchQuery, ignoreCase = true) }
-  }
   val mainUid = remember(viewModel.userId) { derivedUid(viewModel.userId.orEmpty()) }
 
   Column(
@@ -7766,13 +7761,16 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
       .padding(horizontal = 16.dp)
       .verticalScroll(rememberScrollState())
   ) {
-    Row(
-      modifier = Modifier.fillMaxWidth().padding(top = 26.dp, bottom = 20.dp),
-      verticalAlignment = Alignment.CenterVertically
-    ) {
-      Text("Switch/Create Account", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-      IconButton(onClick = { viewModel.closeSwitchAccount() }, modifier = Modifier.size(28.dp)) {
-        Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.White)
+    Box(modifier = Modifier.fillMaxWidth().padding(top = 26.dp, bottom = 20.dp)) {
+      Text(
+        "Subaccount",
+        color = Color.White,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.align(Alignment.Center)
+      )
+      IconButton(onClick = { viewModel.closeSwitchAccount() }, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(24.dp))
       }
     }
 
@@ -7795,51 +7793,53 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
 
     Spacer(modifier = Modifier.height(20.dp))
 
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-      Text("Subaccount", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp, modifier = Modifier.weight(1f))
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
       Box(
         modifier = Modifier
+          .weight(1f)
           .clip(RoundedCornerShape(50))
-          .background(Color.White.copy(alpha = 0.08f))
-          .padding(horizontal = 12.dp, vertical = 6.dp)
+          .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(50))
+          .clickable { manageMode = !manageMode }
+          .padding(vertical = 14.dp),
+        contentAlignment = Alignment.Center
       ) {
-        BasicTextField(
-          value = searchQuery,
-          onValueChange = { searchQuery = it },
-          singleLine = true,
-          textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 13.sp),
-          cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
-          decorationBox = { inner ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(Icons.Outlined.Search, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(14.dp))
-              Spacer(modifier = Modifier.width(6.dp))
-              Box {
-                if (searchQuery.isEmpty()) {
-                  Text("Search", color = Color.White.copy(alpha = 0.35f), fontSize = 13.sp)
-                }
-                inner()
-              }
-            }
+        Text(if (manageMode) "Done" else "Manage", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+      }
+      Box(
+        modifier = Modifier
+          .weight(1f)
+          .clip(RoundedCornerShape(50))
+          .background(Color(0xFFFF9D2E))
+          .clickable {
+            if (viewModel.subaccounts.size >= 5) return@clickable
+            showCreateDialog = true
           }
-        )
+          .padding(vertical = 14.dp),
+        contentAlignment = Alignment.Center
+      ) {
+        Text("Create Subaccount", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold)
       }
     }
+
+    Spacer(modifier = Modifier.height(24.dp))
+
+    Text("Subaccounts", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
     Spacer(modifier = Modifier.height(8.dp))
 
     if (viewModel.loadingSubaccounts && viewModel.subaccounts.isEmpty()) {
       Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(22.dp))
       }
-    } else if (filteredSubaccounts.isEmpty()) {
+    } else if (viewModel.subaccounts.isEmpty()) {
       Text(
-        if (viewModel.subaccounts.isEmpty()) "No subaccounts yet -- create one below." else "No matches.",
+        "You haven't created any subaccounts yet.",
         color = Color.White.copy(alpha = 0.4f),
         fontSize = 13.sp,
         modifier = Modifier.padding(vertical = 16.dp)
       )
     } else {
       Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        filteredSubaccounts.forEach { sub ->
+        viewModel.subaccounts.forEach { sub ->
           SwitchAccountRow(
             name = sub.name.uppercase(),
             uid = derivedUid(sub.id),
@@ -7870,34 +7870,6 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
     }
 
     Spacer(modifier = Modifier.height(24.dp))
-
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
-      Box(
-        modifier = Modifier
-          .weight(1f)
-          .clip(RoundedCornerShape(50))
-          .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(50))
-          .clickable { manageMode = !manageMode }
-          .padding(vertical = 14.dp),
-        contentAlignment = Alignment.Center
-      ) {
-        Text(if (manageMode) "Done" else "Manage", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-      }
-      Box(
-        modifier = Modifier
-          .weight(1f)
-          .clip(RoundedCornerShape(50))
-          .background(Color(0xFFFF9D2E))
-          .clickable {
-            if (viewModel.subaccounts.size >= 5) return@clickable
-            showCreateDialog = true
-          }
-          .padding(vertical = 14.dp),
-        contentAlignment = Alignment.Center
-      ) {
-        Text("Create", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-      }
-    }
   }
 
   if (showCreateDialog) {
