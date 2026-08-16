@@ -1,6 +1,7 @@
 import { createVideo } from "@/lib/ai";
 import { auth } from "@/auth";
 import { getMobileUserId } from "@/lib/mobileAuth";
+import { recordVideoOwner } from "@/lib/videoOwnership";
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
 
   try {
     const video = await createVideo(prompt.trim());
+    await recordVideoOwner(video.id, userId);
     return Response.json(video);
   } catch (error) {
     console.error("ChatGiza video error:", error);
