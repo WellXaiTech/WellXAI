@@ -5254,7 +5254,7 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
         HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
         AboutUsRow(icon = Icons.Outlined.HelpOutline, label = "Help Center") { comingSoon("Help Center") }
         HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
-        AboutUsRow(icon = Icons.Outlined.EditNote, label = "User feedback") { comingSoon("User feedback") }
+        AboutUsRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_compose), label = "User feedback") { comingSoon("User feedback") }
       }
     }
     ScreenshotShareOverlay(viewModel)
@@ -5264,6 +5264,20 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
 
 @Composable
 private fun AboutUsRow(icon: ImageVector, label: String, onClick: () -> Unit) {
+  AboutUsRowShell(label = label, onClick = onClick) {
+    Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+  }
+}
+
+@Composable
+private fun AboutUsRow(painter: androidx.compose.ui.graphics.painter.Painter, label: String, onClick: () -> Unit) {
+  AboutUsRowShell(label = label, onClick = onClick) {
+    Icon(painter, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+  }
+}
+
+@Composable
+private fun AboutUsRowShell(label: String, onClick: () -> Unit, icon: @Composable () -> Unit) {
   Row(
     modifier = Modifier
       .fillMaxWidth()
@@ -5271,7 +5285,7 @@ private fun AboutUsRow(icon: ImageVector, label: String, onClick: () -> Unit) {
       .padding(vertical = 14.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+    icon()
     Spacer(modifier = Modifier.width(16.dp))
     Text(label, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
     Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
