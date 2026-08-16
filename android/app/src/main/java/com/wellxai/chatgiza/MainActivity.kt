@@ -5218,6 +5218,12 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         }
       }
     }
+    // Dialog() opens its own separate Android window -- the ScreenshotShareOverlay
+    // living in MainActivity's main window (below setContent) is invisible while
+    // this dialog is on top, so the "Share a link to chat?" prompt never showed
+    // up while User Center was open. A second copy here, layered inside this
+    // dialog's own window, makes the screenshot on-taken state visible here too.
+    ScreenshotShareOverlay(viewModel)
     }
     if (showNicknameEditor) {
       AlertDialog(
@@ -5326,6 +5332,9 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
     onDismissRequest = { viewModel.closeAboutUs() },
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
+    // Dialog() is its own window, so ScreenshotShareOverlay needs its own
+    // copy here too -- see the matching comment in AccountTabsDialog.
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(
       modifier = Modifier
         .fillMaxSize()
@@ -5368,6 +5377,8 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
         HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
         AboutUsRow(icon = Icons.Outlined.EditNote, label = "User feedback") { comingSoon("User feedback") }
       }
+    }
+    ScreenshotShareOverlay(viewModel)
     }
   }
 }
@@ -5470,6 +5481,9 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
     onDismissRequest = { viewModel.closeAvatarPicker() },
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
+    // Dialog() is its own window, so ScreenshotShareOverlay needs its own
+    // copy here too -- see the matching comment in AccountTabsDialog.
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(
       modifier = Modifier
         .fillMaxSize()
@@ -5595,6 +5609,8 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
         Text("Save", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold)
       }
       Spacer(modifier = Modifier.height(20.dp))
+    }
+    ScreenshotShareOverlay(viewModel)
     }
   }
 }
