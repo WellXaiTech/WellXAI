@@ -1,3 +1,5 @@
+# Re-triggering after ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD
+# were added as repo secrets, to confirm signing works end to end.
 name: Build Android APK
 
 on:
