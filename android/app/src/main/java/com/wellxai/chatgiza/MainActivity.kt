@@ -7239,35 +7239,31 @@ private fun VoiceScreen(viewModel: ChatViewModel) {
         .verticalScroll(rememberScrollState())
         .padding(20.dp)
     ) {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = { viewModel.closeVoice() }, modifier = Modifier.size(28.dp)) {
+      // Centered "Voice Library" title across the full width (matching the
+      // reference), not left-aligned next to the back button.
+      Box(modifier = Modifier.fillMaxWidth()) {
+        Text(
+          "Voice Library",
+          color = colorScheme.onBackground,
+          fontSize = 20.sp,
+          fontWeight = FontWeight.Bold,
+          modifier = Modifier.align(Alignment.Center)
+        )
+        IconButton(onClick = { viewModel.closeVoice() }, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
           Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground, modifier = Modifier.size(28.dp))
         }
-        Spacer(modifier = Modifier.width(20.dp))
-        Text("Voice", color = colorScheme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold)
       }
 
       Spacer(modifier = Modifier.height(20.dp))
 
-      // Exactly OrinVoiceBadge's own shader and colors -- just bigger, not
-      // recolored per selected voice. Per explicit correction: same orb,
-      // same fixed blue/purple, only the size changes.
+      // Richer-palette orb, sized up as the screen's hero avatar -- see
+      // VoiceLibraryHeroOrb's own doc comment for why it isn't just
+      // OrinVoiceBadge reused directly.
       Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        OrinVoiceBadge(modifier = Modifier.size(110.dp), tint = Color.White)
+        VoiceLibraryHeroOrb(modifier = Modifier.size(110.dp), tint = Color.White)
       }
 
       Spacer(modifier = Modifier.height(24.dp))
-
-      SettingsSwitchRow("Premium Voice for chat replies", viewModel.premiumChatVoiceEnabled) {
-        viewModel.updatePremiumChatVoiceEnabled(!viewModel.premiumChatVoiceEnabled)
-      }
-      Text(
-        "Real AI-generated speech (the voice picked below) instead of your device's built-in voice, when you tap " +
-          "the speak icon on a reply.",
-        color = colorScheme.onBackground.copy(alpha = 0.6f),
-        fontSize = 12.sp,
-        modifier = Modifier.padding(bottom = 16.dp)
-      )
 
       Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         VOICE_OPTIONS.forEach { option ->
