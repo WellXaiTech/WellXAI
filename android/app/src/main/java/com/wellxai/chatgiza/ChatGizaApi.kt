@@ -56,6 +56,16 @@ data class CollabSession(
   val messages: List<CollabMessage>
 )
 
+// One global room shared by every ChatGiZa user, unlike CollabSession's
+// per-code sessions -- backs the "Join Our Community" entry point.
+data class CommunityMessage(
+  val id: String,
+  val authorId: String,
+  val authorName: String,
+  val content: String,
+  val createdAt: Long
+)
+
 data class ApiProfile(
   val nickname: String = "",
   val about: String = "",
@@ -1033,6 +1043,54 @@ object ChatGizaApi {
         val text = response.body?.string().orEmpty()
         if (!response.isSuccessful) return@withContext ApiResult.Failure(errorMessage(text, response.code))
         ApiResult.Success(collabSessionFromJson(JSONObject(text).getJSONObject("session")))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  private fun communityMessagesFromJson(arr: JSONArray): List<CommunityMessage> {
+    return (0 until arr.length()).map { i ->
+      val m = arr.getJSONObject(i)
+      CommunityMessage(
+        id = m.optString("id", java.util.UUID.randomUUID().toString()),
+        authorId = m.optString("authorId", ""),
+        authorName = m.optString("authorName", "Someone"),
+        content = m.optString("content", ""),
+        createdAt = m.optLong("createdAt", System.currentTimeMillis())
+      )
+    }
+  }
+
+  suspend fun getCommunityMessages(token: String): ApiResult<List<CommunityMessage>> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/community")
+        .header("Authorization", "Bearer $token")
+        .get()
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        ApiResult.Success(communityMessagesFromJson(JSONObject(text).getJSONArray("messages")))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun postCommunityMessage(token: String, content: String, displayName: String): ApiResult<List<CommunityMessage>> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject().put("content", content).put("displayName", displayName).toString().toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/community")
+        .header("Authorization", "Bearer $token")
+        .post(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        ApiResult.Success(communityMessagesFromJson(JSONObject(text).getJSONArray("messages")))
       }
     } catch (e: Exception) {
       ApiResult.Failure(e.message ?: "Network error")

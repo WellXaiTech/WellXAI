@@ -88,6 +88,7 @@ sealed class AppScreen {
   object KidsMode : AppScreen()
   object SharedConversations : AppScreen()
   object CollabChat : AppScreen()
+  object Community : AppScreen()
   object NsfwPreferences : AppScreen()
   object Connectors : AppScreen()
   object Profile : AppScreen()
@@ -676,6 +677,73 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     collabPollJob = null
     collabSession = null
     screen = AppScreen.SharedConversations
+  }
+
+  // "Join Our Community" -- one global chat room shared by every ChatGiZa
+  // user (not per-code like collab above). Same polling pattern.
+  var communityMessages by mutableStateOf<List<CommunityMessage>>(emptyList())
+    private set
+  var communityInput by mutableStateOf("")
+  var communitySending by mutableStateOf(false)
+    private set
+  var communityError by mutableStateOf<String?>(null)
+    private set
+  private var communityPollJob: Job? = null
+
+  fun onCommunityInputChange(value: String) {
+    communityInput = value
+  }
+
+  private fun startCommunityPolling() {
+    communityPollJob?.cancel()
+    communityPollJob = viewModelScope.launch {
+      while (true) {
+        val token = tokenStore.getToken() ?: break
+        when (val result = ChatGizaApi.getCommunityMessages(token)) {
+          is ApiResult.Success -> communityMessages = result.value
+          is ApiResult.Failure -> {}
+        }
+        delay(3000)
+      }
+    }
+  }
+
+  fun openCommunity() {
+    screen = AppScreen.Community
+    communityError = null
+    val token = tokenStore.getToken()
+    if (token != null) {
+      viewModelScope.launch {
+        when (val result = ChatGizaApi.getCommunityMessages(token)) {
+          is ApiResult.Success -> communityMessages = result.value
+          is ApiResult.Failure -> communityError = result.message
+        }
+      }
+    }
+    startCommunityPolling()
+  }
+
+  fun closeCommunity() {
+    communityPollJob?.cancel()
+    communityPollJob = null
+    returnToAccountTabsIfPending()
+    screen = AppScreen.ProfileHub
+  }
+
+  fun sendCommunityMessage() {
+    val token = tokenStore.getToken() ?: return
+    val text = communityInput.trim()
+    if (text.isEmpty() || communitySending) return
+    val name = userName?.takeIf { it.isNotBlank() } ?: "Someone"
+    communityInput = ""
+    communitySending = true
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.postCommunityMessage(token, text, name)) {
+        is ApiResult.Success -> communityMessages = result.value
+        is ApiResult.Failure -> communityError = result.message
+      }
+      communitySending = false
+    }
   }
 
   fun openNsfwPreferences() {
