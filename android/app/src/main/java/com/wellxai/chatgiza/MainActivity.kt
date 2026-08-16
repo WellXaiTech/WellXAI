@@ -1177,30 +1177,6 @@ private fun SettingsIconCustom(tint: Color, modifier: Modifier = Modifier) {
   }
 }
 
-// Back sheet's visible corner (top edge + rounded left corner + left
-// edge) -- the front sheet below is drawn on top, so only this sliver
-// needs to exist.
-private val COPY_BACK_CORNER_PATH = PathParser().parsePathString("M15 3H9a4 4 0 0 0-4 4v8").toPath()
-
-// Front sheet -- a full rounded-rect outline. The SVG built this via a
-// <mask>+<use> so the back sheet's stroke wouldn't show through it, but
-// masks aren't worth replicating in Canvas here since this path is
-// stroke-only (no fill to mask) -- drawing it plain on top already fully
-// covers that corner of the back sheet the same way.
-private val COPY_FRONT_SHEET_PATH = PathParser().parsePathString(
-  "M8 11.5c0-2.346 0-3.518.62-4.326a3 3 0 0 1 .554-.554C9.982 6 11.154 6 13.5 6s3.518 0 4.326.62a3 3 0 0 1 .554.554c.62.808.62 1.98.62 4.326v4c0 2.346 0 3.518-.62 4.326a3 3 0 0 1-.554.554c-.808.62-1.98.62-4.326.62s-3.518 0-4.326-.62a3 3 0 0 1-.554-.554C8 19.018 8 17.846 8 15.5z"
-).toPath()
-
-@Composable
-private fun CopyIconCustom(tint: Color, modifier: Modifier = Modifier) {
-  Canvas(modifier = modifier) {
-    scale(size.width / 24f, pivot = Offset.Zero) {
-      drawPath(COPY_BACK_CORNER_PATH, color = tint, style = Stroke(width = 2f))
-      drawPath(COPY_FRONT_SHEET_PATH, color = tint, style = Stroke(width = 2f))
-    }
-  }
-}
-
 @Composable
 fun SearchIconCustom(tint: Color, modifier: Modifier = Modifier) {
   Canvas(modifier = modifier) {
@@ -10823,7 +10799,7 @@ private fun MessageActionBar(
   ) {
     ActionBarItemShell("Copy", Color(0xFFA8A8A8), onClick = {
       clipboard.setText(AnnotatedString(cleanContent))
-    }) { tint -> CopyIconCustom(tint = tint, modifier = Modifier.size(22.dp)) }
+    }) { tint -> Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_copy), contentDescription = null, tint = tint, modifier = Modifier.size(22.dp)) }
     if (isUser) {
       ActionBarItem(Icons.Outlined.Language, "Translate on-device", onClick = onTranslate)
       readAloudItem()
