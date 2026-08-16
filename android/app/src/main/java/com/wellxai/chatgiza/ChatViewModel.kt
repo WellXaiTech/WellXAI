@@ -97,6 +97,7 @@ sealed class AppScreen {
   object ProfileHub : AppScreen()
   object AccountSettings : AppScreen()
   object SwitchAccount : AppScreen()
+  object SubaccountSettings : AppScreen()
   object ShareTarget : AppScreen()
 }
 
@@ -1833,6 +1834,44 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         else -> {}
       }
     }
+  }
+
+  fun renameSubaccount(id: String, name: String) {
+    val token = tokenStore.getToken() ?: return
+    val trimmed = name.trim()
+    if (trimmed.isBlank()) return
+    val previous = subaccounts
+    subaccounts = subaccounts.map { if (it.id == id) it.copy(name = trimmed) else it }
+    if (subaccountSettingsTarget?.id == id) subaccountSettingsTarget = subaccountSettingsTarget?.copy(name = trimmed)
+    if (activeSubaccountId == id) {
+      activeSubaccountName = trimmed
+      tokenStore.setActiveSubaccount(id, trimmed)
+    }
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.renameSubaccount(token, id, trimmed)) {
+        is ApiResult.Failure -> {
+          subaccountError = result.message
+          subaccounts = previous
+          if (subaccountSettingsTarget?.id == id) subaccountSettingsTarget = previous.find { it.id == id }
+        }
+        else -> {}
+      }
+    }
+  }
+
+  // Per-subaccount "More > Settings" screen (Rename/Delete) reached from
+  // SwitchAccountScreen -- closes back to that same list, not Profile Hub.
+  var subaccountSettingsTarget by mutableStateOf<ApiSubaccount?>(null)
+    private set
+
+  fun openSubaccountSettings(sub: ApiSubaccount) {
+    subaccountSettingsTarget = sub
+    screen = AppScreen.SubaccountSettings
+  }
+
+  fun closeSubaccountSettings() {
+    subaccountSettingsTarget = null
+    screen = AppScreen.SwitchAccount
   }
 
   // Switching clears whatever's currently loaded and re-fetches history
