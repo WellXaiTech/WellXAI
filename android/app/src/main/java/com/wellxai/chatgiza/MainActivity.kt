@@ -4969,10 +4969,13 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             .padding(horizontal = 16.dp)
         ) {
           MyInfoRow(icon = Icons.Outlined.Email, label = "Email", onClick = { comingSoon("Email") }) {
-            Text("nic***@****", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+            Text(maskEmail(viewModel.userEmail), color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
           }
+          // No phone number exists anywhere on the account (sign-in here is
+          // Google-only) -- the row used to show a fixed fake masked number
+          // ("75****182") to every single user regardless of who they were.
           MyInfoRow(icon = Icons.Outlined.Smartphone, label = "Mobile", onClick = { comingSoon("Mobile") }) {
-            Text("75****182", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+            Text("Not linked", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
           }
           // Sign-in here is Google-only -- ChatGiZa has no account password
           // or its own 2FA to toggle, and can't read whether the user's
@@ -9652,6 +9655,21 @@ private fun BillingScreen(viewModel: ChatViewModel) {
 private fun formatDate(millis: Long): String {
   val fmt = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
   return fmt.format(java.util.Date(millis))
+}
+
+// Security tab's "Email" row used to show a fixed fake masked address
+// ("nic***@****") to every signed-in user regardless of who they actually
+// were. Keeps the first 2 characters of the real local part visible, masks
+// the rest, and leaves the domain intact -- same shape real masked-email UI
+// elsewhere uses, but derived from the account's own email.
+private fun maskEmail(email: String?): String {
+  if (email.isNullOrBlank()) return "-"
+  val at = email.indexOf('@')
+  if (at <= 0) return email
+  val local = email.substring(0, at)
+  val domain = email.substring(at)
+  val visible = local.take(2)
+  return "$visible***$domain"
 }
 
 // Compact "14 May" form for the History row's top-right date, matching the
