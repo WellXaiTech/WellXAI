@@ -524,6 +524,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.KidsMode -> KidsModeScreen(viewModel)
             is AppScreen.SharedConversations -> SharedConversationsScreen(viewModel)
             is AppScreen.CollabChat -> CollabChatScreen(viewModel)
+            is AppScreen.Community -> CommunityScreen(viewModel)
             is AppScreen.NsfwPreferences -> NsfwPreferencesScreen(viewModel)
             is AppScreen.Connectors -> ConnectorsScreen(viewModel)
             is AppScreen.Profile -> {
@@ -5189,7 +5190,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(icon = Icons.Outlined.Business, label = "Affiliate's community", onClick = { comingSoon("Affiliate's community") }) {
             Text("Joined", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
           }
-          MyInfoRow(icon = Icons.Outlined.SupportAgent, label = "Join Our Community", onClick = { comingSoon("Join Our Community") }) {}
+          MyInfoRow(icon = Icons.Outlined.SupportAgent, label = "Join Our Community", onClick = { viewModel.leaveAccountTabsFor { viewModel.openCommunity() } }) {}
         }
         Spacer(modifier = Modifier.height(20.dp))
       }
@@ -8887,6 +8888,104 @@ private fun CollabChatScreen(viewModel: ChatViewModel) {
           .clip(CircleShape)
           .background(if (viewModel.collabInput.isNotBlank() && !viewModel.collabSending) Color.White else Color.White.copy(alpha = 0.15f))
           .clickable(enabled = viewModel.collabInput.isNotBlank() && !viewModel.collabSending) { viewModel.sendCollabMessage() },
+        contentAlignment = Alignment.Center
+      ) {
+        Icon(Icons.Filled.ArrowUpward, contentDescription = "Send", tint = Color.Black, modifier = Modifier.size(18.dp))
+      }
+    }
+  }
+}
+
+// One global room every ChatGiZa user lands in via "Join Our Community"
+// -- unlike CollabChatScreen there's no join code or AI reply, just a
+// shared human group chat everyone polls the same message list for.
+@Composable
+private fun CommunityScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeCommunity() }
+  val listState = rememberLazyListState()
+  val myName = viewModel.userName?.takeIf { it.isNotBlank() } ?: "Someone"
+
+  LaunchedEffect(viewModel.communityMessages.size) {
+    val count = viewModel.communityMessages.size
+    if (count > 0) listState.animateScrollToItem(count - 1)
+  }
+
+  Column(modifier = Modifier.fillMaxSize().background(Color(0xFF000000)).statusBarsPadding()) {
+    Row(
+      modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      IconButton(onClick = { viewModel.closeCommunity() }, modifier = Modifier.size(32.dp)) {
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+      }
+      Spacer(Modifier.width(12.dp))
+      Text("ChatGiZa Community", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+    }
+
+    LazyColumn(
+      state = listState,
+      modifier = Modifier.weight(1f).fillMaxWidth(),
+      contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+      verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+      items(viewModel.communityMessages, key = { it.id }) { msg ->
+        val isMe = msg.authorName == myName
+        Column(
+          horizontalAlignment = if (isMe) Alignment.End else Alignment.Start,
+          modifier = Modifier.fillMaxWidth()
+        ) {
+          Text(
+            if (isMe) "You" else msg.authorName,
+            color = Color.White.copy(alpha = 0.4f),
+            fontSize = 11.sp,
+            modifier = Modifier.padding(bottom = 2.dp, horizontal = 4.dp)
+          )
+          Box(
+            modifier = Modifier
+              .clip(RoundedCornerShape(18.dp))
+              .background(if (isMe) colorScheme.onBackground.copy(alpha = 0.1f) else Color.White.copy(alpha = 0.06f))
+              .padding(horizontal = 14.dp, vertical = 10.dp)
+          ) {
+            Text(msg.content, color = Color.White, fontSize = 15.sp)
+          }
+        }
+      }
+    }
+
+    val error = viewModel.communityError
+    if (error != null) {
+      Text(error, color = Color(0xFFFF6B6B), fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp))
+    }
+
+    Row(
+      modifier = Modifier
+        .fillMaxWidth()
+        .navigationBarsPadding()
+        .imePadding()
+        .padding(horizontal = 12.dp, vertical = 10.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      OutlinedTextField(
+        value = viewModel.communityInput,
+        onValueChange = { viewModel.onCommunityInputChange(it) },
+        modifier = Modifier.weight(1f),
+        placeholder = { Text("Message the community…", color = Color.White.copy(alpha = 0.35f)) },
+        shape = RoundedCornerShape(20.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+          focusedTextColor = Color.White,
+          unfocusedTextColor = Color.White,
+          focusedBorderColor = Color.White.copy(alpha = 0.4f),
+          unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
+          cursorColor = Color.White
+        )
+      )
+      Spacer(Modifier.width(8.dp))
+      Box(
+        modifier = Modifier
+          .size(44.dp)
+          .clip(CircleShape)
+          .background(if (viewModel.communityInput.isNotBlank() && !viewModel.communitySending) Color.White else Color.White.copy(alpha = 0.15f))
+          .clickable(enabled = viewModel.communityInput.isNotBlank() && !viewModel.communitySending) { viewModel.sendCommunityMessage() },
         contentAlignment = Alignment.Center
       ) {
         Icon(Icons.Filled.ArrowUpward, contentDescription = "Send", tint = Color.Black, modifier = Modifier.size(18.dp))
