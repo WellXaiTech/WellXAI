@@ -372,6 +372,7 @@ class MainActivity : ComponentActivity() {
     )
     super.onCreate(savedInstanceState)
     viewModel = ChatViewModel(TokenStore(applicationContext))
+    handleShareIntent(intent)
 
     // Makes Scheduled Tasks actually fire -- idempotent (KEEP policy), so
     // calling this on every launch is fine; WorkManager only schedules it
@@ -534,6 +535,7 @@ class MainActivity : ComponentActivity() {
               }
             }
             is AppScreen.ProfileHub -> ProfileHubScreen(viewModel)
+            is AppScreen.ShareTarget -> ShareTargetPickerScreen(viewModel)
           }
         }
         ScreenshotShareOverlay(viewModel)
@@ -542,6 +544,32 @@ class MainActivity : ComponentActivity() {
         }
       }
     }
+  }
+
+  // MainActivity is singleTask, so a share arriving while the app is
+  // already running comes through here instead of a fresh onCreate.
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+    handleShareIntent(intent)
+  }
+
+  // Picks up "Share" from another app's system Share sheet (an image or a
+  // PDF/text file via ACTION_SEND) and hands it to the ViewModel, which
+  // opens ShareTargetPickerScreen so the user chooses which conversation
+  // it lands in. Ignored while signed out -- there's no conversation list
+  // to pick from yet, and forcing the picker open would strand them there.
+  private fun handleShareIntent(intent: Intent?) {
+    if (intent == null || intent.action != Intent.ACTION_SEND) return
+    if (viewModel.userId == null) return
+    val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+    } else {
+      @Suppress("DEPRECATION")
+      intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+    }
+    val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+    viewModel.receiveShareIntent(uri, text)
   }
 
   override fun onStart() {
@@ -8307,6 +8335,121 @@ private fun OpenSourceLicensesScreen(viewModel: ChatViewModel) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(entry.license, color = Color(0xFFA8A8A8), fontSize = 13.sp)
           }
+        }
+      }
+    }
+  }
+}
+
+// Reached when another app shares a file or text to ChatGiZa (system Share
+// sheet -> MainActivity's ACTION_SEND handling -> viewModel.pendingShare).
+// Lets the user pick which existing conversation it lands in, instead of it
+// silently dropping into whatever chat happened to be open or always
+// starting a fresh one -- same as any real chat app's share target.
+@Composable
+private fun ShareTargetPickerScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.cancelPendingShare() }
+  val context = LocalContext.current
+  val scope = rememberCoroutineScope()
+  val share = viewModel.pendingShare
+  var working by remember { mutableStateOf(false) }
+
+  fun openInto(conversationId: String?) {
+    if (working) return
+    working = true
+    scope.launch {
+      var decodedImageUri: Uri? = null
+      var decodedImageDataUrl: String? = null
+      var decodedFile: AttachedFile? = null
+      var attachFailed = false
+
+      val uri = share?.uri
+      if (uri != null) {
+        val mime = context.contentResolver.getType(uri).orEmpty()
+        if (mime.startsWith("image/")) {
+          decodedImageDataUrl = withContext(Dispatchers.IO) { uriToPostImageDataUrl(context, uri) }
+          if (decodedImageDataUrl != null) decodedImageUri = uri else attachFailed = true
+        } else {
+          val name = withContext(Dispatchers.IO) { queryFileDisplayName(context, uri) }
+          decodedFile = withContext(Dispatchers.IO) { readAttachedFile(context, uri, name) }
+          if (decodedFile == null) attachFailed = true
+        }
+      }
+
+      // Navigate first -- selectConversation/newChat don't touch the input
+      // text or attached-image/file state, but newChat() does reset `input`
+      // to "", so the shared text has to be set after, not before.
+      if (conversationId != null) viewModel.selectConversation(conversationId) else viewModel.newChat()
+
+      val text = share?.text
+      if (!text.isNullOrBlank()) viewModel.onInputChange(text)
+      val finalImageUri = decodedImageUri
+      val finalImageDataUrl = decodedImageDataUrl
+      if (finalImageUri != null && finalImageDataUrl != null) viewModel.setAttachedImage(finalImageUri, finalImageDataUrl)
+      decodedFile?.let { viewModel.updateAttachedFile(it) }
+
+      viewModel.clearPendingShare()
+      working = false
+      if (attachFailed) Toast.makeText(context, "Couldn't attach that file", Toast.LENGTH_SHORT).show()
+    }
+  }
+
+  Scaffold(
+    containerColor = Color(0xFF181818),
+    topBar = {
+      TopAppBar(
+        title = { Text("Open in which conversation?") },
+        navigationIcon = {
+          IconButton(onClick = { viewModel.cancelPendingShare() }) {
+            Icon(Icons.Outlined.Close, contentDescription = "Cancel", tint = Color.White)
+          }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF181818))
+      )
+    }
+  ) { padding ->
+    Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+      LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+      ) {
+        item {
+          Card(
+            modifier = Modifier.fillMaxWidth().clickable { openInto(null) },
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+          ) {
+            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+              Icon(Icons.Filled.Add, contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.size(20.dp))
+              Spacer(modifier = Modifier.width(12.dp))
+              Text("New chat", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            }
+          }
+        }
+        items(viewModel.conversations, key = { it.id }) { convo ->
+          Card(
+            modifier = Modifier.fillMaxWidth().clickable { openInto(convo.id) },
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+          ) {
+            Text(
+              convo.title.ifBlank { "Untitled" },
+              color = Color.White,
+              fontSize = 15.sp,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis,
+              modifier = Modifier.padding(16.dp)
+            )
+          }
+        }
+      }
+      if (working) {
+        Box(
+          modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)),
+          contentAlignment = Alignment.Center
+        ) {
+          CircularProgressIndicator(color = Color.White)
         }
       }
     }

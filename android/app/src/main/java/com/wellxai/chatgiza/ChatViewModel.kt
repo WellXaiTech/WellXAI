@@ -94,7 +94,13 @@ sealed class AppScreen {
   object ProfileHub : AppScreen()
   object AccountSettings : AppScreen()
   object SwitchAccount : AppScreen()
+  object ShareTarget : AppScreen()
 }
+
+// A file/text shared into ChatGiZa from another app (system Share sheet),
+// waiting on the user to pick which existing conversation (or a new one)
+// it should land in -- see ShareTargetPickerScreen.
+data class PendingShare(val uri: Uri?, val text: String?)
 
 class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var screen by mutableStateOf<AppScreen>(AppScreen.Loading)
@@ -2013,6 +2019,29 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     input = ""
     errorMessage = null
     screen = AppScreen.Chat
+  }
+
+  var pendingShare by mutableStateOf<PendingShare?>(null)
+    private set
+
+  /** Reached from MainActivity's ACTION_SEND handling (share-from-another-app).
+   * Doesn't touch the active conversation itself -- just remembers what was
+   * shared and opens the picker so the user decides where it goes, same as
+   * a real chat app's share target rather than dumping it into whatever
+   * chat happened to be open (or silently starting a new one). */
+  fun receiveShareIntent(uri: Uri?, text: String?) {
+    if (uri == null && text.isNullOrBlank()) return
+    pendingShare = PendingShare(uri, text)
+    screen = AppScreen.ShareTarget
+  }
+
+  fun cancelPendingShare() {
+    pendingShare = null
+    screen = AppScreen.History
+  }
+
+  fun clearPendingShare() {
+    pendingShare = null
   }
 
   fun onInputChange(value: String) {
