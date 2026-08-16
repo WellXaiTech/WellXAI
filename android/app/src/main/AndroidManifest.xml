@@ -24,7 +24,7 @@
             </intent-filter>
 
             <!-- Makes ChatGiZa show up in other apps' system Share sheet
-                 ("Share" on a photo, PDF, or text) -- handled in
+                 ("Share" on a photo, PDF, or text), handled in
                  MainActivity.handleShareIntent, which opens a picker for
                  which existing conversation it should land in. -->
             <intent-filter>
