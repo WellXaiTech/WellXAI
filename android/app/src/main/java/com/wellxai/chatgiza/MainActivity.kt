@@ -527,6 +527,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.CollabChat -> CollabChatScreen(viewModel)
             is AppScreen.Community -> CommunityScreen(viewModel)
             is AppScreen.TrustedDevices -> TrustedDevicesScreen(viewModel)
+            is AppScreen.StorageManagement -> StorageManagementScreen(viewModel)
             is AppScreen.NsfwPreferences -> NsfwPreferencesScreen(viewModel)
             is AppScreen.Connectors -> ConnectorsScreen(viewModel)
             is AppScreen.Profile -> {
@@ -5162,11 +5163,12 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(
             icon = Icons.Outlined.Archive,
             label = "Storage management",
-            // Data Controls now lives here instead of its own Settings row --
-            // DataControlsScreen is rendered from the root screen switch, not
-            // from within this dialog, so it has to close first (same fix as
-            // Profile Picture/Appearance above).
-            onClick = { viewModel.leaveAccountTabsFor { viewModel.openDataControls() } }
+            // Real on-device cache/storage breakdown, not the privacy/
+            // delete-account controls (those moved to Data Dashboard's
+            // "Data controls & delete account" row, where they actually
+            // belong -- this row's label was always about storage, not
+            // privacy).
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openStorageManagement() } }
           ) {}
           MyInfoRow(icon = Icons.Outlined.ThumbUp, label = "Rate Our App", onClick = { showRateDialog = true }) {}
         }
@@ -9143,6 +9145,169 @@ private fun TrustedDevicesScreen(viewModel: ChatViewModel) {
       dismissButton = {
         TextButton(onClick = { confirmRevoke = null }) { Text("Cancel") }
       }
+    )
+  }
+}
+
+private fun dirSizeBytes(dir: java.io.File?): Long {
+  if (dir == null || !dir.exists()) return 0L
+  var total = 0L
+  dir.listFiles()?.forEach { f ->
+    total += if (f.isDirectory) dirSizeBytes(f) else f.length()
+  }
+  return total
+}
+
+private fun formatStorageBytes(bytes: Long): String {
+  if (bytes < 1024) return "$bytes B"
+  val units = arrayOf("KB", "MB", "GB")
+  var value = bytes / 1024.0
+  var unitIndex = 0
+  while (value >= 1024 && unitIndex < units.size - 1) {
+    value /= 1024
+    unitIndex++
+  }
+  return String.format(java.util.Locale.US, "%.2f %s", value, units[unitIndex])
+}
+
+// Real on-device storage breakdown -- cache/data sizes come from actually
+// walking context.cacheDir/filesDir, and the used/free split comes from
+// StatFs on the data partition, not placeholder numbers. Only "Cache" is
+// offered for clearing; filesDir holds things the app needs to keep
+// working (TokenStore's encrypted prefs live outside both dirs entirely,
+// under shared_prefs, so clearing cache can never sign the user out).
+@Composable
+private fun StorageManagementScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeStorageManagement() }
+  val context = LocalContext.current
+  var confirmClearCache by remember { mutableStateOf(false) }
+  var refreshTick by remember { mutableStateOf(0) }
+
+  val cacheBytes = remember(refreshTick) { dirSizeBytes(context.cacheDir) }
+  val filesBytes = remember(refreshTick) { dirSizeBytes(context.filesDir) }
+  val appBytes = cacheBytes + filesBytes
+
+  val statFs = remember { android.os.StatFs(android.os.Environment.getDataDirectory().path) }
+  val totalDeviceBytes = statFs.totalBytes
+  val freeDeviceBytes = statFs.availableBytes
+  val otherUsedBytes = (totalDeviceBytes - freeDeviceBytes - appBytes).coerceAtLeast(0L)
+  val percentOfDevice = if (totalDeviceBytes > 0) (appBytes.toDouble() / totalDeviceBytes.toDouble() * 100) else 0.0
+
+  Column(modifier = Modifier.fillMaxSize().background(Color(0xFF000000)).statusBarsPadding()) {
+    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+      Text(
+        "Storage management",
+        color = Color.White,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.align(Alignment.Center)
+      )
+      IconButton(onClick = { viewModel.closeStorageManagement() }, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(24.dp))
+      }
+    }
+
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+      val total = totalDeviceBytes.toFloat().coerceAtLeast(1f)
+      val appFraction = (appBytes / total).coerceIn(0f, 1f)
+      val otherFraction = (otherUsedBytes / total).coerceIn(0f, 1f)
+      val freeFraction = (freeDeviceBytes / total).coerceIn(0f, 1f)
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(10.dp)
+          .clip(RoundedCornerShape(50))
+          .background(Color.White.copy(alpha = 0.1f))
+      ) {
+        // weight(0f) throws, so zero-sized segments are skipped entirely
+        // rather than coerced to a fake minimum width.
+        if (appFraction > 0f) Box(modifier = Modifier.weight(appFraction).fillMaxHeight().background(Color(0xFF22C55E)))
+        if (otherFraction > 0f) Box(modifier = Modifier.weight(otherFraction).fillMaxHeight().background(Color(0xFFF59E0B)))
+        if (freeFraction > 0f) Box(modifier = Modifier.weight(freeFraction).fillMaxHeight().background(Color.Transparent))
+      }
+      Spacer(Modifier.height(10.dp))
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF22C55E)))
+        Spacer(Modifier.width(6.dp))
+        Text("ChatGiZa used", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+        Spacer(Modifier.width(14.dp))
+        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFF59E0B)))
+        Spacer(Modifier.width(6.dp))
+        Text("Other Apps used", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+        Spacer(Modifier.width(14.dp))
+        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.25f)))
+        Spacer(Modifier.width(6.dp))
+        Text("Remaining", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+      }
+      Spacer(Modifier.height(14.dp))
+      Text(
+        "ChatGiZa currently uses ${formatStorageBytes(appBytes)}, accounting for ${String.format(java.util.Locale.US, "%.2f", percentOfDevice)}% of your device's storage.",
+        color = Color.White.copy(alpha = 0.5f),
+        fontSize = 13.sp
+      )
+    }
+
+    Spacer(Modifier.height(20.dp))
+    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
+    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(16.dp))
+          .background(Color.White.copy(alpha = 0.05f))
+          .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Column(modifier = Modifier.weight(1f)) {
+          Text("Cache", color = Color.White, fontSize = 14.sp)
+          Spacer(Modifier.height(4.dp))
+          Text(formatStorageBytes(cacheBytes), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+          Spacer(Modifier.height(4.dp))
+          Text(
+            "Clearing Cache will not affect the normal use of ChatGiZa",
+            color = Color.White.copy(alpha = 0.4f),
+            fontSize = 12.sp,
+            lineHeight = 16.sp
+          )
+        }
+        IconButton(onClick = { confirmClearCache = true }, modifier = Modifier.size(32.dp)) {
+          DeleteIcon(tint = Color.White.copy(alpha = 0.5f))
+        }
+      }
+
+      Spacer(Modifier.height(14.dp))
+
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(16.dp))
+          .background(Color.White.copy(alpha = 0.05f))
+          .padding(16.dp)
+      ) {
+        Text("Important files", color = Color.White, fontSize = 14.sp)
+        Spacer(Modifier.height(4.dp))
+        Text(formatStorageBytes(filesBytes), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(4.dp))
+        Text(
+          "Includes data ChatGiZa needs to work -- not clearable here.",
+          color = Color.White.copy(alpha = 0.4f),
+          fontSize = 12.sp,
+          lineHeight = 16.sp
+        )
+      }
+    }
+  }
+
+  if (confirmClearCache) {
+    ConfirmDangerDialog(
+      title = "Clear cache?",
+      message = "This frees up ${formatStorageBytes(cacheBytes)} of temporary files. It won't sign you out or delete your conversations.",
+      onConfirm = {
+        runCatching { context.cacheDir.deleteRecursively() }
+        refreshTick++
+      },
+      onDismiss = { confirmClearCache = false }
     )
   }
 }

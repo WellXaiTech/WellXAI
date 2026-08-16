@@ -90,6 +90,7 @@ sealed class AppScreen {
   object CollabChat : AppScreen()
   object Community : AppScreen()
   object TrustedDevices : AppScreen()
+  object StorageManagement : AppScreen()
   object NsfwPreferences : AppScreen()
   object Connectors : AppScreen()
   object Profile : AppScreen()
@@ -1039,6 +1040,19 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closeDataControls() {
+    returnToAccountTabsIfPending()
+    screen = AppScreen.ProfileHub
+  }
+
+  // Real on-device cache/storage breakdown -- what "Storage management" in
+  // Settings > General used to (wrongly) link to DataControlsScreen's
+  // privacy toggles for. DataControlsScreen itself is unchanged and still
+  // reachable from Data Dashboard's "Data controls & delete account" row.
+  fun openStorageManagement() {
+    screen = AppScreen.StorageManagement
+  }
+
+  fun closeStorageManagement() {
     returnToAccountTabsIfPending()
     screen = AppScreen.ProfileHub
   }
