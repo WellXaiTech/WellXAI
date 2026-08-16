@@ -1352,34 +1352,6 @@ private fun SpeakerIconCustom(tint: Color, modifier: Modifier = Modifier) {
   }
 }
 
-// Rewards gift-box icon (pasted stroke SVG, viewBox 24x24) -- a rounded
-// rect for the lid band, a vertical stem, a U-shaped box body, and two
-// curved ribbon loops, all stroked instead of filled.
-private val REWARDS_STEM_PATH = PathParser().parsePathString("M12 8v13").toPath()
-private val REWARDS_BODY_PATH = PathParser().parsePathString("M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7").toPath()
-private val REWARDS_RIBBON_LEFT_PATH = PathParser().parsePathString("M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8").toPath()
-private val REWARDS_RIBBON_RIGHT_PATH = PathParser().parsePathString("M16.5 8a2.5 2.5 0 0 0 0-5C13 3 12 8 12 8").toPath()
-
-@Composable
-private fun RewardsIconCustom(tint: Color, modifier: Modifier = Modifier) {
-  Canvas(modifier = modifier) {
-    scale(size.width / 24f, pivot = Offset.Zero) {
-      val stroke = Stroke(width = 1.5f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-      drawRoundRect(
-        color = tint,
-        topLeft = Offset(3f, 8f),
-        size = Size(18f, 4f),
-        cornerRadius = CornerRadius(1f, 1f),
-        style = stroke
-      )
-      drawPath(REWARDS_STEM_PATH, color = tint, style = stroke)
-      drawPath(REWARDS_BODY_PATH, color = tint, style = stroke)
-      drawPath(REWARDS_RIBBON_LEFT_PATH, color = tint, style = stroke)
-      drawPath(REWARDS_RIBBON_RIGHT_PATH, color = tint, style = stroke)
-    }
-  }
-}
-
 // Profile Hub's own top-bar settings icon (pasted stroke SVG, viewBox
 // 24x24) -- a hexagon "nut" outline with a center circle. Deliberately
 // only used at this one call site, not a global replacement of every
@@ -1393,42 +1365,6 @@ private fun SettingsHexIconCustom(tint: Color, modifier: Modifier = Modifier) {
       val stroke = Stroke(width = 1.5f, cap = StrokeCap.Round, join = StrokeJoin.Round)
       drawPath(SETTINGS_HEX_PATH, color = tint, style = stroke)
       drawCircle(color = tint, radius = 3f, center = Offset(12f, 12f), style = stroke)
-    }
-  }
-}
-
-// Invite Friends icon (pasted stroke SVG, viewBox 24x24) -- one person
-// (head circle + open shoulder arc) with a "+" cross and a "$" glyph
-// near the bottom-right, matching the user's corrected reference (a
-// single person, not two).
-private val INVITE_BODY_PATH = PathParser().parsePathString("M2 21v-1a6 6 0 0 1 6-6h2").toPath()
-private val INVITE_PLUS_V_PATH = PathParser().parsePathString("M20 15v6").toPath()
-private val INVITE_PLUS_H_PATH = PathParser().parsePathString("M17 18h6").toPath()
-
-@Composable
-private fun InviteFriendsIconCustom(tint: Color, modifier: Modifier = Modifier) {
-  Canvas(modifier = modifier) {
-    scale(size.width / 24f, pivot = Offset.Zero) {
-      val stroke = Stroke(width = 1.5f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-      drawCircle(color = tint, radius = 4f, center = Offset(10f, 7f), style = stroke)
-      drawPath(INVITE_BODY_PATH, color = tint, style = stroke)
-      drawPath(INVITE_PLUS_V_PATH, color = tint, style = stroke)
-      drawPath(INVITE_PLUS_H_PATH, color = tint, style = stroke)
-      // The original SVG's "$" is a <text> glyph, not a path -- drawn
-      // the same way here via the underlying native Canvas, at the
-      // same raw viewBox coordinates, inside this same scale() block
-      // so it scales together with everything else.
-      drawContext.canvas.nativeCanvas.drawText(
-        "$",
-        17f,
-        21f,
-        Paint().apply {
-          color = tint.toArgb()
-          textSize = 8f
-          isFakeBoldText = true
-          isAntiAlias = true
-        }
-      )
     }
   }
 }
@@ -4660,21 +4596,6 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
       }
     }
 
-    Spacer(modifier = Modifier.height(10.dp))
-
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-      ProfileHubQuickCard(title = "GiZa Card", subtitle = "Coming soon", modifier = Modifier.weight(1f), onClick = { comingSoon("GiZa Card") }) { tint ->
-        Icon(Icons.Outlined.WorkspacePremium, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
-      }
-      ProfileHubQuickCard(title = "Rewards", subtitle = "Check now", modifier = Modifier.weight(1f), onClick = { comingSoon("Rewards") }) { tint ->
-        RewardsIconCustom(tint = tint, modifier = Modifier.size(20.dp))
-      }
-    }
-    Spacer(modifier = Modifier.height(10.dp))
-    ProfileHubQuickCard(title = "Invite Friends", subtitle = "Invite now", modifier = Modifier.fillMaxWidth(), onClick = { comingSoon("Invite Friends") }) { tint ->
-      InviteFriendsIconCustom(tint = tint, modifier = Modifier.size(20.dp))
-    }
-
     Spacer(modifier = Modifier.height(14.dp))
     Text("Trending services", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
     Spacer(modifier = Modifier.height(10.dp))
@@ -5612,31 +5533,6 @@ private fun BouncingAvatarThumbnail(preset: AvatarPreset, size: Dp, modifier: Mo
     label = "scale"
   )
   AvatarPresetThumbnail(preset, size, modifier.graphicsLayer(scaleX = scale, scaleY = scale))
-}
-
-@Composable
-private fun ProfileHubQuickCard(
-  title: String,
-  subtitle: String,
-  modifier: Modifier = Modifier,
-  onClick: () -> Unit,
-  icon: @Composable (Color) -> Unit
-) {
-  Row(
-    verticalAlignment = Alignment.CenterVertically,
-    modifier = modifier
-      .clip(RoundedCornerShape(16.dp))
-      .background(Color(0xFF141414))
-      .clickable(onClick = onClick)
-      .padding(horizontal = 12.dp, vertical = 8.dp)
-  ) {
-    icon(Color.White)
-    Spacer(modifier = Modifier.width(10.dp))
-    Column {
-      Text(title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-      Text(subtitle, color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
-    }
-  }
 }
 
 @Composable
