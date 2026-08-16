@@ -1814,10 +1814,16 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun toggleMediaPostLike(postId: String) {
     val token = tokenStore.getToken() ?: run { mediaError = "Not signed in"; return }
+    val previous = mediaPosts.find { it.id == postId } ?: return
     // Optimistic flip so the tap feels instant; corrected by (or reverted
-    // to match) the server's real state once the request comes back.
+    // to exactly match, using the captured snapshot rather than flipping
+    // whatever the current value happens to be) the server's real state
+    // once the request comes back. Flipping-in-place on failure used to be
+    // able to land on the wrong final state if a second tap fired before
+    // the first request resolved -- restoring the captured `previous`
+    // instead is correct regardless of how many taps overlapped.
     mediaPosts = mediaPosts.map {
-      if (it.id == postId) it.copy(likedByMe = !it.likedByMe, likeCount = it.likeCount + if (it.likedByMe) -1 else 1) else it
+      if (it.id == postId) it.copy(likedByMe = !previous.likedByMe, likeCount = previous.likeCount + if (previous.likedByMe) -1 else 1) else it
     }
     viewModelScope.launch {
       when (val result = ChatGizaApi.toggleMediaPostLike(token, postId)) {
@@ -1828,7 +1834,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         }
         is ApiResult.Failure -> {
           mediaPosts = mediaPosts.map {
-            if (it.id == postId) it.copy(likedByMe = !it.likedByMe, likeCount = it.likeCount + if (it.likedByMe) -1 else 1) else it
+            if (it.id == postId) it.copy(likedByMe = previous.likedByMe, likeCount = previous.likeCount) else it
           }
           mediaError = result.message
         }
