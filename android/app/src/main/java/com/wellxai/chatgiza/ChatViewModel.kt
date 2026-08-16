@@ -1338,6 +1338,10 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun openScheduled() {
     screen = AppScreen.Scheduled
+    // The background worker can mark reminders fired while this screen was
+    // never open -- refresh so what's shown here matches the server instead
+    // of whatever was last loaded at sign-in.
+    loadScheduled()
   }
 
   fun closeScheduled() {
@@ -1407,6 +1411,15 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     newTaskRunAt = value
   }
 
+  // addScheduledTask/scheduleReminderFromChat/deleteScheduledTask all re-fetch
+  // the list from the server right before writing, instead of mutating
+  // whatever `scheduledTasks` already held in memory. ScheduledTaskWorker
+  // runs independently every ~15 minutes and marks due reminders fired=true
+  // on the server -- if a write here started from a stale in-memory copy
+  // (e.g. loaded once at sign-in, never refreshed since), it would silently
+  // overwrite that with fired=false, making the same reminder fire again on
+  // the worker's next pass. Fetching fresh first closes that race.
+
   fun addScheduledTask() {
     val prompt = newTaskPrompt.trim()
     // Web parses this with `new Date(runAt)`, which needs the ISO "T"
@@ -1415,11 +1428,18 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     val runAt = newTaskRunAt.trim().replaceFirst(" ", "T")
     if (prompt.isEmpty() || runAt.isEmpty()) return
     val token = tokenStore.getToken() ?: return
-    val updated = listOf(ApiScheduledTask(UUID.randomUUID().toString(), prompt, runAt, false)) + scheduledTasks
-    scheduledTasks = updated
+    val newTask = ApiScheduledTask(UUID.randomUUID().toString(), prompt, runAt, false)
     newTaskPrompt = ""
     newTaskRunAt = ""
-    viewModelScope.launch { ChatGizaApi.saveScheduled(token, updated) }
+    viewModelScope.launch {
+      val current = when (val result = ChatGizaApi.getScheduled(token)) {
+        is ApiResult.Success -> result.value
+        is ApiResult.Failure -> scheduledTasks
+      }
+      val updated = listOf(newTask) + current
+      scheduledTasks = updated
+      ChatGizaApi.saveScheduled(token, updated)
+    }
   }
 
   /** Same effect as [addScheduledTask], but driven by the AI's own
@@ -1428,9 +1448,16 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   private fun scheduleReminderFromChat(reminder: ChatReminderRequest) {
     val token = tokenStore.getToken() ?: return
     val runAt = reminder.runAt.replaceFirst(" ", "T")
-    val updated = listOf(ApiScheduledTask(UUID.randomUUID().toString(), reminder.prompt, runAt, false)) + scheduledTasks
-    scheduledTasks = updated
-    viewModelScope.launch { ChatGizaApi.saveScheduled(token, updated) }
+    val newTask = ApiScheduledTask(UUID.randomUUID().toString(), reminder.prompt, runAt, false)
+    viewModelScope.launch {
+      val current = when (val result = ChatGizaApi.getScheduled(token)) {
+        is ApiResult.Success -> result.value
+        is ApiResult.Failure -> scheduledTasks
+      }
+      val updated = listOf(newTask) + current
+      scheduledTasks = updated
+      ChatGizaApi.saveScheduled(token, updated)
+    }
   }
 
   /** Fetches admin-approved ads for the Events carousel, targeted by the
@@ -1450,9 +1477,15 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun deleteScheduledTask(id: String) {
     val token = tokenStore.getToken() ?: return
-    val updated = scheduledTasks.filter { it.id != id }
-    scheduledTasks = updated
-    viewModelScope.launch { ChatGizaApi.saveScheduled(token, updated) }
+    viewModelScope.launch {
+      val current = when (val result = ChatGizaApi.getScheduled(token)) {
+        is ApiResult.Success -> result.value
+        is ApiResult.Failure -> scheduledTasks
+      }
+      val updated = current.filter { it.id != id }
+      scheduledTasks = updated
+      ChatGizaApi.saveScheduled(token, updated)
+    }
   }
 
   fun loadBilling() {
