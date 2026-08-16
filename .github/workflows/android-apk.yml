@@ -1,4 +1,5 @@
-# Re-triggering again -- secrets now confirmed saved under Repository secrets.
+# Re-triggering after rotating to a brand-new signing key (the old one was
+# already public in git history, so it's treated as compromised).
 name: Build Android APK
 
 on:
