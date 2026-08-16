@@ -7249,21 +7249,11 @@ private fun VoiceScreen(viewModel: ChatViewModel) {
 
       Spacer(modifier = Modifier.height(20.dp))
 
-      // The same shader-based galaxy sphere OrinVoiceBadge uses (see
-      // VoiceOrb.kt) as a big hero avatar for whichever voice is currently
-      // selected, colored from that voice's own gradientStart/gradientEnd
-      // instead of Orin's fixed blue/purple.
-      val heroOption = VOICE_OPTIONS.find { it.id == viewModel.selectedVoiceId } ?: VOICE_OPTIONS.first()
+      // Exactly OrinVoiceBadge's own shader and colors -- just bigger, not
+      // recolored per selected voice. Per explicit correction: same orb,
+      // same fixed blue/purple, only the size changes.
       Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        VoiceHeroOrb(
-          modifier = Modifier.size(110.dp),
-          tint = heroOption.gradientStart,
-          anchor = heroOption.gradientStart,
-          colorA = heroOption.gradientStart,
-          colorB = lerp(heroOption.gradientStart, Color.White, 0.5f),
-          colorC = heroOption.gradientEnd,
-          seedPhase = (kotlin.math.abs(heroOption.id.hashCode()) % 100) / 100f
-        )
+        OrinVoiceBadge(modifier = Modifier.size(110.dp), tint = Color.White)
       }
 
       Spacer(modifier = Modifier.height(24.dp))
