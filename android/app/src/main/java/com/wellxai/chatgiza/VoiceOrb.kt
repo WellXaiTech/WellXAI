@@ -177,6 +177,35 @@ fun OrinVoiceBadge(modifier: Modifier = Modifier, tint: Color) {
   }
 }
 
+/** Same orb as [OrinVoiceBadge], sized up as the hero avatar on Settings >
+ * Voice, but with a richer 3-hue palette (amber, blue, pink instead of
+ * all-blue/purple) -- per explicit correction that Orin's own palette read
+ * as too monochrome once blown up to 110dp against the reference. Fixed,
+ * not tied to whichever voice is selected. */
+@Composable
+fun VoiceLibraryHeroOrb(modifier: Modifier = Modifier, tint: Color) {
+  var failed by remember { mutableStateOf(false) }
+
+  if (!failed && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    VoiceOrb(
+      modifier = modifier,
+      seedPhase = 0.42f,
+      anchor = Color(0xFF2A2A3D),
+      colorA = Color(0xFFFFB347),
+      colorB = Color(0xFF6D8CFF),
+      colorC = Color(0xFFFF6B9D),
+      onError = { failed = true }
+    )
+  } else {
+    androidx.compose.material3.Icon(
+      painter = painterResource(R.drawable.ic_cloud),
+      contentDescription = "Cloud voice",
+      tint = tint,
+      modifier = modifier
+    )
+  }
+}
+
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
 private fun VoiceOrb(
