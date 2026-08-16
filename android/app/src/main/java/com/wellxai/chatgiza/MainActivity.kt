@@ -7177,6 +7177,70 @@ private data class VoiceOption(
   val gradientEnd: Color
 )
 
+// Same drifting-cloud-of-color technique as VoiceGradientCard (used for the
+// Live Vision voice sheet's selected-voice pill) -- three overlapping radial
+// blobs derived from the voice's own gradientStart/gradientEnd, clipped to a
+// circle instead of a pill, standing in as a "hero" avatar for whichever
+// voice is currently selected on the plain Settings > Voice screen.
+@Composable
+private fun VoiceHeroOrb(option: VoiceOption, size: Dp, modifier: Modifier = Modifier) {
+  val density = LocalDensity.current
+  val sizePx = with(density) { size.toPx() }
+  val infiniteTransition = rememberInfiniteTransition(label = "voiceHeroCloud")
+  val t by infiniteTransition.animateFloat(
+    initialValue = 0f,
+    targetValue = 360f,
+    animationSpec = infiniteRepeatable(animation = tween(6000, easing = LinearEasing), repeatMode = RepeatMode.Restart),
+    label = "voiceHeroCloudAngle"
+  )
+  val midColor = lerp(option.gradientStart, option.gradientEnd, 0.5f)
+  val blobSize = size * 0.95f
+
+  Box(
+    modifier = modifier
+      .size(size)
+      .clip(CircleShape)
+      .background(Color(0xFF1C1C1C))
+  ) {
+    listOf(
+      Triple(option.gradientStart, 0f, 0.9f),
+      Triple(option.gradientEnd, 130f, 0.85f),
+      Triple(midColor, 250f, 0.75f)
+    ).forEach { (color, phase, alpha) ->
+      val rad = Math.toRadians((t + phase).toDouble())
+      val ox = (kotlin.math.cos(rad) * sizePx * 0.18f).toFloat()
+      val oy = (kotlin.math.sin(rad) * sizePx * 0.18f).toFloat()
+      Box(
+        modifier = Modifier
+          .size(blobSize)
+          .align(Alignment.Center)
+          .offset { IntOffset(ox.roundToInt(), oy.roundToInt()) }
+          .graphicsLayer { this.alpha = alpha }
+          .background(Brush.radialGradient(listOf(color, Color.Transparent)))
+      )
+    }
+    VOICE_CLOUD_PUFFS.forEach { puff ->
+      val rad = Math.toRadians((t * 0.6f + puff.phase).toDouble())
+      val ox = (kotlin.math.cos(rad) * sizePx * 0.03f).toFloat()
+      val oy = (kotlin.math.sin(rad) * sizePx * 0.03f).toFloat()
+      val puffSizePx = sizePx * puff.scale * 0.55f
+      val puffSizeDp = with(density) { puffSizePx.toDp() }
+      Box(
+        modifier = Modifier
+          .size(puffSizeDp)
+          .offset {
+            IntOffset(
+              (sizePx * puff.cx - puffSizePx / 2f + ox).roundToInt(),
+              (sizePx * puff.cy - puffSizePx / 2f + oy).roundToInt()
+            )
+          }
+          .graphicsLayer { this.alpha = puff.alpha }
+          .background(Brush.radialGradient(listOf(Color.White, Color.White.copy(alpha = 0f))))
+      )
+    }
+  }
+}
+
 // id = the actual voice name OpenAI's Realtime API accepts (passed straight
 // through to the live session); name/description are just the friendly
 // label shown in the picker — each gets its own gradient so the selected
@@ -7245,6 +7309,13 @@ private fun VoiceScreen(viewModel: ChatViewModel) {
         }
         Spacer(modifier = Modifier.width(20.dp))
         Text("Voice", color = colorScheme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+      }
+
+      Spacer(modifier = Modifier.height(20.dp))
+
+      val heroOption = VOICE_OPTIONS.find { it.id == viewModel.selectedVoiceId } ?: VOICE_OPTIONS.first()
+      Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        VoiceHeroOrb(option = heroOption, size = 110.dp)
       }
 
       Spacer(modifier = Modifier.height(24.dp))
