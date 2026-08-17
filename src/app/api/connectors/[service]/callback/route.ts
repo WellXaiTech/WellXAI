@@ -82,6 +82,22 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ serv
       return resultPage("Connection failed", "The provider rejected the connection. Please try again.");
     }
     const data = await tokenRes.json();
+    // GitHub's OAuth Apps token endpoint is the odd one out here: it
+    // returns HTTP 200 even when the exchange failed (bad/reused code,
+    // wrong client secret, etc.), putting the failure in the JSON body
+    // instead (e.g. {"error":"bad_verification_code",...}) rather than
+    // the HTTP status. Every other provider here uses a real 4xx, which
+    // the !tokenRes.ok branch above already catches.
+    if (data.error) {
+      console.error(`Connector ${id} token exchange returned an error body:`, data);
+      if (data.error === "bad_verification_code" || data.error === "incorrect_client_credentials") {
+        const existing = await getConnectorToken(decoded.userId, id);
+        if (existing) {
+          return resultPage(`${cfg.name} connected`, "You can close this tab and return to ChatGiZa.");
+        }
+      }
+      return resultPage("Connection failed", "The provider rejected the connection. Please try again.");
+    }
     const accessToken = data.access_token as string | undefined;
     if (!accessToken) {
       console.error(`Connector ${id} token response missing access_token:`, data);
