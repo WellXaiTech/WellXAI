@@ -1,0 +1,55 @@
+{
+  "name": "chatgiza-agent",
+  "displayName": "ChatGiZa",
+  "description": "ChatGiZa coding agent -- chat with GiZa inside VS Code to build, edit, and debug real code in your workspace.",
+  "version": "0.1.0",
+  "publisher": "wellxaitech",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": ["AI", "Chat", "Programming Languages"],
+  "keywords": ["chatgiza", "ai", "agent", "chat", "coding assistant"],
+  "icon": "icon.png",
+  "activationEvents": [
+    "onChatParticipant:chatgiza.agent"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "chatParticipants": [
+      {
+        "id": "chatgiza.agent",
+        "name": "chatgiza",
+        "fullName": "ChatGiZa",
+        "description": "Build, edit, and debug code in your workspace",
+        "isSticky": true
+      }
+    ],
+    "commands": [
+      {
+        "command": "chatgiza.signIn",
+        "title": "ChatGiZa: Sign In"
+      },
+      {
+        "command": "chatgiza.signOut",
+        "title": "ChatGiZa: Sign Out"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.0.0",
+    "typescript": "^5.4.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/WellXaiTech/WellXAI"
+  },
+  "license": "MIT"
+}
