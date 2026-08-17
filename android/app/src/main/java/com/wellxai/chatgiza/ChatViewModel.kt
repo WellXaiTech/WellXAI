@@ -353,13 +353,20 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     screen = accountReturnScreen
   }
 
+  // Reachable both directly from Chat's "Customize GiZa" quick action and
+  // from Settings (via leaveAccountTabsFor) -- remembers which, instead of
+  // hardcoding Profile Hub, so closing from the Chat path doesn't strand
+  // the user on Profile Hub instead of back on Chat.
+  private var customizeReturnScreen: AppScreen = AppScreen.ProfileHub
+
   fun openCustomize() {
+    customizeReturnScreen = screen
     screen = AppScreen.Customize
   }
 
   fun closeCustomize() {
     returnToAccountTabsIfPending()
-    screen = AppScreen.ProfileHub
+    screen = customizeReturnScreen
   }
 
   var firstNameInput by mutableStateOf("")
@@ -541,14 +548,30 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   // Profile Hub's About Us sheet) instead of hardcoding Account, so
   // closing it returns to the actual screen the user came from.
   private var reportProblemReturnScreen: AppScreen = AppScreen.ProfileHub
+  // About Us is a dialog overlay (showAboutUs), not part of `screen` --
+  // it used to be closed manually before navigating here, which lost
+  // track of it entirely, so closing Report a Problem always landed on
+  // the bare screen behind it instead of reopening About Us. This
+  // remembers whether it needs to come back.
+  private var reportProblemReturnToAboutUs = false
 
   fun openReportProblem() {
     reportProblemReturnScreen = screen
+    reportProblemReturnToAboutUs = showAboutUs
+    showAboutUs = false
     screen = AppScreen.ReportProblem
   }
 
   fun closeReportProblem() {
+    // Always restore the underlying screen first -- ReportProblem is a
+    // full AppScreen entry, so leaving `screen` pointed at it while
+    // reopening About Us on top (a separate Dialog window) would render
+    // both at once instead of About Us alone.
     screen = reportProblemReturnScreen
+    if (reportProblemReturnToAboutUs) {
+      reportProblemReturnToAboutUs = false
+      showAboutUs = true
+    }
   }
 
   fun openWidgets() {
@@ -1087,13 +1110,19 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     }
   }
 
+  // Reached from Data Dashboard's "Data controls & delete account" row, not
+  // Profile Hub -- hardcoding Profile Hub here always sent the user past
+  // Data Dashboard instead of back to it.
+  private var dataControlsReturnScreen: AppScreen = AppScreen.ProfileHub
+
   fun openDataControls() {
+    dataControlsReturnScreen = screen
     screen = AppScreen.DataControls
   }
 
   fun closeDataControls() {
     returnToAccountTabsIfPending()
-    screen = AppScreen.ProfileHub
+    screen = dataControlsReturnScreen
   }
 
   // Real on-device cache/storage breakdown -- what "Storage management" in
@@ -1533,7 +1562,13 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     }
   }
 
+  // Reachable both from Chat's Events card and from Settings (via
+  // leaveAccountTabsFor) -- remembers which, instead of hardcoding
+  // Profile Hub, so closing from the Chat path returns to Chat.
+  private var scheduledReturnScreen: AppScreen = AppScreen.ProfileHub
+
   fun openScheduled() {
+    scheduledReturnScreen = screen
     screen = AppScreen.Scheduled
     // The background worker can mark reminders fired while this screen was
     // never open -- refresh so what's shown here matches the server instead
@@ -1543,7 +1578,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun closeScheduled() {
     returnToAccountTabsIfPending()
-    screen = AppScreen.ProfileHub
+    screen = scheduledReturnScreen
   }
 
   // Tapping "+" on a Tasks example (e.g. "Weekend ideas") sends its prompt
