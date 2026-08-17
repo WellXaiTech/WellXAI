@@ -56,6 +56,19 @@ data class CollabSession(
   val messages: List<CollabMessage>
 )
 
+// Real OAuth connectors (Gmail, Google Calendar, GitHub, etc.) -- backed
+// by src/lib/connectors.ts. `configured` means the backend has real
+// client id/secret for this provider (not just that the row exists);
+// a connector with configured=false shows as "Setup needed" rather than
+// pretending Connect would do anything.
+data class ConnectorInfo(
+  val id: String,
+  val name: String,
+  val category: String,
+  val configured: Boolean,
+  val connected: Boolean
+)
+
 // One global room shared by every ChatGiZa user, unlike CollabSession's
 // per-code sessions -- backs the "Join Our Community" entry point.
 data class CommunityMessage(
@@ -1177,6 +1190,70 @@ object ChatGizaApi {
       client.newCall(request).execute().use { response ->
         val text = response.body?.string().orEmpty()
         if (!response.isSuccessful) return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun getConnectors(token: String): ApiResult<List<ConnectorInfo>> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/connectors")
+        .header("Authorization", "Bearer $token")
+        .get()
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        val arr = JSONObject(text).getJSONArray("connectors")
+        val list = (0 until arr.length()).map { i ->
+          val o = arr.getJSONObject(i)
+          ConnectorInfo(
+            id = o.getString("id"),
+            name = o.getString("name"),
+            category = o.optString("category", "Featured"),
+            configured = o.optBoolean("configured", false),
+            connected = o.optBoolean("connected", false)
+          )
+        }
+        ApiResult.Success(list)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun startConnectorAuth(token: String, service: String): ApiResult<String> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/connectors/$service/start")
+        .header("Authorization", "Bearer $token")
+        .post("{}".toRequestBody(JSON))
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        ApiResult.Success(JSONObject(text).getString("url"))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun disconnectConnector(token: String, service: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/connectors/$service")
+        .header("Authorization", "Bearer $token")
+        .delete()
+        .build()
+      client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          val text = response.body?.string().orEmpty()
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
         ApiResult.Success(Unit)
       }
     } catch (e: Exception) {
