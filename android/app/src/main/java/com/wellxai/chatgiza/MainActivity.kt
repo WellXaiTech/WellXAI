@@ -9259,17 +9259,46 @@ private fun NsfwPreferencesScreen(viewModel: ChatViewModel) {
   }
 }
 
+// Real brand marks (from Simple Icons, MIT-licensed for exactly this
+// "which service does this row link to" use) for the connectors that
+// have one available -- GitHub and Notion are recolored white since
+// their literal brand hex is near-black and would vanish against these
+// rows' dark background, same as their own dark-mode treatment. Canva
+// has no entry in Simple Icons, so it falls back to the plain
+// initial-letter badge below rather than a fake logo.
+private fun connectorIconRes(id: String): Int? = when (id) {
+  "gmail" -> R.drawable.ic_connector_gmail
+  "google_calendar" -> R.drawable.ic_connector_google_calendar
+  "google_drive" -> R.drawable.ic_connector_google_drive
+  "github" -> R.drawable.ic_connector_github
+  "notion" -> R.drawable.ic_connector_notion
+  "box" -> R.drawable.ic_connector_box
+  "stripe" -> R.drawable.ic_connector_stripe
+  "wix" -> R.drawable.ic_connector_wix
+  else -> null
+}
+
 @Composable
 private fun ConnectorRow(info: ConnectorInfo, busy: Boolean, onConnect: () -> Unit, onDisconnect: () -> Unit) {
   Row(
     verticalAlignment = Alignment.CenterVertically,
     modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)
   ) {
+    val iconRes = connectorIconRes(info.id)
     Box(
       modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f)),
       contentAlignment = Alignment.Center
     ) {
-      Text(info.name.take(1), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+      if (iconRes != null) {
+        Icon(
+          painter = androidx.compose.ui.res.painterResource(iconRes),
+          contentDescription = null,
+          tint = Color.Unspecified,
+          modifier = Modifier.size(20.dp)
+        )
+      } else {
+        Text(info.name.take(1), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+      }
     }
     Spacer(Modifier.width(12.dp))
     Text(info.name, color = Color.White, fontSize = 15.sp, modifier = Modifier.weight(1f))
