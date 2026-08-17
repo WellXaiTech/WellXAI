@@ -5254,7 +5254,10 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
         }
         HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
         AboutUsRow(icon = Icons.Outlined.ReportProblem, label = "Report a Problem") {
-          viewModel.closeAboutUs()
+          // openReportProblem() now handles closing About Us itself (and
+          // remembers to reopen it) -- calling closeAboutUs() here first
+          // used to lose that context entirely, see the comment on
+          // reportProblemReturnToAboutUs in ChatViewModel.
           viewModel.openReportProblem()
         }
         HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
