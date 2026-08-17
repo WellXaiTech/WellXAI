@@ -32,6 +32,11 @@ export type ConnectorConfig = {
   // Some providers (Stripe Connect) send the token-exchange client secret
   // as a differently-named field than the OAuth2 standard "client_secret".
   tokenBodyExtra?: Record<string, string>;
+  // "basic" = client_id/client_secret go in an HTTP Basic Authorization
+  // header instead of the request body (Notion requires this; rejects
+  // the standard body-based form with a 401 otherwise). Defaults to
+  // "body" when omitted.
+  tokenAuthStyle?: "body" | "basic";
 };
 
 // The three Google connectors reuse the SAME OAuth client already used for
@@ -96,6 +101,7 @@ export const CONNECTOR_CONFIGS: Record<ConnectorId, ConnectorConfig> = {
     clientIdEnv: "NOTION_CLIENT_ID",
     clientSecretEnv: "NOTION_CLIENT_SECRET",
     extraAuthParams: { owner: "user" },
+    tokenAuthStyle: "basic",
   },
   box: {
     id: "box",

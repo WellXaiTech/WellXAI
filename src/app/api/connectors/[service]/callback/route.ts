@@ -48,21 +48,37 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ serv
 
   const redirectUri = `${url.origin}/api/connectors/${id}/callback`;
   try {
-    const body = new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      code,
-      redirect_uri: redirectUri,
-      grant_type: "authorization_code",
-      ...(cfg.tokenBodyExtra ?? {}),
-    });
+    // Notion (tokenAuthStyle "basic") wants client credentials as an HTTP
+    // Basic Authorization header and a JSON body -- sending them as
+    // regular form fields like every other provider here gets a 401.
+    // Everyone else uses the standard OAuth2 form-encoded body.
+    const useBasicAuth = cfg.tokenAuthStyle === "basic";
+    const headers: Record<string, string> = { Accept: "application/json" };
+    let requestBody: string;
+    if (useBasicAuth) {
+      headers["Content-Type"] = "application/json";
+      headers["Authorization"] = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`;
+      requestBody = JSON.stringify({
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: redirectUri,
+        ...(cfg.tokenBodyExtra ?? {}),
+      });
+    } else {
+      headers["Content-Type"] = "application/x-www-form-urlencoded";
+      requestBody = new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code,
+        redirect_uri: redirectUri,
+        grant_type: "authorization_code",
+        ...(cfg.tokenBodyExtra ?? {}),
+      }).toString();
+    }
     const tokenRes = await fetch(cfg.tokenUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Accept: "application/json",
-      },
-      body: body.toString(),
+      headers,
+      body: requestBody,
     });
     if (!tokenRes.ok) {
       const errorBody = await tokenRes.text();
