@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CONNECTOR_CONFIGS, type ConnectorId, saveConnectorToken, verifyConnectorState } from "@/lib/connectors";
+import { CONNECTOR_CONFIGS, type ConnectorId, getConnectorToken, saveConnectorToken, verifyConnectorState } from "@/lib/connectors";
 
 function resultPage(title: string, message: string) {
   return new NextResponse(
@@ -65,7 +65,20 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ serv
       body: body.toString(),
     });
     if (!tokenRes.ok) {
-      console.error(`Connector ${id} token exchange failed:`, tokenRes.status, await tokenRes.text());
+      const errorBody = await tokenRes.text();
+      console.error(`Connector ${id} token exchange failed:`, tokenRes.status, errorBody);
+      // Authorization codes are single-use -- some browsers fire the
+      // redirect to this callback twice in quick succession (a retried
+      // page load, a duplicate tab), and the second one always fails
+      // this way since the first already redeemed the code. If a token
+      // already exists for this user, that first request succeeded, so
+      // this isn't really a failure from the user's point of view.
+      if (errorBody.includes("invalid_grant")) {
+        const existing = await getConnectorToken(decoded.userId, id);
+        if (existing) {
+          return resultPage(`${cfg.name} connected`, "You can close this tab and return to ChatGiZa.");
+        }
+      }
       return resultPage("Connection failed", "The provider rejected the connection. Please try again.");
     }
     const data = await tokenRes.json();
