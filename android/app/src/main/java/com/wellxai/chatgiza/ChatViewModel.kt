@@ -819,6 +819,57 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     screen = AppScreen.ProfileHub
   }
 
+  // Real OAuth connectors (see ChatGizaApi.getConnectors/startConnectorAuth
+  // and src/lib/connectors.ts). `startConnector`'s onUrl callback is used
+  // by the composable to open the provider's real authorize page in an
+  // external browser tab -- the ViewModel doesn't launch Intents itself.
+  var connectors by mutableStateOf<List<ConnectorInfo>>(emptyList())
+    private set
+  var loadingConnectors by mutableStateOf(false)
+    private set
+  var connectorsError by mutableStateOf<String?>(null)
+    private set
+  private var connectorBusy by mutableStateOf<String?>(null)
+
+  fun isConnectorBusy(id: String) = connectorBusy == id
+
+  fun loadConnectors() {
+    val token = tokenStore.getToken() ?: return
+    loadingConnectors = true
+    connectorsError = null
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.getConnectors(token)) {
+        is ApiResult.Success -> connectors = result.value
+        is ApiResult.Failure -> connectorsError = result.message
+      }
+      loadingConnectors = false
+    }
+  }
+
+  fun startConnector(service: String, onUrl: (String) -> Unit) {
+    val token = tokenStore.getToken() ?: return
+    connectorBusy = service
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.startConnectorAuth(token, service)) {
+        is ApiResult.Success -> onUrl(result.value)
+        is ApiResult.Failure -> connectorsError = result.message
+      }
+      connectorBusy = null
+    }
+  }
+
+  fun disconnectConnectorService(service: String) {
+    val token = tokenStore.getToken() ?: return
+    connectorBusy = service
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.disconnectConnector(token, service)) {
+        is ApiResult.Success -> connectors = connectors.map { if (it.id == service) it.copy(connected = false) else it }
+        is ApiResult.Failure -> connectorsError = result.message
+      }
+      connectorBusy = null
+    }
+  }
+
   fun openMediaProfile() {
     screen = AppScreen.Profile
   }

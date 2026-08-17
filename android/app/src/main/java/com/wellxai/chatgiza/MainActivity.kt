@@ -9257,9 +9257,78 @@ private fun NsfwPreferencesScreen(viewModel: ChatViewModel) {
 }
 
 @Composable
+private fun ConnectorRow(info: ConnectorInfo, busy: Boolean, onConnect: () -> Unit, onDisconnect: () -> Unit) {
+  Row(
+    verticalAlignment = Alignment.CenterVertically,
+    modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)
+  ) {
+    Box(
+      modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f)),
+      contentAlignment = Alignment.Center
+    ) {
+      Text(info.name.take(1), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+    }
+    Spacer(Modifier.width(12.dp))
+    Text(info.name, color = Color.White, fontSize = 15.sp, modifier = Modifier.weight(1f))
+    when {
+      busy -> CircularProgressIndicator(color = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+      info.connected -> Box(
+        modifier = Modifier
+          .clip(RoundedCornerShape(50))
+          .border(1.dp, Color(0xFF22C55E).copy(alpha = 0.5f), RoundedCornerShape(50))
+          .clickable(onClick = onDisconnect)
+          .padding(horizontal = 14.dp, vertical = 6.dp)
+      ) {
+        Text("Connected", color = Color(0xFF22C55E), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+      }
+      info.configured -> Box(
+        modifier = Modifier
+          .clip(RoundedCornerShape(50))
+          .background(Color.White.copy(alpha = 0.12f))
+          .clickable(onClick = onConnect)
+          .padding(horizontal = 14.dp, vertical = 6.dp)
+      ) {
+        Text("Connect", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+      }
+      else -> Box(
+        modifier = Modifier
+          .clip(RoundedCornerShape(50))
+          .background(Color.White.copy(alpha = 0.05f))
+          .clickable(onClick = onConnect)
+          .padding(horizontal = 14.dp, vertical = 6.dp)
+      ) {
+        Text("Setup needed", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+      }
+    }
+  }
+}
+
+// Real OAuth connectors (see ChatGizaApi.getConnectors/startConnectorAuth
+// and src/lib/connectors.ts) -- "Connect" opens the provider's actual
+// authorize page in the system browser; connectors without real
+// credentials configured on the backend show "Setup needed" instead of a
+// working-looking button that would silently do nothing.
+@Composable
 private fun ConnectorsScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeConnectors() }
+  val context = LocalContext.current
   var query by remember { mutableStateOf("") }
+  LaunchedEffect(Unit) { viewModel.loadConnectors() }
+
+  val lifecycleOwner = LocalLifecycleOwner.current
+  DisposableEffect(lifecycleOwner) {
+    val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+      if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) viewModel.loadConnectors()
+    }
+    lifecycleOwner.lifecycle.addObserver(observer)
+    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+  }
+
+  val filtered = remember(viewModel.connectors, query) {
+    if (query.isBlank()) viewModel.connectors
+    else viewModel.connectors.filter { it.name.contains(query, ignoreCase = true) }
+  }
+
   Column(
     modifier = Modifier
       .fillMaxSize()
@@ -9306,9 +9375,35 @@ private fun ConnectorsScreen(viewModel: ChatViewModel) {
       }
     }
     Spacer(Modifier.height(24.dp))
-    Text(text = "Featured", color = Color(0xFFA8A8A8), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp), contentAlignment = Alignment.Center) {
-      Text("Coming soon", color = Color(0xFFA8A8A8), fontSize = 14.sp)
+
+    viewModel.connectorsError?.let {
+      Text(it, color = Color(0xFFFF6B6B), fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+    }
+
+    if (viewModel.loadingConnectors && viewModel.connectors.isEmpty()) {
+      Box(modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+      }
+    } else {
+      Text(text = "Featured", color = Color(0xFFA8A8A8), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+      LazyColumn(modifier = Modifier.fillMaxSize()) {
+        items(filtered, key = { it.id }) { info ->
+          ConnectorRow(
+            info = info,
+            busy = viewModel.isConnectorBusy(info.id),
+            onConnect = {
+              if (!info.configured) {
+                Toast.makeText(context, "${info.name} isn't set up yet", Toast.LENGTH_SHORT).show()
+              } else {
+                viewModel.startConnector(info.id) { url ->
+                  runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+                }
+              }
+            },
+            onDisconnect = { viewModel.disconnectConnectorService(info.id) }
+          )
+        }
+      }
     }
   }
 }
