@@ -1960,8 +1960,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   // Sends the verification code -- doesn't change the password yet, that
   // only happens once submitPasswordCode confirms the code below.
   fun submitNewPassword() {
-    if (newPasswordInput.length < 8) {
-      passwordError = "Password must be at least 8 characters"
+    if (newPasswordInput.length < 6 || newPasswordInput.length > 16) {
+      passwordError = "Password must be 6-16 characters"
       return
     }
     val token = tokenStore.getToken() ?: return

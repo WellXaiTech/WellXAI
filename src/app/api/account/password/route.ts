@@ -59,8 +59,8 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const oldPassword = typeof body?.oldPassword === "string" ? body.oldPassword : undefined;
   const newPassword = typeof body?.newPassword === "string" ? body.newPassword : "";
-  if (newPassword.length < 8) {
-    return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
+  if (newPassword.length < 6 || newPassword.length > 16) {
+    return NextResponse.json({ error: "Password must be 6-16 characters" }, { status: 400 });
   }
 
   try {
