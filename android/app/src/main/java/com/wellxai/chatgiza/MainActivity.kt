@@ -41,6 +41,7 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.os.LocaleListCompat
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.animation.AnimatedVisibility
@@ -277,6 +278,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -320,6 +322,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -337,6 +340,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.items
@@ -1023,6 +1027,28 @@ private fun ChatGizaTheme(themeMode: String, content: @Composable () -> Unit) {
     )
   }
   MaterialTheme(colorScheme = colors, content = content)
+}
+
+// A Dialog(...) opens its own separate Android Window, so the
+// enableEdgeToEdge()/light-status-bar setup done once for the main
+// Activity in onCreate never reaches it -- every full-screen Dialog
+// (usePlatformDefaultWidth = false) needs this call itself, or its status
+// bar area falls back to the platform's default dim scrim instead of
+// blending with the dialog's own white content, showing up as a dark seam
+// across the top of the screen. Call once at the top of the Dialog's
+// content lambda.
+@Composable
+private fun EdgeToEdgeDialogWindow() {
+  val view = LocalView.current
+  SideEffect {
+    val window = (view.parent as? DialogWindowProvider)?.window ?: return@SideEffect
+    WindowCompat.setDecorFitsSystemWindows(window, false)
+    window.statusBarColor = android.graphics.Color.TRANSPARENT
+    window.navigationBarColor = android.graphics.Color.TRANSPARENT
+    val controller = WindowCompat.getInsetsController(window, view)
+    controller.isAppearanceLightStatusBars = true
+    controller.isAppearanceLightNavigationBars = true
+  }
 }
 
 @Composable
@@ -4675,6 +4701,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
     onDismissRequest = { viewModel.closeAccountTabs() },
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
+    EdgeToEdgeDialogWindow()
     Box(
       modifier = Modifier
         .fillMaxSize()
@@ -5231,6 +5258,7 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
     onDismissRequest = { viewModel.closeAboutUs() },
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
+    EdgeToEdgeDialogWindow()
     // Dialog() is its own window, so ScreenshotShareOverlay needs its own
     // copy here too -- see the matching comment in AccountTabsDialog.
     Box(modifier = Modifier.fillMaxSize()) {
@@ -5715,6 +5743,7 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
     onDismissRequest = { viewModel.closeAvatarPicker() },
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
+    EdgeToEdgeDialogWindow()
     // Dialog() is its own window, so ScreenshotShareOverlay needs its own
     // copy here too -- see the matching comment in AccountTabsDialog.
     Box(modifier = Modifier.fillMaxSize()) {
