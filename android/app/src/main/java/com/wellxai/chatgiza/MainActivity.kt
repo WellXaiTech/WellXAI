@@ -9626,10 +9626,15 @@ private fun PasswordField(value: String, onValueChange: (String) -> Unit, placeh
         modifier = Modifier.fillMaxWidth()
       )
     }
+    // Icons.Outlined.VisibilityOff doesn't exist in this project's Material
+    // Icons Extended version (like PowerSettingsNew/Delete/CheckCircle
+    // before it) -- toggling this same proven-safe icon's opacity instead
+    // of swapping to a second icon keeps the show/hide state visible
+    // without risking another unresolved reference.
     Icon(
-      if (visible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+      Icons.Outlined.Visibility,
       contentDescription = if (visible) "Hide password" else "Show password",
-      tint = Color.Black.copy(alpha = 0.4f),
+      tint = Color.Black.copy(alpha = if (visible) 0.7f else 0.3f),
       modifier = Modifier.size(20.dp).clickable { visible = !visible }
     )
   }
