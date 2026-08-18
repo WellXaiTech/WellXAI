@@ -313,6 +313,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     private set
   var newPasswordInput by mutableStateOf("")
     private set
+  var passwordCodeInput by mutableStateOf("")
+    private set
   var passwordError by mutableStateOf<String?>(null)
     private set
   var changingPassword by mutableStateOf(false)
@@ -1910,6 +1912,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     passwordStep = "old"
     oldPasswordInput = ""
     newPasswordInput = ""
+    passwordCodeInput = ""
     passwordError = null
     val token = tokenStore.getToken() ?: return
     viewModelScope.launch {
@@ -1941,6 +1944,11 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     passwordError = null
   }
 
+  fun onPasswordCodeInputChange(value: String) {
+    passwordCodeInput = value
+    passwordError = null
+  }
+
   fun confirmOldPassword() {
     if (oldPasswordInput.isEmpty()) {
       passwordError = "Enter your current password"
@@ -1949,6 +1957,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     passwordStep = "new"
   }
 
+  // Sends the verification code -- doesn't change the password yet, that
+  // only happens once submitPasswordCode confirms the code below.
   fun submitNewPassword() {
     if (newPasswordInput.length < 8) {
       passwordError = "Password must be at least 8 characters"
@@ -1958,21 +1968,42 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     changingPassword = true
     passwordError = null
     viewModelScope.launch {
-      val result = ChatGizaApi.changePassword(
+      val result = ChatGizaApi.requestPasswordChange(
         token,
         if (hasPassword == true) oldPasswordInput else null,
         newPasswordInput
       )
       changingPassword = false
       when (result) {
-        is ApiResult.Success -> closeChangePassword()
+        is ApiResult.Success -> {
+          passwordCodeInput = ""
+          passwordStep = "code"
+        }
         is ApiResult.Failure -> {
           passwordError = result.message
-          // The only way this endpoint fails once a password already
-          // exists is a wrong old password -- send them back to fix it
-          // rather than leaving the error stuck on the new-password step.
+          // The only way this fails once a password already exists is a
+          // wrong old password -- send them back to fix it rather than
+          // leaving the error stuck on the new-password step.
           if (hasPassword == true) passwordStep = "old"
         }
+      }
+    }
+  }
+
+  fun submitPasswordCode() {
+    if (passwordCodeInput.isBlank()) {
+      passwordError = "Enter the code from your email"
+      return
+    }
+    val token = tokenStore.getToken() ?: return
+    changingPassword = true
+    passwordError = null
+    viewModelScope.launch {
+      val result = ChatGizaApi.confirmPasswordChange(token, passwordCodeInput.trim())
+      changingPassword = false
+      when (result) {
+        is ApiResult.Success -> closeChangePassword()
+        is ApiResult.Failure -> passwordError = result.message
       }
     }
   }

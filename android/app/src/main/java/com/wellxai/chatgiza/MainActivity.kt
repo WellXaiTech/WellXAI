@@ -9594,10 +9594,11 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
           .padding(14.dp)
       ) {
         Text(
-          if (viewModel.passwordStep == "old")
-            "Enter your current ChatGiZa password to continue."
-          else
-            "This password is separate from your Google sign-in -- it's only used inside ChatGiZa.",
+          when (viewModel.passwordStep) {
+            "old" -> "Enter your current ChatGiZa password to continue."
+            "new" -> "This password is separate from your Google sign-in -- it's only used inside ChatGiZa."
+            else -> "Enter the 6-digit code we just emailed to your account's address."
+          },
           color = Color.Black.copy(alpha = 0.6f),
           fontSize = 13.sp,
           lineHeight = 18.sp
@@ -9606,17 +9607,20 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
 
       Spacer(modifier = Modifier.height(20.dp))
 
-      if (viewModel.passwordStep == "old") {
-        PasswordField(
+      when (viewModel.passwordStep) {
+        "old" -> PasswordField(
           value = viewModel.oldPasswordInput,
           onValueChange = viewModel::onOldPasswordInputChange,
           placeholder = "Current password"
         )
-      } else {
-        PasswordField(
+        "new" -> PasswordField(
           value = viewModel.newPasswordInput,
           onValueChange = viewModel::onNewPasswordInputChange,
           placeholder = "New password"
+        )
+        else -> CodeField(
+          value = viewModel.passwordCodeInput,
+          onValueChange = viewModel::onPasswordCodeInputChange
         )
       }
 
@@ -9629,7 +9633,11 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
 
       Button(
         onClick = {
-          if (viewModel.passwordStep == "old") viewModel.confirmOldPassword() else viewModel.submitNewPassword()
+          when (viewModel.passwordStep) {
+            "old" -> viewModel.confirmOldPassword()
+            "new" -> viewModel.submitNewPassword()
+            else -> viewModel.submitPasswordCode()
+          }
         },
         enabled = !viewModel.changingPassword,
         shape = RoundedCornerShape(28.dp),
@@ -9684,6 +9692,35 @@ private fun PasswordField(value: String, onValueChange: (String) -> Unit, placeh
       tint = Color.Black.copy(alpha = if (visible) 0.7f else 0.3f),
       modifier = Modifier.size(20.dp).clickable { visible = !visible }
     )
+  }
+}
+
+@Composable
+private fun CodeField(value: String, onValueChange: (String) -> Unit) {
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .clip(RoundedCornerShape(14.dp))
+      .background(Color.Black.copy(alpha = 0.05f))
+      .padding(horizontal = 16.dp, vertical = 4.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Icon(Icons.Outlined.Lock, contentDescription = null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
+    Spacer(modifier = Modifier.width(12.dp))
+    Box(modifier = Modifier.weight(1f).padding(vertical = 14.dp)) {
+      if (value.isEmpty()) {
+        Text("6-digit code", color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
+      }
+      BasicTextField(
+        value = value,
+        onValueChange = { new -> if (new.length <= 6 && new.all { it.isDigit() }) onValueChange(new) },
+        singleLine = true,
+        textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp, letterSpacing = 4.sp),
+        cursorBrush = SolidColor(Color.Black),
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+        modifier = Modifier.fillMaxWidth()
+      )
+    }
   }
 }
 
