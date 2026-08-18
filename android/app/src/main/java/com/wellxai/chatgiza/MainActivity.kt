@@ -9590,22 +9590,28 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(14.dp))
-          .background(Color.Black.copy(alpha = 0.05f))
+          .background(Color(0xFFFFF3E5))
           .padding(14.dp)
       ) {
         Text(
           when (viewModel.passwordStep) {
-            "old" -> "Enter your current ChatGiZa password to continue."
-            "new" -> "This password is separate from your Google sign-in -- it's only used inside ChatGiZa."
-            else -> "Enter the 6-digit code we just emailed to your account's address."
+            "old" -> "Note: For your account's security, you're allowed to change this password as often as you need to. Changing it here only affects ChatGiZa -- it won't touch your Google sign-in, and you may be asked to sign in again on your other devices afterward. Enter your current ChatGiZa password to continue."
+            "new" -> "Note: This password is separate from your Google sign-in and is only ever used inside ChatGiZa. You're free to change it again at any time from Security settings. Choose one that's at least 8 characters long."
+            else -> "Note: For your account's security, we've sent a 6-digit verification code to the email on this account. Enter it below to finish confirming this change -- the code expires in 10 minutes."
           },
-          color = Color.Black.copy(alpha = 0.6f),
+          color = Color.Black.copy(alpha = 0.7f),
           fontSize = 13.sp,
           lineHeight = 18.sp
         )
       }
 
       Spacer(modifier = Modifier.height(20.dp))
+
+      val hasContent = when (viewModel.passwordStep) {
+        "old" -> viewModel.oldPasswordInput.isNotEmpty()
+        "new" -> viewModel.newPasswordInput.isNotEmpty()
+        else -> viewModel.passwordCodeInput.isNotEmpty()
+      }
 
       when (viewModel.passwordStep) {
         "old" -> PasswordField(
@@ -9631,6 +9637,10 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
 
       Spacer(modifier = Modifier.height(24.dp))
 
+      // Pale until there's something to submit, full color once there is --
+      // enabled itself stays true either way so tapping while empty still
+      // surfaces the "enter your password" validation message instead of
+      // just doing nothing.
       Button(
         onClick = {
           when (viewModel.passwordStep) {
@@ -9641,13 +9651,16 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
         },
         enabled = !viewModel.changingPassword,
         shape = RoundedCornerShape(28.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color.Black, disabledContainerColor = Color.Black.copy(alpha = 0.4f)),
+        colors = ButtonDefaults.buttonColors(
+          containerColor = if (hasContent) Color(0xFFFF9C2D) else Color(0xFFFF9C2D).copy(alpha = 0.35f),
+          disabledContainerColor = Color(0xFFFF9C2D)
+        ),
         modifier = Modifier.fillMaxWidth().height(52.dp)
       ) {
         if (viewModel.changingPassword) {
           CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
         } else {
-          Text("Confirm", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+          Text("Confirm", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
       }
     }
