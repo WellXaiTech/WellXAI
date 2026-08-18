@@ -9691,6 +9691,13 @@ private fun PasswordField(value: String, onValueChange: (String) -> Unit, placeh
         textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp),
         cursorBrush = SolidColor(Color.Black),
         visualTransformation = if (visible) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+        // Without keyboardType = Password the IME had no idea this was a
+        // password field, so Gboard was spell-checking it like plain text
+        // -- the underline and word-split suggestion bar the user saw were
+        // autocorrect actually altering what got typed, which is exactly
+        // why a password that was "set" under autocorrect's influence
+        // could stop matching what's typed back in later.
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password),
         modifier = Modifier.fillMaxWidth()
       )
     }
