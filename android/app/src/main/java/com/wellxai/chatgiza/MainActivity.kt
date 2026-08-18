@@ -5253,7 +5253,7 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
           context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/privacy")))
         }
         HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
-        AboutUsRow(icon = Icons.Outlined.ReportProblem, label = "Report a Problem") {
+        AboutUsRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_report_problem), label = "Report a Problem") {
           // openReportProblem() now handles closing About Us itself (and
           // remembers to reopen it) -- calling closeAboutUs() here first
           // used to lose that context entirely, see the comment on
