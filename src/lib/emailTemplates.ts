@@ -30,6 +30,18 @@ export function welcomeEmail(name: string): { subject: string; html: string } {
   };
 }
 
+export function passwordChangeCodeEmail(code: string): { subject: string; html: string } {
+  return {
+    subject: `${code} is your ChatGiZa verification code`,
+    html: wrap(`
+      <p style="${HEADING_STYLE}">Confirm your password change</p>
+      <p style="${BODY_STYLE}">Enter this code in ChatGiZa to finish changing your password:</p>
+      <p style="font-size: 32px; font-weight: 800; letter-spacing: 6px; margin: 0 0 16px; text-align: center;">${code}</p>
+      <p style="${BODY_STYLE}">This code expires in 10 minutes. If you didn't request this, you can ignore this email — your password won't be changed.</p>
+    `),
+  };
+}
+
 export function paymentConfirmationEmail(planName: string, amount: string): { subject: string; html: string } {
   return {
     subject: `You're on the ${planName} plan`,

@@ -578,7 +578,9 @@ object ChatGizaApi {
 
   // oldPassword is omitted the first time an account sets a password --
   // the backend only requires it once one already exists.
-  suspend fun changePassword(token: String, oldPassword: String?, newPassword: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
+  // Sends a 6-digit code to the account's email; the password itself isn't
+  // written server-side until confirmPasswordChange verifies that code.
+  suspend fun requestPasswordChange(token: String, oldPassword: String?, newPassword: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
     try {
       val payload = JSONObject().put("newPassword", newPassword).apply {
         if (oldPassword != null) put("oldPassword", oldPassword)
@@ -587,6 +589,26 @@ object ChatGizaApi {
         .url("$BASE_URL/api/account/password")
         .header("Authorization", "Bearer $token")
         .post(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          val text = response.body?.string().orEmpty()
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun confirmPasswordChange(token: String, code: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject().put("code", code).toString().toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/account/password")
+        .header("Authorization", "Bearer $token")
+        .put(payload)
         .build()
       client.newCall(request).execute().use { response ->
         if (!response.isSuccessful) {
