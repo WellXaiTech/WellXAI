@@ -5307,37 +5307,42 @@ private fun AboutUsRowShell(label: String, onClick: () -> Unit, icon: @Composabl
 // genuinely pickable, saved-per-device set of distinct avatars rather
 // than a single fixed photo. All people (not animals/fantasy
 // characters) -- a broad, respectable, everyone-can-use-one set.
-private data class AvatarPreset(val id: String, val emoji: String)
+// `variant` drives AvatarGraphic's hand-drawn silhouette+accessory look
+// (see below) -- a from-scratch flat interpretation of the pasted
+// reference grid (business/glasses, hoodie, caps, sunglasses variants,
+// keffiyeh, kimono, veiled/long-hair women, etc.), not a literal
+// reproduction (no image-generation tool or file access to the source
+// image was available). `emoji` stays empty for these -- there's no
+// Twemoji URL to sync server-side for a hand-drawn icon, so
+// updateAvatarPreset's existing "emoji == null -> stay device-local"
+// path is used deliberately (see the Save button below).
+private data class AvatarPreset(val id: String, val emoji: String = "", val variant: String? = null)
 
 private val AVATAR_PRESETS = listOf(
-  AvatarPreset("man", "👨"),
-  AvatarPreset("woman", "👩"),
-  AvatarPreset("person", "🧑"),
-  AvatarPreset("old_man", "👴"),
-  AvatarPreset("old_woman", "👵"),
-  AvatarPreset("redhead_man", "👨‍🦰"),
-  AvatarPreset("redhead_woman", "👩‍🦰"),
-  AvatarPreset("curly_man", "👨‍🦱"),
-  AvatarPreset("curly_woman", "👩‍🦱"),
-  AvatarPreset("white_haired_man", "👨‍🦳"),
-  AvatarPreset("white_haired_woman", "👩‍🦳"),
-  AvatarPreset("bald_man", "👨‍🦲"),
-  AvatarPreset("bald_woman", "👩‍🦲"),
-  AvatarPreset("headscarf", "🧕"),
-  AvatarPreset("turban_man", "👳‍♂️"),
-  AvatarPreset("turban_woman", "👳‍♀️"),
-  AvatarPreset("exec_man", "👨‍💼"),
-  AvatarPreset("exec_woman", "👩‍💼"),
-  AvatarPreset("grad_man", "👨‍🎓"),
-  AvatarPreset("grad_woman", "👩‍🎓"),
-  AvatarPreset("teacher", "🧑‍🏫"),
-  AvatarPreset("doctor_man", "👨‍⚕️"),
-  AvatarPreset("doctor_woman", "👩‍⚕️"),
-  AvatarPreset("scientist", "🧑‍🔬"),
-  AvatarPreset("farmer_man", "👨‍🌾"),
-  AvatarPreset("farmer_woman", "👩‍🌾"),
-  AvatarPreset("astronaut", "🧑‍🚀"),
-  AvatarPreset("coder", "🧑‍💻")
+  AvatarPreset("biz_glasses", variant = "biz_glasses"),
+  AvatarPreset("blank", variant = "blank"),
+  AvatarPreset("hoodie", variant = "hoodie"),
+  AvatarPreset("cap_orange", variant = "cap_orange"),
+  AvatarPreset("miner", variant = "miner"),
+  AvatarPreset("hawaiian_orange", variant = "hawaiian_orange"),
+  AvatarPreset("hawaiian_green", variant = "hawaiian_green"),
+  AvatarPreset("sunglasses_plain", variant = "sunglasses_plain"),
+  AvatarPreset("sunglasses_chain", variant = "sunglasses_chain"),
+  AvatarPreset("afro_sunglasses", variant = "afro_sunglasses"),
+  AvatarPreset("mohawk_blue", variant = "mohawk_blue"),
+  AvatarPreset("spiky_blue", variant = "spiky_blue"),
+  AvatarPreset("blonde_hair", variant = "blonde_hair"),
+  AvatarPreset("beard_sunglasses_plain", variant = "beard_sunglasses_plain"),
+  AvatarPreset("beard_sunglasses_zigzag", variant = "beard_sunglasses_zigzag"),
+  AvatarPreset("vr_headset", variant = "vr_headset"),
+  AvatarPreset("keffiyeh", variant = "keffiyeh"),
+  AvatarPreset("red_cap", variant = "red_cap"),
+  AvatarPreset("kimono", variant = "kimono"),
+  AvatarPreset("gray_hood", variant = "gray_hood"),
+  AvatarPreset("veil_woman", variant = "veil_woman"),
+  AvatarPreset("glasses_woman", variant = "glasses_woman"),
+  AvatarPreset("necklace_woman", variant = "necklace_woman"),
+  AvatarPreset("curly_sunglasses_woman", variant = "curly_sunglasses_woman")
 )
 
 @Composable
@@ -5350,7 +5355,11 @@ private fun AvatarPresetThumbnail(preset: AvatarPreset, size: Dp, modifier: Modi
       .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape),
     contentAlignment = Alignment.Center
   ) {
-    Text(preset.emoji, fontSize = (size.value * 0.6f).sp)
+    if (preset.variant != null) {
+      AvatarGraphic(preset.variant, modifier = Modifier.fillMaxSize())
+    } else {
+      Text(preset.emoji, fontSize = (size.value * 0.6f).sp)
+    }
     // The custom avatar name, shown as a small label near the bottom of
     // the circle itself -- only worth showing at sizes big enough to
     // actually read it.
@@ -5369,6 +5378,315 @@ private fun AvatarPresetThumbnail(preset: AvatarPreset, size: Dp, modifier: Modi
           .background(Color.Black.copy(alpha = 0.55f))
           .padding(vertical = 1.dp)
       )
+    }
+  }
+}
+
+// Hand-drawn (Canvas, not a raster image) flat silhouette-plus-accessory
+// avatar, keyed by `variant`. Every variant shares the same base head+
+// shoulders silhouette; the `when` block below layers 1-3 extra shapes on
+// top per style (glasses, headwear, hair, etc.) using only simple
+// primitives (circles/arcs/rounded rects/polylines) -- no attempt at
+// matching the pasted reference's photorealistic 3D-render look, which
+// would need an actual image-generation tool this environment doesn't have.
+@Composable
+private fun AvatarGraphic(variant: String, modifier: Modifier = Modifier) {
+  val silver = Color(0xFFE7E7E7)
+  val gold = Color(0xFFC9A227)
+  val dark = Color(0xFF2A2A2A)
+  Canvas(modifier = modifier) {
+    val w = size.width
+    val h = size.height
+    val headR = w * 0.20f
+    val headCx = w * 0.5f
+    val headCy = h * 0.36f
+    val strokeW = (w * 0.028f).coerceAtLeast(1f)
+
+    fun body() {
+      val body = Path().apply {
+        moveTo(w * 0.20f, h * 0.98f)
+        lineTo(w * 0.20f, h * 0.74f)
+        cubicTo(w * 0.20f, h * 0.58f, w * 0.32f, h * 0.50f, w * 0.5f, h * 0.50f)
+        cubicTo(w * 0.68f, h * 0.50f, w * 0.80f, h * 0.58f, w * 0.80f, h * 0.74f)
+        lineTo(w * 0.80f, h * 0.98f)
+        close()
+      }
+      drawPath(body, color = silver)
+      drawPath(body, color = gold, style = Stroke(width = strokeW))
+    }
+    fun head() {
+      drawCircle(color = silver, radius = headR, center = Offset(headCx, headCy))
+      drawCircle(color = gold, radius = headR, center = Offset(headCx, headCy), style = Stroke(width = strokeW))
+    }
+    fun glasses(color: Color = Color(0xFF1A1A1A)) {
+      val lensR = headR * 0.32f
+      val lensY = headCy - headR * 0.02f
+      val lx = headCx - headR * 0.42f
+      val rx = headCx + headR * 0.42f
+      drawCircle(color = color, radius = lensR, center = Offset(lx, lensY))
+      drawCircle(color = color, radius = lensR, center = Offset(rx, lensY))
+      drawLine(color = color, start = Offset(lx + lensR, lensY), end = Offset(rx - lensR, lensY), strokeWidth = strokeW)
+    }
+    fun beard(color: Color = Color(0xFF1A1A1A)) {
+      val beard = Path().apply {
+        moveTo(headCx - headR * 0.85f, headCy + headR * 0.15f)
+        cubicTo(headCx - headR * 0.7f, headCy + headR * 1.15f, headCx - headR * 0.25f, headCy + headR * 1.35f, headCx, headCy + headR * 1.3f)
+        cubicTo(headCx + headR * 0.25f, headCy + headR * 1.35f, headCx + headR * 0.7f, headCy + headR * 1.15f, headCx + headR * 0.85f, headCy + headR * 0.15f)
+        lineTo(headCx + headR * 0.6f, headCy + headR * 0.05f)
+        cubicTo(headCx + headR * 0.3f, headCy + headR * 0.4f, headCx - headR * 0.3f, headCy + headR * 0.4f, headCx - headR * 0.6f, headCy + headR * 0.05f)
+        close()
+      }
+      drawPath(beard, color = color)
+    }
+    fun cap(color: Color, brim: Boolean = true) {
+      drawArc(
+        color = color,
+        startAngle = 180f,
+        sweepAngle = 180f,
+        useCenter = true,
+        topLeft = Offset(headCx - headR * 1.08f, headCy - headR * 1.15f),
+        size = Size(headR * 2.16f, headR * 1.7f)
+      )
+      if (brim) {
+        drawOval(
+          color = color,
+          topLeft = Offset(headCx - headR * 0.15f, headCy - headR * 0.35f),
+          size = Size(headR * 1.35f, headR * 0.4f)
+        )
+      }
+    }
+    fun necklace(color: Color = gold, count: Int = 5) {
+      for (i in 0 until count) {
+        val t = i / (count - 1f)
+        val x = headCx - headR * 0.55f + t * headR * 1.1f
+        val y = headCy + headR * 1.15f + kotlin.math.sin(t * Math.PI).toFloat() * headR * 0.18f
+        drawCircle(color = color, radius = w * 0.02f, center = Offset(x, y))
+      }
+    }
+
+    body()
+    head()
+
+    when (variant) {
+      "blank" -> {}
+      "biz_glasses" -> {
+        glasses()
+        val tie = Path().apply {
+          moveTo(headCx - headR * 0.12f, headCy + headR * 1.05f)
+          lineTo(headCx + headR * 0.12f, headCy + headR * 1.05f)
+          lineTo(headCx, headCy + headR * 1.8f)
+          close()
+        }
+        drawPath(tie, color = dark)
+      }
+      "hoodie" -> cap(dark, brim = false)
+      "cap_orange" -> cap(Color(0xFFE07A1F))
+      "red_cap" -> cap(Color(0xFFC23B22))
+      "miner" -> {
+        cap(Color(0xFF3A3A3A), brim = true)
+        drawCircle(color = Color(0xFFFFD54A), radius = w * 0.035f, center = Offset(headCx, headCy - headR * 1.1f))
+      }
+      "hawaiian_orange", "hawaiian_green" -> {
+        val shirtColor = if (variant == "hawaiian_orange") Color(0xFFE07A1F) else Color(0xFF3E8E4F)
+        val shirt = Path().apply {
+          moveTo(w * 0.22f, h * 0.98f)
+          lineTo(w * 0.22f, h * 0.78f)
+          cubicTo(w * 0.22f, h * 0.66f, w * 0.32f, h * 0.60f, w * 0.5f, h * 0.60f)
+          cubicTo(w * 0.68f, h * 0.60f, w * 0.78f, h * 0.66f, w * 0.78f, h * 0.78f)
+          lineTo(w * 0.78f, h * 0.98f)
+          close()
+        }
+        drawPath(shirt, color = shirtColor)
+        for (i in 0..2) {
+          val yy = h * (0.82f + i * 0.06f)
+          drawCircle(color = silver, radius = w * 0.02f, center = Offset(w * 0.38f, yy))
+          drawCircle(color = silver, radius = w * 0.02f, center = Offset(w * 0.62f, yy))
+        }
+      }
+      "sunglasses_plain" -> glasses()
+      "sunglasses_chain" -> {
+        glasses()
+        necklace(gold, 6)
+      }
+      "afro_sunglasses" -> {
+        drawCircle(color = dark, radius = headR * 1.25f, center = Offset(headCx, headCy - headR * 0.35f))
+        drawCircle(color = silver, radius = headR, center = Offset(headCx, headCy))
+        glasses()
+      }
+      "mohawk_blue" -> {
+        val mohawk = Path().apply {
+          moveTo(headCx - headR * 0.15f, headCy - headR * 0.95f)
+          lineTo(headCx + headR * 0.15f, headCy - headR * 0.95f)
+          lineTo(headCx + headR * 0.08f, headCy - headR * 1.6f)
+          lineTo(headCx - headR * 0.08f, headCy - headR * 1.6f)
+          close()
+        }
+        drawPath(mohawk, color = Color(0xFF2E7FD6))
+        glasses(gold.copy(alpha = 0.9f))
+      }
+      "spiky_blue" -> {
+        val blue = Color(0xFF2E7FD6)
+        for (i in -2..2) {
+          val baseX = headCx + i * headR * 0.35f
+          val spike = Path().apply {
+            moveTo(baseX - headR * 0.14f, headCy - headR * 0.75f)
+            lineTo(baseX + headR * 0.14f, headCy - headR * 0.75f)
+            lineTo(baseX, headCy - headR * 1.35f)
+            close()
+          }
+          drawPath(spike, color = blue)
+        }
+        glasses(gold.copy(alpha = 0.9f))
+      }
+      "blonde_hair" -> {
+        val hair = Path().apply {
+          moveTo(headCx - headR * 0.95f, headCy - headR * 0.1f)
+          cubicTo(headCx - headR * 1.05f, headCy - headR * 0.9f, headCx - headR * 0.3f, headCy - headR * 1.25f, headCx + headR * 0.1f, headCy - headR * 1.0f)
+          cubicTo(headCx + headR * 0.5f, headCy - headR * 1.15f, headCx + headR * 1.0f, headCy - headR * 0.7f, headCx + headR * 0.95f, headCy - headR * 0.1f)
+          cubicTo(headCx + headR * 0.6f, headCy - headR * 0.5f, headCx - headR * 0.6f, headCy - headR * 0.5f, headCx - headR * 0.95f, headCy - headR * 0.1f)
+          close()
+        }
+        drawPath(hair, color = Color(0xFFE8C55A))
+      }
+      "beard_sunglasses_plain" -> {
+        glasses()
+        beard()
+      }
+      "beard_sunglasses_zigzag" -> {
+        glasses()
+        beard()
+        val zig = Path().apply {
+          moveTo(w * 0.28f, h * 0.86f)
+          var x = w * 0.28f
+          var up = true
+          while (x < w * 0.72f) {
+            x += w * 0.07f
+            lineTo(x, if (up) h * 0.80f else h * 0.86f)
+            up = !up
+          }
+        }
+        drawPath(zig, color = Color.Transparent, style = Stroke(width = strokeW * 1.4f))
+        drawPath(zig, color = Color(0xFFE0A526), style = Stroke(width = strokeW * 1.4f))
+      }
+      "vr_headset" -> {
+        drawRoundRect(
+          color = dark,
+          topLeft = Offset(headCx - headR * 0.95f, headCy - headR * 0.25f),
+          size = Size(headR * 1.9f, headR * 0.7f),
+          cornerRadius = CornerRadius(headR * 0.2f, headR * 0.2f)
+        )
+        drawRoundRect(
+          color = Color(0xFFE07A1F),
+          topLeft = Offset(headCx - headR * 0.85f, headCy - headR * 0.15f),
+          size = Size(headR * 1.7f, headR * 0.5f),
+          cornerRadius = CornerRadius(headR * 0.15f, headR * 0.15f),
+          style = Stroke(width = strokeW)
+        )
+      }
+      "keffiyeh" -> {
+        val scarf = Path().apply {
+          moveTo(headCx - headR * 1.15f, headCy - headR * 0.3f)
+          lineTo(headCx + headR * 1.15f, headCy - headR * 0.3f)
+          lineTo(headCx + headR * 0.7f, headCy + headR * 1.4f)
+          lineTo(headCx, headCy + headR * 0.7f)
+          lineTo(headCx - headR * 0.7f, headCy + headR * 1.4f)
+          close()
+        }
+        drawPath(scarf, color = Color(0xFFF2F2F2))
+        drawPath(scarf, color = gold, style = Stroke(width = strokeW))
+        val band = Path().apply {
+          moveTo(headCx - headR * 1.05f, headCy - headR * 0.55f)
+          lineTo(headCx + headR * 1.05f, headCy - headR * 0.55f)
+          lineTo(headCx + headR * 0.9f, headCy - headR * 0.85f)
+          lineTo(headCx - headR * 0.9f, headCy - headR * 0.85f)
+          close()
+        }
+        drawPath(band, color = dark)
+      }
+      "kimono" -> {
+        val collar = Path().apply {
+          moveTo(headCx - headR * 0.55f, headCy + headR * 0.55f)
+          lineTo(headCx, headCy + headR * 1.5f)
+          lineTo(headCx + headR * 0.55f, headCy + headR * 0.55f)
+        }
+        drawPath(collar, color = Color(0xFFE0A526), style = Stroke(width = strokeW * 2.2f))
+      }
+      "gray_hood" -> {
+        drawArc(
+          color = Color(0xFFBFBFBF),
+          startAngle = 180f,
+          sweepAngle = 180f,
+          useCenter = true,
+          topLeft = Offset(headCx - headR * 1.15f, headCy - headR * 1.3f),
+          size = Size(headR * 2.3f, headR * 1.9f)
+        )
+        drawLine(
+          color = dark,
+          start = Offset(headCx - headR * 1.15f, headCy - headR * 0.35f),
+          end = Offset(headCx + headR * 1.15f, headCy - headR * 0.35f),
+          strokeWidth = strokeW
+        )
+      }
+      "veil_woman" -> {
+        val veil = Path().apply {
+          moveTo(headCx - headR * 1.1f, headCy - headR * 0.5f)
+          cubicTo(headCx - headR * 1.3f, headCy + headR * 0.9f, headCx - headR * 0.8f, headCy + headR * 1.6f, headCx - headR * 0.3f, headCy + headR * 1.3f)
+          lineTo(headCx, headCy + headR * 0.9f)
+          lineTo(headCx + headR * 0.3f, headCy + headR * 1.3f)
+          cubicTo(headCx + headR * 0.8f, headCy + headR * 1.6f, headCx + headR * 1.3f, headCy + headR * 0.9f, headCx + headR * 1.1f, headCy - headR * 0.5f)
+          cubicTo(headCx + headR * 0.9f, headCy - headR * 1.15f, headCx - headR * 0.9f, headCy - headR * 1.15f, headCx - headR * 1.1f, headCy - headR * 0.5f)
+          close()
+        }
+        drawPath(veil, color = Color(0xFFF2F2F2))
+        drawPath(veil, color = gold, style = Stroke(width = strokeW))
+      }
+      "glasses_woman" -> {
+        val hair = Path().apply {
+          moveTo(headCx - headR * 1.02f, headCy - headR * 0.2f)
+          cubicTo(headCx - headR * 1.05f, headCy - headR * 1.05f, headCx + headR * 1.05f, headCy - headR * 1.05f, headCx + headR * 1.02f, headCy - headR * 0.2f)
+          lineTo(headCx + headR * 0.9f, headCy - headR * 0.3f)
+          cubicTo(headCx + headR * 0.6f, headCy - headR * 0.75f, headCx - headR * 0.6f, headCy - headR * 0.75f, headCx - headR * 0.9f, headCy - headR * 0.3f)
+          close()
+        }
+        drawPath(hair, color = Color(0xFF3A3A3A))
+        val lensR = headR * 0.3f
+        val lensY = headCy
+        drawCircle(color = Color.Transparent, radius = lensR, center = Offset(headCx - headR * 0.4f, lensY))
+        drawCircle(color = gold, radius = lensR, center = Offset(headCx - headR * 0.4f, lensY), style = Stroke(width = strokeW))
+        drawCircle(color = gold, radius = lensR, center = Offset(headCx + headR * 0.4f, lensY), style = Stroke(width = strokeW))
+      }
+      "necklace_woman" -> {
+        val hair = Path().apply {
+          moveTo(headCx - headR * 1.05f, headCy + headR * 0.9f)
+          cubicTo(headCx - headR * 1.2f, headCy - headR * 0.5f, headCx - headR * 0.5f, headCy - headR * 1.2f, headCx, headCy - headR * 1.1f)
+          cubicTo(headCx + headR * 0.5f, headCy - headR * 1.2f, headCx + headR * 1.2f, headCy - headR * 0.5f, headCx + headR * 1.05f, headCy + headR * 0.9f)
+          lineTo(headCx + headR * 0.85f, headCy + headR * 0.5f)
+          cubicTo(headCx + headR * 0.6f, headCy - headR * 0.55f, headCx - headR * 0.6f, headCy - headR * 0.55f, headCx - headR * 0.85f, headCy + headR * 0.5f)
+          close()
+        }
+        drawPath(hair, color = Color(0xFF4A4A4A))
+        necklace(silver, 5)
+      }
+      "curly_sunglasses_woman" -> {
+        for (i in -3..3) {
+          val ang = i * 0.28f
+          val cx = headCx + kotlin.math.sin(ang) * headR * 1.05f
+          val cy = headCy - headR * 0.4f + kotlin.math.cos(ang) * headR * 0.15f - headR * 0.35f
+          drawCircle(color = Color(0xFF3A3A3A), radius = headR * 0.3f, center = Offset(cx, cy))
+        }
+        val lensR = headR * 0.34f
+        val lensY = headCy
+        drawOval(
+          color = dark,
+          topLeft = Offset(headCx - headR * 0.75f, lensY - lensR * 0.7f),
+          size = Size(lensR * 1.3f, lensR * 1.1f)
+        )
+        drawOval(
+          color = dark,
+          topLeft = Offset(headCx + headR * 0.15f, lensY - lensR * 0.7f),
+          size = Size(lensR * 1.3f, lensR * 1.1f)
+        )
+      }
     }
   }
 }
@@ -5501,7 +5819,7 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
           .clip(RoundedCornerShape(50))
           .background(Color(0xFFB8862E))
           .clickable {
-            viewModel.updateAvatarPreset(selected, AVATAR_PRESETS.find { it.id == selected }?.emoji)
+            viewModel.updateAvatarPreset(selected, AVATAR_PRESETS.find { it.id == selected }?.emoji?.ifBlank { null })
             viewModel.updateAvatarName(nameInput.trim().ifBlank { null })
             viewModel.closeAvatarPicker()
           }
