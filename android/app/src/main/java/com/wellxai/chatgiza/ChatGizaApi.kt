@@ -557,6 +557,49 @@ object ChatGizaApi {
     }
   }
 
+  suspend fun getPasswordStatus(token: String): ApiResult<Boolean> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/account/password")
+        .header("Authorization", "Bearer $token")
+        .get()
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(JSONObject(text).optBoolean("hasPassword", false))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  // oldPassword is omitted the first time an account sets a password --
+  // the backend only requires it once one already exists.
+  suspend fun changePassword(token: String, oldPassword: String?, newPassword: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject().put("newPassword", newPassword).apply {
+        if (oldPassword != null) put("oldPassword", oldPassword)
+      }.toString().toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/account/password")
+        .header("Authorization", "Bearer $token")
+        .post(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          val text = response.body?.string().orEmpty()
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
   suspend fun getProfile(token: String): ApiResult<ProfileData> = withContext(Dispatchers.IO) {
     try {
       val request = Request.Builder()

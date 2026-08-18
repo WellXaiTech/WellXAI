@@ -99,6 +99,7 @@ sealed class AppScreen {
   object SwitchAccount : AppScreen()
   object SubaccountSettings : AppScreen()
   object ShareTarget : AppScreen()
+  object ChangePassword : AppScreen()
 }
 
 // A file/text shared into ChatGiZa from another app (system Share sheet),
@@ -298,6 +299,23 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var loadingSubaccounts by mutableStateOf(false)
     private set
   var subaccountError by mutableStateOf<String?>(null)
+    private set
+
+  // null while the account's password status hasn't loaded yet -- the
+  // screen shows a loading state rather than guessing, since guessing
+  // wrong would either ask for a nonexistent old password or skip
+  // straight past a real one.
+  var hasPassword by mutableStateOf<Boolean?>(null)
+    private set
+  var passwordStep by mutableStateOf("old")
+    private set
+  var oldPasswordInput by mutableStateOf("")
+    private set
+  var newPasswordInput by mutableStateOf("")
+    private set
+  var passwordError by mutableStateOf<String?>(null)
+    private set
+  var changingPassword by mutableStateOf(false)
     private set
 
   init {
@@ -1884,6 +1902,79 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun openHistory() {
     screen = AppScreen.History
+  }
+
+  fun openChangePassword() {
+    screen = AppScreen.ChangePassword
+    hasPassword = null
+    passwordStep = "old"
+    oldPasswordInput = ""
+    newPasswordInput = ""
+    passwordError = null
+    val token = tokenStore.getToken() ?: return
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.getPasswordStatus(token)) {
+        is ApiResult.Success -> {
+          hasPassword = result.value
+          // No password set yet -- there's nothing to ask for, so skip
+          // straight to setting one instead of showing a step that can
+          // never succeed.
+          if (!result.value) passwordStep = "new"
+        }
+        is ApiResult.Failure -> passwordError = result.message
+      }
+    }
+  }
+
+  fun closeChangePassword() {
+    returnToAccountTabsIfPending()
+    screen = AppScreen.ProfileHub
+  }
+
+  fun onOldPasswordInputChange(value: String) {
+    oldPasswordInput = value
+    passwordError = null
+  }
+
+  fun onNewPasswordInputChange(value: String) {
+    newPasswordInput = value
+    passwordError = null
+  }
+
+  fun confirmOldPassword() {
+    if (oldPasswordInput.isEmpty()) {
+      passwordError = "Enter your current password"
+      return
+    }
+    passwordStep = "new"
+  }
+
+  fun submitNewPassword() {
+    if (newPasswordInput.length < 8) {
+      passwordError = "Password must be at least 8 characters"
+      return
+    }
+    val token = tokenStore.getToken() ?: return
+    changingPassword = true
+    passwordError = null
+    viewModelScope.launch {
+      val result = ChatGizaApi.changePassword(
+        token,
+        if (hasPassword == true) oldPasswordInput else null,
+        newPasswordInput
+      )
+      changingPassword = false
+      when (result) {
+        is ApiResult.Success -> closeChangePassword()
+        is ApiResult.Failure -> {
+          passwordError = result.message
+          // The only way this endpoint fails once a password already
+          // exists is a wrong old password -- send them back to fix it
+          // rather than leaving the error stuck on the new-password step.
+          if (hasPassword == true) passwordStep = "old"
+        }
+      }
+    }
   }
 
   fun loadSubaccounts() {
