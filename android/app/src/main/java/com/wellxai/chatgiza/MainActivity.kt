@@ -9453,10 +9453,11 @@ private fun StorageManagementScreen(viewModel: ChatViewModel) {
       val appFraction = (appBytes / total).coerceIn(0f, 1f)
       val otherFraction = (otherUsedBytes / total).coerceIn(0f, 1f)
       val freeFraction = (freeDeviceBytes / total).coerceIn(0f, 1f)
+      Spacer(Modifier.height(22.dp))
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .height(10.dp)
+          .height(18.dp)
           .clip(RoundedCornerShape(50))
           .background(Color.White.copy(alpha = 0.1f))
       ) {
