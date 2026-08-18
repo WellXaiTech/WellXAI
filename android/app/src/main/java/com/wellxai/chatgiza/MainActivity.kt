@@ -7126,7 +7126,7 @@ private enum class AppTheme(val key: String, val label: String, val icon: ImageV
 private fun ThemeMockupPreview(bg: Color, panel: Color, modifier: Modifier = Modifier) {
   Box(
     modifier = modifier
-      .aspectRatio(0.55f)
+      .fillMaxSize()
       .clip(RoundedCornerShape(18.dp))
       .background(bg)
       .padding(10.dp)
@@ -7164,12 +7164,13 @@ private fun ThemeCard(theme: AppTheme, selected: Boolean, onClick: () -> Unit, m
     label = "themeCardBorder"
   )
   Column(
-    modifier = modifier.clickable(onClick = onClick),
+    modifier = modifier.clickable(onClick = onClick).fillMaxHeight(),
     horizontalAlignment = Alignment.CenterHorizontally
   ) {
     Box(
       modifier = Modifier
         .fillMaxWidth()
+        .weight(1f)
         .clip(RoundedCornerShape(20.dp))
         .border(2.dp, borderColor, RoundedCornerShape(20.dp))
         .background(colorScheme.onBackground.copy(alpha = 0.05f))
@@ -7180,7 +7181,7 @@ private fun ThemeCard(theme: AppTheme, selected: Boolean, onClick: () -> Unit, m
         AppTheme.DARK -> ThemeMockupPreview(bg = Color(0xFF161616), panel = Color(0xFF2E2E2E), modifier = Modifier.fillMaxWidth())
         AppTheme.FOR_YOU -> ThemeMockupPreview(bg = Color(0xFF2A2A2A), panel = Color(0xFF3F3F3F), modifier = Modifier.fillMaxWidth())
         AppTheme.SYSTEM ->
-          Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))) {
+          Row(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp))) {
             ThemeMockupPreview(bg = Color.White, panel = Color(0xFFEDEDED), modifier = Modifier.weight(1f))
             ThemeMockupPreview(bg = Color(0xFF161616), panel = Color(0xFF2E2E2E), modifier = Modifier.weight(1f))
           }
@@ -7260,7 +7261,6 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
       modifier = Modifier
         .fillMaxSize()
         .padding(padding)
-        .verticalScroll(rememberScrollState())
         .padding(horizontal = 20.dp)
         .padding(top = 20.dp, bottom = 24.dp)
     ) {
@@ -7278,18 +7278,22 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
       // Reference layout: a 2x2 grid of mini app-preview cards instead of
       // a single row of plain icon chips -- same 4 AppTheme entries and
       // the same updateThemeMode(theme.key) underneath, just a richer
-      // preview of what each one actually looks like.
+      // preview of what each one actually looks like. The grid fills all
+      // remaining space down to the bottom of the screen (equally split
+      // between the two rows) instead of sizing itself off the mockup's
+      // own aspect ratio, so all 4 cards stay the same height and the
+      // screen never needs to scroll.
       val themeOrder = listOf(AppTheme.LIGHT, AppTheme.DARK, AppTheme.FOR_YOU, AppTheme.SYSTEM)
-      Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+      Column(modifier = Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         themeOrder.chunked(2).forEach { rowThemes ->
-          Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+          Row(modifier = Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             rowThemes.forEach { theme ->
-              Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+              Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
                 ThemeCard(
                   theme = theme,
                   selected = selectedTheme == theme,
                   onClick = { viewModel.updateThemeMode(theme.key) },
-                  modifier = Modifier.fillMaxWidth(0.78f)
+                  modifier = Modifier.fillMaxWidth(0.88f)
                 )
               }
             }
