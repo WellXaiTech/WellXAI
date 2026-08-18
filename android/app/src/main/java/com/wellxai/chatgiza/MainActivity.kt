@@ -474,7 +474,7 @@ class MainActivity : ComponentActivity() {
               // drag needs to cover to fully open) is built around; overriding
               // it made the swipe stop short of fully open.
               drawerContent = {
-                DismissibleDrawerSheet(drawerContainerColor = Color.Black) {
+                DismissibleDrawerSheet(drawerContainerColor = Color.White) {
                   HistoryScreen(viewModel)
                 }
               }
@@ -650,15 +650,15 @@ private fun BoxScope.ScreenshotShareOverlay(viewModel: ChatViewModel) {
       modifier = Modifier
         .fillMaxWidth()
         .clip(RoundedCornerShape(18.dp))
-        .background(Color(0xFF1C1C1C))
+        .background(Color.White)
         .padding(16.dp),
       verticalAlignment = Alignment.CenterVertically
     ) {
       Column(modifier = Modifier.weight(1f)) {
-        Text("Share a link to chat?", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text("Share a link to chat?", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         Text(
           "This creates a copy that others can chat with",
-          color = Color.White.copy(alpha = 0.55f),
+          color = Color.Black.copy(alpha = 0.55f),
           fontSize = 12.sp
         )
       }
@@ -673,9 +673,9 @@ private fun BoxScope.ScreenshotShareOverlay(viewModel: ChatViewModel) {
           }
           context.startActivity(Intent.createChooser(intent, null))
         },
-        modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.White)
+        modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.Black)
       ) {
-        Icon(Icons.Filled.Share, contentDescription = "Share", tint = Color.Black, modifier = Modifier.size(18.dp))
+        Icon(Icons.Filled.Share, contentDescription = "Share", tint = Color.White, modifier = Modifier.size(18.dp))
       }
     }
   }
@@ -711,35 +711,35 @@ private fun BoxScope.MemorySuggestionOverlay(viewModel: ChatViewModel) {
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(18.dp))
-          .background(Color(0xFF1C1C1C))
+          .background(Color.White)
           .padding(16.dp)
       ) {
-        Text("Remember this?", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text("Remember this?", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         Spacer(modifier = Modifier.height(4.dp))
-        Text("\"$suggestion\"", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+        Text("\"$suggestion\"", color = Color.Black.copy(alpha = 0.7f), fontSize = 13.sp)
         Spacer(modifier = Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
           Box(
             modifier = Modifier
               .weight(1f)
               .clip(RoundedCornerShape(12.dp))
-              .background(Color.White.copy(alpha = 0.1f))
+              .background(Color.Black.copy(alpha = 0.1f))
               .clickable { viewModel.dismissMemorySuggestion(suggestion) }
               .padding(vertical = 10.dp),
             contentAlignment = Alignment.Center
           ) {
-            Text("Not now", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            Text("Not now", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Medium)
           }
           Box(
             modifier = Modifier
               .weight(1f)
               .clip(RoundedCornerShape(12.dp))
-              .background(Color.White)
+              .background(Color.Black)
               .clickable { viewModel.acceptMemorySuggestion(suggestion) }
               .padding(vertical = 10.dp),
             contentAlignment = Alignment.Center
           ) {
-            Text("Remember", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text("Remember", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
           }
         }
       }
@@ -845,7 +845,7 @@ private fun BoxScope.PreferenceWizardOverlay(viewModel: ChatViewModel) {
       modifier = Modifier
         .fillMaxWidth()
         .clip(RoundedCornerShape(22.dp))
-        .background(Color(0xFF1C1C1C))
+        .background(Color.White)
         .padding(20.dp)
     ) {
       Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
@@ -853,13 +853,13 @@ private fun BoxScope.PreferenceWizardOverlay(viewModel: ChatViewModel) {
           Icon(
             Icons.Filled.ArrowBackIosNew,
             contentDescription = "Nyuma",
-            tint = Color.White.copy(alpha = if (step > 0) 0.7f else 0.2f),
+            tint = Color.Black.copy(alpha = if (step > 0) 0.7f else 0.2f),
             modifier = Modifier.size(14.dp)
           )
         }
         Text(
           "${step + 1} of ${wizard.steps.size}",
-          color = Color.White.copy(alpha = 0.6f),
+          color = Color.Black.copy(alpha = 0.6f),
           fontSize = 13.sp,
           modifier = Modifier.weight(1f),
           textAlign = TextAlign.Center
@@ -868,20 +868,20 @@ private fun BoxScope.PreferenceWizardOverlay(viewModel: ChatViewModel) {
           Icon(
             Icons.Filled.ArrowForwardIos,
             contentDescription = "Mbele",
-            tint = Color.White.copy(alpha = if (step < lastStep) 0.7f else 0.2f),
+            tint = Color.Black.copy(alpha = if (step < lastStep) 0.7f else 0.2f),
             modifier = Modifier.size(14.dp)
           )
         }
         Spacer(modifier = Modifier.width(6.dp))
         IconButton(onClick = { viewModel.dismissPreferenceWizard() }, modifier = Modifier.size(28.dp)) {
-          Icon(Icons.Outlined.Close, contentDescription = "Funga", tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
+          Icon(Icons.Outlined.Close, contentDescription = "Funga", tint = Color.Black.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
         }
       }
       Spacer(modifier = Modifier.height(14.dp))
       if (current != null) {
-        Text(current.question, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+        Text(current.question, color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(4.dp))
-        Text("Select all that apply", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+        Text("Select all that apply", color = Color.Black.copy(alpha = 0.5f), fontSize = 12.sp)
         Spacer(modifier = Modifier.height(10.dp))
         val selections = viewModel.wizardSelections.getOrElse(step) { emptySet() }
         current.options.forEach { option ->
@@ -905,9 +905,9 @@ private fun WizardCheckboxRow(label: String, checked: Boolean, onClick: () -> Un
   ) {
     WizardOptionCircle(filled = checked)
     Spacer(modifier = Modifier.width(12.dp))
-    Text(label, color = Color.White, fontSize = 15.sp)
+    Text(label, color = Color.Black, fontSize = 15.sp)
   }
-  HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+  HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
 }
 
 // Plain circle indicator, matching the reference design used for every
@@ -918,8 +918,8 @@ private fun WizardOptionCircle(filled: Boolean) {
     modifier = Modifier
       .size(20.dp)
       .clip(CircleShape)
-      .background(if (filled) Color.White else Color.Transparent)
-      .border(1.5.dp, Color.White.copy(alpha = 0.5f), CircleShape)
+      .background(if (filled) Color.Black else Color.Transparent)
+      .border(1.5.dp, Color.Black.copy(alpha = 0.5f), CircleShape)
   )
 }
 
@@ -934,11 +934,11 @@ private fun WizardSkipRow(label: String, onSkip: () -> Unit) {
   ) {
     WizardOptionCircle(filled = false)
     Spacer(modifier = Modifier.width(12.dp))
-    Text(label, color = Color.White.copy(alpha = 0.7f), fontSize = 15.sp, modifier = Modifier.weight(1f))
+    Text(label, color = Color.Black.copy(alpha = 0.7f), fontSize = 15.sp, modifier = Modifier.weight(1f))
     OutlinedButton(
       onClick = onSkip,
-      colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-      border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.3f)),
+      colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Black),
+      border = androidx.compose.foundation.BorderStroke(1.dp, Color.Black.copy(alpha = 0.3f)),
       contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
     ) {
       Text("Skip", fontSize = 13.sp)
@@ -948,6 +948,11 @@ private fun WizardSkipRow(label: String, onSkip: () -> Unit) {
 
 @Composable
 private fun ChatGizaTheme(themeMode: String, content: @Composable () -> Unit) {
+  // Forced to the light scheme everywhere while colors are being rebuilt
+  // from a single flat background -- shadows the stored setting instead of
+  // touching the Appearance picker or updateThemeMode, so flipping this
+  // back to `themeMode` later restores the switcher with no other changes.
+  @Suppress("NAME_SHADOWING") val themeMode = "light"
   val useDark = when (themeMode) {
     "light" -> false
     "dark", "for_you" -> true
@@ -1051,7 +1056,7 @@ private fun SignedOutScreen(signingIn: Boolean, error: String?, onSignIn: () -> 
     }
     if (error != null) {
       Spacer(modifier = Modifier.height(16.dp))
-      Text(error, color = Color.White, fontSize = 13.sp)
+      Text(error, color = Color.Black, fontSize = 13.sp)
     }
   }
 }
@@ -1139,7 +1144,7 @@ private fun DeleteIcon(tint: Color, modifier: Modifier = Modifier) {
 private val FILTER_LINES_PATH = PathParser().parsePathString("M3 6h18M6 12h12m-9 6h6").toPath()
 
 @Composable
-private fun FilterIconCustom(modifier: Modifier = Modifier, tint: Color = Color.White) {
+private fun FilterIconCustom(modifier: Modifier = Modifier, tint: Color = Color.Black) {
   Canvas(modifier = modifier) {
     scale(size.width / 24f, pivot = Offset.Zero) {
       drawPath(FILTER_LINES_PATH, color = tint, style = Stroke(width = 2f, cap = StrokeCap.Round))
@@ -1677,7 +1682,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
       )
     },
-    containerColor = Color(0xFF000000),
+    containerColor = Color.White,
     contentWindowInsets = WindowInsets(0, 0, 0, 0)
   ) { padding ->
     // A transparent top bar used to let scrolled-up message text show
@@ -1764,7 +1769,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
                 drawContent()
                 drawRect(
                   brush = Brush.verticalGradient(
-                    colors = listOf(Color.Transparent, Color.Black),
+                    colors = listOf(Color.Transparent, Color.White),
                     startY = 0f,
                     endY = padding.calculateTopPadding().toPx()
                   ),
@@ -1821,7 +1826,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
           if (viewModel.errorMessage != null) {
             Text(
               viewModel.errorMessage ?: "",
-              color = Color.White,
+              color = Color.Black,
               fontSize = 12.sp,
               modifier = Modifier.padding(horizontal = 16.dp)
             )
@@ -1846,7 +1851,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
             modifier = Modifier
               .fillMaxWidth()
               .height(6.dp)
-              .background(Color(0xFF000000))
+              .background(Color.White)
           )
         }
       }
@@ -1864,7 +1869,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
           target?.let { viewModel.deleteConversation(it.id) }
           chatDeleteConfirm = false
         }) {
-          Text("Delete", color = Color.White, fontWeight = FontWeight.Bold)
+          Text("Delete", color = Color.Black, fontWeight = FontWeight.Bold)
         }
       },
       dismissButton = {
@@ -1916,7 +1921,7 @@ private fun NowPlayingBar(isPremium: Boolean, player: PremiumTtsPlayer, onClose:
       .padding(bottom = 8.dp)
       .height(52.dp)
       .clip(RoundedCornerShape(percent = 50))
-      .background(Color(0xFF1F1F1F))
+      .background(Color.White)
       .padding(horizontal = 10.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
@@ -1924,7 +1929,7 @@ private fun NowPlayingBar(isPremium: Boolean, player: PremiumTtsPlayer, onClose:
       modifier = Modifier
         .size(36.dp)
         .clip(CircleShape)
-        .background(Color.White)
+        .background(Color.Black)
         .let {
           if (isPremium) it.clickable {
             if (playing) player.pause() else player.resume()
@@ -1936,7 +1941,7 @@ private fun NowPlayingBar(isPremium: Boolean, player: PremiumTtsPlayer, onClose:
       Icon(
         if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
         contentDescription = if (playing) "Pause" else "Play",
-        tint = Color.Black,
+        tint = Color.White,
         modifier = Modifier.size(18.dp)
       )
     }
@@ -1945,7 +1950,7 @@ private fun NowPlayingBar(isPremium: Boolean, player: PremiumTtsPlayer, onClose:
       Icon(
         Icons.Filled.Replay10,
         contentDescription = "Rewind 10 seconds",
-        tint = Color.White,
+        tint = Color.Black,
         modifier = Modifier
           .size(28.dp)
           .clickable { player.seekTo((positionMs - 10_000).coerceAtLeast(0)) }
@@ -1954,7 +1959,7 @@ private fun NowPlayingBar(isPremium: Boolean, player: PremiumTtsPlayer, onClose:
       Icon(
         Icons.Filled.Forward10,
         contentDescription = "Forward 10 seconds",
-        tint = Color.White,
+        tint = Color.Black,
         modifier = Modifier
           .size(28.dp)
           .clickable { player.seekTo((positionMs + 10_000).coerceAtMost(durationMs)) }
@@ -1963,27 +1968,27 @@ private fun NowPlayingBar(isPremium: Boolean, player: PremiumTtsPlayer, onClose:
       Box(
         modifier = Modifier
           .clip(RoundedCornerShape(percent = 50))
-          .background(Color.White.copy(alpha = 0.12f))
+          .background(Color.Black.copy(alpha = 0.12f))
           .clickable {
             speedIndex = (speedIndex + 1) % PLAYBACK_SPEEDS.size
             player.setSpeed(PLAYBACK_SPEEDS[speedIndex])
           }
           .padding(horizontal = 8.dp, vertical = 4.dp)
       ) {
-        Text("${PLAYBACK_SPEEDS[speedIndex]}x", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        Text("${PLAYBACK_SPEEDS[speedIndex]}x", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Medium)
       }
     }
     Spacer(modifier = Modifier.weight(1f))
     Text(
       if (durationMs > 0) "${formatTime(positionMs)} / ${formatTime(durationMs)}" else formatTime(positionMs),
-      color = Color.White,
+      color = Color.Black,
       fontSize = 12.sp
     )
     Spacer(modifier = Modifier.width(10.dp))
     Icon(
       Icons.Filled.Close,
       contentDescription = "Stop",
-      tint = Color.White.copy(alpha = 0.7f),
+      tint = Color.Black.copy(alpha = 0.7f),
       modifier = Modifier.size(20.dp).clickable(onClick = onClose)
     )
   }
@@ -2015,38 +2020,38 @@ private fun ChatConversationMenuSheet(
     onDismissRequest = onDismiss,
     modifier = Modifier.width(240.dp),
     shape = RoundedCornerShape(24.dp),
-    containerColor = Color(0xFF202020),
+    containerColor = Color.White,
     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A2A2A))
   ) {
     Text(
       title,
-      color = Color.White.copy(alpha = 0.5f),
+      color = Color.Black.copy(alpha = 0.5f),
       fontSize = 13.sp,
       maxLines = 1,
       overflow = TextOverflow.Ellipsis,
       modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
     )
-    ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_share), contentDescription = null, tint = Color.White) }, label = "Share") {
+    ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_share), contentDescription = null, tint = Color.Black) }, label = "Share") {
       onDismiss(); onShare()
     }
-    ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_pin), contentDescription = null, tint = Color.White) }, label = if (pinned) "Unpin" else "Pin") {
+    ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_pin), contentDescription = null, tint = Color.Black) }, label = if (pinned) "Unpin" else "Pin") {
       onDismiss(); onTogglePin()
     }
     ChatMenuRow(
-      icon = { ProjectsIconCustom(tint = Color.White, modifier = Modifier.size(20.dp)) },
+      icon = { ProjectsIconCustom(tint = Color.Black, modifier = Modifier.size(20.dp)) },
       label = "Add to project",
-      trailing = { Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp)) }
+      trailing = { Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(20.dp)) }
     ) { onDismiss(); onComingSoon("Add to project") }
-    ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_find_in_chat), contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp)) }, label = "Find in chat") {
+    ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_find_in_chat), contentDescription = null, tint = Color.Black, modifier = Modifier.size(20.dp)) }, label = "Find in chat") {
       onDismiss(); onFindInChat()
     }
-    ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_home), contentDescription = null, tint = Color.White) }, label = "Add to home") {
+    ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_home), contentDescription = null, tint = Color.Black) }, label = "Add to home") {
       onDismiss(); onComingSoon("Add to home")
     }
-    ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_archive), contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp)) }, label = "Archive") {
+    ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_archive), contentDescription = null, tint = Color.Black, modifier = Modifier.size(20.dp)) }, label = "Archive") {
       onDismiss(); onComingSoon("Archive")
     }
-    ChatMenuRow(icon = { DeleteIcon(tint = Color.White) }, label = "Delete", tint = Color.White) {
+    ChatMenuRow(icon = { DeleteIcon(tint = Color.Black) }, label = "Delete", tint = Color.Black) {
       onDismiss(); onDelete()
     }
   }
@@ -2056,7 +2061,7 @@ private fun ChatConversationMenuSheet(
 private fun ChatMenuRow(
   icon: @Composable () -> Unit,
   label: String,
-  tint: Color = Color.White,
+  tint: Color = Color.Black,
   trailing: (@Composable () -> Unit)? = null,
   onClick: () -> Unit
 ) {
@@ -2315,7 +2320,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
     modifier = Modifier
       .fillMaxWidth()
       .padding(start = 6.dp, end = 6.dp, top = 10.dp)
-      .background(Color(0xFF000000))
+      .background(Color.White)
   ) {
   Card(
     // No bottom padding -- the outer Column already carries
@@ -2350,11 +2355,11 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
               .padding(3.dp)
               .size(18.dp)
               .clip(CircleShape)
-              .background(Color.Black.copy(alpha = 0.6f))
+              .background(Color.White.copy(alpha = 0.6f))
               .clickable(onClick = { viewModel.clearAttachedImage() }),
             contentAlignment = Alignment.Center
           ) {
-            Icon(Icons.Outlined.Close, contentDescription = "Remove photo", tint = Color.White, modifier = Modifier.size(12.dp))
+            Icon(Icons.Outlined.Close, contentDescription = "Remove photo", tint = Color.Black, modifier = Modifier.size(12.dp))
           }
         }
       }
@@ -2371,7 +2376,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             modifier = Modifier
               .size(96.dp)
               .clip(RoundedCornerShape(12.dp))
-              .background(Color.White)
+              .background(Color.Black)
           ) {
             // Coil's AsyncImage can't decode a data:...;base64 string
             // directly (it needs a real content:// / http(s) source), so
@@ -2397,11 +2402,11 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
               modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .background(Color.Black.copy(alpha = 0.75f))
+                .background(Color.White.copy(alpha = 0.75f))
                 .padding(vertical = 4.dp),
               contentAlignment = Alignment.Center
             ) {
-              Text("PDF", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+              Text("PDF", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
           }
           Box(
@@ -2409,11 +2414,11 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
               .padding(3.dp)
               .size(18.dp)
               .clip(CircleShape)
-              .background(Color.Black.copy(alpha = 0.6f))
+              .background(Color.White.copy(alpha = 0.6f))
               .clickable(onClick = { viewModel.clearAttachedFile() }),
             contentAlignment = Alignment.Center
           ) {
-            Icon(Icons.Outlined.Close, contentDescription = "Remove file", tint = Color.White, modifier = Modifier.size(12.dp))
+            Icon(Icons.Outlined.Close, contentDescription = "Remove file", tint = Color.Black, modifier = Modifier.size(12.dp))
           }
         }
       } else if (attachedFile != null) {
@@ -2449,7 +2454,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
       if (attachError) {
         Text(
           "Couldn't attach that — try a different file",
-          color = Color.White,
+          color = Color.Black,
           fontSize = 12.sp,
           modifier = Modifier.padding(top = 6.dp)
         )
@@ -2483,13 +2488,13 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
           modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 6.dp)
         ) {
           Box(
-            modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White),
+            modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black),
             contentAlignment = Alignment.Center
           ) {
             Icon(
               painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mic),
               contentDescription = "Listening",
-              tint = Color.White,
+              tint = Color.Black,
               modifier = Modifier.size(18.dp)
             )
           }
@@ -2522,7 +2527,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
               .clickable { stopListening(keepResult = true) },
             contentAlignment = Alignment.Center
           ) {
-            Icon(Icons.Filled.Check, contentDescription = "Done", tint = Color.Black, modifier = Modifier.size(18.dp))
+            Icon(Icons.Filled.Check, contentDescription = "Done", tint = Color.White, modifier = Modifier.size(18.dp))
           }
         }
       } else {
@@ -2551,7 +2556,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             expanded = attachMenuOpen,
             onDismissRequest = { attachMenuOpen = false },
             shape = RoundedCornerShape(32.dp),
-            containerColor = Color(0xFF202020),
+            containerColor = Color.White,
             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A2A2A))
           ) {
             AttachMenuRow(
@@ -2580,7 +2585,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             )
             HorizontalDivider(color = Color(0xFF262626), thickness = 1.dp)
             AttachMenuRow(
-              icon = { SkillsIconCustom(tint = Color.White, modifier = Modifier.size(24.dp)) },
+              icon = { SkillsIconCustom(tint = Color.Black, modifier = Modifier.size(24.dp)) },
               label = "Skills",
               onClick = { attachMenuOpen = false }
             )
@@ -2638,14 +2643,14 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
           modifier = Modifier
             .size(36.dp)
             .clip(CircleShape)
-            .background(Color(0xFF333333))
+            .background(Color.White)
             .clickable { launchSpeech() },
           contentAlignment = Alignment.Center
         ) {
           Icon(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mic),
             contentDescription = "Voice input",
-            tint = Color.White,
+            tint = Color.Black,
             modifier = Modifier.size(18.dp)
           )
         }
@@ -2663,7 +2668,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
               .clickable(enabled = !viewModel.sending) { tapHaptic(); viewModel.sendMessage() },
             contentAlignment = Alignment.Center
           ) {
-            Icon(Icons.Filled.ArrowUpward, contentDescription = "Send", tint = Color.Black, modifier = Modifier.size(18.dp))
+            Icon(Icons.Filled.ArrowUpward, contentDescription = "Send", tint = Color.White, modifier = Modifier.size(18.dp))
           }
         } else {
           // SPEAK BUTTON (waveform icon + label)
@@ -2671,7 +2676,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             modifier = Modifier
               .height(36.dp)
               .clip(RoundedCornerShape(18.dp))
-              .background(Color.White)
+              .background(Color.Black)
               .clickable { viewModel.openLiveVision() }
               .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -2679,7 +2684,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             Icon(
               painter = androidx.compose.ui.res.painterResource(R.drawable.ic_waveform_speak),
               contentDescription = null,
-              tint = Color.Black,
+              tint = Color.White,
               modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
@@ -2687,7 +2692,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
               text = "Speak",
               fontSize = 13.sp,
               fontWeight = FontWeight.Bold,
-              color = Color.Black,
+              color = Color.White,
               maxLines = 1,
               softWrap = false
             )
@@ -2794,7 +2799,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
     }
   }
 
-  Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+  Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
     if (cameraEnabled && hasCameraPermission) {
       // Keyed on useFrontCamera so flipping the camera fully disposes and
       // recreates this AndroidView — factory() below already unbinds the
@@ -2847,7 +2852,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
       ) {
         Text(
           "Live Vision needs microphone access.",
-          color = Color.White,
+          color = Color.Black,
           fontSize = 15.sp,
           textAlign = TextAlign.Center
         )
@@ -2898,27 +2903,27 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               .align(Alignment.Center)
               .height(36.dp)
               .clip(RoundedCornerShape(percent = 50))
-              .background(Color.White.copy(alpha = 0.12f))
+              .background(Color.Black.copy(alpha = 0.12f))
               .padding(horizontal = 14.dp)
           ) {
             if (isConnecting) {
               Icon(
                 painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connecting_spinner),
                 contentDescription = null,
-                tint = Color.White,
+                tint = Color.Black,
                 modifier = Modifier.size(22.dp)
               )
               Spacer(modifier = Modifier.size(8.dp))
-              Text("Connecting…", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+              Text("Connecting…", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             } else {
               Icon(
                 painter = androidx.compose.ui.res.painterResource(R.drawable.ic_talking),
                 contentDescription = null,
-                tint = Color.White,
+                tint = Color.Black,
                 modifier = Modifier.size(20.dp)
               )
               Spacer(modifier = Modifier.size(6.dp))
-              Text(statusText, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+              Text(statusText, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
           }
           if (cameraEnabled) {
@@ -2942,10 +2947,10 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           Box(
             modifier = Modifier
               .clip(RoundedCornerShape(percent = 50))
-              .background(Color.White.copy(alpha = 0.15f))
+              .background(Color.Black.copy(alpha = 0.15f))
               .padding(horizontal = 16.dp, vertical = 8.dp)
           ) {
-            Text("Share Screen — coming soon", color = Color.White, fontSize = 12.sp)
+            Text("Share Screen — coming soon", color = Color.Black, fontSize = 12.sp)
           }
           Spacer(modifier = Modifier.height(10.dp))
         }
@@ -2959,7 +2964,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               expanded = cameraMenuOpen,
               onDismissRequest = { cameraMenuOpen = false },
               shape = RoundedCornerShape(16.dp),
-              containerColor = Color(0xFF202020),
+              containerColor = Color.White,
               border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A2A2A))
             ) {
               Column(
@@ -3034,22 +3039,22 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
                   .offset(x = 4.dp, y = (-4).dp)
                   .size(18.dp)
                   .clip(CircleShape)
-                  .background(Color.White)
-                  .border(width = 1.dp, color = Color.Black, shape = CircleShape),
+                  .background(Color.Black)
+                  .border(width = 1.dp, color = Color.White, shape = CircleShape),
                 contentAlignment = Alignment.Center
               ) {
                 if (activePersonality.iconRes != null) {
                   Icon(
                     painter = androidx.compose.ui.res.painterResource(activePersonality.iconRes),
                     contentDescription = activePersonality.label,
-                    tint = Color.Black,
+                    tint = Color.White,
                     modifier = Modifier.size(11.dp)
                   )
                 } else {
                   Icon(
                     activePersonality.icon!!,
                     contentDescription = activePersonality.label,
-                    tint = Color.Black,
+                    tint = Color.White,
                     modifier = Modifier.size(11.dp)
                   )
                 }
@@ -3072,7 +3077,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               .weight(1f)
               .height(46.dp)
               .clip(RoundedCornerShape(percent = 50))
-              .background(Color(0xFF1A1A1A))
+              .background(Color.White)
           ) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxHeight()) {
               Box {
@@ -3081,11 +3086,11 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
                     .padding(start = 5.dp)
                     .size(width = 40.dp, height = 38.dp)
                     .clip(RoundedCornerShape(percent = 50))
-                    .background(Color.White.copy(alpha = 0.10f))
+                    .background(Color.Black.copy(alpha = 0.10f))
                     .clickable(onClick = { toolMenuOpen = true }),
                   contentAlignment = Alignment.Center
                 ) {
-                  Icon(Icons.Filled.Add, contentDescription = "Tools", tint = Color.White, modifier = Modifier.size(22.dp))
+                  Icon(Icons.Filled.Add, contentDescription = "Tools", tint = Color.Black, modifier = Modifier.size(22.dp))
                 }
                 DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
                   DropdownMenuItem(text = { Text("GiZa Pro") }, onClick = { viewModel.selectTool(null); toolMenuOpen = false })
@@ -3108,15 +3113,15 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               // that padding so the text actually sits centered and legible.
               Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                 if (viewModel.input.isEmpty()) {
-                  Text("Ask anything", color = Color.White.copy(alpha = 0.38f), fontSize = 15.sp)
+                  Text("Ask anything", color = Color.Black.copy(alpha = 0.38f), fontSize = 15.sp)
                 }
                 BasicTextField(
                   value = viewModel.input,
                   onValueChange = viewModel::onInputChange,
                   modifier = Modifier.fillMaxWidth(),
                   singleLine = true,
-                  textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp),
-                  cursorBrush = SolidColor(Color.White)
+                  textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 15.sp),
+                  cursorBrush = SolidColor(Color.Black)
                 )
               }
             }
@@ -3126,7 +3131,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
             modifier = Modifier
               .size(width = 100.dp, height = 46.dp)
               .clip(RoundedCornerShape(percent = 50))
-              .background(Color.White)
+              .background(Color.Black)
               .clickable(onClick = {
                 if (viewModel.input.isNotBlank()) {
                   controller.stop()
@@ -3140,9 +3145,9 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
             contentAlignment = Alignment.Center
           ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-              LiveDotsIndicator(dotColor = Color.Black, animated = false, count = 5, dotSize = 4.dp)
+              LiveDotsIndicator(dotColor = Color.White, animated = false, count = 5, dotSize = 4.dp)
               Spacer(modifier = Modifier.size(8.dp))
-              Text("Stop", color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+              Text("Stop", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
             }
           }
         }
@@ -3298,8 +3303,8 @@ private fun VoiceControlPillShell(contentDescription: String, active: Boolean, e
       .size(width = 84.dp, height = 46.dp)
       .alpha(if (enabled) 1f else 0.4f)
       .clip(RoundedCornerShape(percent = 50))
-      .background(Color(0xFF1F1F1F))
-      .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(percent = 50))
+      .background(Color.White)
+      .border(width = 1.dp, color = Color.Black.copy(alpha = 0.1f), shape = RoundedCornerShape(percent = 50))
       .clickable(enabled = enabled, onClick = onClick),
     contentAlignment = Alignment.Center
   ) {
@@ -3307,7 +3312,7 @@ private fun VoiceControlPillShell(contentDescription: String, active: Boolean, e
     // (most noticeably Camera, off by default until permission is
     // granted) starts in its inactive state -- still visibly dimmer than
     // active, but no longer hard to make out.
-    icon(Color.White.copy(alpha = if (active) 1f else 0.7f))
+    icon(Color.Black.copy(alpha = if (active) 1f else 0.7f))
   }
 }
 
@@ -3326,14 +3331,14 @@ private fun LiveCornerButton(
     modifier = modifier
       .size(44.dp)
       .clip(CircleShape)
-      .background(Color.Black.copy(alpha = 0.35f))
+      .background(Color.White.copy(alpha = 0.35f))
       .clickable(enabled = enabled, onClick = onClick),
     contentAlignment = Alignment.Center
   ) {
     Icon(
       icon,
       contentDescription = contentDescription,
-      tint = Color.White.copy(alpha = if (enabled) 1f else 0.35f),
+      tint = Color.Black.copy(alpha = if (enabled) 1f else 0.35f),
       modifier = Modifier.size(20.dp)
     )
   }
@@ -3349,8 +3354,8 @@ private fun PushToTalkPill(enabled: Boolean = true, onPress: () -> Unit, onRelea
       .size(72.dp)
       .alpha(if (enabled) 1f else 0.4f)
       .clip(CircleShape)
-      .background(if (pressed) Color.White else Color(0xFF1F1F1F))
-      .border(width = 1.dp, color = Color.White.copy(alpha = 0.1f), shape = CircleShape)
+      .background(if (pressed) Color.Black else Color.White)
+      .border(width = 1.dp, color = Color.Black.copy(alpha = 0.1f), shape = CircleShape)
       .pointerInput(enabled) {
         if (!enabled) return@pointerInput
         awaitEachGesture {
@@ -3367,7 +3372,7 @@ private fun PushToTalkPill(enabled: Boolean = true, onPress: () -> Unit, onRelea
     Icon(
       painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mic),
       contentDescription = "Hold to talk",
-      tint = if (pressed) Color.Black else Color.White,
+      tint = if (pressed) Color.White else Color.Black,
       modifier = Modifier.size(26.dp)
     )
   }
@@ -3506,7 +3511,7 @@ private fun VoiceGradientCard(option: VoiceOption, selected: Boolean, onClick: (
       .clickable(onClick = onClick)
   ) {
     if (selected) {
-      Box(modifier = Modifier.matchParentSize().background(Color(0xFF1C1C1C)))
+      Box(modifier = Modifier.matchParentSize().background(Color.White))
       listOf(
         Triple(option.gradientStart, 0f, 0.85f),
         Triple(option.gradientEnd, 130f, 0.8f),
@@ -3542,27 +3547,27 @@ private fun VoiceGradientCard(option: VoiceOption, selected: Boolean, onClick: (
               )
             }
             .graphicsLayer { this.alpha = puff.alpha }
-            .background(Brush.radialGradient(listOf(Color.White, Color.White.copy(alpha = 0f))))
+            .background(Brush.radialGradient(listOf(Color.Black, Color.Black.copy(alpha = 0f))))
         )
       }
     } else {
-      Box(modifier = Modifier.matchParentSize().background(Color.White.copy(alpha = 0.08f)))
+      Box(modifier = Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.08f)))
     }
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(option.name, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+        Text(option.name, color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.Bold)
         // Orin specifically, not every voice -- next to the name rather than
         // a corner badge.
         if (isOrin) {
           Spacer(modifier = Modifier.width(6.dp))
           OrinVoiceBadge(
-            tint = Color.White.copy(alpha = if (selected) 0.9f else 0.5f),
+            tint = Color.Black.copy(alpha = if (selected) 0.9f else 0.5f),
             modifier = Modifier.size(15.dp)
           )
         }
       }
       Spacer(modifier = Modifier.height(2.dp))
-      Text(option.description, color = Color.White.copy(alpha = if (selected) 0.85f else 0.55f), fontSize = 12.sp)
+      Text(option.description, color = Color.Black.copy(alpha = if (selected) 0.85f else 0.55f), fontSize = 12.sp)
     }
   }
 }
@@ -3603,24 +3608,24 @@ private fun PersonalityPill(option: PersonalityOption, selected: Boolean, onClic
     verticalAlignment = Alignment.CenterVertically,
     modifier = Modifier
       .clip(RoundedCornerShape(28.dp))
-      .background(if (selected) Color.White else Color.White.copy(alpha = 0.08f))
+      .background(if (selected) Color.Black else Color.Black.copy(alpha = 0.08f))
       .clickable(onClick = onClick)
       .padding(horizontal = 18.dp, vertical = 14.dp)
   ) {
     if (option.iconRes != null) {
-      Icon(androidx.compose.ui.res.painterResource(option.iconRes), contentDescription = null, tint = if (selected) Color.Black else Color.White, modifier = Modifier.size(18.dp))
+      Icon(androidx.compose.ui.res.painterResource(option.iconRes), contentDescription = null, tint = if (selected) Color.White else Color.Black, modifier = Modifier.size(18.dp))
       Spacer(modifier = Modifier.width(10.dp))
     } else if (option.icon != null) {
-      Icon(option.icon, contentDescription = null, tint = if (selected) Color.Black else Color.White, modifier = Modifier.size(18.dp))
+      Icon(option.icon, contentDescription = null, tint = if (selected) Color.White else Color.Black, modifier = Modifier.size(18.dp))
       Spacer(modifier = Modifier.width(10.dp))
     } else {
-      Icon(Icons.Filled.Add, contentDescription = null, tint = if (selected) Color.Black else Color.White, modifier = Modifier.size(18.dp))
+      Icon(Icons.Filled.Add, contentDescription = null, tint = if (selected) Color.White else Color.Black, modifier = Modifier.size(18.dp))
       Spacer(modifier = Modifier.width(10.dp))
     }
-    Text(option.label, color = if (selected) Color.Black else Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+    Text(option.label, color = if (selected) Color.White else Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold)
     if (option.tag != null) {
       Spacer(modifier = Modifier.width(6.dp))
-      Text(option.tag, color = if (selected) Color.Black.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+      Text(option.tag, color = if (selected) Color.White.copy(alpha = 0.5f) else Color.Black.copy(alpha = 0.4f), fontSize = 13.sp)
     }
   }
 }
@@ -3644,7 +3649,7 @@ private fun LiveVoiceSettingsSheet(
   onOutputDeviceChange: (String) -> Unit,
   onDismiss: () -> Unit
 ) {
-  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFF161616)) {
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color.White) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
@@ -3653,7 +3658,7 @@ private fun LiveVoiceSettingsSheet(
     ) {
       Text(
         "Voice Settings",
-        color = Color.White,
+        color = Color.Black,
         fontSize = 18.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.fillMaxWidth(),
@@ -3661,7 +3666,7 @@ private fun LiveVoiceSettingsSheet(
       )
 
       Spacer(modifier = Modifier.height(28.dp))
-      Text("Voice", color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+      Text("Voice", color = Color.Black.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
       Spacer(modifier = Modifier.height(10.dp))
       Row(
         modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -3680,7 +3685,7 @@ private fun LiveVoiceSettingsSheet(
       }
 
       Spacer(modifier = Modifier.height(26.dp))
-      Text("Personality", color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+      Text("Personality", color = Color.Black.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
       Spacer(modifier = Modifier.height(10.dp))
       Row(
         modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -3696,13 +3701,13 @@ private fun LiveVoiceSettingsSheet(
       }
 
       Spacer(modifier = Modifier.height(26.dp))
-      Text("Voice Activation", color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+      Text("Voice Activation", color = Color.Black.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
       Spacer(modifier = Modifier.height(10.dp))
       Row(
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(24.dp))
-          .background(Color.White.copy(alpha = 0.08f))
+          .background(Color.Black.copy(alpha = 0.08f))
           .padding(4.dp)
       ) {
         listOf("default" to "Default", "push_to_talk" to "Push to Talk").forEach { (id, label) ->
@@ -3711,14 +3716,14 @@ private fun LiveVoiceSettingsSheet(
             modifier = Modifier
               .weight(1f)
               .clip(RoundedCornerShape(20.dp))
-              .background(if (selected) Color.White else Color.Transparent)
+              .background(if (selected) Color.Black else Color.Transparent)
               .clickable { onActivationModeChange(id) }
               .padding(vertical = 10.dp),
             contentAlignment = Alignment.Center
           ) {
             Text(
               label,
-              color = if (selected) Color.Black else Color.White,
+              color = if (selected) Color.White else Color.Black,
               fontSize = 14.sp,
               fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
             )
@@ -3728,8 +3733,8 @@ private fun LiveVoiceSettingsSheet(
 
       Spacer(modifier = Modifier.height(26.dp))
       Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text("Voice Speed", color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-        Text(String.format("%.1fx", speed), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text("Voice Speed", color = Color.Black.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text(String.format("%.1fx", speed), color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
       }
       Spacer(modifier = Modifier.height(12.dp))
       PreviewSlider(
@@ -3739,13 +3744,13 @@ private fun LiveVoiceSettingsSheet(
       )
 
       Spacer(modifier = Modifier.height(26.dp))
-      Text("Output Device", color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+      Text("Output Device", color = Color.Black.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
       Spacer(modifier = Modifier.height(10.dp))
       Row(
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(24.dp))
-          .background(Color.White.copy(alpha = 0.08f))
+          .background(Color.Black.copy(alpha = 0.08f))
           .padding(4.dp)
       ) {
         listOf(
@@ -3759,22 +3764,22 @@ private fun LiveVoiceSettingsSheet(
             modifier = Modifier
               .weight(1f)
               .clip(RoundedCornerShape(20.dp))
-              .background(if (selected) Color.White else Color.Transparent)
+              .background(if (selected) Color.Black else Color.Transparent)
               .clickable { onOutputDeviceChange(id) }
               .padding(vertical = 10.dp)
           ) {
             if (id == "speaker") {
               SpeakerIconCustom(
-                tint = if (selected) Color.Black else Color.White,
+                tint = if (selected) Color.White else Color.Black,
                 modifier = Modifier.size(18.dp)
               )
             } else {
-              Icon(icon, contentDescription = null, tint = if (selected) Color.Black else Color.White, modifier = Modifier.size(18.dp))
+              Icon(icon, contentDescription = null, tint = if (selected) Color.White else Color.Black, modifier = Modifier.size(18.dp))
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
               label,
-              color = if (selected) Color.Black else Color.White,
+              color = if (selected) Color.White else Color.Black,
               fontSize = 12.sp,
               fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
             )
@@ -3886,7 +3891,7 @@ private fun ChatGizaEventsCard(viewModel: ChatViewModel) {
       .fillMaxWidth()
       .padding(horizontal = 10.dp, vertical = 2.dp)
       .clip(RoundedCornerShape(16.dp))
-      .background(Color(0xFF262626))
+      .background(Color.White)
       .padding(horizontal = 10.dp, vertical = 6.dp)
   ) {
     // A real swipeable page for every announcement -- not just a crossfading
@@ -3906,29 +3911,29 @@ private fun ChatGizaEventsCard(viewModel: ChatViewModel) {
           }
       ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-          Text("Events", color = Color.White.copy(alpha = 0.5f), fontSize = 10.sp)
+          Text("Events", color = Color.Black.copy(alpha = 0.5f), fontSize = 10.sp)
           if (item.isAd) {
             Spacer(modifier = Modifier.width(6.dp))
             Box(
               modifier = Modifier
                 .clip(RoundedCornerShape(4.dp))
-                .background(Color.White.copy(alpha = 0.15f))
+                .background(Color.Black.copy(alpha = 0.15f))
                 .padding(horizontal = 4.dp, vertical = 1.dp)
             ) {
-              Text("Ad", color = Color.White.copy(alpha = 0.7f), fontSize = 8.sp, fontWeight = FontWeight.Medium)
+              Text("Ad", color = Color.Black.copy(alpha = 0.7f), fontSize = 8.sp, fontWeight = FontWeight.Medium)
             }
           }
         }
         Spacer(modifier = Modifier.height(1.dp))
         Text(
           item.headline,
-          color = Color.White,
+          color = Color.Black,
           fontSize = 13.sp,
           fontWeight = FontWeight.Bold
         )
         Text(
           item.subtitle,
-          color = Color.White.copy(alpha = 0.6f),
+          color = Color.Black.copy(alpha = 0.6f),
           fontSize = 10.sp,
           maxLines = 1,
           overflow = TextOverflow.Ellipsis
@@ -3939,12 +3944,12 @@ private fun ChatGizaEventsCard(viewModel: ChatViewModel) {
       modifier = Modifier
         .align(Alignment.TopEnd)
         .clip(RoundedCornerShape(8.dp))
-        .background(Color.White.copy(alpha = 0.12f))
+        .background(Color.Black.copy(alpha = 0.12f))
         .padding(horizontal = 6.dp, vertical = 2.dp)
     ) {
       Text(
         "${pagerState.currentPage + 1}/${items.size}",
-        color = Color.White.copy(alpha = 0.7f),
+        color = Color.Black.copy(alpha = 0.7f),
         fontSize = 9.sp,
         fontWeight = FontWeight.Medium
       )
@@ -3962,16 +3967,16 @@ private fun ChatGizaArrangedCard(onClick: () -> Unit) {
       .fillMaxWidth()
       .padding(horizontal = 10.dp, vertical = 4.dp)
       .clip(RoundedCornerShape(16.dp))
-      .background(Color(0xFF1E2B26))
+      .background(Color.White)
       .clickable(onClick = onClick)
       .padding(horizontal = 14.dp, vertical = 8.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
     Box(
-      modifier = Modifier.size(26.dp).clip(RoundedCornerShape(9.dp)).background(Color.White),
+      modifier = Modifier.size(26.dp).clip(RoundedCornerShape(9.dp)).background(Color.Black),
       contentAlignment = Alignment.Center
     ) {
-      ArrangedIconCustom(tint = Color.White, modifier = Modifier.size(15.dp))
+      ArrangedIconCustom(tint = Color.Black, modifier = Modifier.size(15.dp))
     }
     Spacer(modifier = Modifier.width(10.dp))
     Text("Arranged", color = colorScheme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.Bold)
@@ -4092,20 +4097,20 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             .padding(horizontal = 10.dp, vertical = 4.dp)
             .height(150.dp)
             .clip(RoundedCornerShape(24.dp))
-            .background(Brush.linearGradient(listOf(Color.White, Color(0xFF1A1A1A))))
+            .background(Brush.linearGradient(listOf(Color.White, Color(0xFFE0E0E0))))
             .clickable { viewModel.openBilling() }
             .padding(20.dp)
         ) {
           Icon(
             Icons.Outlined.WorkspacePremium,
             contentDescription = null,
-            tint = Color.White.copy(alpha = 0.14f),
+            tint = Color.Black.copy(alpha = 0.14f),
             modifier = Modifier.align(Alignment.TopEnd).size(72.dp)
           )
           Column(modifier = Modifier.align(Alignment.BottomStart)) {
-            Text("Your account", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            Text("Your account", color = Color.Black.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(planName, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+            Text(planName, color = Color.Black, fontSize = 30.sp, fontWeight = FontWeight.Bold)
           }
         }
 
@@ -4129,7 +4134,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           modifier = Modifier
             .padding(horizontal = 10.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF23252B))
+            .background(Color.White)
             .padding(vertical = 10.dp)
         ) {
           // Tab row — only "History" has a real dataset behind it; the
@@ -4213,9 +4218,9 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             })
             .padding(vertical = 14.dp)
         ) {
-          DeleteIcon(tint = Color.White)
+          DeleteIcon(tint = Color.Black)
           Spacer(modifier = Modifier.size(16.dp))
-          Text("Delete", color = Color.White, fontSize = 16.sp)
+          Text("Delete", color = Color.Black, fontSize = 16.sp)
         }
         Row(
           verticalAlignment = Alignment.CenterVertically,
@@ -4261,7 +4266,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           viewModel.deleteConversation(toDelete.id)
           deleteConfirmConvo = null
         }) {
-          Text("Delete", color = Color.White, fontWeight = FontWeight.Bold)
+          Text("Delete", color = Color.Black, fontWeight = FontWeight.Bold)
         }
       },
       dismissButton = {
@@ -4433,7 +4438,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
   Box(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color(0xFF000000))
+      .background(Color.White)
       .statusBarsPadding()
   ) {
   Column(
@@ -4449,20 +4454,20 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
     Spacer(modifier = Modifier.height(8.dp))
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
       IconButton(onClick = { viewModel.closeProfileHub() }, modifier = Modifier.size(30.dp)) {
-        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
       }
       Spacer(modifier = Modifier.weight(1f))
       IconButton(onClick = { comingSoon("Support") }, modifier = Modifier.size(36.dp)) {
-        Icon(Icons.Outlined.Headset, contentDescription = "Support", tint = Color.White)
+        Icon(Icons.Outlined.Headset, contentDescription = "Support", tint = Color.Black)
       }
       IconButton(onClick = { viewModel.openAccountTabs() }, modifier = Modifier.size(36.dp)) {
-        SettingsHexIconCustom(tint = Color.White, modifier = Modifier.size(24.dp))
+        SettingsHexIconCustom(tint = Color.Black, modifier = Modifier.size(24.dp))
       }
       IconButton(onClick = { viewModel.openSwitchAccount() }, modifier = Modifier.size(36.dp)) {
         Icon(
           painter = androidx.compose.ui.res.painterResource(R.drawable.ic_switch_account),
           contentDescription = "Subaccount",
-          tint = Color.White,
+          tint = Color.Black,
           modifier = Modifier.size(24.dp)
         )
       }
@@ -4482,14 +4487,14 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
             modifier = Modifier.size(52.dp).clip(CircleShape)
           )
         } else {
-          Icon(Icons.Outlined.AccountCircle, contentDescription = "Profile", tint = Color.White, modifier = Modifier.size(52.dp))
+          Icon(Icons.Outlined.AccountCircle, contentDescription = "Profile", tint = Color.Black, modifier = Modifier.size(52.dp))
         }
       }
       Spacer(modifier = Modifier.width(12.dp))
       Column(modifier = Modifier.weight(1f)) {
         Text(
           viewModel.userName?.takeIf { it.isNotBlank() } ?: "You",
-          color = Color.White,
+          color = Color.Black,
           fontSize = 21.sp,
           fontWeight = FontWeight.Bold,
           maxLines = 1,
@@ -4497,27 +4502,27 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
         )
         Spacer(modifier = Modifier.height(3.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-          Text("UID: $uid", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+          Text("UID: $uid", color = Color.Black.copy(alpha = 0.5f), fontSize = 11.sp, fontFamily = FontFamily.Monospace)
           Spacer(modifier = Modifier.width(6.dp))
           Icon(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_copy),
             contentDescription = "Copy UID",
-            tint = Color.White.copy(alpha = 0.5f),
+            tint = Color.Black.copy(alpha = 0.5f),
             modifier = Modifier.size(12.dp).clickable {
               clipboard.setText(AnnotatedString(uid))
               Toast.makeText(context, "UID copied", Toast.LENGTH_SHORT).show()
             }
           )
           Spacer(modifier = Modifier.width(8.dp))
-          Text("|", color = Color.White.copy(alpha = 0.25f), fontSize = 11.sp)
+          Text("|", color = Color.Black.copy(alpha = 0.25f), fontSize = 11.sp)
           Spacer(modifier = Modifier.width(8.dp))
-          Text("Site: GiZa Glo...", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
+          Text("Site: GiZa Glo...", color = Color.Black.copy(alpha = 0.5f), fontSize = 11.sp)
         }
       }
       Icon(
         Icons.Filled.ChevronRight,
         contentDescription = null,
-        tint = Color.White.copy(alpha = 0.4f),
+        tint = Color.Black.copy(alpha = 0.4f),
         modifier = Modifier.clickable { viewModel.openAccountTabs() }
       )
     }
@@ -4534,12 +4539,12 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
         modifier = Modifier
           .height(20.dp)
           .clip(RoundedCornerShape(50))
-          .background(Color.White.copy(alpha = 0.1f))
+          .background(Color.Black.copy(alpha = 0.1f))
           .padding(horizontal = 4.dp)
       ) {
-        Icon(Icons.Filled.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+        Icon(Icons.Filled.Check, contentDescription = null, tint = Color.Black, modifier = Modifier.size(13.dp))
         Spacer(modifier = Modifier.width(4.dp))
-        Text("Verified", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        Text("Verified", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Medium)
       }
       Spacer(modifier = Modifier.width(8.dp))
       Row(
@@ -4547,12 +4552,12 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
         modifier = Modifier
           .height(20.dp)
           .clip(RoundedCornerShape(50))
-          .background(Color.White.copy(alpha = 0.1f))
+          .background(Color.Black.copy(alpha = 0.1f))
           .clickable { comingSoon("Plan") }
           .padding(horizontal = 4.dp)
       ) {
-        Text("Free plan", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(13.dp))
+        Text("Free plan", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black.copy(alpha = 0.6f), modifier = Modifier.size(13.dp))
       }
     }
 
@@ -4566,26 +4571,26 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
       modifier = Modifier
         .fillMaxWidth()
         .clip(RoundedCornerShape(18.dp))
-        .background(Color(0xFF141414))
+        .background(Color.White)
         .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
-      Text("Unlock GiZa Pro Perks", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+      Text("Unlock GiZa Pro Perks", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(4.dp))
       Text(
         "Upgrade to GiZa Pro for unlimited chats, priority responses, and exclusive perks!",
-        color = Color.White.copy(alpha = 0.5f),
+        color = Color.Black.copy(alpha = 0.5f),
         fontSize = 11.sp,
         lineHeight = 14.sp
       )
       Spacer(modifier = Modifier.height(8.dp))
-      HorizontalDivider(modifier = Modifier.fillMaxWidth(0.45f), color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+      HorizontalDivider(modifier = Modifier.fillMaxWidth(0.45f), color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
       Spacer(modifier = Modifier.height(6.dp))
-      Text("Current plan: Free", color = Color.White.copy(alpha = 0.4f), fontSize = 10.sp)
+      Text("Current plan: Free", color = Color.Black.copy(alpha = 0.4f), fontSize = 10.sp)
       Spacer(modifier = Modifier.height(8.dp))
       Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
           "Pro Benefits ›",
-          color = Color.White.copy(alpha = 0.6f),
+          color = Color.Black.copy(alpha = 0.6f),
           fontSize = 11.sp,
           fontWeight = FontWeight.Medium,
           modifier = Modifier.weight(1f).clickable { comingSoon("Pro Benefits") }
@@ -4593,11 +4598,11 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
         Box(
           modifier = Modifier
             .clip(RoundedCornerShape(50))
-            .background(Color.White)
+            .background(Color.Black)
             .clickable { comingSoon("Enter GiZa Max") }
             .padding(horizontal = 12.dp, vertical = 4.dp)
         ) {
-          Text("Enter GiZa Max", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+          Text("Enter GiZa Max", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
       }
     }
@@ -4611,17 +4616,17 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
     modifier = Modifier
       .align(Alignment.BottomCenter)
       .fillMaxWidth()
-      .background(Color(0xFF000000))
+      .background(Color.White)
       .navigationBarsPadding()
       .padding(horizontal = 16.dp)
   ) {
-    HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+    HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
     Spacer(modifier = Modifier.height(10.dp))
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-      Text("GiZa Lite", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { comingSoon("GiZa Lite") })
+      Text("GiZa Lite", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { comingSoon("GiZa Lite") })
       Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { viewModel.openAboutUs() }) {
-        Text("About Us", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+        Text("About Us", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
       }
     }
     Spacer(modifier = Modifier.height(10.dp))
@@ -4665,7 +4670,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
     Box(
       modifier = Modifier
         .fillMaxSize()
-        .background(Color(0xFF000000))
+        .background(Color.White)
     ) {
     Column(
       modifier = Modifier
@@ -4685,14 +4690,14 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         Box(modifier = Modifier.fillMaxWidth()) {
           Text(
             "User Center",
-            color = Color.White,
+            color = Color.Black,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.align(Alignment.Center)
           )
           Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             IconButton(onClick = { viewModel.closeAccountTabs() }, modifier = Modifier.size(32.dp)) {
-              Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+              Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
             }
             Spacer(modifier = Modifier.weight(1f))
             // Quick dark-mode toggle -- flips between the two ends of the
@@ -4702,13 +4707,13 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
               onClick = { viewModel.updateThemeMode(if (viewModel.themeMode == "light") "dark" else "light") },
               modifier = Modifier.size(32.dp)
             ) {
-              Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_moon), contentDescription = "Toggle dark mode", tint = Color.White, modifier = Modifier.size(24.dp))
+              Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_moon), contentDescription = "Toggle dark mode", tint = Color.Black, modifier = Modifier.size(24.dp))
             }
             IconButton(
               onClick = { viewModel.leaveAccountTabsFor { viewModel.openAppLanguage() } },
               modifier = Modifier.size(32.dp)
             ) {
-              Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_world), contentDescription = "Language", tint = Color.White, modifier = Modifier.size(23.dp))
+              Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_world), contentDescription = "Language", tint = Color.Black, modifier = Modifier.size(23.dp))
             }
           }
         }
@@ -4727,13 +4732,13 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         } else if (viewModel.userImage != null) {
           AsyncImage(model = viewModel.userImage, contentDescription = "Profile", modifier = Modifier.size(50.dp).clip(CircleShape))
         } else {
-          Icon(Icons.Outlined.AccountCircle, contentDescription = "Profile", tint = Color.White, modifier = Modifier.size(50.dp))
+          Icon(Icons.Outlined.AccountCircle, contentDescription = "Profile", tint = Color.Black, modifier = Modifier.size(50.dp))
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column {
           Text(
             (viewModel.avatarName ?: viewModel.userName ?: "You").uppercase(),
-            color = Color.White,
+            color = Color.Black,
             fontSize = 20.sp,
             fontWeight = FontWeight.ExtraBold,
             modifier = Modifier.padding(top = 3.dp)
@@ -4741,10 +4746,10 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           Spacer(modifier = Modifier.height(4.dp))
           Box(
             modifier = Modifier
-              .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(3.dp))
+              .background(Color.Black.copy(alpha = 0.1f), RoundedCornerShape(3.dp))
               .padding(horizontal = 4.dp, vertical = 1.dp)
           ) {
-            Text("Site: ChatGiZa Global", color = Color.White.copy(alpha = 0.6f), fontSize = 8.sp)
+            Text("Site: ChatGiZa Global", color = Color.Black.copy(alpha = 0.6f), fontSize = 8.sp)
           }
         }
       }
@@ -4763,13 +4768,13 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           ) {
             Text(
               tab,
-              color = if (viewModel.activeAccountTab == tab) Color.White else Color.White.copy(alpha = 0.4f),
+              color = if (viewModel.activeAccountTab == tab) Color.Black else Color.Black.copy(alpha = 0.4f),
               fontSize = 15.sp,
               fontWeight = if (viewModel.activeAccountTab == tab) FontWeight.Bold else FontWeight.Normal
             )
             Spacer(modifier = Modifier.height(6.dp))
             if (viewModel.activeAccountTab == tab) {
-              Box(modifier = Modifier.width(28.dp).height(2.dp).background(Color.White))
+              Box(modifier = Modifier.width(28.dp).height(2.dp).background(Color.Black))
             }
           }
         }
@@ -4808,19 +4813,19 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             } else if (viewModel.userImage != null) {
               AsyncImage(model = viewModel.userImage, contentDescription = null, modifier = Modifier.size(40.dp).clip(CircleShape))
             } else {
-              Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(40.dp))
+              Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = Color.Black.copy(alpha = 0.5f), modifier = Modifier.size(40.dp))
             }
           }
           MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_id_lines), label = "Nickname", onClick = { showNicknameEditor = true }) {
-            Text(viewModel.userName?.takeIf { it.isNotBlank() } ?: "-", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
+            Text(viewModel.userName?.takeIf { it.isNotBlank() } ?: "-", color = Color.Black.copy(alpha = 0.5f), fontSize = 14.sp)
           }
           MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_id_rounded), iconSize = 26.dp, label = "UID", showChevron = false, onClick = {}) {
-            Text(uid, color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp, fontFamily = FontFamily.Monospace)
+            Text(uid, color = Color.Black.copy(alpha = 0.5f), fontSize = 14.sp, fontFamily = FontFamily.Monospace)
             Spacer(modifier = Modifier.width(6.dp))
             Icon(
               painter = androidx.compose.ui.res.painterResource(R.drawable.ic_copy),
               contentDescription = "Copy UID",
-              tint = Color.White.copy(alpha = 0.5f),
+              tint = Color.Black.copy(alpha = 0.5f),
               modifier = Modifier.size(15.dp).clickable {
                 clipboard.setText(AnnotatedString(uid))
                 Toast.makeText(context, "UID copied", Toast.LENGTH_SHORT).show()
@@ -4849,14 +4854,14 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             .padding(horizontal = 16.dp)
         ) {
           MyInfoRow(icon = Icons.Outlined.Email, label = "Email", onClick = { comingSoon("Email") }) {
-            Text(maskEmail(viewModel.userEmail), color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+            Text(maskEmail(viewModel.userEmail), color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
           }
           MyInfoDivider()
           // No phone number exists anywhere on the account (sign-in here is
           // Google-only) -- the row used to show a fixed fake masked number
           // ("75****182") to every single user regardless of who they were.
           MyInfoRow(icon = Icons.Outlined.Smartphone, label = "Mobile", onClick = { comingSoon("Mobile") }) {
-            Text("Not linked", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+            Text("Not linked", color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
           }
           MyInfoDivider()
           // Sign-in here is Google-only -- ChatGiZa has no account password
@@ -4874,7 +4879,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
               }
             }
           ) {
-            Text("Manage on Google", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+            Text("Manage on Google", color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
           }
           MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.Tag, label = "Passkeys", onClick = { comingSoon("Passkeys") }) {}
@@ -4905,7 +4910,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
               }
             }
           ) {
-            Text("Manage on Google", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+            Text("Manage on Google", color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
           }
           MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.ScreenShare, label = "Trusted Devices", onClick = { viewModel.leaveAccountTabsFor { viewModel.openTrustedDevices() } }) {}
@@ -4926,12 +4931,12 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-        Text("Last login time 2026-08-06 22:06:13", color = Color.White.copy(alpha = 0.35f), fontSize = 12.sp)
+        Text("Last login time 2026-08-06 22:06:13", color = Color.Black.copy(alpha = 0.35f), fontSize = 12.sp)
         Spacer(modifier = Modifier.height(2.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-          Text("Login device ", color = Color.White.copy(alpha = 0.35f), fontSize = 12.sp)
-          Icon(Icons.Outlined.Smartphone, contentDescription = null, tint = Color.White.copy(alpha = 0.35f), modifier = Modifier.size(12.dp))
-          Text(" android", color = Color.White.copy(alpha = 0.35f), fontSize = 12.sp)
+          Text("Login device ", color = Color.Black.copy(alpha = 0.35f), fontSize = 12.sp)
+          Icon(Icons.Outlined.Smartphone, contentDescription = null, tint = Color.Black.copy(alpha = 0.35f), modifier = Modifier.size(12.dp))
+          Text(" android", color = Color.Black.copy(alpha = 0.35f), fontSize = 12.sp)
         }
         Spacer(modifier = Modifier.height(20.dp))
       } else if (viewModel.activeAccountTab == "Preference") {
@@ -4989,7 +4994,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             .padding(horizontal = 16.dp)
         ) {
           MyInfoRow(icon = Icons.Outlined.Language, label = "Language", onClick = { viewModel.leaveAccountTabsFor { viewModel.openAppLanguage() } }) {
-            Text("English", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+            Text("English", color = Color.Black.copy(alpha = 0.4f), fontSize = 13.sp)
           }
           MyInfoRow(
             icon = Icons.Filled.LightMode,
@@ -5001,7 +5006,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             // fix as Profile Picture above.
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openAppearance() } }
           ) {
-            Text(AppTheme.fromKey(viewModel.themeMode).label, color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+            Text(AppTheme.fromKey(viewModel.themeMode).label, color = Color.Black.copy(alpha = 0.4f), fontSize = 13.sp)
           }
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_advanced),
@@ -5051,7 +5056,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/advertise"))) }
           ) {}
           MyInfoRow(icon = Icons.Outlined.Business, label = "Affiliate's community", onClick = { comingSoon("Affiliate's community") }) {
-            Text("Joined", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
+            Text("Joined", color = Color.Black.copy(alpha = 0.5f), fontSize = 14.sp)
           }
           MyInfoRow(icon = Icons.Outlined.SupportAgent, label = "Join Our Community", onClick = { viewModel.leaveAccountTabsFor { viewModel.openCommunity() } }) {}
         }
@@ -5064,7 +5069,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         modifier = Modifier
           .align(Alignment.BottomCenter)
           .fillMaxWidth()
-          .background(Color(0xFF000000))
+          .background(Color.White)
           .navigationBarsPadding()
           .padding(horizontal = 16.dp, vertical = 10.dp)
       ) {
@@ -5072,7 +5077,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(50))
-            .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(50))
+            .border(1.dp, Color.Black.copy(alpha = 0.25f), RoundedCornerShape(50))
             .clickable {
               viewModel.closeAccountTabs()
               viewModel.signOut()
@@ -5080,7 +5085,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             .padding(vertical = 10.dp),
           contentAlignment = Alignment.Center
         ) {
-          Text("Log Out", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+          Text("Log Out", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
       }
     }
@@ -5108,7 +5113,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             // included, not just here.
             Text(
               "This is the name shown across your whole account.",
-              color = Color.White.copy(alpha = 0.5f),
+              color = Color.Black.copy(alpha = 0.5f),
               fontSize = 12.sp,
               modifier = Modifier.padding(top = 8.dp)
             )
@@ -5146,7 +5151,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
               runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, webUri)) }
             }
           }) {
-            Text("Rate Now", color = Color.White, fontWeight = FontWeight.Bold)
+            Text("Rate Now", color = Color.Black, fontWeight = FontWeight.Bold)
           }
         },
         dismissButton = {
@@ -5162,10 +5167,10 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
 @Composable
 private fun SecurityGroupHeader(title: String, subtitle: String? = null, titleSize: androidx.compose.ui.unit.TextUnit = 16.sp) {
   Column(modifier = Modifier.padding(bottom = 10.dp)) {
-    Text(title, color = Color.White, fontSize = titleSize, fontWeight = FontWeight.Bold)
+    Text(title, color = Color.Black, fontSize = titleSize, fontWeight = FontWeight.Bold)
     if (subtitle != null) {
       Spacer(modifier = Modifier.height(2.dp))
-      Text(subtitle, color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
+      Text(subtitle, color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp)
     }
   }
 }
@@ -5188,7 +5193,7 @@ private fun MyInfoRow(
       .padding(vertical = 14.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    val tint = Color.White.copy(alpha = 0.8f)
+    val tint = Color.Black.copy(alpha = 0.8f)
     if (iconContent != null) {
       iconContent(tint)
     } else if (painter != null) {
@@ -5197,18 +5202,18 @@ private fun MyInfoRow(
       Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(iconSize))
     }
     Spacer(modifier = Modifier.width(14.dp))
-    Text(label, color = Color.White, fontSize = 17.sp, modifier = Modifier.weight(1f))
+    Text(label, color = Color.Black, fontSize = 17.sp, modifier = Modifier.weight(1f))
     trailing()
     if (showChevron) {
       Spacer(modifier = Modifier.width(4.dp))
-      Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
+      Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
     }
   }
 }
 
 @Composable
 private fun MyInfoDivider() {
-  HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+  HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
 }
 
 // Terms of Use / Privacy Policy / Report a Problem / Help Center / User
@@ -5231,17 +5236,17 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
     Column(
       modifier = Modifier
         .fillMaxSize()
-        .background(Color(0xFF000000))
+        .background(Color.White)
         .statusBarsPadding()
         .padding(horizontal = 16.dp)
     ) {
       Spacer(modifier = Modifier.height(12.dp))
       Row(verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = { viewModel.closeAboutUs() }, modifier = Modifier.size(32.dp)) {
-          Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+          Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
         }
         Spacer(modifier = Modifier.width(20.dp))
-        Text("About Us", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text("About Us", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
       }
 
       Spacer(modifier = Modifier.height(28.dp))
@@ -5250,17 +5255,17 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(18.dp))
-          .background(Color.White.copy(alpha = 0.06f))
+          .background(Color.Black.copy(alpha = 0.06f))
           .padding(horizontal = 14.dp)
       ) {
         AboutUsRow(icon = Icons.AutoMirrored.Outlined.Article, label = "Terms of Use") {
           context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/terms")))
         }
-        HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+        HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
         AboutUsRow(icon = Icons.Outlined.Lock, label = "Privacy Policy") {
           context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/privacy")))
         }
-        HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+        HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
         AboutUsRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_report_problem), label = "Report a Problem") {
           // openReportProblem() now handles closing About Us itself (and
           // remembers to reopen it) -- calling closeAboutUs() here first
@@ -5268,9 +5273,9 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
           // reportProblemReturnToAboutUs in ChatViewModel.
           viewModel.openReportProblem()
         }
-        HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+        HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
         AboutUsRow(icon = Icons.Outlined.HelpOutline, label = "Help Center") { comingSoon("Help Center") }
-        HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+        HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
         AboutUsRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_compose), label = "User feedback") { comingSoon("User feedback") }
       }
     }
@@ -5282,14 +5287,14 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
 @Composable
 private fun AboutUsRow(icon: ImageVector, label: String, onClick: () -> Unit) {
   AboutUsRowShell(label = label, onClick = onClick) {
-    Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+    Icon(icon, contentDescription = null, tint = Color.Black, modifier = Modifier.size(22.dp))
   }
 }
 
 @Composable
 private fun AboutUsRow(painter: androidx.compose.ui.graphics.painter.Painter, label: String, onClick: () -> Unit) {
   AboutUsRowShell(label = label, onClick = onClick) {
-    Icon(painter, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+    Icon(painter, contentDescription = null, tint = Color.Black, modifier = Modifier.size(22.dp))
   }
 }
 
@@ -5304,8 +5309,8 @@ private fun AboutUsRowShell(label: String, onClick: () -> Unit, icon: @Composabl
   ) {
     icon()
     Spacer(modifier = Modifier.width(16.dp))
-    Text(label, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-    Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
+    Text(label, color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+    Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
   }
 }
 
@@ -5359,8 +5364,8 @@ private fun AvatarPresetThumbnail(preset: AvatarPreset, size: Dp, modifier: Modi
     modifier = modifier
       .size(size)
       .clip(CircleShape)
-      .background(Color(0xFF000000))
-      .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape),
+      .background(Color.White)
+      .border(1.dp, Color.Black.copy(alpha = 0.18f), CircleShape),
     contentAlignment = Alignment.Center
   ) {
     if (preset.variant != null) {
@@ -5374,7 +5379,7 @@ private fun AvatarPresetThumbnail(preset: AvatarPreset, size: Dp, modifier: Modi
     if (!name.isNullOrBlank() && size >= 40.dp) {
       Text(
         name,
-        color = Color.White,
+        color = Color.Black,
         fontSize = (size.value * 0.16f).sp,
         fontWeight = FontWeight.Bold,
         maxLines = 1,
@@ -5383,7 +5388,7 @@ private fun AvatarPresetThumbnail(preset: AvatarPreset, size: Dp, modifier: Modi
         modifier = Modifier
           .align(Alignment.BottomCenter)
           .fillMaxWidth()
-          .background(Color.Black.copy(alpha = 0.55f))
+          .background(Color.White.copy(alpha = 0.55f))
           .padding(vertical = 1.dp)
       )
     }
@@ -5715,16 +5720,16 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
     Column(
       modifier = Modifier
         .fillMaxSize()
-        .background(Color(0xFF000000))
+        .background(Color.White)
         .statusBarsPadding()
         .padding(horizontal = 16.dp)
     ) {
       Spacer(modifier = Modifier.height(12.dp))
       Box(modifier = Modifier.fillMaxWidth()) {
         IconButton(onClick = { viewModel.closeAvatarPicker() }, modifier = Modifier.align(Alignment.CenterStart).size(32.dp)) {
-          Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+          Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
         }
-        Text("Profile Picture", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
+        Text("Profile Picture", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
       }
 
       Spacer(modifier = Modifier.height(20.dp))
@@ -5735,7 +5740,7 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
         } else if (viewModel.userImage != null) {
           AsyncImage(model = viewModel.userImage, contentDescription = null, modifier = Modifier.size(88.dp).clip(CircleShape))
         } else {
-          Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(88.dp))
+          Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = Color.Black, modifier = Modifier.size(88.dp))
         }
       }
 
@@ -5745,15 +5750,15 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
         value = nameInput,
         onValueChange = { if (it.length <= 20) nameInput = it },
         modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text("Name your avatar (optional)", color = Color.White.copy(alpha = 0.4f)) },
+        placeholder = { Text("Name your avatar (optional)", color = Color.Black.copy(alpha = 0.4f)) },
         singleLine = true,
         shape = RoundedCornerShape(12.dp),
         colors = OutlinedTextFieldDefaults.colors(
-          focusedTextColor = Color.White,
-          unfocusedTextColor = Color.White,
-          focusedBorderColor = Color.White.copy(alpha = 0.4f),
-          unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
-          cursorColor = Color.White
+          focusedTextColor = Color.Black,
+          unfocusedTextColor = Color.Black,
+          focusedBorderColor = Color.Black.copy(alpha = 0.4f),
+          unfocusedBorderColor = Color.Black.copy(alpha = 0.15f),
+          cursorColor = Color.Black
         )
       )
 
@@ -5777,13 +5782,13 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
           ) {
             Text(
               tab,
-              color = if (activeTab == tab) Color.White else Color.White.copy(alpha = 0.4f),
+              color = if (activeTab == tab) Color.Black else Color.Black.copy(alpha = 0.4f),
               fontSize = 15.sp,
               fontWeight = if (activeTab == tab) FontWeight.Bold else FontWeight.Normal
             )
             Spacer(modifier = Modifier.height(6.dp))
             if (activeTab == tab) {
-              Box(modifier = Modifier.width(28.dp).height(2.dp).background(Color.White))
+              Box(modifier = Modifier.width(28.dp).height(2.dp).background(Color.Black))
             }
           }
         }
@@ -5800,7 +5805,7 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
         items(AVATAR_PRESETS, key = { it.id }) { preset ->
           Box(contentAlignment = Alignment.BottomEnd) {
             val thumbModifier = (
-              if (selected == preset.id) Modifier.border(2.dp, Color.White, CircleShape).padding(3.dp)
+              if (selected == preset.id) Modifier.border(2.dp, Color.Black, CircleShape).padding(3.dp)
               else Modifier
             ).clickable { selected = preset.id }
             if (activeTab == "Animated 🔥") {
@@ -5810,10 +5815,10 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
             }
             if (selected == preset.id) {
               Box(
-                modifier = Modifier.size(20.dp).clip(CircleShape).background(Color.White),
+                modifier = Modifier.size(20.dp).clip(CircleShape).background(Color.Black),
                 contentAlignment = Alignment.Center
               ) {
-                Icon(Icons.Filled.Check, contentDescription = null, tint = Color.Black, modifier = Modifier.size(12.dp))
+                Icon(Icons.Filled.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
               }
             }
           }
@@ -5825,7 +5830,7 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(50))
-          .background(Color.White)
+          .background(Color.Black)
           .clickable {
             viewModel.updateAvatarPreset(selected, AVATAR_PRESETS.find { it.id == selected }?.emoji?.ifBlank { null })
             viewModel.updateAvatarName(nameInput.trim().ifBlank { null })
@@ -5834,7 +5839,7 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
           .padding(vertical = 11.dp),
         contentAlignment = Alignment.Center
       ) {
-        Text("Save", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text("Save", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
       }
       Spacer(modifier = Modifier.height(20.dp))
     }
@@ -5862,7 +5867,7 @@ private fun BouncingAvatarThumbnail(preset: AvatarPreset, size: Dp, modifier: Mo
 }
 
 @Composable
-private fun MediaExpandGlyph(modifier: Modifier = Modifier, tint: Color = Color.White) {
+private fun MediaExpandGlyph(modifier: Modifier = Modifier, tint: Color = Color.Black) {
   // Small diagonal-arrows "expand" cue -- hand-drawn since no Material
   // Icons entry was verified to exist in this project's bundled set and
   // guessing wrong here means another failed CI build.
@@ -5894,7 +5899,7 @@ private fun MediaExpandGlyph(modifier: Modifier = Modifier, tint: Color = Color.
 @Composable
 internal fun MediaCommentComposerSheet(authorName: String, onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
   var text by remember { mutableStateOf("") }
-  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFF161616)) {
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color.White) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
@@ -5903,7 +5908,7 @@ internal fun MediaCommentComposerSheet(authorName: String, onDismiss: () -> Unit
     ) {
       Row(verticalAlignment = Alignment.CenterVertically) {
         Text("Replying to ", color = Color(0xFF8A8A8A), fontSize = 14.sp)
-        Text("@$authorName", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        Text("@$authorName", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
       }
       Spacer(modifier = Modifier.height(12.dp))
       Box(
@@ -5911,14 +5916,14 @@ internal fun MediaCommentComposerSheet(authorName: String, onDismiss: () -> Unit
           .fillMaxWidth()
           .heightIn(min = 100.dp)
           .clip(RoundedCornerShape(14.dp))
-          .background(Color.White.copy(alpha = 0.05f))
+          .background(Color.Black.copy(alpha = 0.05f))
           .padding(14.dp)
       ) {
         BasicTextField(
           value = text,
           onValueChange = { text = it },
-          textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp, lineHeight = 20.sp),
-          cursorBrush = SolidColor(Color.White),
+          textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 15.sp, lineHeight = 20.sp),
+          cursorBrush = SolidColor(Color.Black),
           modifier = Modifier.fillMaxSize(),
           decorationBox = { inner ->
             if (text.isEmpty()) {
@@ -5929,18 +5934,18 @@ internal fun MediaCommentComposerSheet(authorName: String, onDismiss: () -> Unit
         )
         MediaExpandGlyph(
           modifier = Modifier.align(Alignment.TopEnd).size(18.dp),
-          tint = Color.White.copy(alpha = 0.4f)
+          tint = Color.Black.copy(alpha = 0.4f)
         )
       }
       Spacer(modifier = Modifier.height(16.dp))
-      Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.08f)))
+      Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.Black.copy(alpha = 0.08f)))
       Spacer(modifier = Modifier.height(14.dp))
       Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Outlined.EmojiEmotions, contentDescription = null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(22.dp))
+        Icon(Icons.Outlined.EmojiEmotions, contentDescription = null, tint = Color.Black.copy(alpha = 0.6f), modifier = Modifier.size(22.dp))
         Spacer(modifier = Modifier.width(18.dp))
-        Icon(Icons.Outlined.Photo, contentDescription = null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(22.dp))
+        Icon(Icons.Outlined.Photo, contentDescription = null, tint = Color.Black.copy(alpha = 0.6f), modifier = Modifier.size(22.dp))
         Spacer(modifier = Modifier.width(18.dp))
-        Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(22.dp))
+        Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = Color.Black.copy(alpha = 0.6f), modifier = Modifier.size(22.dp))
         Spacer(modifier = Modifier.weight(1f))
         Button(
           onClick = {
@@ -5951,13 +5956,13 @@ internal fun MediaCommentComposerSheet(authorName: String, onDismiss: () -> Unit
           },
           enabled = text.isNotBlank(),
           colors = ButtonDefaults.buttonColors(
-            containerColor = Color.White,
-            disabledContainerColor = Color.White.copy(alpha = 0.35f)
+            containerColor = Color.Black,
+            disabledContainerColor = Color.Black.copy(alpha = 0.35f)
           ),
           shape = RoundedCornerShape(18.dp),
           contentPadding = PaddingValues(horizontal = 20.dp, vertical = 6.dp)
         ) {
-          Text("Reply", color = Color.Black, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+          Text("Reply", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
         }
       }
     }
@@ -5981,7 +5986,7 @@ internal fun MediaPostVideoPlayer(url: String, modifier: Modifier = Modifier) {
     onDispose { player.release() }
   }
   AndroidView(
-    modifier = modifier.background(Color.Black),
+    modifier = modifier.background(Color.White),
     factory = { ctx ->
       PlayerView(ctx).apply {
         this.player = player
@@ -6005,14 +6010,14 @@ internal fun MediaPostVideoPlayer(url: String, modifier: Modifier = Modifier) {
 @Composable
 private fun ConnectFeatureRow(icon: ImageVector, title: String, body: String) {
   ConnectFeatureRowShell(title, body) {
-    Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+    Icon(icon, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
   }
 }
 
 @Composable
 private fun ConnectFeatureRow(painter: androidx.compose.ui.graphics.painter.Painter, title: String, body: String) {
   ConnectFeatureRowShell(title, body) {
-    Icon(painter, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+    Icon(painter, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
   }
 }
 
@@ -6023,16 +6028,16 @@ private fun ConnectFeatureRowShell(title: String, body: String, icon: @Composabl
       modifier = Modifier
         .size(36.dp)
         .clip(RoundedCornerShape(11.dp))
-        .background(Color.White.copy(alpha = 0.14f)),
+        .background(Color.Black.copy(alpha = 0.14f)),
       contentAlignment = Alignment.Center
     ) {
       icon()
     }
     Spacer(modifier = Modifier.width(12.dp))
     Column {
-      Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+      Text(title, color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
       Spacer(modifier = Modifier.height(2.dp))
-      Text(body, color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp, lineHeight = 18.sp)
+      Text(body, color = Color.Black.copy(alpha = 0.6f), fontSize = 13.sp, lineHeight = 18.sp)
     }
   }
 }
@@ -6040,7 +6045,7 @@ private fun ConnectFeatureRowShell(title: String, body: String, icon: @Composabl
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () -> Unit) {
-  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFF161616)) {
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color.White) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
@@ -6051,28 +6056,28 @@ internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () ->
         modifier = Modifier
           .size(52.dp)
           .clip(RoundedCornerShape(16.dp))
-          .background(Color.White.copy(alpha = 0.14f)),
+          .background(Color.Black.copy(alpha = 0.14f)),
         contentAlignment = Alignment.Center
       ) {
         Icon(
           painter = androidx.compose.ui.res.painterResource(R.drawable.ic_share_link),
           contentDescription = null,
-          tint = Color.White,
+          tint = Color.Black,
           modifier = Modifier.size(24.dp)
         )
       }
       Spacer(modifier = Modifier.height(16.dp))
-      Text("Connect With ChatGiZa", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+      Text("Connect With ChatGiZa", color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(6.dp))
       Text(
         "Ruhusu akaunti yako ya Extra kuingiliana moja kwa moja na ChatGiZa. Ukishaunganisha, " +
           "utaona chaguo la \"Extra\" chini ya majibu marefu ya ChatGiZa kwenye chat.",
-        color = Color.White.copy(alpha = 0.75f),
+        color = Color.Black.copy(alpha = 0.75f),
         fontSize = 14.sp,
         lineHeight = 20.sp
       )
       Spacer(modifier = Modifier.height(6.dp))
-      Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.08f)))
+      Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.Black.copy(alpha = 0.08f)))
       ConnectFeatureRow(
         icon = Icons.Filled.Send,
         title = "Post",
@@ -6091,9 +6096,9 @@ internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () ->
       Spacer(modifier = Modifier.height(20.dp))
       if (viewModel.chatGizaMediaConnected) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-          Icon(Icons.Filled.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+          Icon(Icons.Filled.Check, contentDescription = null, tint = Color.Black, modifier = Modifier.size(20.dp))
           Spacer(modifier = Modifier.width(8.dp))
-          Text("Connected", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+          Text("Connected", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         }
         Spacer(modifier = Modifier.height(14.dp))
         OutlinedButton(
@@ -6107,10 +6112,10 @@ internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () ->
         Button(
           onClick = { viewModel.updateChatGizaMediaConnected(true) },
           modifier = Modifier.fillMaxWidth().height(52.dp),
-          colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+          colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
           shape = RoundedCornerShape(24.dp)
         ) {
-          Text("Connect", color = Color.Black, fontWeight = FontWeight.SemiBold)
+          Text("Connect", color = Color.White, fontWeight = FontWeight.SemiBold)
         }
       }
     }
@@ -6290,7 +6295,7 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
   Box(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color(0xFF161616))
+      .background(Color.White)
       .statusBarsPadding()
   ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -6299,7 +6304,7 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
         verticalAlignment = Alignment.CenterVertically
       ) {
         IconButton(onClick = onDismiss, modifier = Modifier.size(26.dp)) {
-          Icon(Icons.Outlined.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(26.dp))
+          Icon(Icons.Outlined.Close, contentDescription = "Close", tint = Color.Black, modifier = Modifier.size(26.dp))
         }
         Spacer(modifier = Modifier.weight(1f))
         Button(
@@ -6351,15 +6356,15 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
           },
           enabled = canPost,
           colors = ButtonDefaults.buttonColors(
-            containerColor = Color.White,
-            disabledContainerColor = Color.White.copy(alpha = 0.35f)
+            containerColor = Color.Black,
+            disabledContainerColor = Color.Black.copy(alpha = 0.35f)
           ),
           shape = RoundedCornerShape(20.dp),
           contentPadding = PaddingValues(horizontal = 22.dp, vertical = 8.dp)
         ) {
           Text(
             if (viewModel.uploadingMediaVideo) "Uploading…" else if (posting) "Posting…" else "Post",
-            color = Color.Black,
+            color = Color.White,
             fontWeight = FontWeight.SemiBold
           )
         }
@@ -6367,7 +6372,7 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
       if (viewModel.mediaError != null) {
         Text(
           viewModel.mediaError.orEmpty(),
-          color = Color.White,
+          color = Color.Black,
           fontSize = 13.sp,
           modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
         )
@@ -6391,7 +6396,7 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
             Icon(
               Icons.Outlined.AccountCircle,
               contentDescription = "Profile",
-              tint = Color.White,
+              tint = Color.Black,
               modifier = Modifier.size(36.dp)
             )
           }
@@ -6403,8 +6408,8 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
             BasicTextField(
               value = text,
               onValueChange = { text = it },
-              textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 17.sp),
-              cursorBrush = SolidColor(Color.White),
+              textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 17.sp),
+              cursorBrush = SolidColor(Color.Black),
               modifier = Modifier.fillMaxWidth()
             )
           }
@@ -6414,7 +6419,7 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
           Spacer(modifier = Modifier.height(6.dp))
           Text(
             "${text.length}/$MEDIA_POST_FREE_CAPTION_LIMIT",
-            color = if (overFreeCaptionLimit) Color.White else Color(0xFF7A7A7A),
+            color = if (overFreeCaptionLimit) Color.Black else Color(0xFF7A7A7A),
             fontSize = 12.sp,
             modifier = Modifier.fillMaxWidth()
           )
@@ -6426,12 +6431,12 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
             modifier = Modifier
               .fillMaxWidth()
               .clip(RoundedCornerShape(12.dp))
-              .background(Color.White.copy(alpha = 0.1f))
+              .background(Color.Black.copy(alpha = 0.1f))
               .padding(14.dp)
           ) {
             Text(
               "Captions over $MEDIA_POST_FREE_CAPTION_LIMIT characters need GiZa Pro.",
-              color = Color.White,
+              color = Color.Black,
               fontSize = 13.sp
             )
             Spacer(modifier = Modifier.height(10.dp))
@@ -6448,11 +6453,11 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
                 }
               },
               enabled = !openingCheckout,
-              colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+              colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
               shape = RoundedCornerShape(20.dp),
               contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp)
             ) {
-              Text(if (openingCheckout) "Opening…" else "Upgrade to GiZa Pro", color = Color.Black, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+              Text(if (openingCheckout) "Opening…" else "Upgrade to GiZa Pro", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
             }
           }
         }
@@ -6478,9 +6483,9 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
                     .padding(4.dp)
                     .size(22.dp)
                     .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.55f))
+                    .background(Color.White.copy(alpha = 0.55f))
                 ) {
-                  Icon(Icons.Outlined.Close, contentDescription = "Remove photo", tint = Color.White, modifier = Modifier.size(14.dp))
+                  Icon(Icons.Outlined.Close, contentDescription = "Remove photo", tint = Color.Black, modifier = Modifier.size(14.dp))
                 }
               }
             }
@@ -6494,18 +6499,18 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
               .fillMaxWidth()
               .height(180.dp)
               .clip(RoundedCornerShape(16.dp))
-              .background(Color.White.copy(alpha = 0.06f)),
+              .background(Color.Black.copy(alpha = 0.06f)),
             contentAlignment = Alignment.Center
           ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
               Icon(
                 painter = androidx.compose.ui.res.painterResource(R.drawable.ic_video),
                 contentDescription = null,
-                tint = Color.White,
+                tint = Color.Black,
                 modifier = Modifier.size(20.dp)
               )
               Spacer(modifier = Modifier.width(8.dp))
-              Text("Video attached", color = Color.White, fontSize = 14.sp)
+              Text("Video attached", color = Color.Black, fontSize = 14.sp)
             }
             IconButton(
               onClick = { videoUri = null },
@@ -6514,9 +6519,9 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
                 .padding(8.dp)
                 .size(30.dp)
                 .clip(CircleShape)
-                .background(Color.Black.copy(alpha = 0.55f))
+                .background(Color.White.copy(alpha = 0.55f))
             ) {
-              Icon(Icons.Outlined.Close, contentDescription = "Remove video", tint = Color.White, modifier = Modifier.size(18.dp))
+              Icon(Icons.Outlined.Close, contentDescription = "Remove video", tint = Color.Black, modifier = Modifier.size(18.dp))
             }
           }
         }
@@ -6574,19 +6579,19 @@ private fun SentimentToggle(selected: String?, onSelect: (String) -> Unit) {
   Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
     SentimentToggleIcon(
       icon = Icons.Outlined.TrendingUp,
-      tint = Color.White,
+      tint = Color.Black,
       active = selected == "bullish",
       onClick = { onSelect("bullish") }
     )
     SentimentToggleIcon(
       icon = Icons.AutoMirrored.Outlined.TrendingFlat,
-      tint = Color.White,
+      tint = Color.Black,
       active = selected == "neutral",
       onClick = { onSelect("neutral") }
     )
     SentimentToggleIcon(
       icon = Icons.Outlined.TrendingDown,
-      tint = Color.White,
+      tint = Color.Black,
       active = selected == "bearish",
       onClick = { onSelect("bearish") }
     )
@@ -6627,12 +6632,12 @@ private fun AttachMenuRow(iconRes: Int = 0, icon: (@Composable () -> Unit)? = nu
       Icon(
         painter = androidx.compose.ui.res.painterResource(iconRes),
         contentDescription = null,
-        tint = Color.White,
+        tint = Color.Black,
         modifier = Modifier.size(24.dp)
       )
     }
     Spacer(modifier = Modifier.width(24.dp))
-    Text(label, color = Color.White, fontSize = 15.sp)
+    Text(label, color = Color.Black, fontSize = 15.sp)
   }
 }
 
@@ -6651,11 +6656,11 @@ private fun CameraMenuRow(iconRes: Int, label: String, onClick: () -> Unit) {
     Icon(
       painter = androidx.compose.ui.res.painterResource(iconRes),
       contentDescription = null,
-      tint = Color.White,
+      tint = Color.Black,
       modifier = Modifier.size(19.dp)
     )
     Spacer(modifier = Modifier.width(16.dp))
-    Text(label, color = Color.White, fontSize = 16.sp)
+    Text(label, color = Color.Black, fontSize = 16.sp)
   }
 }
 
@@ -6738,11 +6743,11 @@ private fun HistoryRow(
       contentAlignment = Alignment.Center
     ) {
       if (isVoice) {
-        Icon(Icons.Outlined.Mic, contentDescription = "Voice", tint = Color.White, modifier = Modifier.size(16.dp))
+        Icon(Icons.Outlined.Mic, contentDescription = "Voice", tint = Color.Black, modifier = Modifier.size(16.dp))
       } else {
         Text(
           title.trim().take(1).uppercase(),
-          color = Color.White,
+          color = Color.Black,
           fontSize = 14.sp,
           fontWeight = FontWeight.Bold
         )
@@ -6856,7 +6861,7 @@ private fun CustomizeScreen(viewModel: ChatViewModel) {
             .clip(CircleShape)
             .background(
               Brush.linearGradient(
-                listOf(Color.White, Color.White, Color.White)
+                listOf(Color.Black, Color.Black, Color.Black)
               )
             )
         )
@@ -6896,7 +6901,7 @@ private fun ProfileAvatar(imageUrl: String?, modifier: Modifier = Modifier, size
     modifier = modifier
       .size(size)
       .clip(CircleShape)
-      .background(Color(0xFF2F2F2F)),
+      .background(Color.White),
     contentAlignment = Alignment.Center
   ) {
     if (imageUrl != null) {
@@ -6909,7 +6914,7 @@ private fun ProfileAvatar(imageUrl: String?, modifier: Modifier = Modifier, size
       Icon(
         Icons.Outlined.AccountCircle,
         contentDescription = "Profile photo",
-        tint = Color.White,
+        tint = Color.Black,
         modifier = Modifier.size(size * 0.45f)
       )
     }
@@ -6921,13 +6926,13 @@ private fun BirthYearCard(icon: ImageVector, value: String, onValueChange: (Stri
   Card(
     modifier = Modifier.fillMaxWidth(),
     shape = RoundedCornerShape(22.dp),
-    colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+    colors = CardDefaults.cardColors(containerColor = Color.White)
   ) {
     Row(
       modifier = Modifier.padding(20.dp),
       verticalAlignment = Alignment.CenterVertically
     ) {
-      Icon(icon, contentDescription = null, tint = Color.White)
+      Icon(icon, contentDescription = null, tint = Color.Black)
       Spacer(modifier = Modifier.width(16.dp))
       TextField(
         value = value,
@@ -6938,8 +6943,8 @@ private fun BirthYearCard(icon: ImageVector, value: String, onValueChange: (Stri
           focusedContainerColor = Color.Transparent,
           unfocusedIndicatorColor = Color.Transparent,
           focusedIndicatorColor = Color.Transparent,
-          unfocusedTextColor = Color.White,
-          focusedTextColor = Color.White
+          unfocusedTextColor = Color.Black,
+          focusedTextColor = Color.Black
         ),
         modifier = Modifier.fillMaxWidth()
       )
@@ -6952,16 +6957,16 @@ private fun EmailCard(icon: ImageVector, title: String, subtitle: String) {
   Card(
     modifier = Modifier.fillMaxWidth(),
     shape = RoundedCornerShape(22.dp),
-    colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+    colors = CardDefaults.cardColors(containerColor = Color.White)
   ) {
     Row(
       modifier = Modifier.padding(20.dp),
       verticalAlignment = Alignment.CenterVertically
     ) {
-      Icon(icon, contentDescription = null, tint = Color.White)
+      Icon(icon, contentDescription = null, tint = Color.Black)
       Spacer(modifier = Modifier.width(16.dp))
       Column {
-        Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        Text(title, color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Medium)
         Text(subtitle, color = Color(0xFFA8A8A8), fontSize = 13.sp)
       }
     }
@@ -6973,15 +6978,15 @@ private fun XAccountCard(icon: ImageVector, title: String, onClick: () -> Unit) 
   Card(
     modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
     shape = RoundedCornerShape(22.dp),
-    colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+    colors = CardDefaults.cardColors(containerColor = Color.White)
   ) {
     Row(
       modifier = Modifier.padding(20.dp),
       verticalAlignment = Alignment.CenterVertically
     ) {
-      Icon(icon, contentDescription = null, tint = Color.White)
+      Icon(icon, contentDescription = null, tint = Color.Black)
       Spacer(modifier = Modifier.width(16.dp))
-      Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+      Text(title, color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Medium)
     }
   }
 }
@@ -6995,7 +7000,7 @@ private fun EditProfileScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color(0xFF181818))
+      .background(Color.White)
       .verticalScroll(rememberScrollState())
       .padding(horizontal = 20.dp)
   ) {
@@ -7007,7 +7012,7 @@ private fun EditProfileScreen(viewModel: ChatViewModel) {
       // (BackHandler above), same as the other settings sub-screens.
       Text(
         "Profile",
-        color = Color.White,
+        color = Color.Black,
         fontSize = 20.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.weight(1f)
@@ -7031,9 +7036,9 @@ private fun EditProfileScreen(viewModel: ChatViewModel) {
           .align(Alignment.BottomEnd)
           .offset(x = (-4).dp)
           .border(2.dp, Color(0xFF181818), CircleShape),
-        colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White)
+        colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.Black)
       ) {
-        Icon(Icons.Outlined.Edit, contentDescription = "Change photo", tint = Color.Black, modifier = Modifier.size(18.dp))
+        Icon(Icons.Outlined.Edit, contentDescription = "Change photo", tint = Color.White, modifier = Modifier.size(18.dp))
       }
     }
 
@@ -7092,15 +7097,15 @@ private fun EditProfileScreen(viewModel: ChatViewModel) {
     Card(
       modifier = Modifier.fillMaxWidth().clickable(onClick = { viewModel.signOut() }),
       shape = RoundedCornerShape(22.dp),
-      colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+      colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
       Row(
         modifier = Modifier.padding(20.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_logout), contentDescription = null, tint = Color.White)
+        Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_logout), contentDescription = null, tint = Color.Black)
         Spacer(modifier = Modifier.width(16.dp))
-        Text("Sign out", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        Text("Sign out", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Medium)
       }
     }
 
@@ -7314,16 +7319,16 @@ private data class VoiceOption(
 // label shown in the picker — each gets its own gradient so the selected
 // card reads as "this voice" at a glance, not just a checkmark.
 private val VOICE_OPTIONS = listOf(
-  VoiceOption("cedar", "Orin", "Wise Male", Color.White, Color.White),
-  VoiceOption("alloy", "Lyra", "Calm Female", Color.White, Color.White),
-  VoiceOption("ballad", "Kael", "Bold Male", Color.White, Color.White),
-  VoiceOption("coral", "Elia", "Warm Female", Color.White, Color.White),
-  VoiceOption("sage", "Leo", "Smart Male", Color.White, Color.White),
+  VoiceOption("cedar", "Orin", "Wise Male", Color.Black, Color.Black),
+  VoiceOption("alloy", "Lyra", "Calm Female", Color.Black, Color.Black),
+  VoiceOption("ballad", "Kael", "Bold Male", Color.Black, Color.Black),
+  VoiceOption("coral", "Elia", "Warm Female", Color.Black, Color.Black),
+  VoiceOption("sage", "Leo", "Smart Male", Color.Black, Color.Black),
   // The signature/default ChatGiZa voice — no "18+" tag here: unlike
   // Personality, voice choice has no real content-gating behind it, and
   // this is also the app's default, so tagging it adult-only would be
   // both meaningless and contradict it being what new users hear by default.
-  VoiceOption("marin", "GiZa", "Playful", Color.White, Color.White)
+  VoiceOption("marin", "GiZa", "Playful", Color.Black, Color.Black)
 )
 
 @Composable
@@ -7338,13 +7343,13 @@ private fun VoiceCard(option: VoiceOption, selected: Boolean, onClick: () -> Uni
       .fillMaxWidth()
       .height(78.dp)
       .clip(RoundedCornerShape(18.dp))
-      .background(Color(0xFF2F2F2F))
+      .background(Color.White)
       .clickable(onClick = onClick)
       .padding(start = 18.dp, end = 18.dp, top = 16.dp, bottom = 16.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
     Column(modifier = Modifier.weight(1f)) {
-      Text(option.name, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+      Text(option.name, color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(2.dp))
       Text(option.description, color = Color(0xFFA8A8A8), fontSize = 15.sp, fontWeight = FontWeight.Normal)
     }
@@ -7352,7 +7357,7 @@ private fun VoiceCard(option: VoiceOption, selected: Boolean, onClick: () -> Uni
       Icon(
         Icons.Filled.Check,
         contentDescription = "Selected",
-        tint = Color.White.copy(alpha = checkAlpha),
+        tint = Color.Black.copy(alpha = checkAlpha),
         modifier = Modifier.size(28.dp).padding(end = 8.dp)
       )
     }
@@ -7413,7 +7418,7 @@ private fun VoiceScreen(viewModel: ChatViewModel) {
                 heartbeatScale.animateTo(1f, tween(180, easing = FastOutSlowInEasing))
               }
             },
-          tint = Color.White
+          tint = Color.Black
         )
       }
 
@@ -7600,12 +7605,12 @@ private fun DataControlsAppBar(title: String, onBack: () -> Unit) {
     verticalAlignment = Alignment.CenterVertically
   ) {
     IconButton(onClick = onBack, modifier = Modifier.size(24.dp)) {
-      Icon(Icons.Filled.ArrowBackIosNew, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(24.dp))
+      Icon(Icons.Filled.ArrowBackIosNew, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(24.dp))
     }
     Spacer(modifier = Modifier.width(20.dp))
     Text(
       title,
-      color = Color.White,
+      color = Color.Black,
       fontSize = 22.sp,
       fontWeight = FontWeight.Bold,
       modifier = Modifier.padding(top = 2.dp)
@@ -7617,7 +7622,7 @@ private fun DataControlsAppBar(title: String, onBack: () -> Unit) {
 private fun DataControlToggleRow(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
   Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
     Column(modifier = Modifier.weight(1f)) {
-      Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+      Text(title, color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(3.dp))
       Text(subtitle, color = Color(0xFFA8A8A8), fontSize = 12.sp, lineHeight = 15.sp, fontWeight = FontWeight.Normal)
     }
@@ -7634,7 +7639,7 @@ private fun DataControlToggleRow(title: String, subtitle: String, checked: Boole
 private fun DangerRow(label: String, onClick: () -> Unit) {
   Text(
     label,
-    color = Color.White,
+    color = Color.Black,
     fontSize = 14.sp,
     fontWeight = FontWeight.Bold,
     modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
@@ -7649,7 +7654,7 @@ private fun ConfirmDangerDialog(title: String, message: String, onConfirm: () ->
     text = { Text(message) },
     confirmButton = {
       TextButton(onClick = { onConfirm(); onDismiss() }) {
-        Text("Delete", color = Color.White)
+        Text("Delete", color = Color.Black)
       }
     },
     dismissButton = {
@@ -7684,7 +7689,7 @@ private fun DataControlsScreen(viewModel: ChatViewModel) {
       ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
           Column(modifier = Modifier.weight(1f)) {
-            Text("Manage Cloud Storage", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text("Manage Cloud Storage", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(3.dp))
             Text(
               "See all the files and assets you have uploaded to ChatGiZa. You can also delete them here.",
@@ -7786,7 +7791,7 @@ private fun AccountSettingsScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color(0xFF000000))
+      .background(Color.White)
       .statusBarsPadding()
       .padding(horizontal = 16.dp)
   ) {
@@ -7822,18 +7827,18 @@ private fun AccountSettingsRow(icon: ImageVector, title: String, description: St
     modifier = Modifier
       .fillMaxWidth()
       .clip(RoundedCornerShape(16.dp))
-      .background(Color.White.copy(alpha = 0.06f))
+      .background(Color.Black.copy(alpha = 0.06f))
       .clickable(onClick = onClick)
       .padding(16.dp)
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-      Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+      Icon(icon, contentDescription = null, tint = Color.Black, modifier = Modifier.size(22.dp))
       Spacer(modifier = Modifier.width(14.dp))
-      Text(title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-      Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+      Text(title, color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+      Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
     }
     Spacer(modifier = Modifier.height(10.dp))
-    Text(description, color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp, lineHeight = 20.sp)
+    Text(description, color = Color.Black.copy(alpha = 0.5f), fontSize = 14.sp, lineHeight = 20.sp)
   }
 }
 
@@ -7853,7 +7858,7 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color(0xFF000000))
+      .background(Color.White)
       .statusBarsPadding()
       .padding(horizontal = 16.dp)
       .verticalScroll(rememberScrollState())
@@ -7861,17 +7866,17 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
     Box(modifier = Modifier.fillMaxWidth().padding(top = 26.dp, bottom = 20.dp)) {
       Text(
         "Subaccount",
-        color = Color.White,
+        color = Color.Black,
         fontSize = 18.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.align(Alignment.Center)
       )
       IconButton(onClick = { viewModel.closeSwitchAccount() }, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
-        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(24.dp))
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(24.dp))
       }
     }
 
-    Text("Main Account", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+    Text("Main Account", color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
     Spacer(modifier = Modifier.height(8.dp))
     SwitchAccountRow(
       name = (viewModel.userName ?: "You").uppercase(),
@@ -7891,17 +7896,17 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
     // Everything subaccount-related (rules, create, list) grouped together
     // below Main Account, instead of the Create button sitting between the
     // two sections.
-    Text("Subaccounts", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+    Text("Subaccounts", color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
     Spacer(modifier = Modifier.height(8.dp))
     Text(
       "You can create up to 5 subaccounts. Each one has its own separate chat history.",
-      color = Color.White.copy(alpha = 0.4f),
+      color = Color.Black.copy(alpha = 0.4f),
       fontSize = 12.sp,
       lineHeight = 16.sp,
       modifier = Modifier
         .fillMaxWidth()
         .clip(RoundedCornerShape(12.dp))
-        .background(Color.White.copy(alpha = 0.05f))
+        .background(Color.Black.copy(alpha = 0.05f))
         .padding(12.dp)
     )
     Spacer(modifier = Modifier.height(12.dp))
@@ -7910,7 +7915,7 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
       modifier = Modifier
         .fillMaxWidth()
         .clip(RoundedCornerShape(50))
-        .background(Color.White)
+        .background(Color.Black)
         .clickable {
           if (viewModel.subaccounts.size >= 5) return@clickable
           showCreateDialog = true
@@ -7918,19 +7923,19 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
         .padding(vertical = 14.dp),
       contentAlignment = Alignment.Center
     ) {
-      Text("Create Subaccount", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+      Text("Create Subaccount", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
     }
 
     Spacer(modifier = Modifier.height(16.dp))
 
     if (viewModel.loadingSubaccounts && viewModel.subaccounts.isEmpty()) {
       Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(22.dp))
+        CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(22.dp))
       }
     } else if (viewModel.subaccounts.isEmpty()) {
       Text(
         "You haven't created any subaccounts yet.",
-        color = Color.White.copy(alpha = 0.4f),
+        color = Color.Black.copy(alpha = 0.4f),
         fontSize = 13.sp,
         modifier = Modifier.padding(vertical = 16.dp)
       )
@@ -7949,7 +7954,7 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
               AvatarPresetThumbnail(preset, 40.dp, name = null)
             } else {
               Box(
-                modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)),
+                modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
               ) {
                 Text(sub.name.take(1).uppercase(), color = tint, fontSize = 15.sp, fontWeight = FontWeight.Bold)
@@ -7962,7 +7967,7 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
 
     viewModel.subaccountError?.let {
       Spacer(modifier = Modifier.height(8.dp))
-      Text(it, color = Color.White, fontSize = 12.sp)
+      Text(it, color = Color.Black, fontSize = 12.sp)
     }
 
     Spacer(modifier = Modifier.height(24.dp))
@@ -7996,12 +8001,12 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
 
   val moreTarget = moreSheetTarget
   if (moreTarget != null) {
-    ModalBottomSheet(onDismissRequest = { moreSheetTarget = null }, containerColor = Color(0xFF161616)) {
+    ModalBottomSheet(onDismissRequest = { moreSheetTarget = null }, containerColor = Color.White) {
       Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
-          Text("More", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+          Text("More", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
           IconButton(onClick = { moreSheetTarget = null }, modifier = Modifier.size(28.dp)) {
-            Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.White)
+            Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.Black)
           }
         }
         SubaccountMoreRow("Settings") {
@@ -8030,28 +8035,28 @@ private fun SwitchAccountRow(
     modifier = Modifier
       .fillMaxWidth()
       .clip(RoundedCornerShape(14.dp))
-      .background(Color.White.copy(alpha = 0.06f))
+      .background(Color.Black.copy(alpha = 0.06f))
       .border(
         if (selected) 1.5.dp else 0.dp,
-        if (selected) Color.White else Color.Transparent,
+        if (selected) Color.Black else Color.Transparent,
         RoundedCornerShape(14.dp)
       )
       .clickable(onClick = onClick)
       .padding(14.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    avatar(Color.White.copy(alpha = 0.7f))
+    avatar(Color.Black.copy(alpha = 0.7f))
     Spacer(modifier = Modifier.width(12.dp))
     Column(modifier = Modifier.weight(1f)) {
-      Text(name, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-      Text("UID: $uid", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
+      Text(name, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+      Text("UID: $uid", color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp)
     }
     if (selected) {
-      Icon(Icons.Filled.Check, contentDescription = "Active", tint = Color.White, modifier = Modifier.size(20.dp))
+      Icon(Icons.Filled.Check, contentDescription = "Active", tint = Color.Black, modifier = Modifier.size(20.dp))
     }
     if (onMore != null) {
       IconButton(onClick = onMore, modifier = Modifier.size(28.dp)) {
-        Icon(Icons.Outlined.MoreHoriz, contentDescription = "More", tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(20.dp))
+        Icon(Icons.Outlined.MoreHoriz, contentDescription = "More", tint = Color.Black.copy(alpha = 0.5f), modifier = Modifier.size(20.dp))
       }
     }
   }
@@ -8063,8 +8068,8 @@ private fun SubaccountMoreRow(label: String, onClick: () -> Unit) {
     modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    Text(label, color = Color.White, fontSize = 16.sp, modifier = Modifier.weight(1f))
-    Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
+    Text(label, color = Color.Black, fontSize = 16.sp, modifier = Modifier.weight(1f))
+    Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
   }
 }
 
@@ -8086,17 +8091,17 @@ private fun SubaccountSettingsScreen(viewModel: ChatViewModel) {
     return
   }
 
-  Column(modifier = Modifier.fillMaxSize().background(Color(0xFF000000)).statusBarsPadding()) {
+  Column(modifier = Modifier.fillMaxSize().background(Color.White).statusBarsPadding()) {
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
       Text(
         sub.name,
-        color = Color.White,
+        color = Color.Black,
         fontSize = 18.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.align(Alignment.Center)
       )
       IconButton(onClick = { viewModel.closeSubaccountSettings() }, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
-        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(24.dp))
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(24.dp))
       }
     }
 
@@ -8108,12 +8113,12 @@ private fun SubaccountSettingsScreen(viewModel: ChatViewModel) {
           .padding(vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Text("Nickname", color = Color.White, fontSize = 16.sp, modifier = Modifier.weight(1f))
-        Text(sub.name, color = Color.White.copy(alpha = 0.4f), fontSize = 14.sp)
+        Text("Nickname", color = Color.Black, fontSize = 16.sp, modifier = Modifier.weight(1f))
+        Text(sub.name, color = Color.Black.copy(alpha = 0.4f), fontSize = 14.sp)
         Spacer(Modifier.width(6.dp))
-        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
+        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
       }
-      HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+      HorizontalDivider(color = Color.Black.copy(alpha = 0.08f))
       Row(
         modifier = Modifier
           .fillMaxWidth()
@@ -8121,8 +8126,8 @@ private fun SubaccountSettingsScreen(viewModel: ChatViewModel) {
           .padding(vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Text("Delete Subaccount", color = Color.White, fontSize = 16.sp, modifier = Modifier.weight(1f))
-        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+        Text("Delete Subaccount", color = Color.Black, fontSize = 16.sp, modifier = Modifier.weight(1f))
+        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
       }
     }
   }
@@ -8169,10 +8174,10 @@ private fun DashboardStatTile(label: String, value: String, modifier: Modifier =
   Column(
     modifier = modifier
       .clip(RoundedCornerShape(12.dp))
-      .background(Color.White.copy(alpha = 0.06f))
+      .background(Color.Black.copy(alpha = 0.06f))
       .padding(12.dp)
   ) {
-    Text(value, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+    Text(value, color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
     Spacer(modifier = Modifier.height(2.dp))
     Text(label, color = Color(0xFFA8A8A8), fontSize = 11.sp)
   }
@@ -8234,7 +8239,7 @@ private fun DataDashboardScreen(viewModel: ChatViewModel) {
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(12.dp))
-          .background(Color.White.copy(alpha = 0.06f))
+          .background(Color.Black.copy(alpha = 0.06f))
           .padding(14.dp)
       ) {
         DashboardInfoRow("First message", firstMessageAt?.let { dateFmt.format(java.util.Date(it)) } ?: "—")
@@ -8248,14 +8253,14 @@ private fun DataDashboardScreen(viewModel: ChatViewModel) {
       }
 
       Spacer(modifier = Modifier.height(24.dp))
-      Text("Manage your data", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 10.dp))
+      Text("Manage your data", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 10.dp))
       Row(
         modifier = Modifier
           .fillMaxWidth()
           .clickable { viewModel.openDataControls() },
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Text("Data controls & delete account", color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Text("Data controls & delete account", color = Color.Black, fontSize = 14.sp, modifier = Modifier.weight(1f))
         Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color(0xFFA8A8A8), modifier = Modifier.size(22.dp))
       }
       Spacer(modifier = Modifier.height(24.dp))
@@ -8267,7 +8272,7 @@ private fun DataDashboardScreen(viewModel: ChatViewModel) {
 private fun DashboardInfoRow(label: String, value: String) {
   Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
     Text(label, color = Color(0xFFA8A8A8), fontSize = 13.sp)
-    Text(value, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+    Text(value, color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Medium)
   }
 }
 
@@ -8278,11 +8283,11 @@ private val CLOUD_STORAGE_SORTS = listOf("Last used", "Date created", "Name", "S
 private fun CloudStorageFilterMenuItem(label: String, selected: Boolean, onClick: () -> Unit) {
   DropdownMenuItem(
     text = {
-      Text(label, color = Color.White, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal, fontSize = 15.sp)
+      Text(label, color = Color.Black, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal, fontSize = 15.sp)
     },
     leadingIcon = {
       if (selected) {
-        Icon(Icons.Filled.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+        Icon(Icons.Filled.Check, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
       } else {
         Spacer(modifier = Modifier.size(18.dp))
       }
@@ -8308,11 +8313,11 @@ private fun ManageCloudStorageScreen(viewModel: ChatViewModel) {
       verticalAlignment = Alignment.CenterVertically
     ) {
       IconButton(onClick = { viewModel.closeManageCloudStorage() }, modifier = Modifier.size(28.dp)) {
-        Icon(Icons.Filled.ArrowBackIosNew, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
+        Icon(Icons.Filled.ArrowBackIosNew, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(28.dp))
       }
       Spacer(modifier = Modifier.width(20.dp))
       Column(modifier = Modifier.weight(1f)) {
-        Text("0 B", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text("0 B", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Text("0% used", color = Color(0xFFA8A8A8), fontSize = 13.sp)
       }
       Box {
@@ -8323,12 +8328,12 @@ private fun ManageCloudStorageScreen(viewModel: ChatViewModel) {
             .clickable { filterMenuOpen = true },
           contentAlignment = Alignment.Center
         ) {
-          FilterIconCustom(tint = Color.White, modifier = Modifier.size(24.dp))
+          FilterIconCustom(tint = Color.Black, modifier = Modifier.size(24.dp))
         }
         DropdownMenu(
           expanded = filterMenuOpen,
           onDismissRequest = { filterMenuOpen = false },
-          modifier = Modifier.background(Color(0xFF1F1F1F))
+          modifier = Modifier.background(Color.White)
         ) {
           Text(
             "Filter by",
@@ -8343,7 +8348,7 @@ private fun ManageCloudStorageScreen(viewModel: ChatViewModel) {
               filterMenuOpen = false
             }
           }
-          HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+          HorizontalDivider(color = Color.Black.copy(alpha = 0.1f))
           Text(
             "Sort by",
             color = Color(0xFFA8A8A8),
@@ -8375,19 +8380,19 @@ private fun WidgetMockPreview(modifier: Modifier = Modifier) {
   Box(
     modifier = modifier
       .clip(RoundedCornerShape(18.dp))
-      .background(Color(0xFF1A1A1A))
+      .background(Color.White)
       .padding(16.dp)
   ) {
     Column {
       Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
-          modifier = Modifier.size(28.dp).clip(CircleShape).background(Color.White),
+          modifier = Modifier.size(28.dp).clip(CircleShape).background(Color.Black),
           contentAlignment = Alignment.Center
         ) {
-          Text("G", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+          Text("G", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.width(8.dp))
-        Text("ChatGiZa", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        Text("ChatGiZa", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
       }
       Spacer(modifier = Modifier.height(14.dp))
       Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -8404,13 +8409,13 @@ private fun WidgetMockAction(icon: ImageVector, label: String, modifier: Modifie
   Column(
     modifier = modifier
       .clip(RoundedCornerShape(12.dp))
-      .background(Color.White.copy(alpha = 0.08f))
+      .background(Color.Black.copy(alpha = 0.08f))
       .padding(vertical = 10.dp),
     horizontalAlignment = Alignment.CenterHorizontally
   ) {
-    Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+    Icon(icon, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
     Spacer(modifier = Modifier.height(4.dp))
-    Text(label, color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
+    Text(label, color = Color.Black.copy(alpha = 0.8f), fontSize = 11.sp)
   }
 }
 
@@ -8422,16 +8427,16 @@ private fun WidgetsScreen(viewModel: ChatViewModel) {
   var addedMessage by remember { mutableStateOf(false) }
 
   Scaffold(
-    containerColor = Color(0xFF181818),
+    containerColor = Color.White,
     topBar = {
       TopAppBar(
         title = { Text("Widget") },
         navigationIcon = {
           IconButton(onClick = { viewModel.closeWidgets() }) {
-            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
           }
         },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF181818))
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
       )
     }
   ) { padding ->
@@ -8442,7 +8447,7 @@ private fun WidgetsScreen(viewModel: ChatViewModel) {
     ) {
       Card(
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+        colors = CardDefaults.cardColors(containerColor = Color.White)
       ) {
         WidgetMockPreview(
           modifier = Modifier
@@ -8453,7 +8458,7 @@ private fun WidgetsScreen(viewModel: ChatViewModel) {
 
         Text(
           text = "Get quick access to chat, imagine and voice with ChatGiZa",
-          color = Color.White,
+          color = Color.Black,
           fontSize = 18.sp,
           textAlign = TextAlign.Center,
           modifier = Modifier.fillMaxWidth().padding(20.dp)
@@ -8467,15 +8472,15 @@ private fun WidgetsScreen(viewModel: ChatViewModel) {
           .fillMaxWidth()
           .clickable { showBottomSheet = true },
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+        colors = CardDefaults.cardColors(containerColor = Color.White)
       ) {
         Row(
           modifier = Modifier.padding(20.dp),
           verticalAlignment = Alignment.CenterVertically
         ) {
-          Icon(Icons.Outlined.AddBox, contentDescription = null, tint = Color.White)
+          Icon(Icons.Outlined.AddBox, contentDescription = null, tint = Color.Black)
           Spacer(modifier = Modifier.width(16.dp))
-          Text("Add Widget", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+          Text("Add Widget", color = Color.Black, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
       }
 
@@ -8493,11 +8498,11 @@ private fun WidgetsScreen(viewModel: ChatViewModel) {
   if (showBottomSheet) {
     ModalBottomSheet(
       onDismissRequest = { showBottomSheet = false },
-      containerColor = Color(0xFF2F2F2F)
+      containerColor = Color.White
     ) {
       Text(
         "Add to Desktop",
-        color = Color.White,
+        color = Color.Black,
         fontSize = 28.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(24.dp)
@@ -8505,7 +8510,7 @@ private fun WidgetsScreen(viewModel: ChatViewModel) {
 
       Text(
         "ChatGiZa",
-        color = Color.White,
+        color = Color.Black,
         fontSize = 24.sp,
         modifier = Modifier.align(Alignment.CenterHorizontally)
       )
@@ -8575,16 +8580,16 @@ private fun OpenSourceLicensesScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeOpenSourceLicenses() }
   val context = LocalContext.current
   Scaffold(
-    containerColor = Color(0xFF181818),
+    containerColor = Color.White,
     topBar = {
       TopAppBar(
         title = { Text("Open Source Licenses") },
         navigationIcon = {
           IconButton(onClick = { viewModel.closeOpenSourceLicenses() }) {
-            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
           }
         },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF181818))
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
       )
     }
   ) { padding ->
@@ -8607,10 +8612,10 @@ private fun OpenSourceLicensesScreen(viewModel: ChatViewModel) {
             .fillMaxWidth()
             .clickable { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(entry.licenseUrl))) },
           shape = RoundedCornerShape(16.dp),
-          colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+          colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
           Column(modifier = Modifier.padding(16.dp)) {
-            Text(entry.name, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(entry.name, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(4.dp))
             Text(entry.license, color = Color(0xFFA8A8A8), fontSize = 13.sp)
           }
@@ -8675,16 +8680,16 @@ private fun ShareTargetPickerScreen(viewModel: ChatViewModel) {
   }
 
   Scaffold(
-    containerColor = Color(0xFF181818),
+    containerColor = Color.White,
     topBar = {
       TopAppBar(
         title = { Text("Open in which conversation?") },
         navigationIcon = {
           IconButton(onClick = { viewModel.cancelPendingShare() }) {
-            Icon(Icons.Outlined.Close, contentDescription = "Cancel", tint = Color.White)
+            Icon(Icons.Outlined.Close, contentDescription = "Cancel", tint = Color.Black)
           }
         },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF181818))
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
       )
     }
   ) { padding ->
@@ -8698,12 +8703,12 @@ private fun ShareTargetPickerScreen(viewModel: ChatViewModel) {
           Card(
             modifier = Modifier.fillMaxWidth().clickable { openInto(null) },
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+            colors = CardDefaults.cardColors(containerColor = Color.White)
           ) {
             Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-              Icon(Icons.Filled.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+              Icon(Icons.Filled.Add, contentDescription = null, tint = Color.Black, modifier = Modifier.size(20.dp))
               Spacer(modifier = Modifier.width(12.dp))
-              Text("New chat", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+              Text("New chat", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
           }
         }
@@ -8711,11 +8716,11 @@ private fun ShareTargetPickerScreen(viewModel: ChatViewModel) {
           Card(
             modifier = Modifier.fillMaxWidth().clickable { openInto(convo.id) },
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+            colors = CardDefaults.cardColors(containerColor = Color.White)
           ) {
             Text(
               convo.title.ifBlank { "Untitled" },
-              color = Color.White,
+              color = Color.Black,
               fontSize = 15.sp,
               maxLines = 1,
               overflow = TextOverflow.Ellipsis,
@@ -8726,10 +8731,10 @@ private fun ShareTargetPickerScreen(viewModel: ChatViewModel) {
       }
       if (working) {
         Box(
-          modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)),
+          modifier = Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.4f)),
           contentAlignment = Alignment.Center
         ) {
-          CircularProgressIndicator(color = Color.White)
+          CircularProgressIndicator(color = Color.Black)
         }
       }
     }
@@ -8741,15 +8746,15 @@ private fun HapticCard(icon: ImageVector, title: String, checked: Boolean, onChe
   Card(
     modifier = Modifier.fillMaxWidth(),
     shape = RoundedCornerShape(22.dp),
-    colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+    colors = CardDefaults.cardColors(containerColor = Color.White)
   ) {
     Row(
       modifier = Modifier.padding(20.dp),
       verticalAlignment = Alignment.CenterVertically
     ) {
-      Icon(imageVector = icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
+      Icon(imageVector = icon, contentDescription = null, tint = Color.Black, modifier = Modifier.size(30.dp))
       Spacer(Modifier.width(18.dp))
-      Text(text = title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+      Text(text = title, color = Color.Black, fontSize = 20.sp, fontWeight = FontWeight.Bold)
       Spacer(Modifier.weight(1f))
       Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
@@ -8761,7 +8766,7 @@ private fun ToggleCard(title: String, checked: Boolean, enabled: Boolean, onChec
   Card(
     modifier = Modifier.fillMaxWidth(),
     shape = RoundedCornerShape(18.dp),
-    colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+    colors = CardDefaults.cardColors(containerColor = Color.White)
   ) {
     Row(
       modifier = Modifier.padding(20.dp),
@@ -8769,7 +8774,7 @@ private fun ToggleCard(title: String, checked: Boolean, enabled: Boolean, onChec
     ) {
       Text(
         text = title,
-        color = if (enabled) Color.White else Color.White.copy(alpha = 0.4f),
+        color = if (enabled) Color.Black else Color.Black.copy(alpha = 0.4f),
         fontSize = 19.sp,
         fontWeight = FontWeight.Bold
       )
@@ -8787,15 +8792,15 @@ private fun HapticsScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color(0xFF181818))
+      .background(Color.White)
       .padding(20.dp)
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
       IconButton(onClick = { viewModel.closeHaptics() }) {
-        Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+        Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
       }
       Spacer(Modifier.width(18.dp))
-      Text(text = "Haptics", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+      Text(text = "Haptics", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
     }
 
     Spacer(Modifier.height(28.dp))
@@ -8851,15 +8856,15 @@ private fun KidsModeScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color(0xFF181818))
+      .background(Color.White)
       .padding(20.dp)
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
       IconButton(onClick = { viewModel.closeKidsMode() }) {
-        Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+        Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
       }
       Spacer(Modifier.width(18.dp))
-      Text(text = "Kids Mode", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+      Text(text = "Kids Mode", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
     }
     Spacer(Modifier.height(28.dp))
     HapticCard(
@@ -8881,15 +8886,15 @@ private fun SharedConversationsScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color(0xFF181818))
+      .background(Color.White)
       .padding(20.dp)
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
       IconButton(onClick = { viewModel.closeSharedConversations() }) {
-        Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+        Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
       }
       Spacer(Modifier.width(18.dp))
-      Text(text = "Collaborative Chat", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+      Text(text = "Collaborative Chat", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
     }
     Spacer(Modifier.height(20.dp))
     Text(
@@ -8904,44 +8909,44 @@ private fun SharedConversationsScreen(viewModel: ChatViewModel) {
       modifier = Modifier
         .fillMaxWidth()
         .clip(RoundedCornerShape(16.dp))
-        .background(Color.White)
+        .background(Color.Black)
         .clickable { viewModel.startCollabSession() }
         .padding(vertical = 16.dp),
       contentAlignment = Alignment.Center
     ) {
-      Text("Start a Collaborative Chat", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+      Text("Start a Collaborative Chat", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
     }
 
     Spacer(Modifier.height(28.dp))
-    Text("Join with a code", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    Text("Join with a code", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
     Spacer(Modifier.height(10.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
       OutlinedTextField(
         value = viewModel.collabJoinCodeInput,
         onValueChange = { viewModel.onCollabJoinCodeChange(it) },
         modifier = Modifier.weight(1f),
-        placeholder = { Text("ABC123", color = Color.White.copy(alpha = 0.35f)) },
+        placeholder = { Text("ABC123", color = Color.Black.copy(alpha = 0.35f)) },
         singleLine = true,
         shape = RoundedCornerShape(12.dp),
         colors = OutlinedTextFieldDefaults.colors(
-          focusedTextColor = Color.White,
-          unfocusedTextColor = Color.White,
-          focusedBorderColor = Color.White.copy(alpha = 0.4f),
-          unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
-          cursorColor = Color.White
+          focusedTextColor = Color.Black,
+          unfocusedTextColor = Color.Black,
+          focusedBorderColor = Color.Black.copy(alpha = 0.4f),
+          unfocusedBorderColor = Color.Black.copy(alpha = 0.15f),
+          cursorColor = Color.Black
         )
       )
       Spacer(Modifier.width(10.dp))
       Box(
         modifier = Modifier
           .clip(RoundedCornerShape(12.dp))
-          .background(if (viewModel.collabJoinCodeInput.length >= 4) Color.White else Color.White.copy(alpha = 0.15f))
+          .background(if (viewModel.collabJoinCodeInput.length >= 4) Color.Black else Color.Black.copy(alpha = 0.15f))
           .clickable(enabled = viewModel.collabJoinCodeInput.length >= 4) { viewModel.joinCollabSession() }
           .padding(horizontal = 20.dp, vertical = 14.dp)
       ) {
         Text(
           "Join",
-          color = if (viewModel.collabJoinCodeInput.length >= 4) Color.Black else Color.White.copy(alpha = 0.4f),
+          color = if (viewModel.collabJoinCodeInput.length >= 4) Color.White else Color.Black.copy(alpha = 0.4f),
           fontSize = 14.sp,
           fontWeight = FontWeight.Bold
         )
@@ -8951,7 +8956,7 @@ private fun SharedConversationsScreen(viewModel: ChatViewModel) {
     val error = viewModel.collabError
     if (error != null) {
       Spacer(Modifier.height(10.dp))
-      Text(error, color = Color.White, fontSize = 12.sp)
+      Text(error, color = Color.Black, fontSize = 12.sp)
     }
   }
   // Fires the OS share sheet the moment a session is created, so the
@@ -8982,21 +8987,21 @@ private fun CollabChatScreen(viewModel: ChatViewModel) {
     if (count > 0) listState.animateScrollToItem(count - 1)
   }
 
-  Column(modifier = Modifier.fillMaxSize().background(Color(0xFF000000)).statusBarsPadding()) {
+  Column(modifier = Modifier.fillMaxSize().background(Color.White).statusBarsPadding()) {
     Row(
       modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
       verticalAlignment = Alignment.CenterVertically
     ) {
       IconButton(onClick = { viewModel.closeCollabChat() }, modifier = Modifier.size(32.dp)) {
-        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
       }
       Spacer(Modifier.width(12.dp))
       Column(modifier = Modifier.weight(1f)) {
-        Text("Collaborative Chat", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text("Collaborative Chat", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         if (session != null) {
           Text(
             "${session.participants.size} in this chat",
-            color = Color.White.copy(alpha = 0.5f),
+            color = Color.Black.copy(alpha = 0.5f),
             fontSize = 12.sp
           )
         }
@@ -9006,16 +9011,16 @@ private fun CollabChatScreen(viewModel: ChatViewModel) {
           verticalAlignment = Alignment.CenterVertically,
           modifier = Modifier
             .clip(RoundedCornerShape(50))
-            .background(Color.White.copy(alpha = 0.1f))
+            .background(Color.Black.copy(alpha = 0.1f))
             .clickable {
               clipboard.setText(AnnotatedString(session.code))
               Toast.makeText(context, "Code copied", Toast.LENGTH_SHORT).show()
             }
             .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-          Text(session.code, color = Color.White, fontSize = 13.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+          Text(session.code, color = Color.Black, fontSize = 13.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
           Spacer(Modifier.width(6.dp))
-          Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_copy), contentDescription = "Copy code", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(14.dp))
+          Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_copy), contentDescription = "Copy code", tint = Color.Black.copy(alpha = 0.6f), modifier = Modifier.size(14.dp))
         }
       }
     }
@@ -9028,11 +9033,11 @@ private fun CollabChatScreen(viewModel: ChatViewModel) {
         session.participants.forEach { p ->
           Text(
             p.name,
-            color = Color.White.copy(alpha = 0.5f),
+            color = Color.Black.copy(alpha = 0.5f),
             fontSize = 11.sp,
             modifier = Modifier
               .clip(RoundedCornerShape(50))
-              .background(Color.White.copy(alpha = 0.06f))
+              .background(Color.Black.copy(alpha = 0.06f))
               .padding(horizontal = 10.dp, vertical = 4.dp)
           )
         }
@@ -9052,7 +9057,7 @@ private fun CollabChatScreen(viewModel: ChatViewModel) {
           Column(horizontalAlignment = Alignment.End, modifier = Modifier.fillMaxWidth()) {
             Text(
               if (msg.authorName == myName) "You" else (msg.authorName ?: "Someone"),
-              color = Color.White.copy(alpha = 0.4f),
+              color = Color.Black.copy(alpha = 0.4f),
               fontSize = 11.sp,
               modifier = Modifier.padding(bottom = 2.dp, end = 4.dp)
             )
@@ -9062,18 +9067,18 @@ private fun CollabChatScreen(viewModel: ChatViewModel) {
                 .background(colorScheme.onBackground.copy(alpha = 0.1f))
                 .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
-              Text(msg.content, color = Color.White, fontSize = 15.sp)
+              Text(msg.content, color = Color.Black, fontSize = 15.sp)
             }
           }
         } else {
           Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp)) {
-            MarkdownText(text = msg.content, baseColor = Color.White, fontSize = 15.sp)
+            MarkdownText(text = msg.content, baseColor = Color.Black, fontSize = 15.sp)
           }
         }
       }
       if (viewModel.collabSending) {
         item {
-          Text("GiZa is replying…", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+          Text("GiZa is replying…", color = Color.Black.copy(alpha = 0.4f), fontSize = 13.sp)
         }
       }
     }
@@ -9090,14 +9095,14 @@ private fun CollabChatScreen(viewModel: ChatViewModel) {
         value = viewModel.collabInput,
         onValueChange = { viewModel.onCollabInputChange(it) },
         modifier = Modifier.weight(1f),
-        placeholder = { Text("Message the group…", color = Color.White.copy(alpha = 0.35f)) },
+        placeholder = { Text("Message the group…", color = Color.Black.copy(alpha = 0.35f)) },
         shape = RoundedCornerShape(20.dp),
         colors = OutlinedTextFieldDefaults.colors(
-          focusedTextColor = Color.White,
-          unfocusedTextColor = Color.White,
-          focusedBorderColor = Color.White.copy(alpha = 0.4f),
-          unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
-          cursorColor = Color.White
+          focusedTextColor = Color.Black,
+          unfocusedTextColor = Color.Black,
+          focusedBorderColor = Color.Black.copy(alpha = 0.4f),
+          unfocusedBorderColor = Color.Black.copy(alpha = 0.15f),
+          cursorColor = Color.Black
         )
       )
       Spacer(Modifier.width(8.dp))
@@ -9105,11 +9110,11 @@ private fun CollabChatScreen(viewModel: ChatViewModel) {
         modifier = Modifier
           .size(44.dp)
           .clip(CircleShape)
-          .background(if (viewModel.collabInput.isNotBlank() && !viewModel.collabSending) Color.White else Color.White.copy(alpha = 0.15f))
+          .background(if (viewModel.collabInput.isNotBlank() && !viewModel.collabSending) Color.Black else Color.Black.copy(alpha = 0.15f))
           .clickable(enabled = viewModel.collabInput.isNotBlank() && !viewModel.collabSending) { viewModel.sendCollabMessage() },
         contentAlignment = Alignment.Center
       ) {
-        Icon(Icons.Filled.ArrowUpward, contentDescription = "Send", tint = Color.Black, modifier = Modifier.size(18.dp))
+        Icon(Icons.Filled.ArrowUpward, contentDescription = "Send", tint = Color.White, modifier = Modifier.size(18.dp))
       }
     }
   }
@@ -9129,16 +9134,16 @@ private fun CommunityScreen(viewModel: ChatViewModel) {
     if (count > 0) listState.animateScrollToItem(count - 1)
   }
 
-  Column(modifier = Modifier.fillMaxSize().background(Color(0xFF000000)).statusBarsPadding()) {
+  Column(modifier = Modifier.fillMaxSize().background(Color.White).statusBarsPadding()) {
     Row(
       modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
       verticalAlignment = Alignment.CenterVertically
     ) {
       IconButton(onClick = { viewModel.closeCommunity() }, modifier = Modifier.size(32.dp)) {
-        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
       }
       Spacer(Modifier.width(12.dp))
-      Text("ChatGiZa Community", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+      Text("ChatGiZa Community", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold)
     }
 
     LazyColumn(
@@ -9155,17 +9160,17 @@ private fun CommunityScreen(viewModel: ChatViewModel) {
         ) {
           Text(
             if (isMe) "You" else msg.authorName,
-            color = Color.White.copy(alpha = 0.4f),
+            color = Color.Black.copy(alpha = 0.4f),
             fontSize = 11.sp,
             modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 2.dp)
           )
           Box(
             modifier = Modifier
               .clip(RoundedCornerShape(18.dp))
-              .background(if (isMe) colorScheme.onBackground.copy(alpha = 0.1f) else Color.White.copy(alpha = 0.06f))
+              .background(if (isMe) colorScheme.onBackground.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.06f))
               .padding(horizontal = 14.dp, vertical = 10.dp)
           ) {
-            Text(msg.content, color = Color.White, fontSize = 15.sp)
+            Text(msg.content, color = Color.Black, fontSize = 15.sp)
           }
         }
       }
@@ -9173,7 +9178,7 @@ private fun CommunityScreen(viewModel: ChatViewModel) {
 
     val error = viewModel.communityError
     if (error != null) {
-      Text(error, color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp))
+      Text(error, color = Color.Black, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp))
     }
 
     Row(
@@ -9188,14 +9193,14 @@ private fun CommunityScreen(viewModel: ChatViewModel) {
         value = viewModel.communityInput,
         onValueChange = { viewModel.onCommunityInputChange(it) },
         modifier = Modifier.weight(1f),
-        placeholder = { Text("Message the community…", color = Color.White.copy(alpha = 0.35f)) },
+        placeholder = { Text("Message the community…", color = Color.Black.copy(alpha = 0.35f)) },
         shape = RoundedCornerShape(20.dp),
         colors = OutlinedTextFieldDefaults.colors(
-          focusedTextColor = Color.White,
-          unfocusedTextColor = Color.White,
-          focusedBorderColor = Color.White.copy(alpha = 0.4f),
-          unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
-          cursorColor = Color.White
+          focusedTextColor = Color.Black,
+          unfocusedTextColor = Color.Black,
+          focusedBorderColor = Color.Black.copy(alpha = 0.4f),
+          unfocusedBorderColor = Color.Black.copy(alpha = 0.15f),
+          cursorColor = Color.Black
         )
       )
       Spacer(Modifier.width(8.dp))
@@ -9203,11 +9208,11 @@ private fun CommunityScreen(viewModel: ChatViewModel) {
         modifier = Modifier
           .size(44.dp)
           .clip(CircleShape)
-          .background(if (viewModel.communityInput.isNotBlank() && !viewModel.communitySending) Color.White else Color.White.copy(alpha = 0.15f))
+          .background(if (viewModel.communityInput.isNotBlank() && !viewModel.communitySending) Color.Black else Color.Black.copy(alpha = 0.15f))
           .clickable(enabled = viewModel.communityInput.isNotBlank() && !viewModel.communitySending) { viewModel.sendCommunityMessage() },
         contentAlignment = Alignment.Center
       ) {
-        Icon(Icons.Filled.ArrowUpward, contentDescription = "Send", tint = Color.Black, modifier = Modifier.size(18.dp))
+        Icon(Icons.Filled.ArrowUpward, contentDescription = "Send", tint = Color.White, modifier = Modifier.size(18.dp))
       }
     }
   }
@@ -9230,42 +9235,42 @@ private fun TrustedDevicesScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeTrustedDevices() }
   var confirmRevoke by remember { mutableStateOf<DeviceSession?>(null) }
 
-  Column(modifier = Modifier.fillMaxSize().background(Color(0xFF000000)).statusBarsPadding()) {
+  Column(modifier = Modifier.fillMaxSize().background(Color.White).statusBarsPadding()) {
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
       Text(
         "Trusted Devices",
-        color = Color.White,
+        color = Color.Black,
         fontSize = 18.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.align(Alignment.Center)
       )
       IconButton(onClick = { viewModel.closeTrustedDevices() }, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
-        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(24.dp))
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(24.dp))
       }
     }
 
     Text(
       "These devices have been authorized to allow logging into your account.",
-      color = Color.White.copy(alpha = 0.5f),
+      color = Color.Black.copy(alpha = 0.5f),
       fontSize = 13.sp,
       modifier = Modifier.padding(horizontal = 16.dp)
     )
     Spacer(Modifier.height(8.dp))
-    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+    HorizontalDivider(color = Color.Black.copy(alpha = 0.08f))
 
     val error = viewModel.trustedDevicesError
     if (error != null) {
-      Text(error, color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(16.dp))
+      Text(error, color = Color.Black, fontSize = 12.sp, modifier = Modifier.padding(16.dp))
     }
 
     if (viewModel.trustedDevicesLoading && viewModel.trustedDevices.isEmpty()) {
       Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(28.dp))
+        CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(28.dp))
       }
     } else if (viewModel.trustedDevices.isEmpty()) {
       Text(
         "No sign-ins recorded yet.",
-        color = Color.White.copy(alpha = 0.4f),
+        color = Color.Black.copy(alpha = 0.4f),
         fontSize = 13.sp,
         modifier = Modifier.padding(16.dp)
       )
@@ -9281,35 +9286,35 @@ private fun TrustedDevicesScreen(viewModel: ChatViewModel) {
               Icon(
                 if (device.platform == "mobile") Icons.Outlined.Smartphone else Icons.Outlined.Computer,
                 contentDescription = null,
-                tint = Color.White.copy(alpha = 0.8f),
+                tint = Color.Black.copy(alpha = 0.8f),
                 modifier = Modifier.size(20.dp)
               )
               Spacer(Modifier.width(10.dp))
-              Text(device.device, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+              Text(device.device, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
               if (isCurrent) {
                 Text(
                   "This device",
-                  color = Color.White.copy(alpha = 0.4f),
+                  color = Color.Black.copy(alpha = 0.4f),
                   fontSize = 11.sp,
                   modifier = Modifier
                     .clip(RoundedCornerShape(50))
-                    .background(Color.White.copy(alpha = 0.08f))
+                    .background(Color.Black.copy(alpha = 0.08f))
                     .padding(horizontal = 10.dp, vertical = 4.dp)
                 )
               } else if (viewModel.isRevokingDevice(device.id)) {
-                CircularProgressIndicator(color = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(color = Color.Black.copy(alpha = 0.6f), modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
               } else {
                 IconButton(onClick = { confirmRevoke = device }, modifier = Modifier.size(32.dp)) {
-                  DeleteIcon(tint = Color.White.copy(alpha = 0.5f))
+                  DeleteIcon(tint = Color.Black.copy(alpha = 0.5f))
                 }
               }
             }
             Spacer(Modifier.height(6.dp))
-            Text("Time: ${formatSessionTime(device.signedInAt)}", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
-            Text("Login Location: ${device.location}", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
-            Text("IP Address: ${device.ip}", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
+            Text("Time: ${formatSessionTime(device.signedInAt)}", color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp)
+            Text("Login Location: ${device.location}", color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp)
+            Text("IP Address: ${device.ip}", color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp)
           }
-          HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
+          HorizontalDivider(color = Color.Black.copy(alpha = 0.06f))
         }
       }
     }
@@ -9326,7 +9331,7 @@ private fun TrustedDevicesScreen(viewModel: ChatViewModel) {
           viewModel.revokeTrustedDevice(target.id)
           confirmRevoke = null
         }) {
-          Text("Remove", color = Color.White, fontWeight = FontWeight.Bold)
+          Text("Remove", color = Color.Black, fontWeight = FontWeight.Bold)
         }
       },
       dismissButton = {
@@ -9380,17 +9385,17 @@ private fun StorageManagementScreen(viewModel: ChatViewModel) {
   val otherUsedBytes = (totalDeviceBytes - freeDeviceBytes - appBytes).coerceAtLeast(0L)
   val percentOfDevice = if (totalDeviceBytes > 0) (appBytes.toDouble() / totalDeviceBytes.toDouble() * 100) else 0.0
 
-  Column(modifier = Modifier.fillMaxSize().background(Color(0xFF000000)).statusBarsPadding()) {
+  Column(modifier = Modifier.fillMaxSize().background(Color.White).statusBarsPadding()) {
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
       Text(
         "Storage management",
-        color = Color.White,
+        color = Color.Black,
         fontSize = 18.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.align(Alignment.Center)
       )
       IconButton(onClick = { viewModel.closeStorageManagement() }, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
-        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(24.dp))
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(24.dp))
       }
     }
 
@@ -9405,62 +9410,62 @@ private fun StorageManagementScreen(viewModel: ChatViewModel) {
           .fillMaxWidth()
           .height(18.dp)
           .clip(RoundedCornerShape(50))
-          .background(Color.White.copy(alpha = 0.1f))
+          .background(Color.Black.copy(alpha = 0.1f))
       ) {
         // weight(0f) throws, so zero-sized segments are skipped entirely
         // rather than coerced to a fake minimum width.
-        if (appFraction > 0f) Box(modifier = Modifier.weight(appFraction).fillMaxHeight().background(Color.White))
-        if (otherFraction > 0f) Box(modifier = Modifier.weight(otherFraction).fillMaxHeight().background(Color.White))
+        if (appFraction > 0f) Box(modifier = Modifier.weight(appFraction).fillMaxHeight().background(Color.Black))
+        if (otherFraction > 0f) Box(modifier = Modifier.weight(otherFraction).fillMaxHeight().background(Color.Black))
         if (freeFraction > 0f) Box(modifier = Modifier.weight(freeFraction).fillMaxHeight().background(Color.Transparent))
       }
       Spacer(Modifier.height(10.dp))
       Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color.White))
+        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color.Black))
         Spacer(Modifier.width(6.dp))
-        Text("ChatGiZa used", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+        Text("ChatGiZa used", color = Color.Black.copy(alpha = 0.6f), fontSize = 12.sp)
         Spacer(Modifier.width(14.dp))
-        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color.White))
+        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color.Black))
         Spacer(Modifier.width(6.dp))
-        Text("Other Apps used", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+        Text("Other Apps used", color = Color.Black.copy(alpha = 0.6f), fontSize = 12.sp)
         Spacer(Modifier.width(14.dp))
-        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.25f)))
+        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.25f)))
         Spacer(Modifier.width(6.dp))
-        Text("Remaining", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+        Text("Remaining", color = Color.Black.copy(alpha = 0.6f), fontSize = 12.sp)
       }
       Spacer(Modifier.height(14.dp))
       Text(
         "ChatGiZa currently uses ${formatStorageBytes(appBytes)}, accounting for ${String.format(java.util.Locale.US, "%.2f", percentOfDevice)}% of your device's storage.",
-        color = Color.White.copy(alpha = 0.5f),
+        color = Color.Black.copy(alpha = 0.5f),
         fontSize = 13.sp
       )
     }
 
     Spacer(Modifier.height(20.dp))
-    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+    HorizontalDivider(color = Color.Black.copy(alpha = 0.08f))
 
     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
       Row(
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(16.dp))
-          .background(Color.White.copy(alpha = 0.05f))
+          .background(Color.Black.copy(alpha = 0.05f))
           .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
         Column(modifier = Modifier.weight(1f)) {
-          Text("Cache", color = Color.White, fontSize = 14.sp)
+          Text("Cache", color = Color.Black, fontSize = 14.sp)
           Spacer(Modifier.height(4.dp))
-          Text(formatStorageBytes(cacheBytes), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+          Text(formatStorageBytes(cacheBytes), color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
           Spacer(Modifier.height(4.dp))
           Text(
             "Clearing Cache will not affect the normal use of ChatGiZa",
-            color = Color.White.copy(alpha = 0.4f),
+            color = Color.Black.copy(alpha = 0.4f),
             fontSize = 12.sp,
             lineHeight = 16.sp
           )
         }
         IconButton(onClick = { confirmClearCache = true }, modifier = Modifier.size(32.dp)) {
-          DeleteIcon(tint = Color.White.copy(alpha = 0.5f))
+          DeleteIcon(tint = Color.Black.copy(alpha = 0.5f))
         }
       }
 
@@ -9470,16 +9475,16 @@ private fun StorageManagementScreen(viewModel: ChatViewModel) {
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(16.dp))
-          .background(Color.White.copy(alpha = 0.05f))
+          .background(Color.Black.copy(alpha = 0.05f))
           .padding(16.dp)
       ) {
-        Text("Important files", color = Color.White, fontSize = 14.sp)
+        Text("Important files", color = Color.Black, fontSize = 14.sp)
         Spacer(Modifier.height(4.dp))
-        Text(formatStorageBytes(filesBytes), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text(formatStorageBytes(filesBytes), color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         Text(
           "Includes data ChatGiZa needs to work -- not clearable here.",
-          color = Color.White.copy(alpha = 0.4f),
+          color = Color.Black.copy(alpha = 0.4f),
           fontSize = 12.sp,
           lineHeight = 16.sp
         )
@@ -9506,15 +9511,15 @@ private fun NsfwPreferencesScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color(0xFF181818))
+      .background(Color.White)
       .padding(20.dp)
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
       IconButton(onClick = { viewModel.closeNsfwPreferences() }) {
-        Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+        Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
       }
       Spacer(Modifier.width(18.dp))
-      Text(text = "NSFW Preferences", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+      Text(text = "NSFW Preferences", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
     }
     Spacer(Modifier.height(10.dp))
     Text(
@@ -9559,7 +9564,7 @@ private fun ConnectorRow(info: ConnectorInfo, busy: Boolean, onConnect: () -> Un
   ) {
     val iconRes = connectorIconRes(info.id)
     Box(
-      modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f)),
+      modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.1f)),
       contentAlignment = Alignment.Center
     ) {
       if (iconRes != null) {
@@ -9570,39 +9575,39 @@ private fun ConnectorRow(info: ConnectorInfo, busy: Boolean, onConnect: () -> Un
           modifier = Modifier.size(20.dp)
         )
       } else {
-        Text(info.name.take(1), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Text(info.name.take(1), color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold)
       }
     }
     Spacer(Modifier.width(12.dp))
-    Text(info.name, color = Color.White, fontSize = 15.sp, modifier = Modifier.weight(1f))
+    Text(info.name, color = Color.Black, fontSize = 15.sp, modifier = Modifier.weight(1f))
     when {
-      busy -> CircularProgressIndicator(color = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+      busy -> CircularProgressIndicator(color = Color.Black.copy(alpha = 0.6f), modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
       info.connected -> Box(
         modifier = Modifier
           .clip(RoundedCornerShape(50))
-          .border(1.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(50))
+          .border(1.dp, Color.Black.copy(alpha = 0.5f), RoundedCornerShape(50))
           .clickable(onClick = onDisconnect)
           .padding(horizontal = 14.dp, vertical = 6.dp)
       ) {
-        Text("Connected", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text("Connected", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Medium)
       }
       info.configured -> Box(
         modifier = Modifier
           .clip(RoundedCornerShape(50))
-          .background(Color.White.copy(alpha = 0.12f))
+          .background(Color.Black.copy(alpha = 0.12f))
           .clickable(onClick = onConnect)
           .padding(horizontal = 14.dp, vertical = 6.dp)
       ) {
-        Text("Connect", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text("Connect", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Medium)
       }
       else -> Box(
         modifier = Modifier
           .clip(RoundedCornerShape(50))
-          .background(Color.White.copy(alpha = 0.05f))
+          .background(Color.Black.copy(alpha = 0.05f))
           .clickable(onClick = onConnect)
           .padding(horizontal = 14.dp, vertical = 6.dp)
       ) {
-        Text("Setup needed", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text("Setup needed", color = Color.Black.copy(alpha = 0.4f), fontSize = 13.sp, fontWeight = FontWeight.Medium)
       }
     }
   }
@@ -9637,15 +9642,15 @@ private fun ConnectorsScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color(0xFF181818))
+      .background(Color.White)
       .padding(20.dp)
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
       IconButton(onClick = { viewModel.closeConnectors() }) {
-        Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+        Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
       }
       Spacer(Modifier.width(18.dp))
-      Text(text = "Connectors", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+      Text(text = "Connectors", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
     }
     Spacer(Modifier.height(10.dp))
     Text(
@@ -9660,7 +9665,7 @@ private fun ConnectorsScreen(viewModel: ChatViewModel) {
         .fillMaxWidth()
         .height(42.dp)
         .clip(RoundedCornerShape(21.dp))
-        .background(Color.White.copy(alpha = 0.08f))
+        .background(Color.Black.copy(alpha = 0.08f))
         .padding(horizontal = 14.dp)
     ) {
       Icon(Icons.Outlined.Search, contentDescription = null, tint = Color(0xFFA8A8A8), modifier = Modifier.size(18.dp))
@@ -9673,8 +9678,8 @@ private fun ConnectorsScreen(viewModel: ChatViewModel) {
           value = query,
           onValueChange = { query = it },
           singleLine = true,
-          textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp),
-          cursorBrush = SolidColor(Color.White),
+          textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 14.sp),
+          cursorBrush = SolidColor(Color.Black),
           modifier = Modifier.fillMaxWidth()
         )
       }
@@ -9682,12 +9687,12 @@ private fun ConnectorsScreen(viewModel: ChatViewModel) {
     Spacer(Modifier.height(24.dp))
 
     viewModel.connectorsError?.let {
-      Text(it, color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+      Text(it, color = Color.Black, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
     }
 
     if (viewModel.loadingConnectors && viewModel.connectors.isEmpty()) {
       Box(modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+        CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(24.dp))
       }
     } else {
       Text(text = "Featured", color = Color(0xFFA8A8A8), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
@@ -9752,9 +9757,9 @@ private fun LanguageRow(label: String, selected: Boolean, onClick: () -> Unit) {
       .padding(vertical = 14.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    Text(label, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+    Text(label, color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
     if (selected) {
-      Icon(Icons.Filled.Check, contentDescription = "Selected", tint = Color.White, modifier = Modifier.size(22.dp))
+      Icon(Icons.Filled.Check, contentDescription = "Selected", tint = Color.Black, modifier = Modifier.size(22.dp))
     }
   }
 }
@@ -9800,7 +9805,7 @@ private fun AppLanguageScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color(0xFF181818))
+      .background(Color.White)
       .padding(horizontal = 20.dp)
   ) {
     Row(
@@ -9808,12 +9813,12 @@ private fun AppLanguageScreen(viewModel: ChatViewModel) {
       verticalAlignment = Alignment.CenterVertically
     ) {
       IconButton(onClick = { viewModel.closeAppLanguage() }, modifier = Modifier.size(28.dp)) {
-        Icon(Icons.Filled.ArrowBackIosNew, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
+        Icon(Icons.Filled.ArrowBackIosNew, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(28.dp))
       }
       Spacer(modifier = Modifier.width(18.dp))
-      Text("App Language", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+      Text("App Language", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
       IconButton(onClick = { searchOpen = !searchOpen }, modifier = Modifier.size(28.dp)) {
-        Icon(Icons.Outlined.Search, contentDescription = "Search languages", tint = Color.White, modifier = Modifier.size(28.dp))
+        Icon(Icons.Outlined.Search, contentDescription = "Search languages", tint = Color.Black, modifier = Modifier.size(28.dp))
       }
     }
 
@@ -9833,26 +9838,26 @@ private fun AppLanguageScreen(viewModel: ChatViewModel) {
       Card(
         modifier = Modifier.fillMaxWidth().height(120.dp),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+        colors = CardDefaults.cardColors(containerColor = Color.White)
       ) {
         Row(modifier = Modifier.fillMaxSize().padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
           Box(
-            modifier = Modifier.size(48.dp).clip(CircleShape).background(Color.White),
+            modifier = Modifier.size(48.dp).clip(CircleShape).background(Color.Black),
             contentAlignment = Alignment.Center
           ) {
-            Text("G", color = Color.Black, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("G", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
           }
           Spacer(modifier = Modifier.width(16.dp))
           Column {
             Text("Current Language", color = Color(0xFFA8A8A8), fontSize = 13.sp)
             Spacer(modifier = Modifier.height(2.dp))
-            Text(currentLabel, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(currentLabel, color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
           }
         }
       }
 
       Spacer(modifier = Modifier.height(20.dp))
-      Text("Suggested", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+      Text("Suggested", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
       LanguageRow("System Default", selected = isAutoDetect) { applyLocale(null) }
       suggested.forEach { e ->
         LanguageRow(e.nativeName, selected = !isAutoDetect && currentLabel.equals(e.englishName, ignoreCase = true)) {
@@ -9861,7 +9866,7 @@ private fun AppLanguageScreen(viewModel: ChatViewModel) {
       }
 
       Spacer(modifier = Modifier.height(12.dp))
-      Text("All Languages", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+      Text("All Languages", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
       LazyColumn(modifier = Modifier.weight(1f)) {
         items(allEntries, key = { it.iso2 }) { e ->
           LanguageRow(e.nativeName, selected = !isAutoDetect && currentLabel.equals(e.englishName, ignoreCase = true)) {
@@ -9904,7 +9909,7 @@ private fun RadioIcon(selected: Boolean) {
   Icon(
     if (selected) Icons.Outlined.RadioButtonChecked else Icons.Outlined.RadioButtonUnchecked,
     contentDescription = null,
-    tint = if (selected) Color.White else Color(0xFFA8A8A8)
+    tint = if (selected) Color.Black else Color(0xFFA8A8A8)
   )
 }
 
@@ -9916,16 +9921,16 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color(0xFF181818))
+      .background(Color.White)
       .statusBarsPadding()
       .padding(20.dp)
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
       IconButton(onClick = { viewModel.closeAdvanced() }, modifier = Modifier.size(28.dp)) {
-        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(28.dp))
       }
       Spacer(Modifier.width(20.dp))
-      Text(text = "Advanced", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+      Text(text = "Advanced", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
     }
 
     Spacer(Modifier.height(28.dp))
@@ -9935,10 +9940,10 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
         .fillMaxWidth()
         .clickable { showDialog = true },
       shape = RoundedCornerShape(22.dp),
-      colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+      colors = CardDefaults.cardColors(containerColor = Color.Black.copy(alpha = 0.05f))
     ) {
       Column(modifier = Modifier.padding(20.dp)) {
-        Text(text = "Paste as File", color = Color.White, fontWeight = FontWeight.Medium, fontSize = 16.sp)
+        Text(text = "Paste as File", color = Color.Black, fontWeight = FontWeight.Medium, fontSize = 16.sp)
         Spacer(Modifier.height(6.dp))
         Text(text = pasteAsFileModeLabel(viewModel.pasteAsFileMode), color = Color.Gray, fontSize = 13.sp)
       }
@@ -9957,10 +9962,10 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
     Dialog(onDismissRequest = { showDialog = false }) {
       Card(
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
+        colors = CardDefaults.cardColors(containerColor = Color.White)
       ) {
         Column(modifier = Modifier.padding(24.dp)) {
-          Text("Paste as File", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+          Text("Paste as File", color = Color.Black, fontSize = 24.sp, fontWeight = FontWeight.Bold)
 
           Spacer(Modifier.height(30.dp))
 
@@ -9975,7 +9980,7 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
           ) {
             RadioIcon(selected = viewModel.pasteAsFileMode == "always_ask")
             Spacer(Modifier.width(12.dp))
-            Text("Always Ask", color = Color.White, fontSize = 19.sp)
+            Text("Always Ask", color = Color.Black, fontSize = 19.sp)
           }
 
           Spacer(Modifier.height(22.dp))
@@ -9991,7 +9996,7 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
           ) {
             RadioIcon(selected = viewModel.pasteAsFileMode == "always_file")
             Spacer(Modifier.width(12.dp))
-            Text("Always Attach as File", color = Color.White, fontSize = 19.sp)
+            Text("Always Attach as File", color = Color.Black, fontSize = 19.sp)
           }
 
           Spacer(Modifier.height(22.dp))
@@ -10007,7 +10012,7 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
           ) {
             RadioIcon(selected = viewModel.pasteAsFileMode == "always_text")
             Spacer(Modifier.width(12.dp))
-            Text("Always Paste as Text", color = Color.White, fontSize = 19.sp)
+            Text("Always Paste as Text", color = Color.Black, fontSize = 19.sp)
           }
         }
       }
@@ -10222,11 +10227,11 @@ private fun SettingsScreen(viewModel: ChatViewModel) {
         maxLines = 8,
         modifier = Modifier.fillMaxWidth(),
         colors = OutlinedTextFieldDefaults.colors(
-          focusedTextColor = Color.White,
-          unfocusedTextColor = Color.White,
-          focusedBorderColor = Color.White.copy(alpha = 0.4f),
-          unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
-          cursorColor = Color.White
+          focusedTextColor = Color.Black,
+          unfocusedTextColor = Color.Black,
+          focusedBorderColor = Color.Black.copy(alpha = 0.4f),
+          unfocusedBorderColor = Color.Black.copy(alpha = 0.15f),
+          cursorColor = Color.Black
         )
       )
       Row(
@@ -10821,7 +10826,7 @@ private fun MessageBubble(
         ) {
           Text(
             text = cleanContent.ifEmpty { "…" },
-            color = Color.White,
+            color = Color.Black,
             fontSize = 15.sp,
             fontWeight = FontWeight.Medium
           )
@@ -10833,7 +10838,7 @@ private fun MessageBubble(
         ) {
           MarkdownText(
             text = cleanContent.ifEmpty { "…" },
-            baseColor = Color.White,
+            baseColor = Color.Black,
             fontSize = 15.sp
           )
         }
@@ -11016,7 +11021,7 @@ private fun MessageActionBar(
   // be caught before it's public instead of after.
   var extraStage by remember(message.id) { mutableStateOf("none") }
   var pendingCaption by remember(message.id) { mutableStateOf<String?>(null) }
-  val accent = Color.White
+  val accent = Color.Black
 
   fun push(caption: String?, destination: String) {
     if (pushState == "idle") {
@@ -11129,7 +11134,7 @@ private fun MessageActionBar(
             }
           )
           DropdownMenuItem(
-            text = { Text("Delete", color = Color.White) },
+            text = { Text("Delete", color = Color.Black) },
             onClick = { moreOpen = false; onDelete() }
           )
         }
@@ -11197,14 +11202,14 @@ private fun ActionBarExtraItem(label: String, tint: Color, connected: Boolean, o
 @Composable
 private fun ExtraOptionRow(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
   ExtraOptionRowShell(title, subtitle, onClick) {
-    Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+    Icon(icon, contentDescription = null, tint = Color.Black, modifier = Modifier.size(20.dp))
   }
 }
 
 @Composable
 private fun ExtraOptionRow(painter: androidx.compose.ui.graphics.painter.Painter, title: String, subtitle: String, onClick: () -> Unit) {
   ExtraOptionRowShell(title, subtitle, onClick) {
-    Icon(painter, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+    Icon(painter, contentDescription = null, tint = Color.Black, modifier = Modifier.size(20.dp))
   }
 }
 
@@ -11214,42 +11219,42 @@ private fun ExtraOptionRowShell(title: String, subtitle: String, onClick: () -> 
     modifier = Modifier
       .fillMaxWidth()
       .clip(RoundedCornerShape(18.dp))
-      .background(Color.White.copy(alpha = 0.06f))
+      .background(Color.Black.copy(alpha = 0.06f))
       .clickable(onClick = onClick)
       .padding(16.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
     Box(
-      modifier = Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).background(Color.White.copy(alpha = 0.14f)),
+      modifier = Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).background(Color.Black.copy(alpha = 0.14f)),
       contentAlignment = Alignment.Center
     ) {
       icon()
     }
     Spacer(modifier = Modifier.width(14.dp))
     Column(modifier = Modifier.weight(1f)) {
-      Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+      Text(title, color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
       Spacer(modifier = Modifier.height(2.dp))
-      Text(subtitle, color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp, lineHeight = 17.sp)
+      Text(subtitle, color = Color.Black.copy(alpha = 0.55f), fontSize = 13.sp, lineHeight = 17.sp)
     }
-    Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
+    Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
   }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ExtraOptionsSheet(onDismiss: () -> Unit, onPost: () -> Unit, onCaption: () -> Unit) {
-  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFF161616)) {
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color.White) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
         .padding(horizontal = 24.dp)
         .padding(bottom = 36.dp, top = 4.dp)
     ) {
-      Text("Send to Extra Media", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+      Text("Send to Extra Media", color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(6.dp))
       Text(
         "Choose how this reply goes to your Extra profile. You'll see exactly how it looks before it's sent.",
-        color = Color.White.copy(alpha = 0.6f),
+        color = Color.Black.copy(alpha = 0.6f),
         fontSize = 14.sp,
         lineHeight = 19.sp
       )
@@ -11281,14 +11286,14 @@ private fun ExtraDestinationChip(label: String, selected: Boolean, modifier: Mod
   Box(
     modifier = modifier
       .clip(RoundedCornerShape(14.dp))
-      .background(if (selected) Color.White else Color.White.copy(alpha = 0.06f))
+      .background(if (selected) Color.Black else Color.Black.copy(alpha = 0.06f))
       .clickable(onClick = onClick)
       .padding(vertical = 12.dp),
     contentAlignment = Alignment.Center
   ) {
     Text(
       label,
-      color = if (selected) Color.Black else Color.White.copy(alpha = 0.8f),
+      color = if (selected) Color.White else Color.Black.copy(alpha = 0.8f),
       fontSize = 13.sp,
       fontWeight = FontWeight.SemiBold
     )
@@ -11312,18 +11317,18 @@ private fun ExtraPostPreviewSheet(
   // rather than guessing one behavior for everyone. "post" here means
   // History/the main feed, matching the backend's `destination` column.
   var destination by remember { mutableStateOf("post") }
-  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFF161616)) {
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color.White) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
         .padding(horizontal = 24.dp)
         .padding(bottom = 36.dp, top = 4.dp)
     ) {
-      Text("Preview", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+      Text("Preview", color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(4.dp))
       Text(
         "This is how it'll look on Extra Media.",
-        color = Color.White.copy(alpha = 0.6f),
+        color = Color.Black.copy(alpha = 0.6f),
         fontSize = 14.sp
       )
       Spacer(modifier = Modifier.height(18.dp))
@@ -11331,8 +11336,8 @@ private fun ExtraPostPreviewSheet(
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(20.dp))
-          .background(Color.White.copy(alpha = 0.05f))
-          .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
+          .background(Color.Black.copy(alpha = 0.05f))
+          .border(1.dp, Color.Black.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
           .padding(18.dp)
       ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -11344,28 +11349,28 @@ private fun ExtraPostPreviewSheet(
               contentScale = ContentScale.Crop
             )
           } else {
-            Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(38.dp))
+            Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = Color.Black, modifier = Modifier.size(38.dp))
           }
           Spacer(modifier = Modifier.width(10.dp))
           Column {
-            Text(authorName, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-            Text("Just now", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+            Text(authorName, color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text("Just now", color = Color.Black.copy(alpha = 0.5f), fontSize = 12.sp)
           }
         }
         Spacer(modifier = Modifier.height(12.dp))
         Text(
           if (bodyText.length > 400) bodyText.take(400) + "…" else bodyText,
-          color = Color.White.copy(alpha = 0.9f),
+          color = Color.Black.copy(alpha = 0.9f),
           fontSize = 14.sp,
           lineHeight = 20.sp
         )
         if (!caption.isNullOrBlank()) {
           Spacer(modifier = Modifier.height(10.dp))
-          Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.08f)))
+          Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.Black.copy(alpha = 0.08f)))
           Spacer(modifier = Modifier.height(10.dp))
           Text(
             caption,
-            color = Color.White.copy(alpha = 0.75f),
+            color = Color.Black.copy(alpha = 0.75f),
             fontSize = 14.sp,
             lineHeight = 20.sp,
             fontStyle = FontStyle.Italic
@@ -11373,7 +11378,7 @@ private fun ExtraPostPreviewSheet(
         }
       }
       Spacer(modifier = Modifier.height(20.dp))
-      Text("Where should this go?", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+      Text("Where should this go?", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
       Spacer(modifier = Modifier.height(10.dp))
       Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ExtraDestinationChip("History", destination == "post", Modifier.weight(1f)) { destination = "post" }
@@ -11394,13 +11399,13 @@ private fun ExtraPostPreviewSheet(
           onClick = { onConfirm(destination) },
           enabled = !posting,
           colors = ButtonDefaults.buttonColors(
-            containerColor = Color.White,
-            disabledContainerColor = Color.White.copy(alpha = 0.5f)
+            containerColor = Color.Black,
+            disabledContainerColor = Color.Black.copy(alpha = 0.5f)
           ),
           shape = RoundedCornerShape(24.dp),
           modifier = Modifier.weight(1f).height(52.dp)
         ) {
-          Text(if (posting) "Posting…" else "Post to Extra", color = Color.Black, fontWeight = FontWeight.SemiBold)
+          Text(if (posting) "Posting…" else "Post to Extra", color = Color.White, fontWeight = FontWeight.SemiBold)
         }
       }
     }
@@ -11419,7 +11424,7 @@ private fun ExtraPostPreviewSheet(
 @Composable
 private fun CaptionComposerSheet(onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
   var text by remember { mutableStateOf("") }
-  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFF161616)) {
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color.White) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
@@ -11430,17 +11435,17 @@ private fun CaptionComposerSheet(onDismiss: () -> Unit, onSubmit: (String) -> Un
         modifier = Modifier
           .size(52.dp)
           .clip(RoundedCornerShape(16.dp))
-          .background(Color.White.copy(alpha = 0.14f)),
+          .background(Color.Black.copy(alpha = 0.14f)),
         contentAlignment = Alignment.Center
       ) {
-        Icon(Icons.Filled.Send, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+        Icon(Icons.Filled.Send, contentDescription = null, tint = Color.Black, modifier = Modifier.size(24.dp))
       }
       Spacer(modifier = Modifier.height(16.dp))
-      Text("Add a caption", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+      Text("Add a caption", color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(6.dp))
       Text(
         "This reply becomes the post; what you write below is added underneath it on your Extra Media profile.",
-        color = Color.White.copy(alpha = 0.6f),
+        color = Color.Black.copy(alpha = 0.6f),
         fontSize = 14.sp,
         lineHeight = 19.sp
       )
@@ -11451,7 +11456,7 @@ private fun CaptionComposerSheet(onDismiss: () -> Unit, onSubmit: (String) -> Un
             .weight(1f)
             .heightIn(min = 56.dp, max = 110.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(Color.White.copy(alpha = 0.06f))
+            .background(Color.Black.copy(alpha = 0.06f))
             .padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
           if (text.isEmpty()) {
@@ -11460,8 +11465,8 @@ private fun CaptionComposerSheet(onDismiss: () -> Unit, onSubmit: (String) -> Un
           BasicTextField(
             value = text,
             onValueChange = { text = it },
-            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp, lineHeight = 20.sp),
-            cursorBrush = SolidColor(Color.White),
+            textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 15.sp, lineHeight = 20.sp),
+            cursorBrush = SolidColor(Color.Black),
             modifier = Modifier.fillMaxWidth()
           )
         }
@@ -11471,9 +11476,9 @@ private fun CaptionComposerSheet(onDismiss: () -> Unit, onSubmit: (String) -> Un
           modifier = Modifier
             .size(52.dp)
             .clip(CircleShape)
-            .background(if (text.isNotBlank()) Color.White else Color.White.copy(alpha = 0.35f))
+            .background(if (text.isNotBlank()) Color.Black else Color.Black.copy(alpha = 0.35f))
         ) {
-          Icon(Icons.Filled.Send, contentDescription = "Send", tint = Color.Black, modifier = Modifier.size(22.dp))
+          Icon(Icons.Filled.Send, contentDescription = "Send", tint = Color.White, modifier = Modifier.size(22.dp))
         }
       }
       Spacer(modifier = Modifier.height(14.dp))
@@ -11564,7 +11569,7 @@ private fun inlineMarkdown(raw: String) = buildAnnotatedString {
           append(raw.substring(idx)); idx = len
         } else {
           withStyle(
-            SpanStyle(fontFamily = FontFamily.Monospace, background = Color.White.copy(alpha = 0.1f))
+            SpanStyle(fontFamily = FontFamily.Monospace, background = Color.Black.copy(alpha = 0.1f))
           ) { append(raw.substring(idx + 1, end)) }
           idx = end + 1
         }
@@ -11619,7 +11624,7 @@ private fun MarkdownText(
           modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(Color.White.copy(alpha = 0.06f))
+            .background(Color.Black.copy(alpha = 0.06f))
             .padding(10.dp)
         ) {
           Text(block.code, color = baseColor, fontFamily = FontFamily.Monospace, fontSize = fontSize * 0.9f)
