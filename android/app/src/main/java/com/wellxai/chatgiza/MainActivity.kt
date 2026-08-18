@@ -9629,7 +9629,8 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
         "new" -> PasswordField(
           value = viewModel.newPasswordInput,
           onValueChange = viewModel::onNewPasswordInputChange,
-          placeholder = "New password"
+          placeholder = "New password",
+          maxLength = 16
         )
         else -> CodeField(
           value = viewModel.passwordCodeInput,
@@ -9639,7 +9640,7 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
 
       if (viewModel.passwordError != null) {
         Spacer(modifier = Modifier.height(10.dp))
-        Text(viewModel.passwordError!!, color = Color(0xFFB00020), fontSize = 13.sp)
+        Text(viewModel.passwordError!!, color = Color(0xFFE14050), fontSize = 13.sp)
       }
 
       Spacer(modifier = Modifier.height(24.dp))
@@ -9675,7 +9676,7 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
 }
 
 @Composable
-private fun PasswordField(value: String, onValueChange: (String) -> Unit, placeholder: String) {
+private fun PasswordField(value: String, onValueChange: (String) -> Unit, placeholder: String, maxLength: Int? = null) {
   var visible by remember { mutableStateOf(false) }
   Row(
     modifier = Modifier
@@ -9694,7 +9695,7 @@ private fun PasswordField(value: String, onValueChange: (String) -> Unit, placeh
       }
       BasicTextField(
         value = value,
-        onValueChange = onValueChange,
+        onValueChange = { new -> if (maxLength == null || new.length <= maxLength) onValueChange(new) },
         singleLine = true,
         textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp),
         cursorBrush = SolidColor(Color.Black),
@@ -9711,15 +9712,31 @@ private fun PasswordField(value: String, onValueChange: (String) -> Unit, placeh
     }
     // Icons.Outlined.VisibilityOff doesn't exist in this project's Material
     // Icons Extended version (like PowerSettingsNew/Delete/CheckCircle
-    // before it) -- toggling this same proven-safe icon's opacity instead
-    // of swapping to a second icon keeps the show/hide state visible
-    // without risking another unresolved reference.
-    Icon(
-      Icons.Outlined.Visibility,
-      contentDescription = if (visible) "Hide password" else "Show password",
-      tint = Color.Black.copy(alpha = if (visible) 0.7f else 0.3f),
-      modifier = Modifier.size(20.dp).clickable { visible = !visible }
-    )
+    // before it) -- drawing a diagonal line over the one proven-safe eye
+    // icon reproduces the standard "crossed-out = hidden" convention
+    // without needing a second, unresolved icon reference.
+    Box(
+      modifier = Modifier.size(20.dp).clickable { visible = !visible },
+      contentAlignment = Alignment.Center
+    ) {
+      Icon(
+        Icons.Outlined.Visibility,
+        contentDescription = if (visible) "Hide password" else "Show password",
+        tint = Color.Black.copy(alpha = 0.5f),
+        modifier = Modifier.size(20.dp)
+      )
+      if (!visible) {
+        Canvas(modifier = Modifier.size(20.dp)) {
+          drawLine(
+            color = Color.Black,
+            start = Offset(size.width * 0.12f, size.height * 0.12f),
+            end = Offset(size.width * 0.88f, size.height * 0.88f),
+            strokeWidth = 1.6.dp.toPx(),
+            cap = StrokeCap.Round
+          )
+        }
+      }
+    }
   }
 }
 
