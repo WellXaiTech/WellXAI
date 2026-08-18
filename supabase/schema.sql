@@ -9,12 +9,19 @@ create table if not exists users (
   -- Admin-only flag (no self-serve UI sets this) shown as the blue
   -- checkmark on the ChatGiZa Media profile page.
   is_verified boolean not null default false,
+  -- Optional in-app password, separate from the Google sign-in itself --
+  -- `salt:scryptHash` (hex), null until the user sets one via Change
+  -- Password. Never stored or returned as plaintext.
+  password_hash text,
   created_at timestamptz not null default now(),
   last_seen_at timestamptz not null default now()
 );
 
 -- Run once for existing databases created before is_verified existed:
 -- alter table users add column if not exists is_verified boolean not null default false;
+
+-- Run once for existing databases created before password_hash existed:
+-- alter table users add column if not exists password_hash text;
 
 -- Lightweight sub-identities under one signed-in Google account (up to 5,
 -- enforced in the API, not here) -- each gets its own name/avatar and its

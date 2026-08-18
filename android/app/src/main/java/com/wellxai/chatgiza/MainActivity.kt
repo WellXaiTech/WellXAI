@@ -528,6 +528,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Community -> CommunityScreen(viewModel)
             is AppScreen.TrustedDevices -> TrustedDevicesScreen(viewModel)
             is AppScreen.StorageManagement -> StorageManagementScreen(viewModel)
+            is AppScreen.ChangePassword -> ChangePasswordScreen(viewModel)
             is AppScreen.SubaccountSettings -> SubaccountSettingsScreen(viewModel)
             is AppScreen.NsfwPreferences -> NsfwPreferencesScreen(viewModel)
             is AppScreen.Connectors -> ConnectorsScreen(viewModel)
@@ -4897,21 +4898,14 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
         ) {
-          // Same reasoning as "Google 2FA Authentication" above -- sign-in
-          // here is Google-only, so there's no ChatGiZa account password to
-          // change. Sends them to where their real sign-in credential
-          // actually lives instead of a "coming soon" dead end.
+          // This is now a real, separate in-app password (see
+          // ChangePasswordScreen) -- independent of the Google sign-in
+          // itself, which is unaffected by whatever gets set here.
           MyInfoRow(
             icon = Icons.Outlined.Lock,
             label = "Change Password",
-            onClick = {
-              runCatching {
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://myaccount.google.com/signinoptions/password")))
-              }
-            }
-          ) {
-            Text("Manage on Google", color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
-          }
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openChangePassword() } }
+          ) {}
           MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.ScreenShare, label = "Trusted Devices", onClick = { viewModel.leaveAccountTabsFor { viewModel.openTrustedDevices() } }) {}
           MyInfoDivider()
@@ -9501,6 +9495,131 @@ private fun StorageManagementScreen(viewModel: ChatViewModel) {
         refreshTick++
       },
       onDismiss = { confirmClearCache = false }
+    )
+  }
+}
+
+// Two steps -- "old" (skipped entirely for accounts that have never set a
+// password) then "new" -- rather than one screen with two fields, so the
+// current-password check can fail and bounce the user back without also
+// discarding whatever they'd already typed as the new one.
+@Composable
+private fun ChangePasswordScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeChangePassword() }
+  Column(modifier = Modifier.fillMaxSize().background(Color.White).statusBarsPadding()) {
+    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+      Text(
+        "Change Password",
+        color = Color.Black,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.align(Alignment.Center)
+      )
+      IconButton(onClick = { viewModel.closeChangePassword() }, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(24.dp))
+      }
+    }
+
+    if (viewModel.hasPassword == null) {
+      Box(modifier = Modifier.fillMaxWidth().padding(top = 60.dp), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
+      }
+      return@Column
+    }
+
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(14.dp))
+          .background(Color.Black.copy(alpha = 0.05f))
+          .padding(14.dp)
+      ) {
+        Text(
+          if (viewModel.passwordStep == "old")
+            "Enter your current ChatGiZa password to continue."
+          else
+            "This password is separate from your Google sign-in -- it's only used inside ChatGiZa.",
+          color = Color.Black.copy(alpha = 0.6f),
+          fontSize = 13.sp,
+          lineHeight = 18.sp
+        )
+      }
+
+      Spacer(modifier = Modifier.height(20.dp))
+
+      if (viewModel.passwordStep == "old") {
+        PasswordField(
+          value = viewModel.oldPasswordInput,
+          onValueChange = viewModel::onOldPasswordInputChange,
+          placeholder = "Current password"
+        )
+      } else {
+        PasswordField(
+          value = viewModel.newPasswordInput,
+          onValueChange = viewModel::onNewPasswordInputChange,
+          placeholder = "New password"
+        )
+      }
+
+      if (viewModel.passwordError != null) {
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(viewModel.passwordError!!, color = Color(0xFFB00020), fontSize = 13.sp)
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+
+      Button(
+        onClick = {
+          if (viewModel.passwordStep == "old") viewModel.confirmOldPassword() else viewModel.submitNewPassword()
+        },
+        enabled = !viewModel.changingPassword,
+        shape = RoundedCornerShape(28.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Color.Black, disabledContainerColor = Color.Black.copy(alpha = 0.4f)),
+        modifier = Modifier.fillMaxWidth().height(52.dp)
+      ) {
+        if (viewModel.changingPassword) {
+          CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+        } else {
+          Text("Confirm", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        }
+      }
+    }
+  }
+}
+
+@Composable
+private fun PasswordField(value: String, onValueChange: (String) -> Unit, placeholder: String) {
+  var visible by remember { mutableStateOf(false) }
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .clip(RoundedCornerShape(14.dp))
+      .background(Color.Black.copy(alpha = 0.05f))
+      .padding(horizontal = 16.dp, vertical = 4.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Icon(Icons.Outlined.Lock, contentDescription = null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
+    Spacer(modifier = Modifier.width(12.dp))
+    Box(modifier = Modifier.weight(1f).padding(vertical = 14.dp)) {
+      if (value.isEmpty()) {
+        Text(placeholder, color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
+      }
+      BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp),
+        cursorBrush = SolidColor(Color.Black),
+        visualTransformation = if (visible) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+        modifier = Modifier.fillMaxWidth()
+      )
+    }
+    Icon(
+      if (visible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+      contentDescription = if (visible) "Hide password" else "Show password",
+      tint = Color.Black.copy(alpha = 0.4f),
+      modifier = Modifier.size(20.dp).clickable { visible = !visible }
     )
   }
 }
