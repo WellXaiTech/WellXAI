@@ -9594,7 +9594,7 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
           .padding(12.dp)
       ) {
         Icon(
-          Icons.Outlined.ReportProblem,
+          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_warning_circle),
           contentDescription = null,
           tint = Color.Black,
           modifier = Modifier.size(16.dp).padding(top = 1.dp)
@@ -9607,8 +9607,9 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
             else -> "Note: For your account's security, we've sent a 6-digit verification code to the email on this account. Enter it below to finish confirming this change -- the code expires in 10 minutes."
           },
           color = Color.Black,
-          fontSize = 11.sp,
-          lineHeight = 15.sp
+          fontSize = 10.sp,
+          lineHeight = 14.sp,
+          fontWeight = FontWeight.Medium
         )
       }
 
