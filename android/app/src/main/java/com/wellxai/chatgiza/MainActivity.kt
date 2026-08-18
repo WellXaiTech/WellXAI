@@ -9531,9 +9531,27 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
       }
     }
 
-    if (viewModel.hasPassword == null) {
+    // A failed status fetch used to leave hasPassword permanently null with
+    // no way out of the spinner -- passwordError now breaks out of it into
+    // a retry state instead of spinning forever.
+    if (viewModel.hasPassword == null && viewModel.passwordError == null) {
       Box(modifier = Modifier.fillMaxWidth().padding(top = 60.dp), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
+      }
+      return@Column
+    }
+
+    if (viewModel.hasPassword == null && viewModel.passwordError != null) {
+      Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 60.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(viewModel.passwordError!!, color = Color.Black.copy(alpha = 0.6f), fontSize = 14.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(
+          onClick = { viewModel.openChangePassword() },
+          shape = RoundedCornerShape(28.dp),
+          colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
+        ) {
+          Text("Try again", color = Color.White)
+        }
       }
       return@Column
     }
