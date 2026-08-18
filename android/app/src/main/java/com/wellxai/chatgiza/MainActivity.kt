@@ -9687,7 +9687,7 @@ private fun PasswordField(value: String, onValueChange: (String) -> Unit, placeh
       .padding(horizontal = 16.dp, vertical = 4.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    Icon(Icons.Outlined.Lock, contentDescription = null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
+    Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded), contentDescription = null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
     Spacer(modifier = Modifier.width(12.dp))
     Box(modifier = Modifier.weight(1f).padding(vertical = 14.dp)) {
       if (value.isEmpty()) {
@@ -9751,7 +9751,7 @@ private fun CodeField(value: String, onValueChange: (String) -> Unit) {
       .padding(horizontal = 16.dp, vertical = 4.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    Icon(Icons.Outlined.Lock, contentDescription = null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
+    Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded), contentDescription = null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
     Spacer(modifier = Modifier.width(12.dp))
     Box(modifier = Modifier.weight(1f).padding(vertical = 14.dp)) {
       if (value.isEmpty()) {
