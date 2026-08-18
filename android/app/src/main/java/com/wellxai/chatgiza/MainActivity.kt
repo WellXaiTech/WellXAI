@@ -369,9 +369,16 @@ class MainActivity : ComponentActivity() {
   private var screenCaptureCallback: Activity.ScreenCaptureCallback? = null
 
   override fun onCreate(savedInstanceState: Bundle?) {
+    // Was .dark(...) (light icons for a dark app background) from when the
+    // whole app was dark-themed. Now that everything is forced to the
+    // light scheme, dark-style icons on a light background made the system
+    // fall back to a protective gray scrim behind the status bar instead
+    // of blending with the app's own white -- that's the visible "seam" at
+    // the top of every screen. .light(...) matches dark icons to the light
+    // background so the transparent bar actually reads as transparent.
     enableEdgeToEdge(
-      statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
-      navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+      statusBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
+      navigationBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
     )
     super.onCreate(savedInstanceState)
     viewModel = ChatViewModel(TokenStore(applicationContext))
