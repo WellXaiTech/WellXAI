@@ -7127,7 +7127,7 @@ private enum class AppTheme(val key: String, val label: String, val icon: ImageV
 private fun ThemeMockupPreview(bg: Color, panel: Color, modifier: Modifier = Modifier) {
   Box(
     modifier = modifier
-      .aspectRatio(0.82f)
+      .aspectRatio(0.55f)
       .clip(RoundedCornerShape(18.dp))
       .background(bg)
       .padding(10.dp)
@@ -7255,8 +7255,6 @@ private fun PreviewSlider(value: Float, onValueChange: (Float) -> Unit, modifier
 private fun AppearanceScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeAppearance() }
   val selectedTheme = AppTheme.fromKey(viewModel.themeMode)
-  var textSize by remember { mutableStateOf(0.5f) }
-  val previewFontSize = (14f + 8f * textSize).sp
 
   Scaffold(containerColor = Color.Transparent) { padding ->
     Column(
@@ -7287,68 +7285,16 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
         themeOrder.chunked(2).forEach { rowThemes ->
           Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             rowThemes.forEach { theme ->
-              ThemeCard(
-                theme = theme,
-                selected = selectedTheme == theme,
-                onClick = { viewModel.updateThemeMode(theme.key) },
-                modifier = Modifier.weight(1f)
-              )
+              Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                ThemeCard(
+                  theme = theme,
+                  selected = selectedTheme == theme,
+                  onClick = { viewModel.updateThemeMode(theme.key) },
+                  modifier = Modifier.fillMaxWidth(0.78f)
+                )
+              }
             }
           }
-        }
-      }
-
-      Spacer(modifier = Modifier.height(24.dp))
-      Text("Text Size", color = colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-      Spacer(modifier = Modifier.height(10.dp))
-      val showReset = kotlin.math.abs(textSize - 0.5f) > 0.001f
-      Box(
-        modifier = Modifier
-          .fillMaxWidth()
-          .height(280.dp)
-          .clip(RoundedCornerShape(28.dp))
-          .background(colorScheme.onBackground.copy(alpha = 0.06f))
-      ) {
-        Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
-          PreviewSlider(
-            value = textSize,
-            onValueChange = { textSize = it },
-            modifier = Modifier.fillMaxWidth()
-          )
-
-          Spacer(modifier = Modifier.height(24.dp))
-
-          Box(
-            modifier = Modifier
-              .height(48.dp)
-              .clip(RoundedCornerShape(24.dp))
-              .background(colorScheme.onBackground.copy(alpha = 0.12f))
-              .padding(horizontal = 18.dp, vertical = 12.dp),
-            contentAlignment = Alignment.CenterStart
-          ) {
-            Text("Hi! This is how your messages will look.", color = colorScheme.onBackground, fontSize = 16.sp)
-          }
-
-          Spacer(modifier = Modifier.height(20.dp))
-
-          Text(
-            "This is a preview of how ChatGiZa text will appear in your conversations.",
-            color = colorScheme.onBackground,
-            fontSize = previewFontSize,
-            lineHeight = 28.sp
-          )
-
-          Spacer(modifier = Modifier.weight(1f))
-
-          Text(
-            if (showReset) "Reset" else "PREVIEW",
-            color = if (showReset) colorScheme.onBackground else colorScheme.onBackground.copy(alpha = 0.5f),
-            fontSize = 15.sp,
-            fontWeight = if (showReset) FontWeight.Bold else FontWeight.SemiBold,
-            modifier = Modifier
-              .align(Alignment.CenterHorizontally)
-              .let { if (showReset) it.clickable { textSize = 0.5f } else it }
-          )
         }
       }
     }
