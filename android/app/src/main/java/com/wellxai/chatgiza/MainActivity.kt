@@ -4851,12 +4851,14 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(icon = Icons.Outlined.Email, label = "Email", onClick = { comingSoon("Email") }) {
             Text(maskEmail(viewModel.userEmail), color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
           }
+          MyInfoDivider()
           // No phone number exists anywhere on the account (sign-in here is
           // Google-only) -- the row used to show a fixed fake masked number
           // ("75****182") to every single user regardless of who they were.
           MyInfoRow(icon = Icons.Outlined.Smartphone, label = "Mobile", onClick = { comingSoon("Mobile") }) {
             Text("Not linked", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
           }
+          MyInfoDivider()
           // Sign-in here is Google-only -- ChatGiZa has no account password
           // or its own 2FA to toggle, and can't read whether the user's
           // Google account has 2FA on. A fake in-app switch used to sit here
@@ -4874,7 +4876,9 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           ) {
             Text("Manage on Google", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
           }
+          MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.Tag, label = "Passkeys", onClick = { comingSoon("Passkeys") }) {}
+          MyInfoDivider()
           // Moved here from My info -- linking another account is an
           // access/security action, not identity.
           MyInfoRow(icon = Icons.Outlined.AlternateEmail, label = "Link Account", onClick = { comingSoon("Link Account") }) {}
@@ -4882,7 +4886,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
 
         Spacer(modifier = Modifier.height(18.dp))
 
-        SecurityGroupHeader("Account access and management")
+        SecurityGroupHeader("Account access and management", titleSize = 11.sp)
         Column(
           modifier = Modifier
             .fillMaxWidth()
@@ -4903,13 +4907,17 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           ) {
             Text("Manage on Google", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
           }
+          MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.ScreenShare, label = "Trusted Devices", onClick = { viewModel.leaveAccountTabsFor { viewModel.openTrustedDevices() } }) {}
+          MyInfoDivider()
           MyInfoRow(
             icon = Icons.Outlined.QueryStats,
             label = "Data Dashboard",
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openDataDashboard() } }
           ) {}
+          MyInfoDivider()
           MyInfoRow(icon = Icons.Outlined.Lock, label = "App Lock", onClick = { comingSoon("App Lock") }) {}
+          MyInfoDivider()
           MyInfoRow(
             icon = Icons.Filled.Person,
             label = "Account Settings",
@@ -5152,9 +5160,9 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
 }
 
 @Composable
-private fun SecurityGroupHeader(title: String, subtitle: String? = null) {
+private fun SecurityGroupHeader(title: String, subtitle: String? = null, titleSize: androidx.compose.ui.unit.TextUnit = 16.sp) {
   Column(modifier = Modifier.padding(bottom = 10.dp)) {
-    Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+    Text(title, color = Color.White, fontSize = titleSize, fontWeight = FontWeight.Bold)
     if (subtitle != null) {
       Spacer(modifier = Modifier.height(2.dp))
       Text(subtitle, color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
