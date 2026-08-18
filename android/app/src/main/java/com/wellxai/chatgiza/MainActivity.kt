@@ -1051,7 +1051,7 @@ private fun SignedOutScreen(signingIn: Boolean, error: String?, onSignIn: () -> 
     }
     if (error != null) {
       Spacer(modifier = Modifier.height(16.dp))
-      Text(error, color = Color(0xFFFF6B6B), fontSize = 13.sp)
+      Text(error, color = Color.White, fontSize = 13.sp)
     }
   }
 }
@@ -1821,7 +1821,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
           if (viewModel.errorMessage != null) {
             Text(
               viewModel.errorMessage ?: "",
-              color = Color(0xFFFF6B6B),
+              color = Color.White,
               fontSize = 12.sp,
               modifier = Modifier.padding(horizontal = 16.dp)
             )
@@ -1864,7 +1864,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
           target?.let { viewModel.deleteConversation(it.id) }
           chatDeleteConfirm = false
         }) {
-          Text("Delete", color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold)
+          Text("Delete", color = Color.White, fontWeight = FontWeight.Bold)
         }
       },
       dismissButton = {
@@ -2046,7 +2046,7 @@ private fun ChatConversationMenuSheet(
     ChatMenuRow(icon = { Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_archive), contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp)) }, label = "Archive") {
       onDismiss(); onComingSoon("Archive")
     }
-    ChatMenuRow(icon = { DeleteIcon(tint = Color(0xFFFF6B6B)) }, label = "Delete", tint = Color(0xFFFF6B6B)) {
+    ChatMenuRow(icon = { DeleteIcon(tint = Color.White) }, label = "Delete", tint = Color.White) {
       onDismiss(); onDelete()
     }
   }
@@ -2449,7 +2449,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
       if (attachError) {
         Text(
           "Couldn't attach that — try a different file",
-          color = Color(0xFFFF6B6B),
+          color = Color.White,
           fontSize = 12.sp,
           modifier = Modifier.padding(top = 6.dp)
         )
@@ -2483,7 +2483,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
           modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 6.dp)
         ) {
           Box(
-            modifier = Modifier.size(36.dp).clip(CircleShape).background(Color(0xFFFF6B6B)),
+            modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White),
             contentAlignment = Alignment.Center
           ) {
             Icon(
@@ -3034,7 +3034,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
                   .offset(x = 4.dp, y = (-4).dp)
                   .size(18.dp)
                   .clip(CircleShape)
-                  .background(Color(0xFFFF9800))
+                  .background(Color.White)
                   .border(width = 1.dp, color = Color.Black, shape = CircleShape),
                 contentAlignment = Alignment.Center
               ) {
@@ -3968,7 +3968,7 @@ private fun ChatGizaArrangedCard(onClick: () -> Unit) {
     verticalAlignment = Alignment.CenterVertically
   ) {
     Box(
-      modifier = Modifier.size(26.dp).clip(RoundedCornerShape(9.dp)).background(Color(0xFF1EBE7E)),
+      modifier = Modifier.size(26.dp).clip(RoundedCornerShape(9.dp)).background(Color.White),
       contentAlignment = Alignment.Center
     ) {
       ArrangedIconCustom(tint = Color.White, modifier = Modifier.size(15.dp))
@@ -4092,7 +4092,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             .padding(horizontal = 10.dp, vertical = 4.dp)
             .height(150.dp)
             .clip(RoundedCornerShape(24.dp))
-            .background(Brush.linearGradient(listOf(Color(0xFF3A2E6B), Color(0xFF1B1430))))
+            .background(Brush.linearGradient(listOf(Color.White, Color(0xFF1A1A1A))))
             .clickable { viewModel.openBilling() }
             .padding(20.dp)
         ) {
@@ -4213,9 +4213,9 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             })
             .padding(vertical = 14.dp)
         ) {
-          DeleteIcon(tint = Color(0xFFFF6B6B))
+          DeleteIcon(tint = Color.White)
           Spacer(modifier = Modifier.size(16.dp))
-          Text("Delete", color = Color(0xFFFF6B6B), fontSize = 16.sp)
+          Text("Delete", color = Color.White, fontSize = 16.sp)
         }
         Row(
           verticalAlignment = Alignment.CenterVertically,
@@ -4261,7 +4261,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           viewModel.deleteConversation(toDelete.id)
           deleteConfirmConvo = null
         }) {
-          Text("Delete", color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold)
+          Text("Delete", color = Color.White, fontWeight = FontWeight.Bold)
         }
       },
       dismissButton = {
@@ -4593,7 +4593,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
         Box(
           modifier = Modifier
             .clip(RoundedCornerShape(50))
-            .background(Color(0xFFFF9D2E))
+            .background(Color.White)
             .clickable { comingSoon("Enter GiZa Max") }
             .padding(horizontal = 12.dp, vertical = 4.dp)
         ) {
@@ -5146,7 +5146,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
               runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, webUri)) }
             }
           }) {
-            Text("Rate Now", color = Color(0xFFF59E0B), fontWeight = FontWeight.Bold)
+            Text("Rate Now", color = Color.White, fontWeight = FontWeight.Bold)
           }
         },
         dismissButton = {
@@ -5400,7 +5400,7 @@ private fun AvatarPresetThumbnail(preset: AvatarPreset, size: Dp, modifier: Modi
 @Composable
 private fun AvatarGraphic(variant: String, modifier: Modifier = Modifier) {
   val silver = Color(0xFFE7E7E7)
-  val gold = Color(0xFFC9A227)
+  val gold = Color.White
   val dark = Color(0xFF2A2A2A)
   Canvas(modifier = modifier) {
     val w = size.width
@@ -5488,14 +5488,14 @@ private fun AvatarGraphic(variant: String, modifier: Modifier = Modifier) {
         drawPath(tie, color = dark)
       }
       "hoodie" -> cap(dark, brim = false)
-      "cap_orange" -> cap(Color(0xFFE07A1F))
-      "red_cap" -> cap(Color(0xFFC23B22))
+      "cap_orange" -> cap(Color.White)
+      "red_cap" -> cap(Color.White)
       "miner" -> {
         cap(Color(0xFF3A3A3A), brim = true)
-        drawCircle(color = Color(0xFFFFD54A), radius = w * 0.035f, center = Offset(headCx, headCy - headR * 1.1f))
+        drawCircle(color = Color.White, radius = w * 0.035f, center = Offset(headCx, headCy - headR * 1.1f))
       }
       "hawaiian_orange", "hawaiian_green" -> {
-        val shirtColor = if (variant == "hawaiian_orange") Color(0xFFE07A1F) else Color(0xFF3E8E4F)
+        val shirtColor = if (variant == "hawaiian_orange") Color.White else Color.White
         val shirt = Path().apply {
           moveTo(w * 0.22f, h * 0.98f)
           lineTo(w * 0.22f, h * 0.78f)
@@ -5529,11 +5529,11 @@ private fun AvatarGraphic(variant: String, modifier: Modifier = Modifier) {
           lineTo(headCx - headR * 0.08f, headCy - headR * 1.6f)
           close()
         }
-        drawPath(mohawk, color = Color(0xFF2E7FD6))
+        drawPath(mohawk, color = Color.White)
         glasses(gold.copy(alpha = 0.9f))
       }
       "spiky_blue" -> {
-        val blue = Color(0xFF2E7FD6)
+        val blue = Color.White
         for (i in -2..2) {
           val baseX = headCx + i * headR * 0.35f
           val spike = Path().apply {
@@ -5554,7 +5554,7 @@ private fun AvatarGraphic(variant: String, modifier: Modifier = Modifier) {
           cubicTo(headCx + headR * 0.6f, headCy - headR * 0.5f, headCx - headR * 0.6f, headCy - headR * 0.5f, headCx - headR * 0.95f, headCy - headR * 0.1f)
           close()
         }
-        drawPath(hair, color = Color(0xFFE8C55A))
+        drawPath(hair, color = Color.White)
       }
       "beard_sunglasses_plain" -> {
         glasses()
@@ -5574,7 +5574,7 @@ private fun AvatarGraphic(variant: String, modifier: Modifier = Modifier) {
           }
         }
         drawPath(zig, color = Color.Transparent, style = Stroke(width = strokeW * 1.4f))
-        drawPath(zig, color = Color(0xFFE0A526), style = Stroke(width = strokeW * 1.4f))
+        drawPath(zig, color = Color.White, style = Stroke(width = strokeW * 1.4f))
       }
       "vr_headset" -> {
         drawRoundRect(
@@ -5584,7 +5584,7 @@ private fun AvatarGraphic(variant: String, modifier: Modifier = Modifier) {
           cornerRadius = CornerRadius(headR * 0.2f, headR * 0.2f)
         )
         drawRoundRect(
-          color = Color(0xFFE07A1F),
+          color = Color.White,
           topLeft = Offset(headCx - headR * 0.85f, headCy - headR * 0.15f),
           size = Size(headR * 1.7f, headR * 0.5f),
           cornerRadius = CornerRadius(headR * 0.15f, headR * 0.15f),
@@ -5617,7 +5617,7 @@ private fun AvatarGraphic(variant: String, modifier: Modifier = Modifier) {
           lineTo(headCx, headCy + headR * 1.5f)
           lineTo(headCx + headR * 0.55f, headCy + headR * 0.55f)
         }
-        drawPath(collar, color = Color(0xFFE0A526), style = Stroke(width = strokeW * 2.2f))
+        drawPath(collar, color = Color.White, style = Stroke(width = strokeW * 2.2f))
       }
       "gray_hood" -> {
         drawArc(
@@ -5800,7 +5800,7 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
         items(AVATAR_PRESETS, key = { it.id }) { preset ->
           Box(contentAlignment = Alignment.BottomEnd) {
             val thumbModifier = (
-              if (selected == preset.id) Modifier.border(2.dp, Color(0xFFFF9800), CircleShape).padding(3.dp)
+              if (selected == preset.id) Modifier.border(2.dp, Color.White, CircleShape).padding(3.dp)
               else Modifier
             ).clickable { selected = preset.id }
             if (activeTab == "Animated 🔥") {
@@ -5810,7 +5810,7 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
             }
             if (selected == preset.id) {
               Box(
-                modifier = Modifier.size(20.dp).clip(CircleShape).background(Color(0xFFFF9800)),
+                modifier = Modifier.size(20.dp).clip(CircleShape).background(Color.White),
                 contentAlignment = Alignment.Center
               ) {
                 Icon(Icons.Filled.Check, contentDescription = null, tint = Color.Black, modifier = Modifier.size(12.dp))
@@ -5825,7 +5825,7 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(50))
-          .background(Color(0xFFB8862E))
+          .background(Color.White)
           .clickable {
             viewModel.updateAvatarPreset(selected, AVATAR_PRESETS.find { it.id == selected }?.emoji?.ifBlank { null })
             viewModel.updateAvatarName(nameInput.trim().ifBlank { null })
@@ -5903,7 +5903,7 @@ internal fun MediaCommentComposerSheet(authorName: String, onDismiss: () -> Unit
     ) {
       Row(verticalAlignment = Alignment.CenterVertically) {
         Text("Replying to ", color = Color(0xFF8A8A8A), fontSize = 14.sp)
-        Text("@$authorName", color = Color(0xFFFFC94A), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        Text("@$authorName", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
       }
       Spacer(modifier = Modifier.height(12.dp))
       Box(
@@ -5918,7 +5918,7 @@ internal fun MediaCommentComposerSheet(authorName: String, onDismiss: () -> Unit
           value = text,
           onValueChange = { text = it },
           textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp, lineHeight = 20.sp),
-          cursorBrush = SolidColor(Color(0xFFFFC94A)),
+          cursorBrush = SolidColor(Color.White),
           modifier = Modifier.fillMaxSize(),
           decorationBox = { inner ->
             if (text.isEmpty()) {
@@ -5951,8 +5951,8 @@ internal fun MediaCommentComposerSheet(authorName: String, onDismiss: () -> Unit
           },
           enabled = text.isNotBlank(),
           colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFFFFC94A),
-            disabledContainerColor = Color(0xFFFFC94A).copy(alpha = 0.35f)
+            containerColor = Color.White,
+            disabledContainerColor = Color.White.copy(alpha = 0.35f)
           ),
           shape = RoundedCornerShape(18.dp),
           contentPadding = PaddingValues(horizontal = 20.dp, vertical = 6.dp)
@@ -6005,14 +6005,14 @@ internal fun MediaPostVideoPlayer(url: String, modifier: Modifier = Modifier) {
 @Composable
 private fun ConnectFeatureRow(icon: ImageVector, title: String, body: String) {
   ConnectFeatureRowShell(title, body) {
-    Icon(icon, contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.size(18.dp))
+    Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
   }
 }
 
 @Composable
 private fun ConnectFeatureRow(painter: androidx.compose.ui.graphics.painter.Painter, title: String, body: String) {
   ConnectFeatureRowShell(title, body) {
-    Icon(painter, contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.size(18.dp))
+    Icon(painter, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
   }
 }
 
@@ -6023,7 +6023,7 @@ private fun ConnectFeatureRowShell(title: String, body: String, icon: @Composabl
       modifier = Modifier
         .size(36.dp)
         .clip(RoundedCornerShape(11.dp))
-        .background(Color(0xFFFFC94A).copy(alpha = 0.14f)),
+        .background(Color.White.copy(alpha = 0.14f)),
       contentAlignment = Alignment.Center
     ) {
       icon()
@@ -6051,13 +6051,13 @@ internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () ->
         modifier = Modifier
           .size(52.dp)
           .clip(RoundedCornerShape(16.dp))
-          .background(Color(0xFFFFC94A).copy(alpha = 0.14f)),
+          .background(Color.White.copy(alpha = 0.14f)),
         contentAlignment = Alignment.Center
       ) {
         Icon(
           painter = androidx.compose.ui.res.painterResource(R.drawable.ic_share_link),
           contentDescription = null,
-          tint = Color(0xFFFFC94A),
+          tint = Color.White,
           modifier = Modifier.size(24.dp)
         )
       }
@@ -6091,9 +6091,9 @@ internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () ->
       Spacer(modifier = Modifier.height(20.dp))
       if (viewModel.chatGizaMediaConnected) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-          Icon(Icons.Filled.Check, contentDescription = null, tint = Color(0xFF16C784), modifier = Modifier.size(20.dp))
+          Icon(Icons.Filled.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
           Spacer(modifier = Modifier.width(8.dp))
-          Text("Connected", color = Color(0xFF16C784), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+          Text("Connected", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         }
         Spacer(modifier = Modifier.height(14.dp))
         OutlinedButton(
@@ -6107,7 +6107,7 @@ internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () ->
         Button(
           onClick = { viewModel.updateChatGizaMediaConnected(true) },
           modifier = Modifier.fillMaxWidth().height(52.dp),
-          colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC94A)),
+          colors = ButtonDefaults.buttonColors(containerColor = Color.White),
           shape = RoundedCornerShape(24.dp)
         ) {
           Text("Connect", color = Color.Black, fontWeight = FontWeight.SemiBold)
@@ -6351,8 +6351,8 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
           },
           enabled = canPost,
           colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFFFFC94A),
-            disabledContainerColor = Color(0xFFFFC94A).copy(alpha = 0.35f)
+            containerColor = Color.White,
+            disabledContainerColor = Color.White.copy(alpha = 0.35f)
           ),
           shape = RoundedCornerShape(20.dp),
           contentPadding = PaddingValues(horizontal = 22.dp, vertical = 8.dp)
@@ -6367,7 +6367,7 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
       if (viewModel.mediaError != null) {
         Text(
           viewModel.mediaError.orEmpty(),
-          color = Color(0xFFEA3943),
+          color = Color.White,
           fontSize = 13.sp,
           modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
         )
@@ -6404,7 +6404,7 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
               value = text,
               onValueChange = { text = it },
               textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 17.sp),
-              cursorBrush = SolidColor(Color(0xFFFFC94A)),
+              cursorBrush = SolidColor(Color.White),
               modifier = Modifier.fillMaxWidth()
             )
           }
@@ -6414,7 +6414,7 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
           Spacer(modifier = Modifier.height(6.dp))
           Text(
             "${text.length}/$MEDIA_POST_FREE_CAPTION_LIMIT",
-            color = if (overFreeCaptionLimit) Color(0xFFEA3943) else Color(0xFF7A7A7A),
+            color = if (overFreeCaptionLimit) Color.White else Color(0xFF7A7A7A),
             fontSize = 12.sp,
             modifier = Modifier.fillMaxWidth()
           )
@@ -6426,7 +6426,7 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
             modifier = Modifier
               .fillMaxWidth()
               .clip(RoundedCornerShape(12.dp))
-              .background(Color(0xFFFFC94A).copy(alpha = 0.1f))
+              .background(Color.White.copy(alpha = 0.1f))
               .padding(14.dp)
           ) {
             Text(
@@ -6448,7 +6448,7 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
                 }
               },
               enabled = !openingCheckout,
-              colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC94A)),
+              colors = ButtonDefaults.buttonColors(containerColor = Color.White),
               shape = RoundedCornerShape(20.dp),
               contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp)
             ) {
@@ -6501,7 +6501,7 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
               Icon(
                 painter = androidx.compose.ui.res.painterResource(R.drawable.ic_video),
                 contentDescription = null,
-                tint = Color(0xFFFFC94A),
+                tint = Color.White,
                 modifier = Modifier.size(20.dp)
               )
               Spacer(modifier = Modifier.width(8.dp))
@@ -6574,7 +6574,7 @@ private fun SentimentToggle(selected: String?, onSelect: (String) -> Unit) {
   Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
     SentimentToggleIcon(
       icon = Icons.Outlined.TrendingUp,
-      tint = Color(0xFF16C784),
+      tint = Color.White,
       active = selected == "bullish",
       onClick = { onSelect("bullish") }
     )
@@ -6586,7 +6586,7 @@ private fun SentimentToggle(selected: String?, onSelect: (String) -> Unit) {
     )
     SentimentToggleIcon(
       icon = Icons.Outlined.TrendingDown,
-      tint = Color(0xFFEA3943),
+      tint = Color.White,
       active = selected == "bearish",
       onClick = { onSelect("bearish") }
     )
@@ -6856,7 +6856,7 @@ private fun CustomizeScreen(viewModel: ChatViewModel) {
             .clip(CircleShape)
             .background(
               Brush.linearGradient(
-                listOf(Color(0xFFB8452F), Color(0xFFE0A93A), Color(0xFF7A3B8A))
+                listOf(Color.White, Color.White, Color.White)
               )
             )
         )
@@ -7098,9 +7098,9 @@ private fun EditProfileScreen(viewModel: ChatViewModel) {
         modifier = Modifier.padding(20.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_logout), contentDescription = null, tint = Color(0xFFFF6B6B))
+        Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_logout), contentDescription = null, tint = Color.White)
         Spacer(modifier = Modifier.width(16.dp))
-        Text("Sign out", color = Color(0xFFFF6B6B), fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        Text("Sign out", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
       }
     }
 
@@ -7143,7 +7143,7 @@ private fun ThemeMockupPreview(bg: Color, panel: Color, modifier: Modifier = Mod
       Spacer(modifier = Modifier.height(6.dp))
       Box(modifier = Modifier.fillMaxWidth(0.55f).height(3.dp).clip(RoundedCornerShape(2.dp)).background(panel))
       Spacer(modifier = Modifier.weight(1f))
-      val rowColors = listOf(Color(0xFFE0345C), Color(0xFF2ECC71), Color(0xFFE0345C))
+      val rowColors = listOf(Color.White, Color.White, Color.White)
       Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
         rowColors.forEach { accent ->
           Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -7368,16 +7368,16 @@ private data class VoiceOption(
 // label shown in the picker — each gets its own gradient so the selected
 // card reads as "this voice" at a glance, not just a checkmark.
 private val VOICE_OPTIONS = listOf(
-  VoiceOption("cedar", "Orin", "Wise Male", Color(0xFFF59E0B), Color(0xFFEF4444)),
-  VoiceOption("alloy", "Lyra", "Calm Female", Color(0xFF14B8A6), Color(0xFF06B6D4)),
-  VoiceOption("ballad", "Kael", "Bold Male", Color(0xFF8B5CF6), Color(0xFFEC4899)),
-  VoiceOption("coral", "Elia", "Warm Female", Color(0xFF10B981), Color(0xFF84CC16)),
-  VoiceOption("sage", "Leo", "Smart Male", Color(0xFF3B82F6), Color(0xFF14B8A6)),
+  VoiceOption("cedar", "Orin", "Wise Male", Color.White, Color.White),
+  VoiceOption("alloy", "Lyra", "Calm Female", Color.White, Color.White),
+  VoiceOption("ballad", "Kael", "Bold Male", Color.White, Color.White),
+  VoiceOption("coral", "Elia", "Warm Female", Color.White, Color.White),
+  VoiceOption("sage", "Leo", "Smart Male", Color.White, Color.White),
   // The signature/default ChatGiZa voice — no "18+" tag here: unlike
   // Personality, voice choice has no real content-gating behind it, and
   // this is also the app's default, so tagging it adult-only would be
   // both meaningless and contradict it being what new users hear by default.
-  VoiceOption("marin", "GiZa", "Playful", Color(0xFF4F46E5), Color(0xFFEC4899))
+  VoiceOption("marin", "GiZa", "Playful", Color.White, Color.White)
 )
 
 @Composable
@@ -7688,7 +7688,7 @@ private fun DataControlToggleRow(title: String, subtitle: String, checked: Boole
 private fun DangerRow(label: String, onClick: () -> Unit) {
   Text(
     label,
-    color = Color(0xFFFF3B30),
+    color = Color.White,
     fontSize = 14.sp,
     fontWeight = FontWeight.Bold,
     modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
@@ -7703,7 +7703,7 @@ private fun ConfirmDangerDialog(title: String, message: String, onConfirm: () ->
     text = { Text(message) },
     confirmButton = {
       TextButton(onClick = { onConfirm(); onDismiss() }) {
-        Text("Delete", color = Color(0xFFFF3B30))
+        Text("Delete", color = Color.White)
       }
     },
     dismissButton = {
@@ -7964,7 +7964,7 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
       modifier = Modifier
         .fillMaxWidth()
         .clip(RoundedCornerShape(50))
-        .background(Color(0xFFFF9D2E))
+        .background(Color.White)
         .clickable {
           if (viewModel.subaccounts.size >= 5) return@clickable
           showCreateDialog = true
@@ -8016,7 +8016,7 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
 
     viewModel.subaccountError?.let {
       Spacer(modifier = Modifier.height(8.dp))
-      Text(it, color = Color(0xFFFF6B6B), fontSize = 12.sp)
+      Text(it, color = Color.White, fontSize = 12.sp)
     }
 
     Spacer(modifier = Modifier.height(24.dp))
@@ -8175,8 +8175,8 @@ private fun SubaccountSettingsScreen(viewModel: ChatViewModel) {
           .padding(vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Text("Delete Subaccount", color = Color(0xFFFF6B6B), fontSize = 16.sp, modifier = Modifier.weight(1f))
-        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color(0xFFFF6B6B).copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+        Text("Delete Subaccount", color = Color.White, fontSize = 16.sp, modifier = Modifier.weight(1f))
+        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
       }
     }
   }
@@ -8755,7 +8755,7 @@ private fun ShareTargetPickerScreen(viewModel: ChatViewModel) {
             colors = CardDefaults.cardColors(containerColor = Color(0xFF2F2F2F))
           ) {
             Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-              Icon(Icons.Filled.Add, contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.size(20.dp))
+              Icon(Icons.Filled.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
               Spacer(modifier = Modifier.width(12.dp))
               Text("New chat", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
@@ -9005,7 +9005,7 @@ private fun SharedConversationsScreen(viewModel: ChatViewModel) {
     val error = viewModel.collabError
     if (error != null) {
       Spacer(Modifier.height(10.dp))
-      Text(error, color = Color(0xFFFF6B6B), fontSize = 12.sp)
+      Text(error, color = Color.White, fontSize = 12.sp)
     }
   }
   // Fires the OS share sheet the moment a session is created, so the
@@ -9227,7 +9227,7 @@ private fun CommunityScreen(viewModel: ChatViewModel) {
 
     val error = viewModel.communityError
     if (error != null) {
-      Text(error, color = Color(0xFFFF6B6B), fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp))
+      Text(error, color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp))
     }
 
     Row(
@@ -9309,7 +9309,7 @@ private fun TrustedDevicesScreen(viewModel: ChatViewModel) {
 
     val error = viewModel.trustedDevicesError
     if (error != null) {
-      Text(error, color = Color(0xFFFF6B6B), fontSize = 12.sp, modifier = Modifier.padding(16.dp))
+      Text(error, color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(16.dp))
     }
 
     if (viewModel.trustedDevicesLoading && viewModel.trustedDevices.isEmpty()) {
@@ -9380,7 +9380,7 @@ private fun TrustedDevicesScreen(viewModel: ChatViewModel) {
           viewModel.revokeTrustedDevice(target.id)
           confirmRevoke = null
         }) {
-          Text("Remove", color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold)
+          Text("Remove", color = Color.White, fontWeight = FontWeight.Bold)
         }
       },
       dismissButton = {
@@ -9462,17 +9462,17 @@ private fun StorageManagementScreen(viewModel: ChatViewModel) {
       ) {
         // weight(0f) throws, so zero-sized segments are skipped entirely
         // rather than coerced to a fake minimum width.
-        if (appFraction > 0f) Box(modifier = Modifier.weight(appFraction).fillMaxHeight().background(Color(0xFF22C55E)))
-        if (otherFraction > 0f) Box(modifier = Modifier.weight(otherFraction).fillMaxHeight().background(Color(0xFFF59E0B)))
+        if (appFraction > 0f) Box(modifier = Modifier.weight(appFraction).fillMaxHeight().background(Color.White))
+        if (otherFraction > 0f) Box(modifier = Modifier.weight(otherFraction).fillMaxHeight().background(Color.White))
         if (freeFraction > 0f) Box(modifier = Modifier.weight(freeFraction).fillMaxHeight().background(Color.Transparent))
       }
       Spacer(Modifier.height(10.dp))
       Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF22C55E)))
+        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color.White))
         Spacer(Modifier.width(6.dp))
         Text("ChatGiZa used", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
         Spacer(Modifier.width(14.dp))
-        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFF59E0B)))
+        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color.White))
         Spacer(Modifier.width(6.dp))
         Text("Other Apps used", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
         Spacer(Modifier.width(14.dp))
@@ -9633,11 +9633,11 @@ private fun ConnectorRow(info: ConnectorInfo, busy: Boolean, onConnect: () -> Un
       info.connected -> Box(
         modifier = Modifier
           .clip(RoundedCornerShape(50))
-          .border(1.dp, Color(0xFF22C55E).copy(alpha = 0.5f), RoundedCornerShape(50))
+          .border(1.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(50))
           .clickable(onClick = onDisconnect)
           .padding(horizontal = 14.dp, vertical = 6.dp)
       ) {
-        Text("Connected", color = Color(0xFF22C55E), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text("Connected", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
       }
       info.configured -> Box(
         modifier = Modifier
@@ -9735,7 +9735,7 @@ private fun ConnectorsScreen(viewModel: ChatViewModel) {
     Spacer(Modifier.height(24.dp))
 
     viewModel.connectorsError?.let {
-      Text(it, color = Color(0xFFFF6B6B), fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+      Text(it, color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
     }
 
     if (viewModel.loadingConnectors && viewModel.connectors.isEmpty()) {
@@ -9807,7 +9807,7 @@ private fun LanguageRow(label: String, selected: Boolean, onClick: () -> Unit) {
   ) {
     Text(label, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
     if (selected) {
-      Icon(Icons.Filled.Check, contentDescription = "Selected", tint = Color(0xFF2979FF), modifier = Modifier.size(22.dp))
+      Icon(Icons.Filled.Check, contentDescription = "Selected", tint = Color.White, modifier = Modifier.size(22.dp))
     }
   }
 }
@@ -9905,7 +9905,7 @@ private fun AppLanguageScreen(viewModel: ChatViewModel) {
       }
 
       Spacer(modifier = Modifier.height(20.dp))
-      Text("Suggested", color = Color(0xFF2979FF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+      Text("Suggested", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
       LanguageRow("System Default", selected = isAutoDetect) { applyLocale(null) }
       suggested.forEach { e ->
         LanguageRow(e.nativeName, selected = !isAutoDetect && currentLabel.equals(e.englishName, ignoreCase = true)) {
@@ -9914,7 +9914,7 @@ private fun AppLanguageScreen(viewModel: ChatViewModel) {
       }
 
       Spacer(modifier = Modifier.height(12.dp))
-      Text("All Languages", color = Color(0xFF2979FF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+      Text("All Languages", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
       LazyColumn(modifier = Modifier.weight(1f)) {
         items(allEntries, key = { it.iso2 }) { e ->
           LanguageRow(e.nativeName, selected = !isAutoDetect && currentLabel.equals(e.englishName, ignoreCase = true)) {
@@ -11069,7 +11069,7 @@ private fun MessageActionBar(
   // be caught before it's public instead of after.
   var extraStage by remember(message.id) { mutableStateOf("none") }
   var pendingCaption by remember(message.id) { mutableStateOf<String?>(null) }
-  val accent = Color(0xFF2979FF)
+  val accent = Color.White
 
   fun push(caption: String?, destination: String) {
     if (pushState == "idle") {
@@ -11182,7 +11182,7 @@ private fun MessageActionBar(
             }
           )
           DropdownMenuItem(
-            text = { Text("Delete", color = Color(0xFFFF3B30)) },
+            text = { Text("Delete", color = Color.White) },
             onClick = { moreOpen = false; onDelete() }
           )
         }
@@ -11250,14 +11250,14 @@ private fun ActionBarExtraItem(label: String, tint: Color, connected: Boolean, o
 @Composable
 private fun ExtraOptionRow(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
   ExtraOptionRowShell(title, subtitle, onClick) {
-    Icon(icon, contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.size(20.dp))
+    Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
   }
 }
 
 @Composable
 private fun ExtraOptionRow(painter: androidx.compose.ui.graphics.painter.Painter, title: String, subtitle: String, onClick: () -> Unit) {
   ExtraOptionRowShell(title, subtitle, onClick) {
-    Icon(painter, contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.size(20.dp))
+    Icon(painter, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
   }
 }
 
@@ -11273,7 +11273,7 @@ private fun ExtraOptionRowShell(title: String, subtitle: String, onClick: () -> 
     verticalAlignment = Alignment.CenterVertically
   ) {
     Box(
-      modifier = Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).background(Color(0xFFFFC94A).copy(alpha = 0.14f)),
+      modifier = Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).background(Color.White.copy(alpha = 0.14f)),
       contentAlignment = Alignment.Center
     ) {
       icon()
@@ -11334,7 +11334,7 @@ private fun ExtraDestinationChip(label: String, selected: Boolean, modifier: Mod
   Box(
     modifier = modifier
       .clip(RoundedCornerShape(14.dp))
-      .background(if (selected) Color(0xFFFFC94A) else Color.White.copy(alpha = 0.06f))
+      .background(if (selected) Color.White else Color.White.copy(alpha = 0.06f))
       .clickable(onClick = onClick)
       .padding(vertical = 12.dp),
     contentAlignment = Alignment.Center
@@ -11447,8 +11447,8 @@ private fun ExtraPostPreviewSheet(
           onClick = { onConfirm(destination) },
           enabled = !posting,
           colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFFFFC94A),
-            disabledContainerColor = Color(0xFFFFC94A).copy(alpha = 0.5f)
+            containerColor = Color.White,
+            disabledContainerColor = Color.White.copy(alpha = 0.5f)
           ),
           shape = RoundedCornerShape(24.dp),
           modifier = Modifier.weight(1f).height(52.dp)
@@ -11483,10 +11483,10 @@ private fun CaptionComposerSheet(onDismiss: () -> Unit, onSubmit: (String) -> Un
         modifier = Modifier
           .size(52.dp)
           .clip(RoundedCornerShape(16.dp))
-          .background(Color(0xFFFFC94A).copy(alpha = 0.14f)),
+          .background(Color.White.copy(alpha = 0.14f)),
         contentAlignment = Alignment.Center
       ) {
-        Icon(Icons.Filled.Send, contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.size(24.dp))
+        Icon(Icons.Filled.Send, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
       }
       Spacer(modifier = Modifier.height(16.dp))
       Text("Add a caption", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
@@ -11514,7 +11514,7 @@ private fun CaptionComposerSheet(onDismiss: () -> Unit, onSubmit: (String) -> Un
             value = text,
             onValueChange = { text = it },
             textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp, lineHeight = 20.sp),
-            cursorBrush = SolidColor(Color(0xFFFFC94A)),
+            cursorBrush = SolidColor(Color.White),
             modifier = Modifier.fillMaxWidth()
           )
         }
@@ -11524,7 +11524,7 @@ private fun CaptionComposerSheet(onDismiss: () -> Unit, onSubmit: (String) -> Un
           modifier = Modifier
             .size(52.dp)
             .clip(CircleShape)
-            .background(if (text.isNotBlank()) Color(0xFFFFC94A) else Color(0xFFFFC94A).copy(alpha = 0.35f))
+            .background(if (text.isNotBlank()) Color.White else Color.White.copy(alpha = 0.35f))
         ) {
           Icon(Icons.Filled.Send, contentDescription = "Send", tint = Color.Black, modifier = Modifier.size(22.dp))
         }

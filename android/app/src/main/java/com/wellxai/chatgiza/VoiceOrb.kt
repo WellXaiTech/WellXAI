@@ -161,10 +161,10 @@ fun OrinVoiceBadge(modifier: Modifier = Modifier, tint: Color) {
     VoiceOrb(
       modifier = modifier,
       seedPhase = 0.42f,
-      anchor = Color(0xFF6D8CFF),
-      colorA = Color(0xFF3A5CFF),
-      colorB = Color(0xFFBFD4FF),
-      colorC = Color(0xFF8E6DFF),
+      anchor = Color.White,
+      colorA = Color.White,
+      colorB = Color.White,
+      colorC = Color.White,
       onError = { failed = true }
     )
   } else {
@@ -190,10 +190,10 @@ fun VoiceLibraryHeroOrb(modifier: Modifier = Modifier, tint: Color) {
     VoiceOrb(
       modifier = modifier,
       seedPhase = 0.42f,
-      anchor = Color(0xFF2A2A3D),
-      colorA = Color(0xFFFFB347),
-      colorB = Color(0xFF6D8CFF),
-      colorC = Color(0xFFFF6B9D),
+      anchor = Color.White,
+      colorA = Color.White,
+      colorB = Color.White,
+      colorC = Color.White,
       onError = { failed = true }
     )
   } else {
@@ -211,10 +211,10 @@ fun VoiceLibraryHeroOrb(modifier: Modifier = Modifier, tint: Color) {
 private fun VoiceOrb(
   modifier: Modifier = Modifier,
   seedPhase: Float = 0.42f,
-  anchor: Color = Color(0xFF6D8CFF),
-  colorA: Color = Color(0xFF3A5CFF),
-  colorB: Color = Color(0xFFBFD4FF),
-  colorC: Color = Color(0xFF8E6DFF),
+  anchor: Color = Color.White,
+  colorA: Color = Color.White,
+  colorB: Color = Color.White,
+  colorC: Color = Color.White,
   audioLevel: Float = 0f,
   onError: () -> Unit
 ) {
