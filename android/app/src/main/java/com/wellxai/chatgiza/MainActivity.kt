@@ -4620,6 +4620,18 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
   fun comingSoon(label: String) {
     Toast.makeText(context, "$label — coming soon", Toast.LENGTH_SHORT).show()
   }
+  // Loaded so the header below can show the active subaccount's own name
+  // and UID instead of always freezing on the main account's -- switching
+  // accounts (Switch Account, this screen's top-right icon) previously had
+  // no visible effect anywhere the profile itself is shown.
+  LaunchedEffect(Unit) { viewModel.loadSubaccounts() }
+  val activeSubaccount = viewModel.subaccounts.find { it.id == viewModel.activeSubaccountId }
+  val headerName = if (viewModel.activeSubaccountId != null) {
+    viewModel.activeSubaccountName ?: activeSubaccount?.name ?: "Subaccount"
+  } else {
+    viewModel.userName?.takeIf { it.isNotBlank() } ?: "You"
+  }
+  val headerUid = if (viewModel.activeSubaccountId != null) derivedUid(viewModel.activeSubaccountId!!) else uid
 
   Box(
     modifier = Modifier
@@ -4662,10 +4674,21 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
     Spacer(modifier = Modifier.height(8.dp))
 
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-      val selectedPreset = AVATAR_PRESETS.find { it.id == viewModel.avatarPresetId }
-      Box(modifier = Modifier.clickable { viewModel.openAvatarPicker() }) {
+      // Subaccounts have no photo of their own -- only a preset/initials
+      // avatar (see SwitchAccountRow) -- so once one is active this only
+      // ever shows a preset or initials, never the main account's photo.
+      val subaccountPreset = activeSubaccount?.avatarPresetId?.let { id -> AVATAR_PRESETS.find { it.id == id } }
+      val selectedPreset = if (viewModel.activeSubaccountId != null) subaccountPreset else AVATAR_PRESETS.find { it.id == viewModel.avatarPresetId }
+      Box(modifier = Modifier.clickable { if (viewModel.activeSubaccountId == null) viewModel.openAvatarPicker() }) {
         if (selectedPreset != null) {
-          AvatarPresetThumbnail(selectedPreset, 52.dp, name = viewModel.avatarName)
+          AvatarPresetThumbnail(selectedPreset, 52.dp, name = if (viewModel.activeSubaccountId != null) headerName else viewModel.avatarName)
+        } else if (viewModel.activeSubaccountId != null) {
+          Box(
+            modifier = Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+          ) {
+            Text(headerName.take(1).uppercase(), color = Color.Black, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+          }
         } else if (viewModel.userImage != null) {
           AsyncImage(
             model = viewModel.userImage,
@@ -4679,7 +4702,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
       Spacer(modifier = Modifier.width(12.dp))
       Column(modifier = Modifier.weight(1f)) {
         Text(
-          viewModel.userName?.takeIf { it.isNotBlank() } ?: "You",
+          headerName,
           color = Color.Black,
           fontSize = 21.sp,
           fontWeight = FontWeight.Bold,
@@ -4688,14 +4711,14 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
         )
         Spacer(modifier = Modifier.height(3.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-          Text("UID: $uid", color = Color.Black.copy(alpha = 0.5f), fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+          Text("UID: $headerUid", color = Color.Black.copy(alpha = 0.5f), fontSize = 11.sp, fontFamily = FontFamily.Monospace)
           Spacer(modifier = Modifier.width(6.dp))
           Icon(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_copy),
             contentDescription = "Copy UID",
             tint = Color.Black.copy(alpha = 0.5f),
             modifier = Modifier.size(12.dp).clickable {
-              clipboard.setText(AnnotatedString(uid))
+              clipboard.setText(AnnotatedString(headerUid))
               Toast.makeText(context, "UID copied", Toast.LENGTH_SHORT).show()
             }
           )
