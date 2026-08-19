@@ -278,6 +278,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -320,6 +321,8 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -4843,33 +4846,67 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
 
       Spacer(modifier = Modifier.height(20.dp))
 
-      Row(
-        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(26.dp)
-      ) {
-        listOf("My info", "Security", "Preference", "General").forEach { tab ->
-          Column(
-            modifier = Modifier.clickable {
-              viewModel.activeAccountTab = tab
-              tabPagerScope.launch { pagerState.animateScrollToPage(accountTabsOrder.indexOf(tab)) }
-            }
-          ) {
-            Text(
-              tab,
-              color = if (viewModel.activeAccountTab == tab) Color.Black else Color.Black.copy(alpha = 0.4f),
-              fontSize = 15.sp,
-              fontWeight = if (viewModel.activeAccountTab == tab) FontWeight.Bold else FontWeight.Normal
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            // fillMaxWidth instead of a fixed dp -- the Column above wraps
-            // to the width of its widest child (the label Text), so this
-            // now matches each tab label's own width instead of a uniform
-            // 28dp that was too narrow for longer labels and too wide for
-            // shorter ones.
-            if (viewModel.activeAccountTab == tab) {
-              Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(Color.Black))
+      // Per-tab offset/width in px, measured live via onGloballyPositioned/
+      // onTextLayout below -- fillMaxWidth() on the underline used to
+      // stretch it way beyond the tab's own label (the earlier "thick
+      // black bar" bug) because this Row scrolls horizontally, which
+      // hands its children an effectively unbounded max width; fillMaxWidth
+      // has nothing sane to resolve against in that context. Measuring the
+      // label's actual rendered size sidesteps that entirely.
+      val density = LocalDensity.current
+      val tabOffsetsPx = remember { mutableStateListOf(0f, 0f, 0f, 0f) }
+      val tabWidthsPx = remember { mutableStateListOf(0f, 0f, 0f, 0f) }
+      var tabTextHeightPx by remember { mutableStateOf(0f) }
+      Box(modifier = Modifier.fillMaxWidth()) {
+        Row(
+          modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+          horizontalArrangement = Arrangement.spacedBy(26.dp)
+        ) {
+          accountTabsOrder.forEachIndexed { index, tab ->
+            Column(
+              modifier = Modifier
+                .onGloballyPositioned { coords -> tabOffsetsPx[index] = coords.positionInParent().x }
+                .clickable {
+                  viewModel.activeAccountTab = tab
+                  tabPagerScope.launch { pagerState.animateScrollToPage(index) }
+                }
+            ) {
+              Text(
+                tab,
+                color = if (viewModel.activeAccountTab == tab) Color.Black else Color.Black.copy(alpha = 0.4f),
+                fontSize = 15.sp,
+                fontWeight = if (viewModel.activeAccountTab == tab) FontWeight.Bold else FontWeight.Normal,
+                onTextLayout = { result ->
+                  tabWidthsPx[index] = result.size.width.toFloat()
+                  tabTextHeightPx = result.size.height.toFloat()
+                }
+              )
+              Spacer(modifier = Modifier.height(6.dp))
+              Spacer(modifier = Modifier.height(2.dp))
             }
           }
+        }
+        // Slides continuously between tabs using the pager's own live
+        // scroll fraction (not just a discrete jump once the active tab
+        // changes), so it visually follows a swipe the same way the
+        // content underneath does.
+        if (tabWidthsPx.all { it > 0f }) {
+          val rawPage = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
+            .coerceIn(0f, (accountTabsOrder.lastIndex).toFloat())
+          val fromIdx = rawPage.toInt().coerceIn(0, accountTabsOrder.lastIndex)
+          val toIdx = (fromIdx + 1).coerceAtMost(accountTabsOrder.lastIndex)
+          val frac = (rawPage - fromIdx).coerceIn(0f, 1f)
+          val indicatorX = tabOffsetsPx[fromIdx] + (tabOffsetsPx[toIdx] - tabOffsetsPx[fromIdx]) * frac
+          val indicatorW = tabWidthsPx[fromIdx] + (tabWidthsPx[toIdx] - tabWidthsPx[fromIdx]) * frac
+          val indicatorY = with(density) { tabTextHeightPx.toDp() } + 6.dp
+          Box(
+            modifier = Modifier
+              .offset { IntOffset(indicatorX.roundToInt(), 0) }
+              .padding(top = indicatorY)
+              .width(with(density) { indicatorW.toDp() })
+              .height(2.dp)
+              .background(Color.Black)
+          )
         }
       }
 
