@@ -5283,7 +5283,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openOpenSourceLicenses() } }
           ) {}
           MyInfoRow(
-            icon = Icons.Outlined.Archive,
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_storage_table),
             label = "Storage management",
             // Real on-device cache/storage breakdown, not the privacy/
             // delete-account controls (those moved to Data Dashboard's
