@@ -9797,7 +9797,10 @@ private fun PasswordField(
             if (state.isFocused) {
               onFocusGained()
             } else {
-              if (minLength != null && value.length < minLength) invalid = true
+              // Only flags red if they've actually started typing and
+              // stopped short -- a fresh, never-touched field that's just
+              // tapped in and out shouldn't be scolded for being empty.
+              if (minLength != null && value.isNotEmpty() && value.length < minLength) invalid = true
               onFocusLost()
             }
           }
