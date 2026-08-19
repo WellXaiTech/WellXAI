@@ -9716,18 +9716,23 @@ private fun PasswordField(
   onFocusLost: () -> Unit = {}
 ) {
   var visible by remember { mutableStateOf(false) }
+  var focused by remember { mutableStateOf(false) }
   Row(
     modifier = Modifier
       .fillMaxWidth()
       .clip(RoundedCornerShape(14.dp))
       .background(Color.Black.copy(alpha = 0.05f))
-      .border(1.dp, Color.Black, RoundedCornerShape(14.dp))
+      // Border only shows once the field is actually focused instead of
+      // being permanently visible -- an untouched field reads as plain/flat
+      // like the rest of the screen, and tapping in is what draws the eye
+      // to it.
+      .border(1.dp, if (focused) Color.Black else Color.Transparent, RoundedCornerShape(14.dp))
       .padding(horizontal = 16.dp, vertical = 4.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
     Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded), contentDescription = null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
     Spacer(modifier = Modifier.width(12.dp))
-    Box(modifier = Modifier.weight(1f).padding(vertical = 14.dp)) {
+    Box(modifier = Modifier.weight(1f).padding(vertical = 11.dp)) {
       if (value.isEmpty()) {
         Text(placeholder, color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
       }
@@ -9747,7 +9752,10 @@ private fun PasswordField(
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password),
         modifier = Modifier
           .fillMaxWidth()
-          .onFocusChanged { state -> if (!state.isFocused) onFocusLost() }
+          .onFocusChanged { state ->
+            focused = state.isFocused
+            if (!state.isFocused) onFocusLost()
+          }
       )
     }
     // Visible state uses the proven-safe Material eye (no crossed-out
@@ -9775,18 +9783,19 @@ private fun PasswordField(
 
 @Composable
 private fun CodeField(value: String, onValueChange: (String) -> Unit) {
+  var focused by remember { mutableStateOf(false) }
   Row(
     modifier = Modifier
       .fillMaxWidth()
       .clip(RoundedCornerShape(14.dp))
       .background(Color.Black.copy(alpha = 0.05f))
-      .border(1.dp, Color.Black, RoundedCornerShape(14.dp))
+      .border(1.dp, if (focused) Color.Black else Color.Transparent, RoundedCornerShape(14.dp))
       .padding(horizontal = 16.dp, vertical = 4.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
     Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded), contentDescription = null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
     Spacer(modifier = Modifier.width(12.dp))
-    Box(modifier = Modifier.weight(1f).padding(vertical = 14.dp)) {
+    Box(modifier = Modifier.weight(1f).padding(vertical = 11.dp)) {
       if (value.isEmpty()) {
         Text("6-digit code", color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
       }
@@ -9797,7 +9806,9 @@ private fun CodeField(value: String, onValueChange: (String) -> Unit) {
         textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp, letterSpacing = 4.sp),
         cursorBrush = SolidColor(Color.Black),
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+          .fillMaxWidth()
+          .onFocusChanged { state -> focused = state.isFocused }
       )
     }
   }
