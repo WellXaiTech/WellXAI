@@ -1217,16 +1217,28 @@ private fun LoadingScreen() {
 private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
   val focusManager = LocalFocusManager.current
   val signingIn = viewModel.signingIn
+  // A weight(1f) title box above a wrap-height card used to look right
+  // with the keyboard closed, but weight(1f) only means anything inside a
+  // Column that ISN'T itself scrolling -- it couldn't shrink to get the
+  // focused field above the keyboard once opened, which is why the field
+  // was getting covered. Now the whole screen (title + card) is one
+  // scrollable Column with imePadding() so it genuinely has less room
+  // once the keyboard shows, and Compose's own focused-field-into-view
+  // behavior scrolls the card up until the field being typed into clears
+  // the keyboard -- title box got a fixed height instead of weight(1f)
+  // since a scrolling Column can't have weighted children.
   Column(
     modifier = Modifier
       .fillMaxSize()
       .background(Color(0xFFF4F4F4))
+      .imePadding()
+      .verticalScroll(rememberScrollState())
       .pointerInput(Unit) {
         detectTapGestures(onTap = { focusManager.clearFocus() })
       }
   ) {
     Box(
-      modifier = Modifier.fillMaxWidth().weight(1f),
+      modifier = Modifier.fillMaxWidth().height(260.dp),
       contentAlignment = Alignment.Center
     ) {
       Text("ChatGiZa", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
@@ -1238,7 +1250,6 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
         .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
         .background(Color.White)
         .navigationBarsPadding()
-        .verticalScroll(rememberScrollState())
         .padding(horizontal = 20.dp, vertical = 24.dp)
     ) {
       // Email / Mobile pill switch
@@ -5034,6 +5045,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
 // inline on the main Profile Hub screen. Only "My info" is real (it
 // just points back at the profile fields already shown on the main
 // screen); the rest are stub taps.
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AccountTabsDialog(viewModel: ChatViewModel) {
   var showRateDialog by remember { mutableStateOf(false) }
