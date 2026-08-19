@@ -7949,7 +7949,7 @@ private fun AccountSettingsScreen(viewModel: ChatViewModel) {
     )
     Spacer(modifier = Modifier.height(14.dp))
     AccountSettingsRow(
-      icon = Icons.Outlined.ReportProblem,
+      painter = androidx.compose.ui.res.painterResource(R.drawable.ic_power_off),
       title = "Delete account",
       description = "Permanently delete the current Main Account and all associated Subaccounts",
       onClick = { confirmDeleteAccount = true }
