@@ -10471,9 +10471,9 @@ private fun AppLockGateScreen(viewModel: ChatViewModel) {
       modifier = Modifier.size(40.dp)
     )
     Spacer(modifier = Modifier.height(16.dp))
-    Text("Enter your PIN", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
-    Spacer(modifier = Modifier.height(6.dp))
-    Text("ChatGiZa is locked", fontSize = 14.sp, color = Color.Black.copy(alpha = 0.6f))
+    Text("ChatGiZa", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+    Spacer(modifier = Modifier.height(8.dp))
+    Text("Enter your PIN to continue", fontSize = 15.sp, color = Color.Black.copy(alpha = 0.6f))
     Spacer(modifier = Modifier.height(28.dp))
     CodeField(value = viewModel.appLockGateInput, onValueChange = viewModel::onAppLockGateInputChange, placeholder = "Enter PIN")
     if (viewModel.appLockGateError != null) {
