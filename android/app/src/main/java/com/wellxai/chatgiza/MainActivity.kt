@@ -5037,6 +5037,8 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
 @Composable
 private fun AccountTabsDialog(viewModel: ChatViewModel) {
   var showRateDialog by remember { mutableStateOf(false) }
+  var showEmailOptions by remember { mutableStateOf(false) }
+  var confirmUnlinkEmail by remember { mutableStateOf(false) }
   val context = LocalContext.current
   val clipboard = LocalClipboardManager.current
   val uid = remember(viewModel.userId) {
@@ -5350,7 +5352,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mail_outline),
             iconSize = 26.dp,
             label = "Email",
-            onClick = { viewModel.leaveAccountTabsFor { viewModel.openChangeEmail() } }
+            onClick = { showEmailOptions = true }
           ) {
             Text(maskEmail(viewModel.userEmail), color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
           }
@@ -5634,6 +5636,109 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           }
         }
       )
+    }
+
+    // Reference-matched "Please Select" sheet -- Change is the real,
+    // already-existing flow; Unlink is real too (clears users.email
+    // server-side, see ChatViewModel.unlinkEmail), gated behind a plain-
+    // language confirm since sign-in via email+password stops working
+    // for the account until an email is set again.
+    if (showEmailOptions) {
+      ModalBottomSheet(
+        onDismissRequest = { showEmailOptions = false },
+        dragHandle = null,
+        containerColor = Color.Transparent,
+        scrimColor = Color.Black.copy(alpha = 0.6f)
+      ) {
+        Column(
+          modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+          Column(
+            modifier = Modifier
+              .fillMaxWidth()
+              .clip(RoundedCornerShape(16.dp))
+              .background(Color.White)
+          ) {
+            Text(
+              "Please Select",
+              color = Color.Black.copy(alpha = 0.5f),
+              fontSize = 14.sp,
+              textAlign = TextAlign.Center,
+              modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
+            )
+            HorizontalDivider(color = Color.Black.copy(alpha = 0.08f))
+            Text(
+              "Unlink my Registered Email",
+              color = Color.Black,
+              fontWeight = FontWeight.Bold,
+              fontSize = 16.sp,
+              textAlign = TextAlign.Center,
+              modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showEmailOptions = false; confirmUnlinkEmail = true }
+                .padding(vertical = 16.dp)
+            )
+            HorizontalDivider(color = Color.Black.copy(alpha = 0.08f))
+            Text(
+              "Change my Registered Email",
+              color = Color.Black,
+              fontWeight = FontWeight.Bold,
+              fontSize = 16.sp,
+              textAlign = TextAlign.Center,
+              modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                  showEmailOptions = false
+                  viewModel.leaveAccountTabsFor { viewModel.openChangeEmail() }
+                }
+                .padding(vertical = 16.dp)
+            )
+          }
+          Spacer(modifier = Modifier.height(8.dp))
+          Text(
+            "Cancel",
+            color = Color.Black,
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+              .fillMaxWidth()
+              .clip(RoundedCornerShape(16.dp))
+              .background(Color.White)
+              .clickable { showEmailOptions = false }
+              .padding(vertical = 16.dp)
+          )
+        }
+      }
+    }
+
+    if (confirmUnlinkEmail) {
+      AlertDialog(
+        onDismissRequest = { confirmUnlinkEmail = false },
+        title = { Text("Unlink your email?") },
+        text = { Text("You won't be able to sign in with email + password until you set an email again. Google sign-in and passkeys keep working.") },
+        confirmButton = {
+          TextButton(onClick = {
+            viewModel.unlinkEmail()
+            confirmUnlinkEmail = false
+          }) {
+            Text("Unlink", color = Color.Black, fontWeight = FontWeight.Bold)
+          }
+        },
+        dismissButton = {
+          TextButton(onClick = { confirmUnlinkEmail = false }) { Text("Cancel") }
+        }
+      )
+    }
+
+    val emailUnlinkError = viewModel.emailUnlinkError
+    if (emailUnlinkError != null) {
+      LaunchedEffect(emailUnlinkError) {
+        Toast.makeText(context, emailUnlinkError, Toast.LENGTH_SHORT).show()
+      }
     }
   }
 }
@@ -11024,11 +11129,11 @@ private fun NicknameScreen(viewModel: ChatViewModel) {
           .background(Color.Black.copy(alpha = 0.08f))
           .padding(horizontal = 16.dp, vertical = 18.dp)
       ) {
-        if (viewModel.nicknameInput.isEmpty()) {
+        if (viewModel.accountNicknameInput.isEmpty()) {
           Text("Nickname", color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
         }
         BasicTextField(
-          value = viewModel.nicknameInput,
+          value = viewModel.accountNicknameInput,
           onValueChange = { viewModel.onNicknameInputChange(it) },
           singleLine = true,
           textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp),
@@ -11046,7 +11151,7 @@ private fun NicknameScreen(viewModel: ChatViewModel) {
 
       Button(
         onClick = { viewModel.submitNickname() },
-        enabled = viewModel.nicknameInput.isNotBlank() && !viewModel.nicknameUpdateBusy,
+        enabled = viewModel.accountNicknameInput.isNotBlank() && !viewModel.nicknameUpdateBusy,
         shape = RoundedCornerShape(28.dp),
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
         modifier = Modifier.fillMaxWidth().height(52.dp)

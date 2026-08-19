@@ -1054,6 +1054,25 @@ object ChatGizaApi {
     }
   }
 
+  suspend fun unlinkEmail(token: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/profile/email")
+        .header("Authorization", "Bearer $token")
+        .delete()
+        .build()
+      client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          val text = response.body?.string().orEmpty()
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
   suspend fun updatePhone(token: String, phone: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
     try {
       val payload = JSONObject().put("phone", phone).toString().toRequestBody(JSON)

@@ -1143,14 +1143,14 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   // screen shape as Mobile/Change Email -- back arrow + centered title, one
   // boxed field, a bottom Save button -- instead of the small AlertDialog
   // this used to be.
-  var nicknameInput by mutableStateOf("")
+  var accountNicknameInput by mutableStateOf("")
     private set
   var nicknameUpdateBusy by mutableStateOf(false)
     private set
 
   fun openNickname() {
     screen = AppScreen.Nickname
-    nicknameInput = userName.orEmpty()
+    accountNicknameInput = userName.orEmpty()
     nameUpdateError = null
   }
 
@@ -1160,12 +1160,12 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun onNicknameInputChange(value: String) {
-    if (value.length <= 30) nicknameInput = value
+    if (value.length <= 30) accountNicknameInput = value
     nameUpdateError = null
   }
 
   fun submitNickname() {
-    val trimmed = nicknameInput.trim()
+    val trimmed = accountNicknameInput.trim()
     if (trimmed.isBlank()) return
     val token = tokenStore.getToken() ?: return
     nicknameUpdateBusy = true
@@ -1324,6 +1324,35 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         is ApiResult.Failure -> {
           emailUpdateBusy = false
           emailError = result.message
+        }
+      }
+    }
+  }
+
+  var emailUnlinkBusy by mutableStateOf(false)
+    private set
+  var emailUnlinkError by mutableStateOf<String?>(null)
+    private set
+
+  // Real, not just a UI toggle -- clears users.email server-side. Safe
+  // because sign-in doesn't depend on it (the account's real identity is
+  // the Google sub, not this address); the one thing that stops working is
+  // signing in with email+password until an email is set again, which the
+  // confirmation dialog before this is called warns about.
+  fun unlinkEmail() {
+    val token = tokenStore.getToken() ?: return
+    emailUnlinkBusy = true
+    emailUnlinkError = null
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.unlinkEmail(token)) {
+        is ApiResult.Success -> {
+          userEmail = null
+          tokenStore.setUserEmail("")
+          emailUnlinkBusy = false
+        }
+        is ApiResult.Failure -> {
+          emailUnlinkBusy = false
+          emailUnlinkError = result.message
         }
       }
     }
