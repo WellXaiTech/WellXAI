@@ -75,7 +75,8 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.scrollBy
@@ -4746,21 +4747,26 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         .fillMaxSize()
         .background(Color.White)
     ) {
-    // tabOffsetAnim/tabDragScope drive only the tab-content Box further
-    // below now, not this whole Column -- wrapping the header/avatar/tab
-    // bar in the drag too made the entire screen (title, avatar, tab
-    // labels included) slide together, which read as the whole page
-    // leaving rather than just the content underneath the tabs switching.
-    val tabOffsetAnim = remember { Animatable(0f) }
-    val tabDragScope = rememberCoroutineScope()
+    // HorizontalPager instead of a hand-rolled offset -- the two earlier
+    // manual Animatable attempts could only ever move the CURRENT tab's
+    // content, never render the neighboring tab underneath during the drag
+    // itself, which is why dragging left a blank gap instead of the next
+    // tab's content sliding into view. The pager also brings its own
+    // well-tuned fling/snap physics, replacing the separate hand-tuned
+    // "spring" from before.
+    val pagerState = rememberPagerState(
+      initialPage = accountTabsOrder.indexOf(viewModel.activeAccountTab).coerceAtLeast(0)
+    ) { accountTabsOrder.size }
+    val tabPagerScope = rememberCoroutineScope()
+    LaunchedEffect(pagerState.currentPage) {
+      viewModel.activeAccountTab = accountTabsOrder[pagerState.currentPage]
+    }
     Column(
       modifier = Modifier
         .fillMaxSize()
         .statusBarsPadding()
-        .verticalScroll(rememberScrollState())
-        .padding(horizontal = 16.dp)
-        .padding(bottom = if (viewModel.activeAccountTab == "My info") 76.dp else 0.dp)
     ) {
+      Column(modifier = Modifier.padding(horizontal = 16.dp)) {
       Spacer(modifier = Modifier.height(12.dp))
       Row(verticalAlignment = Alignment.CenterVertically) {
         // "User Center" is centered across the whole header width (between
@@ -4845,6 +4851,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           Column(
             modifier = Modifier.clickable {
               viewModel.activeAccountTab = tab
+              tabPagerScope.launch { pagerState.animateScrollToPage(accountTabsOrder.indexOf(tab)) }
             }
           ) {
             Text(
@@ -4854,58 +4861,34 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
               fontWeight = if (viewModel.activeAccountTab == tab) FontWeight.Bold else FontWeight.Normal
             )
             Spacer(modifier = Modifier.height(6.dp))
+            // fillMaxWidth instead of a fixed dp -- the Column above wraps
+            // to the width of its widest child (the label Text), so this
+            // now matches each tab label's own width instead of a uniform
+            // 28dp that was too narrow for longer labels and too wide for
+            // shorter ones.
             if (viewModel.activeAccountTab == tab) {
-              Box(modifier = Modifier.width(28.dp).height(2.dp).background(Color.Black))
+              Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(Color.Black))
             }
           }
         }
       }
 
       Spacer(modifier = Modifier.height(24.dp))
+      }
 
-      // Only this content area follows the finger/slides on swipe -- the
-      // header, avatar row, and tab bar above stay fixed in place, matching
-      // the reference behavior (only the list under the tabs moves). Must
-      // be a Column, not a Box -- each tab branch below emits several
-      // top-level siblings (a SecurityGroupHeader, a Column, a Spacer,
-      // another SecurityGroupHeader...) that need to stack vertically like
-      // they did in the old single outer Column; a Box instead stacked them
-      // all on top of each other at the same position (the overlapping-text
-      // bug seen right after this swipe change shipped).
+      HorizontalPager(
+        state = pagerState,
+        modifier = Modifier.fillMaxWidth().weight(1f)
+      ) { page ->
+      val tabForPage = accountTabsOrder[page]
       Column(
         modifier = Modifier
-          .pointerInput(Unit) {
-            detectHorizontalDragGestures(
-              onDragEnd = {
-                val idx = accountTabsOrder.indexOf(viewModel.activeAccountTab)
-                val current = tabOffsetAnim.value
-                val screenWidth = size.width.toFloat().coerceAtLeast(1f)
-                tabDragScope.launch {
-                  when {
-                    current <= -80f && idx < accountTabsOrder.lastIndex -> {
-                      tabOffsetAnim.animateTo(-screenWidth, tween(160))
-                      viewModel.activeAccountTab = accountTabsOrder[idx + 1]
-                      tabOffsetAnim.snapTo(screenWidth)
-                      tabOffsetAnim.animateTo(0f, tween(160))
-                    }
-                    current >= 80f && idx > 0 -> {
-                      tabOffsetAnim.animateTo(screenWidth, tween(160))
-                      viewModel.activeAccountTab = accountTabsOrder[idx - 1]
-                      tabOffsetAnim.snapTo(-screenWidth)
-                      tabOffsetAnim.animateTo(0f, tween(160))
-                    }
-                    else -> tabOffsetAnim.animateTo(0f, tween(200))
-                  }
-                }
-              },
-              onDragCancel = { tabDragScope.launch { tabOffsetAnim.animateTo(0f, tween(200)) } }
-            ) { _, dragAmount ->
-              tabDragScope.launch { tabOffsetAnim.snapTo(tabOffsetAnim.value + dragAmount) }
-            }
-          }
-          .offset { IntOffset(tabOffsetAnim.value.roundToInt(), 0) }
+          .fillMaxSize()
+          .verticalScroll(rememberScrollState())
+          .padding(horizontal = 16.dp)
+          .padding(bottom = if (tabForPage == "My info") 76.dp else 0.dp)
       ) {
-      if (viewModel.activeAccountTab == "My info") {
+      if (tabForPage == "My info") {
         // Identity only -- who you are, not app behavior or account
         // security, which now live in Preference/Security respectively
         // (see the reorganization pass that moved Advertise/Affiliate's
@@ -4965,7 +4948,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         // Log Out itself is pinned to the very bottom of the screen (see
         // the Box wrapper below), not flowing right after this content.
         Spacer(modifier = Modifier.height(20.dp))
-      } else if (viewModel.activeAccountTab == "Security") {
+      } else if (tabForPage == "Security") {
         // Account safety and access only. "Fund Password" (a crypto-
         // exchange wallet concept -- ChatGiZa has no funds/wallet) was
         // dropped outright rather than forced into any tab.
@@ -5056,7 +5039,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           Text(" android", color = Color.Black.copy(alpha = 0.35f), fontSize = 12.sp)
         }
         Spacer(modifier = Modifier.height(20.dp))
-      } else if (viewModel.activeAccountTab == "Preference") {
+      } else if (tabForPage == "Preference") {
         // How the app behaves/feels for you -- AI persona and voice
         // alongside the device-feel/notification settings that were
         // already here.
@@ -5101,7 +5084,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(icon = Icons.Outlined.Email, label = "Email Subscriptions", onClick = { comingSoon("Email Subscriptions") }) {}
         }
         Spacer(modifier = Modifier.height(20.dp))
-      } else if (viewModel.activeAccountTab == "General") {
+      } else if (tabForPage == "General") {
         // App-wide/about -- display settings, storage, legal, and the
         // business/community links that don't belong under personal
         // identity (My info) or account security (Security).
@@ -5178,6 +5161,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(icon = Icons.Outlined.SupportAgent, label = "Join Our Community", onClick = { viewModel.leaveAccountTabsFor { viewModel.openCommunity() } }) {}
         }
         Spacer(modifier = Modifier.height(20.dp))
+      }
       }
       }
     }
