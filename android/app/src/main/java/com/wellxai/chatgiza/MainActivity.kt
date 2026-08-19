@@ -5216,7 +5216,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_trusted_device), iconSize = 23.dp, label = "Trusted Devices", onClick = { viewModel.leaveAccountTabsFor { viewModel.openTrustedDevices() } }) {}
           MyInfoDivider()
           MyInfoRow(
-            icon = Icons.Outlined.QueryStats,
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_dashboard_grid),
             label = "Data Dashboard",
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openDataDashboard() } }
           ) {}
