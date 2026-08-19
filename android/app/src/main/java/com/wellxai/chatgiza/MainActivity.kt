@@ -144,6 +144,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -8086,48 +8087,40 @@ private fun AccountSettingsScreen(viewModel: ChatViewModel) {
 
 @Composable
 private fun DeactivateAccountIllustration() {
-  Box(modifier = Modifier.size(width = 110.dp, height = 100.dp)) {
+  Box(modifier = Modifier.size(width = 116.dp, height = 106.dp)) {
     Box(
       modifier = Modifier
-        .size(width = 68.dp, height = 82.dp)
+        .size(width = 70.dp, height = 84.dp)
         .align(Alignment.TopStart)
-        .offset(x = 2.dp, y = 6.dp)
+        .offset(x = 2.dp, y = 8.dp)
         .graphicsLayer { rotationZ = -8f }
-        .border(1.5.dp, Color.Black.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+        .border(2.dp, Color.Black.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
     )
     Column(
       modifier = Modifier
-        .size(width = 68.dp, height = 82.dp)
+        .size(width = 70.dp, height = 84.dp)
         .align(Alignment.TopStart)
-        .offset(x = 22.dp, y = 0.dp)
-        .clip(RoundedCornerShape(8.dp))
+        .offset(x = 24.dp, y = 0.dp)
+        .clip(RoundedCornerShape(10.dp))
         .background(Color.White)
-        .border(1.5.dp, Color.Black, RoundedCornerShape(8.dp))
+        .border(2.dp, Color.Black, RoundedCornerShape(10.dp))
         .padding(12.dp),
       horizontalAlignment = Alignment.CenterHorizontally
     ) {
-      Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = Color.Black, modifier = Modifier.size(26.dp))
-      Spacer(modifier = Modifier.height(10.dp))
-      Box(modifier = Modifier.fillMaxWidth().height(1.5.dp).background(Color.Black.copy(alpha = 0.7f)))
-      Spacer(modifier = Modifier.height(6.dp))
-      Box(modifier = Modifier.fillMaxWidth(0.7f).height(1.5.dp).background(Color.Black.copy(alpha = 0.7f)))
+      Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = Color.Black, modifier = Modifier.size(28.dp))
+      Spacer(modifier = Modifier.height(11.dp))
+      Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(Color.Black))
+      Spacer(modifier = Modifier.height(7.dp))
+      Box(modifier = Modifier.fillMaxWidth(0.7f).height(2.dp).background(Color.Black))
     }
-    Box(
+    Icon(
+      painter = androidx.compose.ui.res.painterResource(R.drawable.ic_padlock_outline),
+      contentDescription = null,
+      tint = Color.Black,
       modifier = Modifier
-        .size(30.dp)
+        .size(26.dp)
         .align(Alignment.BottomEnd)
-        .clip(CircleShape)
-        .background(Color.White)
-        .border(1.5.dp, Color.Black, CircleShape),
-      contentAlignment = Alignment.Center
-    ) {
-      Icon(
-        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded),
-        contentDescription = null,
-        tint = Color.Black,
-        modifier = Modifier.size(15.dp)
-      )
-    }
+    )
   }
 }
 
@@ -8144,7 +8137,12 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
     Toast.makeText(context, "UID copied", Toast.LENGTH_SHORT).show()
   }
 
-  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color.White) {
+  // skipPartiallyExpanded -- without it a sheet this tall opens sitting
+  // halfway up the screen, needing a drag before the Deactivate button
+  // down at the bottom is even visible.
+  val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Color.White) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
@@ -8152,7 +8150,14 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
         .padding(bottom = 28.dp)
     ) {
       Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        Text("Deactivate Account", color = Color.Black, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+        Text(
+          "Deactivate Account",
+          color = Color.Black,
+          fontSize = 20.sp,
+          fontWeight = FontWeight.Bold,
+          fontFamily = FontFamily.Monospace,
+          modifier = Modifier.weight(1f)
+        )
         Icon(
           Icons.Filled.Close,
           contentDescription = "Close",
@@ -8168,8 +8173,9 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
       Text(
         "Are you sure you want to deactivate your account?",
         color = Color.Black,
-        fontSize = 18.sp,
+        fontSize = 17.sp,
         fontWeight = FontWeight.Bold,
+        fontFamily = FontFamily.Monospace,
         textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth()
       )
@@ -8180,7 +8186,7 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
           .border(1.dp, Color.Black.copy(alpha = 0.1f), RoundedCornerShape(14.dp))
           .padding(16.dp)
       ) {
-        Text("Account to be deactivated", color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp)
+        Text("Account to be deactivated", color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp, fontFamily = FontFamily.Monospace)
         Spacer(modifier = Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
           if (viewModel.userImage != null) {
@@ -8194,7 +8200,8 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
               viewModel.userName?.takeIf { it.isNotBlank() } ?: "You",
               color = Color.Black,
               fontSize = 15.sp,
-              fontWeight = FontWeight.SemiBold
+              fontWeight = FontWeight.SemiBold,
+              fontFamily = FontFamily.Monospace
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
               Text("UID: $mainUid", color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp, fontFamily = FontFamily.Monospace)
@@ -8213,8 +8220,8 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
           HorizontalDivider(color = Color.Black.copy(alpha = 0.08f))
           Spacer(modifier = Modifier.height(14.dp))
           Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("Subaccount", color = Color.Black.copy(alpha = 0.4f), fontSize = 13.sp, modifier = Modifier.weight(1f))
-            Text("${viewModel.subaccounts.size}", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text("Subaccount", color = Color.Black.copy(alpha = 0.4f), fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.weight(1f))
+            Text("${viewModel.subaccounts.size}", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace)
           }
           Spacer(modifier = Modifier.height(10.dp))
           viewModel.subaccounts.forEach { sub ->
@@ -8224,7 +8231,7 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
               horizontalArrangement = Arrangement.SpaceBetween,
               verticalAlignment = Alignment.CenterVertically
             ) {
-              Text(sub.name, color = Color.Black, fontSize = 13.sp)
+              Text(sub.name, color = Color.Black, fontSize = 13.sp, fontFamily = FontFamily.Monospace)
               Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("UID: $subUid", color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp, fontFamily = FontFamily.Monospace)
                 Spacer(modifier = Modifier.width(4.dp))
@@ -8250,7 +8257,7 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
         if (viewModel.deactivatingAccount) {
           CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
         } else {
-          Text("Deactivate", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+          Text("Deactivate", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace)
         }
       }
       Spacer(modifier = Modifier.height(16.dp))
@@ -8259,6 +8266,7 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
         color = Color.Black,
         fontSize = 15.sp,
         fontWeight = FontWeight.SemiBold,
+        fontFamily = FontFamily.Monospace,
         textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth().clickable(onClick = onDismiss)
       )
