@@ -103,6 +103,7 @@ sealed class AppScreen {
   object ChangePassword : AppScreen()
   object MobileNumber : AppScreen()
   object ChangeEmail : AppScreen()
+  object Nickname : AppScreen()
   object TwoFactorSetup : AppScreen()
   object TotpLoginVerify : AppScreen()
   object AppLockSetup : AppScreen()
@@ -1134,6 +1135,53 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
           tokenStore.setUserName(trimmed)
         }
         is ApiResult.Failure -> nameUpdateError = result.message
+      }
+    }
+  }
+
+  // Full-screen Nickname editor (Profile Hub > My info > Nickname), same
+  // screen shape as Mobile/Change Email -- back arrow + centered title, one
+  // boxed field, a bottom Save button -- instead of the small AlertDialog
+  // this used to be.
+  var nicknameInput by mutableStateOf("")
+    private set
+  var nicknameUpdateBusy by mutableStateOf(false)
+    private set
+
+  fun openNickname() {
+    screen = AppScreen.Nickname
+    nicknameInput = userName.orEmpty()
+    nameUpdateError = null
+  }
+
+  fun closeNickname() {
+    returnToAccountTabsIfPending()
+    screen = AppScreen.ProfileHub
+  }
+
+  fun onNicknameInputChange(value: String) {
+    if (value.length <= 30) nicknameInput = value
+    nameUpdateError = null
+  }
+
+  fun submitNickname() {
+    val trimmed = nicknameInput.trim()
+    if (trimmed.isBlank()) return
+    val token = tokenStore.getToken() ?: return
+    nicknameUpdateBusy = true
+    nameUpdateError = null
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.updateName(token, trimmed)) {
+        is ApiResult.Success -> {
+          userName = trimmed
+          tokenStore.setUserName(trimmed)
+          nicknameUpdateBusy = false
+          closeNickname()
+        }
+        is ApiResult.Failure -> {
+          nicknameUpdateBusy = false
+          nameUpdateError = result.message
+        }
       }
     }
   }
