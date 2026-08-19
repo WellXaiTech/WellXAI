@@ -8252,7 +8252,7 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
   // down at the bottom is even visible.
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Color.White, dragHandle = null) {
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Color.White, dragHandle = null, scrimColor = Color.Black.copy(alpha = 0.75f)) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
@@ -8405,13 +8405,12 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
       }
       }
       } else {
-        // weight(1f) + Arrangement.Bottom, not a plain natural-height
-        // Column -- this fills the same space step 1's content does, but
-        // bottom-aligns instead of top-aligns, so the checkbox stays right
-        // above the button (no gap between them) while the whole cluster
-        // still sits down near the true bottom of the sheet instead of
-        // floating high up with empty space below Cancel.
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Bottom) {
+        // weight(1f), default top arrangement -- the text/bullets sit
+        // flush at the top (right after the header) like step 1's content
+        // does, and a weighted Spacer below them (not Arrangement.Bottom on
+        // the whole column) is what pushes just the checkbox down to sit
+        // right above the button, instead of dragging the text down too.
+        Column(modifier = Modifier.weight(1f)) {
         // Second, harder-to-miss step -- the actual deactivateAccount()
         // call only happens from here, gated behind reading the checkbox
         // and a few seconds' countdown so it can't be tapped on reflex.
@@ -8434,7 +8433,7 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
             Text(line, color = Color.Black.copy(alpha = 0.6f), fontSize = 13.sp, fontFamily = FontFamily.Monospace, lineHeight = 18.sp)
           }
         }
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.weight(1f))
         Row(
           modifier = Modifier.fillMaxWidth().clickable { agreedToConsequences = !agreedToConsequences },
           verticalAlignment = Alignment.Top
@@ -8561,7 +8560,7 @@ private fun DeleteAccountIllustration() {
 private fun DeleteAccountDialog(viewModel: ChatViewModel, onDismiss: () -> Unit) {
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Color.White, dragHandle = null) {
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Color.White, dragHandle = null, scrimColor = Color.Black.copy(alpha = 0.75f)) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
