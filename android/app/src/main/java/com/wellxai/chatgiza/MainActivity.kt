@@ -8105,38 +8105,45 @@ private fun AccountSettingsScreen(viewModel: ChatViewModel) {
 
 @Composable
 private fun DeactivateAccountIllustration() {
-  Box(modifier = Modifier.size(width = 116.dp, height = 106.dp)) {
+  Box(modifier = Modifier.size(width = 140.dp, height = 128.dp)) {
     Box(
       modifier = Modifier
-        .size(width = 70.dp, height = 84.dp)
+        .size(width = 84.dp, height = 100.dp)
         .align(Alignment.TopStart)
-        .offset(x = 2.dp, y = 8.dp)
+        .offset(x = 3.dp, y = 10.dp)
         .graphicsLayer { rotationZ = -8f }
-        .border(2.dp, Color.Black.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
+        .border(2.dp, Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
     )
     Column(
       modifier = Modifier
-        .size(width = 70.dp, height = 84.dp)
+        .size(width = 84.dp, height = 100.dp)
         .align(Alignment.TopStart)
-        .offset(x = 24.dp, y = 0.dp)
-        .clip(RoundedCornerShape(10.dp))
+        .offset(x = 29.dp, y = 0.dp)
+        .clip(RoundedCornerShape(12.dp))
         .background(Color.White)
-        .border(2.dp, Color.Black, RoundedCornerShape(10.dp))
-        .padding(12.dp),
+        .border(2.dp, Color.Black, RoundedCornerShape(12.dp))
+        .padding(14.dp),
       horizontalAlignment = Alignment.CenterHorizontally
     ) {
-      Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = Color.Black, modifier = Modifier.size(28.dp))
-      Spacer(modifier = Modifier.height(11.dp))
-      Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(Color.Black))
-      Spacer(modifier = Modifier.height(7.dp))
-      Box(modifier = Modifier.fillMaxWidth(0.7f).height(2.dp).background(Color.Black))
+      Icon(
+        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_account_face),
+        contentDescription = null,
+        tint = Color.Black,
+        modifier = Modifier.size(38.dp)
+      )
+      Spacer(modifier = Modifier.height(13.dp))
+      Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.Black))
+      Spacer(modifier = Modifier.height(5.dp))
+      Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.Black))
+      Spacer(modifier = Modifier.height(5.dp))
+      Box(modifier = Modifier.fillMaxWidth(0.65f).height(1.dp).background(Color.Black))
     }
     Icon(
       painter = androidx.compose.ui.res.painterResource(R.drawable.ic_padlock_outline),
       contentDescription = null,
       tint = Color.Black,
       modifier = Modifier
-        .size(26.dp)
+        .size(30.dp)
         .align(Alignment.BottomEnd)
     )
   }
@@ -8314,36 +8321,43 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
 // different actions.
 @Composable
 private fun DeleteAccountIllustration() {
-  Box(modifier = Modifier.size(width = 116.dp, height = 106.dp)) {
+  Box(modifier = Modifier.size(width = 140.dp, height = 128.dp)) {
     Box(
       modifier = Modifier
-        .size(width = 70.dp, height = 84.dp)
+        .size(width = 84.dp, height = 100.dp)
         .align(Alignment.TopStart)
-        .offset(x = 2.dp, y = 8.dp)
+        .offset(x = 3.dp, y = 10.dp)
         .graphicsLayer { rotationZ = -8f }
-        .border(2.dp, Color.Black.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
+        .border(2.dp, Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
     )
     Column(
       modifier = Modifier
-        .size(width = 70.dp, height = 84.dp)
+        .size(width = 84.dp, height = 100.dp)
         .align(Alignment.TopStart)
-        .offset(x = 24.dp, y = 0.dp)
-        .clip(RoundedCornerShape(10.dp))
+        .offset(x = 29.dp, y = 0.dp)
+        .clip(RoundedCornerShape(12.dp))
         .background(Color.White)
-        .border(2.dp, Color.Black, RoundedCornerShape(10.dp))
-        .padding(12.dp),
+        .border(2.dp, Color.Black, RoundedCornerShape(12.dp))
+        .padding(14.dp),
       horizontalAlignment = Alignment.CenterHorizontally
     ) {
-      Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = Color.Black, modifier = Modifier.size(28.dp))
-      Spacer(modifier = Modifier.height(11.dp))
-      Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(Color.Black))
-      Spacer(modifier = Modifier.height(7.dp))
-      Box(modifier = Modifier.fillMaxWidth(0.7f).height(2.dp).background(Color.Black))
+      Icon(
+        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_account_face),
+        contentDescription = null,
+        tint = Color.Black,
+        modifier = Modifier.size(38.dp)
+      )
+      Spacer(modifier = Modifier.height(13.dp))
+      Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.Black))
+      Spacer(modifier = Modifier.height(5.dp))
+      Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.Black))
+      Spacer(modifier = Modifier.height(5.dp))
+      Box(modifier = Modifier.fillMaxWidth(0.65f).height(1.dp).background(Color.Black))
     }
     DeleteIcon(
       tint = Color.Black,
       modifier = Modifier
-        .size(26.dp)
+        .size(30.dp)
         .align(Alignment.BottomEnd)
     )
   }
