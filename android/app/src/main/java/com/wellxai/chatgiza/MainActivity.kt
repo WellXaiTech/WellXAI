@@ -10145,12 +10145,10 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
           Spacer(modifier = Modifier.height(10.dp))
           Text("16-digit key", color = Color.Black.copy(alpha = 0.5f), fontSize = 11.sp)
           Spacer(modifier = Modifier.height(4.dp))
+          // No background box -- just plain text, pulled to the side
+          // instead of the wide filled bar it sat in before.
           Row(
-            modifier = Modifier
-              .fillMaxWidth()
-              .clip(RoundedCornerShape(14.dp))
-              .background(Color.Black.copy(alpha = 0.05f))
-              .padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
           ) {
             Text(
@@ -10172,40 +10170,26 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
               }
             )
           }
-          Spacer(modifier = Modifier.height(14.dp))
+          Spacer(modifier = Modifier.height(16.dp))
+          // QR + the "add a new entry" badge sit side by side now, both
+          // small and pulled to the start instead of each filling the
+          // width inside its own gray background box.
           val qrBitmap = rememberQrBitmap(viewModel.totpSetupUri.orEmpty())
-          Box(
-            modifier = Modifier
-              .fillMaxWidth()
-              .clip(RoundedCornerShape(14.dp))
-              .background(Color.Black.copy(alpha = 0.05f))
-              .padding(16.dp),
-            contentAlignment = Alignment.Center
-          ) {
+          Row(verticalAlignment = Alignment.CenterVertically) {
             if (qrBitmap != null) {
               Image(
                 bitmap = qrBitmap.asImageBitmap(),
                 contentDescription = "2FA QR code",
-                modifier = Modifier.size(140.dp)
+                modifier = Modifier.size(110.dp)
               )
             }
-          }
-          Spacer(modifier = Modifier.height(24.dp))
-          NumberedTotpStep(number = "02", text = "Open your authenticator app and add a new entry using the 16-digit key that you just copied.")
-          Spacer(modifier = Modifier.height(10.dp))
-          // A small illustrative "add a new entry" badge under step 02,
-          // matching the reference -- generic "+" rather than a specific
-          // authenticator app's logo, since this works with any of them.
-          Box(
-            modifier = Modifier
-              .size(width = 56.dp, height = 96.dp)
-              .clip(RoundedCornerShape(12.dp))
-              .border(1.dp, Color.Black.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
-            contentAlignment = Alignment.Center
-          ) {
+            Spacer(modifier = Modifier.width(20.dp))
+            // Small illustrative "add a new entry" badge -- generic "+"
+            // rather than a specific authenticator app's logo, since this
+            // works with any of them.
             Box(
               modifier = Modifier
-                .size(28.dp)
+                .size(32.dp)
                 .clip(CircleShape)
                 .background(Color(0xFFFF9C2D)),
               contentAlignment = Alignment.Center
@@ -10213,6 +10197,8 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
               Text("+", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
           }
+          Spacer(modifier = Modifier.height(24.dp))
+          NumberedTotpStep(number = "02", text = "Open your authenticator app and add a new entry using the 16-digit key that you just copied.")
           Spacer(modifier = Modifier.height(24.dp))
           NumberedTotpStep(number = "03", text = "Come back and enter the 6-digit code it shows to finish verifying.")
           Spacer(modifier = Modifier.height(24.dp))
