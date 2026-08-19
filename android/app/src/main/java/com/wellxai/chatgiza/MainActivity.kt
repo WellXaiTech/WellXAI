@@ -10263,7 +10263,7 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
           .padding(horizontal = 16.dp)
           .navigationBarsPadding()
           .padding(bottom = 16.dp)
-          .height(52.dp)
+          .height(44.dp)
       ) {
         if (viewModel.totpBusy) {
           CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
