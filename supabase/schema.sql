@@ -26,6 +26,11 @@ create table if not exists users (
   -- account signs back in (see finishMobileSignIn), so there's no separate
   -- reactivation flow to build.
   deactivated_at timestamptz,
+  -- Security > Mobile -- a plain contact number the user links/changes
+  -- themselves, not verified by SMS (no SMS provider is wired up). Same
+  -- trust level as the in-app password: self-reported, not proof of
+  -- ownership of that number.
+  phone text,
   created_at timestamptz not null default now(),
   last_seen_at timestamptz not null default now()
 );
@@ -42,6 +47,9 @@ create table if not exists users (
 
 -- Run once for existing databases created before deactivated_at existed:
 -- alter table users add column if not exists deactivated_at timestamptz;
+
+-- Run once for existing databases created before phone existed:
+-- alter table users add column if not exists phone text;
 
 -- WebAuthn passkeys -- a user can register more than one (phone, laptop,
 -- security key), so this is its own table rather than a column on users.

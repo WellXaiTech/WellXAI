@@ -564,6 +564,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.TrustedDevices -> TrustedDevicesScreen(viewModel)
             is AppScreen.StorageManagement -> StorageManagementScreen(viewModel)
             is AppScreen.ChangePassword -> ChangePasswordScreen(viewModel)
+            is AppScreen.MobileNumber -> MobileNumberScreen(viewModel)
             is AppScreen.TwoFactorSetup -> TwoFactorSetupScreen(viewModel)
             is AppScreen.TotpLoginVerify -> TotpLoginVerifyScreen(viewModel)
             is AppScreen.AppLockSetup -> AppLockSetupScreen(viewModel)
@@ -5142,11 +5143,21 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             Text(maskEmail(viewModel.userEmail), color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
           }
           MyInfoDivider()
-          // No phone number exists anywhere on the account (sign-in here is
-          // Google-only) -- the row used to show a fixed fake masked number
-          // ("75****182") to every single user regardless of who they were.
-          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mobile_outline), iconSize = 23.dp, label = "Mobile", onClick = { comingSoon("Mobile") }) {
-            Text("Not linked", color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
+          // Real, self-reported phone number (users.phone) -- linked/changed
+          // from MobileNumberScreen. No SMS provider is wired up here, so
+          // this isn't OTP-verified, same trust level as the in-app
+          // password.
+          MyInfoRow(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mobile_outline),
+            iconSize = 23.dp,
+            label = "Mobile",
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openMobileNumber() } }
+          ) {
+            Text(
+              viewModel.userPhone?.takeIf { it.isNotBlank() } ?: "Not linked",
+              color = Color.Black.copy(alpha = 0.5f),
+              fontSize = 13.sp
+            )
           }
           MyInfoDivider()
           // Real in-app Authenticator App (TOTP) 2FA -- ChatGiZa's own
@@ -10486,6 +10497,121 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
           CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
         } else {
           Text("Confirm", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        }
+      }
+    }
+  }
+}
+
+// Security > Mobile. Just one field and a Save -- no OTP step, since
+// there's no SMS provider wired up to actually verify the number belongs
+// to whoever's typing it (same trust level as the in-app password: a
+// self-reported value, not proof of ownership).
+@Composable
+private fun MobileNumberScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeMobileNumber() }
+  val focusManager = LocalFocusManager.current
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color.White)
+      .statusBarsPadding()
+      .pointerInput(Unit) {
+        detectTapGestures(onTap = { focusManager.clearFocus() })
+      }
+  ) {
+    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+      Text(
+        "Mobile Number",
+        color = Color.Black,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.align(Alignment.Center)
+      )
+      IconButton(onClick = { viewModel.closeMobileNumber() }, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(24.dp))
+      }
+    }
+
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(14.dp))
+          .background(Color(0xFFFFF3E5))
+          .padding(12.dp)
+      ) {
+        Icon(
+          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_warning_circle),
+          contentDescription = null,
+          tint = Color.Black,
+          modifier = Modifier.size(16.dp).padding(top = 1.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+          if (viewModel.userPhone.isNullOrBlank()) {
+            "Note: This number is just a contact detail on your account -- it isn't used to sign in, and isn't verified by SMS."
+          } else {
+            "Note: Changing this number only updates the contact detail on your account -- your Google sign-in is unaffected."
+          },
+          color = Color.Black,
+          fontSize = 10.sp,
+          lineHeight = 14.sp,
+          fontWeight = FontWeight.Medium
+        )
+      }
+
+      Spacer(modifier = Modifier.height(20.dp))
+
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(14.dp))
+          .background(Color.Black.copy(alpha = 0.05f))
+          .padding(horizontal = 16.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Icon(
+          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mobile_outline),
+          contentDescription = null,
+          tint = Color.Black.copy(alpha = 0.4f),
+          modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Box(modifier = Modifier.weight(1f).padding(vertical = 11.dp)) {
+          if (viewModel.phoneInput.isEmpty()) {
+            Text("Phone number", color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
+          }
+          BasicTextField(
+            value = viewModel.phoneInput,
+            onValueChange = { new -> if (new.length <= 20) viewModel.onPhoneInputChange(new) },
+            singleLine = true,
+            textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp),
+            cursorBrush = SolidColor(Color.Black),
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone),
+            modifier = Modifier.fillMaxWidth()
+          )
+        }
+      }
+
+      if (viewModel.phoneError != null) {
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(viewModel.phoneError!!, color = Color(0xFFE14050), fontSize = 13.sp)
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+
+      Button(
+        onClick = { viewModel.submitPhoneNumber() },
+        enabled = !viewModel.phoneUpdateBusy,
+        shape = RoundedCornerShape(28.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
+        modifier = Modifier.fillMaxWidth().height(52.dp)
+      ) {
+        if (viewModel.phoneUpdateBusy) {
+          CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+        } else {
+          Text("Save", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
       }
     }
