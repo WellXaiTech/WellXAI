@@ -1,5 +1,6 @@
 import { encode, decode } from "next-auth/jwt";
 import { isRevoked, recordSession, clientIpFromHeaders } from "@/lib/sessions";
+import { supabaseAdmin } from "@/lib/supabase";
 
 // The native Android app has no browser session cookie, so it authenticates
 // with a standalone bearer token instead — minted here using Auth.js's own
@@ -83,6 +84,16 @@ export async function finishMobileSignIn(request: Request, identity: VerifiedMob
     await recordSession(identity.sub, sessionId, request.headers.get("user-agent"), ip, "mobile", identity.deviceModel);
   } catch (err) {
     console.error("recordSession (mobile) failed:", err);
+  }
+
+  // A successful sign-in reactivates a deactivated account -- there's no
+  // separate "reactivate" screen, getting past Google (+2FA/passkey, if on)
+  // again is proof enough this is really the owner. Data was never touched
+  // by deactivation in the first place.
+  try {
+    await supabaseAdmin.from("users").update({ deactivated_at: null }).eq("id", identity.sub);
+  } catch (err) {
+    console.error("Account reactivate-on-signin failed:", err);
   }
 
   const token = await mintMobileToken({

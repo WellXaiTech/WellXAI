@@ -2846,6 +2846,30 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     }
   }
 
+  var deactivatingAccount by mutableStateOf(false)
+    private set
+
+  // Unlike deleteAccount, this doesn't touch any data -- the account
+  // reactivates itself automatically the next time this same person signs
+  // back in (see finishMobileSignIn on the backend), so signing out here is
+  // enough; there's no separate reactivation screen to build.
+  fun deactivateAccount() {
+    val token = tokenStore.getToken() ?: return
+    deactivatingAccount = true
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.deactivateAccount(token)) {
+        is ApiResult.Success -> {
+          deactivatingAccount = false
+          signOut()
+        }
+        is ApiResult.Failure -> {
+          deactivatingAccount = false
+          errorMessage = result.message
+        }
+      }
+    }
+  }
+
   fun renameConversation(id: String, newTitle: String) {
     val token = tokenStore.getToken() ?: return
     val trimmed = newTitle.trim()

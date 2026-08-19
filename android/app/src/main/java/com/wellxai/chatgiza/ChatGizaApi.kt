@@ -519,6 +519,25 @@ object ChatGizaApi {
     }
   }
 
+  suspend fun deactivateAccount(token: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/account/deactivate")
+        .header("Authorization", "Bearer $token")
+        .post("".toRequestBody(JSON))
+        .build()
+      client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          val text = response.body?.string().orEmpty()
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
   suspend fun getSubaccounts(token: String): ApiResult<List<ApiSubaccount>> = withContext(Dispatchers.IO) {
     try {
       val request = Request.Builder()

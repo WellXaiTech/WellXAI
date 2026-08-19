@@ -20,6 +20,12 @@ create table if not exists users (
   -- sign-in succeeds.
   totp_secret text,
   totp_enabled boolean not null default false,
+  -- Account Settings > Deactivate an Account -- set the moment the user
+  -- confirms; nothing else is touched (data stays intact, matching the
+  -- feature's own description). Cleared automatically the next time this
+  -- account signs back in (see finishMobileSignIn), so there's no separate
+  -- reactivation flow to build.
+  deactivated_at timestamptz,
   created_at timestamptz not null default now(),
   last_seen_at timestamptz not null default now()
 );
@@ -33,6 +39,9 @@ create table if not exists users (
 -- Run once for existing databases created before totp_secret/totp_enabled existed:
 -- alter table users add column if not exists totp_secret text;
 -- alter table users add column if not exists totp_enabled boolean not null default false;
+
+-- Run once for existing databases created before deactivated_at existed:
+-- alter table users add column if not exists deactivated_at timestamptz;
 
 -- WebAuthn passkeys -- a user can register more than one (phone, laptop,
 -- security key), so this is its own table rather than a column on users.
