@@ -8263,7 +8263,6 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
         // toggled inside it, and reaches close to the top of the screen
         // like the reference instead of stopping partway down.
         .fillMaxHeight(0.85f)
-        .verticalScroll(rememberScrollState())
         .padding(horizontal = 20.dp)
         .padding(top = 20.dp, bottom = 28.dp)
     ) {
@@ -8285,6 +8284,12 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
         )
       }
       Spacer(modifier = Modifier.height(20.dp))
+      // weight(1f) + its own scroll, instead of scrolling the whole sheet --
+      // this is what actually pins the button/Cancel to the bottom of the
+      // fixed-height sheet. Scrolling the outer Column let short content
+      // just leave a gap below Cancel instead of the button sitting at the
+      // true bottom like the reference.
+      Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
       if (!deactivateConfirmStep) {
       Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         DeactivateAccountIllustration()
@@ -8393,15 +8398,6 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
           }
         }
       }
-      Spacer(modifier = Modifier.height(24.dp))
-      Button(
-        onClick = { deactivateConfirmStep = true },
-        shape = RoundedCornerShape(28.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
-        modifier = Modifier.fillMaxWidth().height(52.dp)
-      ) {
-        Text("Deactivate", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace)
-      }
       } else {
         // Second, harder-to-miss step -- the actual deactivateAccount()
         // call only happens from here, gated behind reading the checkbox
@@ -8414,18 +8410,18 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
           fontFamily = FontFamily.Monospace,
           lineHeight = 20.sp
         )
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(18.dp))
         listOf(
           "You'll be signed out of this account and all Subaccounts.",
           "You won't be able to use ChatGiZa until you sign back in.",
           "Your conversations and data stay intact -- nothing is deleted."
         ).forEach { line ->
-          Row(modifier = Modifier.padding(vertical = 4.dp)) {
+          Row(modifier = Modifier.padding(vertical = 10.dp)) {
             Text("• ", color = Color.Black.copy(alpha = 0.6f), fontSize = 13.sp, fontFamily = FontFamily.Monospace)
             Text(line, color = Color.Black.copy(alpha = 0.6f), fontSize = 13.sp, fontFamily = FontFamily.Monospace, lineHeight = 18.sp)
           }
         }
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         Row(
           modifier = Modifier.fillMaxWidth().clickable { agreedToConsequences = !agreedToConsequences },
           verticalAlignment = Alignment.Top
@@ -8445,7 +8441,19 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
             modifier = Modifier.padding(top = 14.dp)
           )
         }
-        Spacer(modifier = Modifier.height(20.dp))
+      }
+      }
+      Spacer(modifier = Modifier.height(24.dp))
+      if (!deactivateConfirmStep) {
+        Button(
+          onClick = { deactivateConfirmStep = true },
+          shape = RoundedCornerShape(28.dp),
+          colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
+          modifier = Modifier.fillMaxWidth().height(52.dp)
+        ) {
+          Text("Deactivate", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace)
+        }
+      } else {
         val readyToConfirm = agreedToConsequences && confirmCountdown <= 0
         Button(
           onClick = { viewModel.deactivateAccount() },
