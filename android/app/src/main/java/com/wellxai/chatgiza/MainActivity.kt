@@ -9954,8 +9954,8 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
         // app installed before anything account-specific is shown.
         viewModel.totpSetupSecret == null -> {
           Spacer(modifier = Modifier.height(8.dp))
-          Text("Authenticator App", color = Color.Black, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 34.sp)
-          Text("Verification", color = Color.Black, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 34.sp)
+          Text("Authenticator App", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold, lineHeight = 27.sp)
+          Text("Verification", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold, lineHeight = 27.sp)
           Spacer(modifier = Modifier.height(28.dp))
           Icon(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_totp_verify),
@@ -10154,7 +10154,9 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
       Button(
         onClick = { viewModel.startTotpSetup() },
         enabled = !viewModel.totpBusy,
-        shape = RoundedCornerShape(28.dp),
+        // A more rectangular 14dp radius instead of the app's usual 28dp
+        // pill, per reference -- specific to this button only.
+        shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
         modifier = Modifier
           .fillMaxWidth()
