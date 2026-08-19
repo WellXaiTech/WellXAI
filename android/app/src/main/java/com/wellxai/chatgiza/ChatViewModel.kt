@@ -1944,6 +1944,15 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     passwordError = null
   }
 
+  // Fires when the New Password field loses focus (keyboard dismissed by
+  // tapping elsewhere) -- catches a too-short password immediately instead
+  // of only at Confirm.
+  fun checkNewPasswordOnBlur() {
+    if (newPasswordInput.length < 6) {
+      passwordError = "Please enter the correct password"
+    }
+  }
+
   fun onPasswordCodeInputChange(value: String) {
     passwordCodeInput = value
     passwordError = null
