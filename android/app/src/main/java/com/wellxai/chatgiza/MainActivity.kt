@@ -9803,6 +9803,10 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
     viewModel.totpSetupStep == "link" -> "Link an Authenticator"
     else -> "Verify Authenticator"
   }
+  // The intro step uses its own big two-line heading further down instead
+  // of a small centered app-bar title -- matching the reference, where
+  // only a bare back arrow sits in the top row on that screen.
+  val totpIntroStep = viewModel.totpEnabled != true && viewModel.totpSetupSecret == null
   Column(
     modifier = Modifier
       .fillMaxSize()
@@ -9812,16 +9816,22 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
         detectTapGestures(onTap = { focusManager.clearFocus() })
       }
   ) {
-    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
-      Text(
-        title,
-        color = Color.Black,
-        fontSize = 18.sp,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.align(Alignment.Center)
-      )
-      IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
+    if (totpIntroStep) {
+      IconButton(onClick = onBack, modifier = Modifier.padding(start = 12.dp, top = 6.dp).size(28.dp)) {
         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(24.dp))
+      }
+    } else {
+      Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+        Text(
+          title,
+          color = Color.Black,
+          fontSize = 18.sp,
+          fontWeight = FontWeight.Bold,
+          modifier = Modifier.align(Alignment.Center)
+        )
+        IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
+          Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(24.dp))
+        }
       }
     }
 
@@ -9888,21 +9898,16 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
         // Step 1: intro -- explains what this is and gets the authenticator
         // app installed before anything account-specific is shown.
         viewModel.totpSetupSecret == null -> {
-          Spacer(modifier = Modifier.height(24.dp))
-          Box(
-            modifier = Modifier
-              .size(72.dp)
-              .clip(CircleShape)
-              .background(Color.Black.copy(alpha = 0.06f)),
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(
-              painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded),
-              contentDescription = null,
-              tint = Color.Black,
-              modifier = Modifier.size(34.dp)
-            )
-          }
+          Spacer(modifier = Modifier.height(8.dp))
+          Text("Authenticator App", color = Color.Black, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 34.sp)
+          Text("Verification", color = Color.Black, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 34.sp)
+          Spacer(modifier = Modifier.height(28.dp))
+          Icon(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_totp_verify),
+            contentDescription = null,
+            tint = Color.Black,
+            modifier = Modifier.size(80.dp).align(Alignment.CenterHorizontally)
+          )
           Spacer(modifier = Modifier.height(16.dp))
           Text(
             "Instead of waiting for text messages, get verification codes from an authenticator app like Google Authenticator. It works even if your phone is offline.",
@@ -9916,11 +9921,7 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
           Text("1. Download Authenticator App", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
           Spacer(modifier = Modifier.height(10.dp))
           Row(
-            modifier = Modifier
-              .fillMaxWidth()
-              .clip(RoundedCornerShape(14.dp))
-              .background(Color.Black.copy(alpha = 0.05f))
-              .padding(horizontal = 16.dp, vertical = 14.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
           ) {
             Text("Google Authenticator", color = Color.Black, fontSize = 14.sp, modifier = Modifier.weight(1f))
@@ -9967,21 +9968,7 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
             Spacer(modifier = Modifier.height(14.dp))
             Text(viewModel.totpError!!, color = Color(0xFFE14050), fontSize = 13.sp)
           }
-          Spacer(modifier = Modifier.height(28.dp))
-          Button(
-            onClick = { viewModel.startTotpSetup() },
-            enabled = !viewModel.totpBusy,
-            shape = RoundedCornerShape(28.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
-            modifier = Modifier.fillMaxWidth().height(52.dp)
-          ) {
-            if (viewModel.totpBusy) {
-              CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-            } else {
-              Text("Enable Authenticator App", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            }
-          }
-          Spacer(modifier = Modifier.height(24.dp))
+          Spacer(modifier = Modifier.height(20.dp))
         }
 
         // Step 2: link -- the QR code / manual key, shown as the same
@@ -10091,6 +10078,30 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
             }
           }
           Spacer(modifier = Modifier.height(24.dp))
+        }
+      }
+    }
+
+    // Pinned to the very bottom of the screen instead of just trailing the
+    // scrollable intro content, so it stays reachable without scrolling
+    // all the way down, matching the reference.
+    if (totpIntroStep) {
+      Button(
+        onClick = { viewModel.startTotpSetup() },
+        enabled = !viewModel.totpBusy,
+        shape = RoundedCornerShape(28.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(horizontal = 16.dp)
+          .navigationBarsPadding()
+          .padding(bottom = 16.dp)
+          .height(52.dp)
+      ) {
+        if (viewModel.totpBusy) {
+          CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+        } else {
+          Text("Enable Authenticator App", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
       }
     }
