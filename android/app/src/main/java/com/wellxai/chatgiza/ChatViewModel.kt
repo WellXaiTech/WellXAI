@@ -1953,6 +1953,17 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     }
   }
 
+  // Fires when the Current Password field loses focus. This is the same
+  // length-based hint as New Password's, not an assertion that the typed
+  // password is wrong -- passwords are always 6-16 characters system-wide,
+  // so anything shorter simply can't be complete yet. Whether it's the
+  // *correct* password is still only checked for real on Confirm.
+  fun checkOldPasswordOnBlur() {
+    if (oldPasswordInput.isNotEmpty() && oldPasswordInput.length < 6) {
+      passwordError = "Please enter the correct password"
+    }
+  }
+
   // Fires when the New Password field regains focus -- hides the error
   // text immediately even though the field's own border stays red (via its
   // local invalid state) until the input actually reaches 6 characters.
