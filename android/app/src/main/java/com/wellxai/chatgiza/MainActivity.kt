@@ -4920,14 +4920,14 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
         ) {
-          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mail_outline), label = "Email", onClick = { comingSoon("Email") }) {
+          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mail_outline), iconSize = 23.dp, label = "Email", onClick = { comingSoon("Email") }) {
             Text(maskEmail(viewModel.userEmail), color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
           }
           MyInfoDivider()
           // No phone number exists anywhere on the account (sign-in here is
           // Google-only) -- the row used to show a fixed fake masked number
           // ("75****182") to every single user regardless of who they were.
-          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mobile_outline), label = "Mobile", onClick = { comingSoon("Mobile") }) {
+          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mobile_outline), iconSize = 23.dp, label = "Mobile", onClick = { comingSoon("Mobile") }) {
             Text("Not linked", color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
           }
           MyInfoDivider()
