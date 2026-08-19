@@ -75,6 +75,7 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.scrollBy
@@ -4729,6 +4730,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
   fun comingSoon(label: String) {
     Toast.makeText(context, "$label — coming soon", Toast.LENGTH_SHORT).show()
   }
+  val accountTabsOrder = listOf("My info", "Security", "Preference", "General")
   Dialog(
     onDismissRequest = { viewModel.closeAccountTabs() },
     properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -4739,11 +4741,30 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         .fillMaxSize()
         .background(Color.White)
     ) {
+    var tabDragAccum by remember { mutableStateOf(0f) }
     Column(
       modifier = Modifier
         .fillMaxSize()
         .statusBarsPadding()
         .verticalScroll(rememberScrollState())
+        // Swipe left/right anywhere on the tab content to move between My
+        // info/Security/Preference/General, same as tapping a tab label --
+        // coexists with the vertical scroll above since drag detection here
+        // only reacts to horizontal movement.
+        .pointerInput(Unit) {
+          detectHorizontalDragGestures(
+            onDragEnd = {
+              val idx = accountTabsOrder.indexOf(viewModel.activeAccountTab)
+              if (tabDragAccum <= -80f && idx < accountTabsOrder.lastIndex) {
+                viewModel.activeAccountTab = accountTabsOrder[idx + 1]
+              } else if (tabDragAccum >= 80f && idx > 0) {
+                viewModel.activeAccountTab = accountTabsOrder[idx - 1]
+              }
+              tabDragAccum = 0f
+            },
+            onDragCancel = { tabDragAccum = 0f }
+          ) { _, dragAmount -> tabDragAccum += dragAmount }
+        }
         .padding(horizontal = 16.dp)
         .padding(bottom = if (viewModel.activeAccountTab == "My info") 76.dp else 0.dp)
     ) {
