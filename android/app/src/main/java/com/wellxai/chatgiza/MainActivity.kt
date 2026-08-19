@@ -5310,7 +5310,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           // feedback alongside Terms/Privacy/Report a Problem -- see
           // AboutUsDialog.
           MyInfoRow(
-            icon = Icons.AutoMirrored.Outlined.Article,
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_folder_outline),
             label = "Open Source Licenses",
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openOpenSourceLicenses() } }
           ) {}
