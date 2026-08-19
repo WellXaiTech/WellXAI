@@ -1231,28 +1231,27 @@ private fun LoadingScreen() {
 private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
   val focusManager = LocalFocusManager.current
   val signingIn = viewModel.signingIn
-  // A weight(1f) title box above a wrap-height card used to look right
-  // with the keyboard closed, but weight(1f) only means anything inside a
-  // Column that ISN'T itself scrolling -- it couldn't shrink to get the
-  // focused field above the keyboard once opened, which is why the field
-  // was getting covered. Now the whole screen (title + card) is one
-  // scrollable Column with imePadding() so it genuinely has less room
-  // once the keyboard shows, and Compose's own focused-field-into-view
-  // behavior scrolls the card up until the field being typed into clears
-  // the keyboard -- title box got a fixed height instead of weight(1f)
-  // since a scrolling Column can't have weighted children.
+  // Title box keeps weight(1f) -- with the keyboard closed that's what
+  // pushes the white card flush to the bottom, no gap underneath it. The
+  // trick for the keyboard is imePadding() on this outer Column: that
+  // shrinks the TOTAL space available, so the weighted title box is what
+  // shrinks first (down to 0 if needed), leaving the white card -- which
+  // still has its own verticalScroll below -- genuinely bounded to
+  // whatever's left. Once it's bounded like that, Compose's own focused-
+  // field-into-view behavior scrolls the card up until the field being
+  // typed into clears the keyboard, without needing a fixed-height title
+  // that leaves an empty gap when the keyboard is closed.
   Column(
     modifier = Modifier
       .fillMaxSize()
       .background(Color(0xFFF4F4F4))
       .imePadding()
-      .verticalScroll(rememberScrollState())
       .pointerInput(Unit) {
         detectTapGestures(onTap = { focusManager.clearFocus() })
       }
   ) {
     Box(
-      modifier = Modifier.fillMaxWidth().height(260.dp),
+      modifier = Modifier.fillMaxWidth().weight(1f),
       contentAlignment = Alignment.Center
     ) {
       Text("ChatGiZa", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
@@ -1264,6 +1263,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
         .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
         .background(Color.White)
         .navigationBarsPadding()
+        .verticalScroll(rememberScrollState())
         .padding(horizontal = 20.dp, vertical = 24.dp)
     ) {
       // Email / Mobile pill switch
