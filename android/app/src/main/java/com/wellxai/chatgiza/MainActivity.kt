@@ -132,6 +132,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DismissibleDrawerSheet
 import androidx.compose.material3.DismissibleNavigationDrawer
@@ -8223,6 +8225,23 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
   var subaccountsExpanded by remember { mutableStateOf(true) }
   LaunchedEffect(Unit) { viewModel.loadSubaccounts() }
 
+  // Tapping Deactivate on the first screen doesn't act right away -- it
+  // opens this second, harder-to-miss confirmation matching the reference:
+  // consequences spelled out, a checkbox, and the button itself disabled
+  // behind a few seconds' countdown so it can't be tapped on reflex.
+  var deactivateConfirmStep by remember { mutableStateOf(false) }
+  var agreedToConsequences by remember(deactivateConfirmStep) { mutableStateOf(false) }
+  var confirmCountdown by remember(deactivateConfirmStep) { mutableStateOf(5) }
+  LaunchedEffect(deactivateConfirmStep) {
+    if (deactivateConfirmStep) {
+      confirmCountdown = 5
+      while (confirmCountdown > 0) {
+        delay(1000)
+        confirmCountdown -= 1
+      }
+    }
+  }
+
   fun copyUid(uid: String) {
     clipboard.setText(AnnotatedString(uid))
     Toast.makeText(context, "UID copied", Toast.LENGTH_SHORT).show()
@@ -8260,6 +8279,15 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
         }
     ) {
       Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        if (deactivateConfirmStep) {
+          Icon(
+            Icons.AutoMirrored.Outlined.ArrowBack,
+            contentDescription = "Back",
+            tint = Color.Black,
+            modifier = Modifier.size(22.dp).clickable { deactivateConfirmStep = false }
+          )
+          Spacer(modifier = Modifier.width(12.dp))
+        }
         Text(
           "Deactivate Account",
           color = Color.Black,
@@ -8276,6 +8304,7 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
         )
       }
       Spacer(modifier = Modifier.height(20.dp))
+      if (!deactivateConfirmStep) {
       Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         DeactivateAccountIllustration()
       }
@@ -8385,16 +8414,79 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
       }
       Spacer(modifier = Modifier.height(24.dp))
       Button(
-        onClick = { viewModel.deactivateAccount() },
-        enabled = !viewModel.deactivatingAccount,
+        onClick = { deactivateConfirmStep = true },
         shape = RoundedCornerShape(28.dp),
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
         modifier = Modifier.fillMaxWidth().height(52.dp)
       ) {
-        if (viewModel.deactivatingAccount) {
-          CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-        } else {
-          Text("Deactivate", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace)
+        Text("Deactivate", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace)
+      }
+      } else {
+        // Second, harder-to-miss step -- the actual deactivateAccount()
+        // call only happens from here, gated behind reading the checkbox
+        // and a few seconds' countdown so it can't be tapped on reflex.
+        Text(
+          "Deactivating your account will result in the following:",
+          color = Color.Black,
+          fontSize = 15.sp,
+          fontWeight = FontWeight.Bold,
+          fontFamily = FontFamily.Monospace,
+          lineHeight = 20.sp
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+        listOf(
+          "You'll be signed out of this account and all Subaccounts.",
+          "You won't be able to use ChatGiZa until you sign back in.",
+          "Your conversations and data stay intact -- nothing is deleted."
+        ).forEach { line ->
+          Row(modifier = Modifier.padding(vertical = 4.dp)) {
+            Text("• ", color = Color.Black.copy(alpha = 0.6f), fontSize = 13.sp, fontFamily = FontFamily.Monospace)
+            Text(line, color = Color.Black.copy(alpha = 0.6f), fontSize = 13.sp, fontFamily = FontFamily.Monospace, lineHeight = 18.sp)
+          }
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+        Row(
+          modifier = Modifier.fillMaxWidth().clickable { agreedToConsequences = !agreedToConsequences },
+          verticalAlignment = Alignment.Top
+        ) {
+          Checkbox(
+            checked = agreedToConsequences,
+            onCheckedChange = { agreedToConsequences = it },
+            colors = CheckboxDefaults.colors(checkedColor = Color.Black, uncheckedColor = Color.Black.copy(alpha = 0.4f))
+          )
+          Spacer(modifier = Modifier.width(4.dp))
+          Text(
+            "I have read, understood, and agree to the above.",
+            color = Color.Black,
+            fontSize = 13.sp,
+            fontFamily = FontFamily.Monospace,
+            lineHeight = 18.sp,
+            modifier = Modifier.padding(top = 14.dp)
+          )
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+        val readyToConfirm = agreedToConsequences && confirmCountdown <= 0
+        Button(
+          onClick = { viewModel.deactivateAccount() },
+          enabled = readyToConfirm && !viewModel.deactivatingAccount,
+          shape = RoundedCornerShape(28.dp),
+          colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFFFF9C2D),
+            disabledContainerColor = Color(0xFFFF9C2D).copy(alpha = 0.4f)
+          ),
+          modifier = Modifier.fillMaxWidth().height(52.dp)
+        ) {
+          if (viewModel.deactivatingAccount) {
+            CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+          } else {
+            Text(
+              if (confirmCountdown > 0) "I Understand (${confirmCountdown}s)" else "I Understand",
+              color = Color.Black,
+              fontSize = 16.sp,
+              fontWeight = FontWeight.SemiBold,
+              fontFamily = FontFamily.Monospace
+            )
+          }
         }
       }
       Spacer(modifier = Modifier.height(16.dp))
