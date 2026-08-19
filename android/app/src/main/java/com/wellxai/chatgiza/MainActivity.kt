@@ -4968,7 +4968,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           // ChangePasswordScreen) -- independent of the Google sign-in
           // itself, which is unaffected by whatever gets set here.
           MyInfoRow(
-            icon = Icons.Outlined.Lock,
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded),
             label = "Change Password",
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openChangePassword() } }
           ) {}
