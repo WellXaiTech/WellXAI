@@ -536,7 +536,13 @@ class MainActivity : ComponentActivity() {
             }
             return@Surface
           }
-          when (viewModel.screen) {
+          // Crossfade instead of the instant swap this used to be -- every
+          // screen routed through here (Appearance/"Color Theme" included)
+          // used to pop in/out with no transition at all, which read as an
+          // abrupt flash rather than a normal back navigation. tween(220)
+          // matches Android's own default activity-transition length.
+          Crossfade(targetState = viewModel.screen, animationSpec = tween(220), label = "screenCrossfade") { screen ->
+          when (screen) {
             is AppScreen.Loading -> LoadingScreen()
             is AppScreen.SignedOut -> SignedOutScreen(
               viewModel = viewModel,
@@ -595,6 +601,7 @@ class MainActivity : ComponentActivity() {
             }
             is AppScreen.ProfileHub -> ProfileHubScreen(viewModel)
             is AppScreen.ShareTarget -> ShareTargetPickerScreen(viewModel)
+          }
           }
         }
         // Root-level, not screen-gated -- see the comment on
