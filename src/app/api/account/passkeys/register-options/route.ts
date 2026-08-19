@@ -25,7 +25,13 @@ export async function POST(req: NextRequest) {
     const options = await generateRegistrationOptions({
       rpName: RP_NAME,
       rpID: RP_ID,
-      userID: user.id,
+      // @simplewebauthn/server v9's generateRegistrationOptions passes
+      // userID straight into the output JSON's user.id WITHOUT encoding it
+      // (later major versions changed this) -- the WebAuthn spec requires
+      // that field to be base64url, so passing the raw Google account id
+      // string here made Android's Credential Manager fail decoding it
+      // ("bad base-64") the moment it tried to parse the options.
+      userID: isoBase64URL.fromString(user.id),
       userName: email,
       userDisplayName: user.name || email,
       attestationType: "none",
