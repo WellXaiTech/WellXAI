@@ -8288,9 +8288,14 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
       // this is what actually pins the button/Cancel to the bottom of the
       // fixed-height sheet. Scrolling the outer Column let short content
       // just leave a gap below Cancel instead of the button sitting at the
-      // true bottom like the reference.
-      Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+      // true bottom like the reference. Only step 1 gets the weight though
+      // -- its illustration+box naturally fill most of the space anyway, so
+      // pinning works well there. Step 2's content (a few bullets + a
+      // checkbox) is much shorter, and weighting it the same way left a
+      // large empty gap between the checkbox and the button instead of
+      // them sitting close together.
       if (!deactivateConfirmStep) {
+      Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
       Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         DeactivateAccountIllustration()
       }
@@ -8398,7 +8403,12 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
           }
         }
       }
+      }
       } else {
+        // No weight/scroll here on purpose -- see the comment above. This
+        // sits at its natural height so the checkbox ends up right next to
+        // the button below instead of pinned apart by a stretched gap.
+        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
         // Second, harder-to-miss step -- the actual deactivateAccount()
         // call only happens from here, gated behind reading the checkbox
         // and a few seconds' countdown so it can't be tapped on reflex.
@@ -8441,7 +8451,7 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
             modifier = Modifier.padding(top = 14.dp)
           )
         }
-      }
+        }
       }
       Spacer(modifier = Modifier.height(24.dp))
       if (!deactivateConfirmStep) {
