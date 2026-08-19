@@ -4924,7 +4924,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           // this instead sends them to where their sign-in's real 2FA
           // actually lives and can actually be changed.
           MyInfoRow(
-            icon = Icons.Outlined.Lock,
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_google_g),
             label = "Google 2FA Authentication",
             onClick = {
               runCatching {
