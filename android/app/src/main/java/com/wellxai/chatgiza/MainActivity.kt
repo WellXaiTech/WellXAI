@@ -298,6 +298,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Path
@@ -8132,7 +8133,7 @@ private fun AccountSettingsScreen(viewModel: ChatViewModel) {
 // A rounded rect with the bottom-left corner cut into a diagonal --
 // matches the "folded page corner" look on the reference's document
 // illustration instead of a plain rounded corner there.
-private fun foldedCornerShape(cornerRadius: Dp, foldSize: Dp) = GenericShape { size, density ->
+private fun foldedCornerShape(cornerRadius: Dp, foldSize: Dp) = GenericShape { size: Size, density: Density ->
   val r = with(density) { cornerRadius.toPx() }
   val fold = with(density) { foldSize.toPx() }
   val w = size.width
