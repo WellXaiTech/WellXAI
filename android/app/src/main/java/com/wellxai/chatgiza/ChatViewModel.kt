@@ -101,6 +101,7 @@ sealed class AppScreen {
   object SubaccountSettings : AppScreen()
   object ShareTarget : AppScreen()
   object ChangePassword : AppScreen()
+  object MobileNumber : AppScreen()
   object TwoFactorSetup : AppScreen()
   object TotpLoginVerify : AppScreen()
   object AppLockSetup : AppScreen()
@@ -123,6 +124,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var userEmail by mutableStateOf<String?>(null)
     private set
   var userImage by mutableStateOf<String?>(null)
+    private set
+  var userPhone by mutableStateOf<String?>(null)
     private set
 
   var historySearchQuery by mutableStateOf("")
@@ -406,6 +409,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
       userName = tokenStore.getUserName()
       userEmail = tokenStore.getUserEmail()
       userImage = tokenStore.getUserImage()
+      userPhone = tokenStore.getUserPhone()
       screen = AppScreen.Chat
       // Cold start with App Lock on -- gate immediately, same as returning
       // from the background (see armAppLockIfEnabled).
@@ -1129,6 +1133,58 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
           tokenStore.setUserName(trimmed)
         }
         is ApiResult.Failure -> nameUpdateError = result.message
+      }
+    }
+  }
+
+  // Security > Mobile. No SMS provider is wired up, so this is a plain
+  // self-reported contact number (same trust level as the in-app
+  // password) -- not an OTP-verified line, hence no separate "code" step
+  // the way Change Password has one.
+  var phoneInput by mutableStateOf("")
+    private set
+  var phoneError by mutableStateOf<String?>(null)
+    private set
+  var phoneUpdateBusy by mutableStateOf(false)
+    private set
+
+  fun openMobileNumber() {
+    screen = AppScreen.MobileNumber
+    phoneInput = userPhone.orEmpty()
+    phoneError = null
+  }
+
+  fun closeMobileNumber() {
+    returnToAccountTabsIfPending()
+    screen = AppScreen.ProfileHub
+  }
+
+  fun onPhoneInputChange(value: String) {
+    phoneInput = value
+    phoneError = null
+  }
+
+  fun submitPhoneNumber() {
+    val trimmed = phoneInput.trim()
+    if (trimmed.isEmpty()) {
+      phoneError = "Enter a phone number"
+      return
+    }
+    val token = tokenStore.getToken() ?: return
+    phoneUpdateBusy = true
+    phoneError = null
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.updatePhone(token, trimmed)) {
+        is ApiResult.Success -> {
+          userPhone = trimmed
+          tokenStore.setUserPhone(trimmed)
+          phoneUpdateBusy = false
+          closeMobileNumber()
+        }
+        is ApiResult.Failure -> {
+          phoneUpdateBusy = false
+          phoneError = result.message
+        }
       }
     }
   }

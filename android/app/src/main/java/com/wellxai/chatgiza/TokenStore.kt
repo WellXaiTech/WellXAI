@@ -75,6 +75,11 @@ class TokenStore(context: Context) {
     prefs.edit().putString(KEY_IMAGE, image).apply()
   }
 
+  fun getUserPhone(): String? = prefs.getString(KEY_PHONE, null)
+  fun setUserPhone(phone: String) {
+    prefs.edit().putString(KEY_PHONE, phone).apply()
+  }
+
   fun getHapticsEnabled(): Boolean = prefs.getBoolean(KEY_HAPTICS_ENABLED, true)
   fun setHapticsEnabled(value: Boolean) {
     prefs.edit().putBoolean(KEY_HAPTICS_ENABLED, value).apply()
@@ -276,6 +281,7 @@ class TokenStore(context: Context) {
     private const val KEY_NAME = "user_name"
     private const val KEY_EMAIL = "user_email"
     private const val KEY_IMAGE = "user_image"
+    private const val KEY_PHONE = "user_phone"
     private const val KEY_HAPTICS_ENABLED = "haptics_enabled"
     private const val KEY_EXTRA_DARK_MODE = "extra_dark_mode"
     private const val KEY_HAPTICS_ON_PRESS = "haptics_on_press"
