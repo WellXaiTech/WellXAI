@@ -2707,11 +2707,6 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     loadPasskeys()
   }
 
-  fun onPasskeySignInStart() {
-    signingIn = true
-    errorMessage = null
-  }
-
   fun onPasskeySignedIn(result: AuthResult) {
     signingIn = false
     applySignedInResult(result)
