@@ -34,6 +34,35 @@ create table if not exists users (
 -- alter table users add column if not exists totp_secret text;
 -- alter table users add column if not exists totp_enabled boolean not null default false;
 
+-- WebAuthn passkeys -- a user can register more than one (phone, laptop,
+-- security key), so this is its own table rather than a column on users.
+-- id is the credential id (base64url) the authenticator itself generates;
+-- public_key is the base64url COSE public key verifyAuthenticationResponse
+-- checks signatures against, and counter is the signature counter used to
+-- detect cloned authenticators (must strictly increase on every use).
+create table if not exists passkey_credentials (
+  id text primary key,
+  user_id text not null references users(id) on delete cascade,
+  public_key text not null,
+  counter bigint not null default 0,
+  device_name text,
+  created_at timestamptz not null default now(),
+  last_used_at timestamptz
+);
+create index if not exists passkey_credentials_user_id_idx on passkey_credentials(user_id);
+
+-- Run once for existing databases created before passkey_credentials existed:
+-- create table if not exists passkey_credentials (
+--   id text primary key,
+--   user_id text not null references users(id) on delete cascade,
+--   public_key text not null,
+--   counter bigint not null default 0,
+--   device_name text,
+--   created_at timestamptz not null default now(),
+--   last_used_at timestamptz
+-- );
+-- create index if not exists passkey_credentials_user_id_idx on passkey_credentials(user_id);
+
 -- Lightweight sub-identities under one signed-in Google account (up to 5,
 -- enforced in the API, not here) -- each gets its own name/avatar and its
 -- own separate ChatGiZa conversation history (scoped in KV by owner_id +

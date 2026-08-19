@@ -1,5 +1,4 @@
-import { mintMobileToken } from "@/lib/mobileAuth";
-import { recordSession, clientIpFromHeaders } from "@/lib/sessions";
+import { finishMobileSignIn } from "@/lib/mobileAuth";
 import { kv } from "@vercel/kv";
 import { supabaseAdmin } from "@/lib/supabase";
 import { verifyTotp } from "@/lib/totp";
@@ -15,37 +14,6 @@ type PendingLogin = {
   picture: string | null;
   deviceModel: string | null;
 };
-
-// Records the Trusted Devices session and mints the bearer token -- the
-// tail end shared by a normal (non-2FA) sign-in and a 2FA sign-in that just
-// cleared its authenticator-code check.
-async function finishSignIn(request: Request, pending: PendingLogin) {
-  const sessionId = crypto.randomUUID();
-  try {
-    const ip = clientIpFromHeaders(request.headers);
-    await recordSession(pending.sub, sessionId, request.headers.get("user-agent"), ip, "mobile", pending.deviceModel);
-  } catch (err) {
-    console.error("recordSession (mobile) failed:", err);
-  }
-
-  const token = await mintMobileToken({
-    sub: pending.sub,
-    email: pending.email,
-    name: pending.name,
-    picture: pending.picture,
-    sessionId,
-  });
-
-  return Response.json({
-    token,
-    user: {
-      id: pending.sub,
-      email: pending.email,
-      name: pending.name,
-      image: pending.picture,
-    },
-  });
-}
 
 // Verifies a Google ID token obtained natively (Android Credential Manager)
 // the same way the web "google-one-tap" Credentials provider does (see
@@ -93,7 +61,7 @@ export async function POST(request: Request) {
     return Response.json({ totpRequired: true, pendingId });
   }
 
-  return finishSignIn(request, pending);
+  return finishMobileSignIn(request, pending);
 }
 
 // Step 2 of a 2FA-gated sign-in: verifies the authenticator code against the
@@ -119,5 +87,5 @@ export async function PUT(request: Request) {
   }
 
   await kv.del(pendingLoginKey(pendingId));
-  return finishSignIn(request, pending);
+  return finishMobileSignIn(request, pending);
 }

@@ -1,5 +1,5 @@
 import { encode, decode } from "next-auth/jwt";
-import { isRevoked } from "@/lib/sessions";
+import { isRevoked, recordSession, clientIpFromHeaders } from "@/lib/sessions";
 
 // The native Android app has no browser session cookie, so it authenticates
 // with a standalone bearer token instead — minted here using Auth.js's own
@@ -60,4 +60,46 @@ export async function getMobilePayload(request: Request): Promise<MobileTokenPay
 export async function getMobileUserId(request: Request): Promise<string | null> {
   const payload = await getMobilePayload(request);
   return payload?.sub ?? null;
+}
+
+export type VerifiedMobileIdentity = {
+  sub: string;
+  email: string | null;
+  name: string | null;
+  picture: string | null;
+  deviceModel: string | null;
+};
+
+/**
+ * Records the Trusted Devices session and mints the bearer token -- the
+ * tail end shared by every mobile sign-in path once the identity is
+ * verified, whether that's a plain Google sign-in, one that also cleared a
+ * TOTP check, or one that cleared a passkey assertion instead.
+ */
+export async function finishMobileSignIn(request: Request, identity: VerifiedMobileIdentity) {
+  const sessionId = crypto.randomUUID();
+  try {
+    const ip = clientIpFromHeaders(request.headers);
+    await recordSession(identity.sub, sessionId, request.headers.get("user-agent"), ip, "mobile", identity.deviceModel);
+  } catch (err) {
+    console.error("recordSession (mobile) failed:", err);
+  }
+
+  const token = await mintMobileToken({
+    sub: identity.sub,
+    email: identity.email,
+    name: identity.name,
+    picture: identity.picture,
+    sessionId,
+  });
+
+  return Response.json({
+    token,
+    user: {
+      id: identity.sub,
+      email: identity.email,
+      name: identity.name,
+      image: identity.picture,
+    },
+  });
 }
