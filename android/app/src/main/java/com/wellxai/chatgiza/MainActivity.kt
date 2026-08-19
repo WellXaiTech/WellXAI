@@ -74,6 +74,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.scrollBy
@@ -321,6 +322,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.AnnotatedString
@@ -9562,7 +9564,19 @@ private fun StorageManagementScreen(viewModel: ChatViewModel) {
 @Composable
 private fun ChangePasswordScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeChangePassword() }
-  Column(modifier = Modifier.fillMaxSize().background(Color.White).statusBarsPadding()) {
+  val focusManager = LocalFocusManager.current
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color.White)
+      .statusBarsPadding()
+      // Tapping the field itself opens the keyboard as usual; tapping
+      // anywhere else on the screen dismisses it, same as a chat box --
+      // clearFocus() on the field is what actually closes the IME.
+      .pointerInput(Unit) {
+        detectTapGestures(onTap = { focusManager.clearFocus() })
+      }
+  ) {
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
       Text(
         "Change Password",
@@ -9647,7 +9661,8 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
           value = viewModel.newPasswordInput,
           onValueChange = viewModel::onNewPasswordInputChange,
           placeholder = "New password",
-          maxLength = 16
+          maxLength = 16,
+          onFocusLost = viewModel::checkNewPasswordOnBlur
         )
         else -> CodeField(
           value = viewModel.passwordCodeInput,
@@ -9693,7 +9708,13 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
 }
 
 @Composable
-private fun PasswordField(value: String, onValueChange: (String) -> Unit, placeholder: String, maxLength: Int? = null) {
+private fun PasswordField(
+  value: String,
+  onValueChange: (String) -> Unit,
+  placeholder: String,
+  maxLength: Int? = null,
+  onFocusLost: () -> Unit = {}
+) {
   var visible by remember { mutableStateOf(false) }
   Row(
     modifier = Modifier
@@ -9724,35 +9745,30 @@ private fun PasswordField(value: String, onValueChange: (String) -> Unit, placeh
         // why a password that was "set" under autocorrect's influence
         // could stop matching what's typed back in later.
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+          .fillMaxWidth()
+          .onFocusChanged { state -> if (!state.isFocused) onFocusLost() }
       )
     }
-    // Icons.Outlined.VisibilityOff doesn't exist in this project's Material
-    // Icons Extended version (like PowerSettingsNew/Delete/CheckCircle
-    // before it) -- drawing a diagonal line over the one proven-safe eye
-    // icon reproduces the standard "crossed-out = hidden" convention
-    // without needing a second, unresolved icon reference.
-    Box(
-      modifier = Modifier.size(20.dp).clickable { visible = !visible },
-      contentAlignment = Alignment.Center
-    ) {
+    // Visible state uses the proven-safe Material eye (no crossed-out
+    // counterpart exists in this project's icon set -- see the
+    // Icons.Outlined.VisibilityOff notes elsewhere in this file); hidden
+    // state now uses the pasted eye-slash SVG instead of the earlier
+    // manual Canvas-drawn line workaround.
+    if (visible) {
       Icon(
         Icons.Outlined.Visibility,
-        contentDescription = if (visible) "Hide password" else "Show password",
+        contentDescription = "Hide password",
         tint = Color.Black.copy(alpha = 0.5f),
-        modifier = Modifier.size(20.dp)
+        modifier = Modifier.size(20.dp).clickable { visible = !visible }
       )
-      if (!visible) {
-        Canvas(modifier = Modifier.size(20.dp)) {
-          drawLine(
-            color = Color.Black,
-            start = Offset(size.width * 0.12f, size.height * 0.12f),
-            end = Offset(size.width * 0.88f, size.height * 0.88f),
-            strokeWidth = 1.6.dp.toPx(),
-            cap = StrokeCap.Round
-          )
-        }
-      }
+    } else {
+      Icon(
+        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_eye_slash),
+        contentDescription = "Show password",
+        tint = Color.Black.copy(alpha = 0.5f),
+        modifier = Modifier.size(20.dp).clickable { visible = !visible }
+      )
     }
   }
 }
