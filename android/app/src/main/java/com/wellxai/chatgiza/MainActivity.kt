@@ -4971,7 +4971,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             Text("Manage on Google", color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
           }
           MyInfoDivider()
-          MyInfoRow(icon = Icons.Outlined.Tag, label = "Passkeys", onClick = { comingSoon("Passkeys") }) {}
+          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_passkey), iconSize = 23.dp, label = "Passkeys", onClick = { comingSoon("Passkeys") }) {}
           MyInfoDivider()
           // Moved here from My info -- linking another account is an
           // access/security action, not identity.
