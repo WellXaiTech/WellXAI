@@ -5284,7 +5284,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
         ) {
-          MyInfoRow(icon = Icons.Outlined.Language, label = "Language", onClick = { viewModel.leaveAccountTabsFor { viewModel.openAppLanguage() } }) {
+          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_world), label = "Language", onClick = { viewModel.leaveAccountTabsFor { viewModel.openAppLanguage() } }) {
             Text("English", color = Color.Black.copy(alpha = 0.4f), fontSize = 13.sp)
           }
           MyInfoRow(
