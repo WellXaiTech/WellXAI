@@ -8073,12 +8073,7 @@ private fun AccountSettingsScreen(viewModel: ChatViewModel) {
   }
 
   if (confirmDeleteAccount) {
-    ConfirmDangerDialog(
-      title = "Delete account?",
-      message = "This permanently deletes your ChatGiZa account and all associated data. This can't be undone.",
-      onConfirm = { viewModel.deleteAccount() },
-      onDismiss = { confirmDeleteAccount = false }
-    )
+    DeleteAccountDialog(viewModel = viewModel, onDismiss = { confirmDeleteAccount = false })
   }
   if (showDeactivateDialog) {
     DeactivateAccountDialog(viewModel = viewModel, onDismiss = { showDeactivateDialog = false })
@@ -8258,6 +8253,147 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
           CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
         } else {
           Text("Deactivate", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace)
+        }
+      }
+      Spacer(modifier = Modifier.height(16.dp))
+      Text(
+        "Cancel",
+        color = Color.Black,
+        fontSize = 15.sp,
+        fontWeight = FontWeight.SemiBold,
+        fontFamily = FontFamily.Monospace,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onDismiss)
+      )
+    }
+  }
+}
+
+// Same two-card illustration as DeactivateAccountIllustration but with a
+// trash badge instead of a lock, so Delete and Deactivate read as a
+// matched pair instead of reusing the exact same graphic for two
+// different actions.
+@Composable
+private fun DeleteAccountIllustration() {
+  Box(modifier = Modifier.size(width = 116.dp, height = 106.dp)) {
+    Box(
+      modifier = Modifier
+        .size(width = 70.dp, height = 84.dp)
+        .align(Alignment.TopStart)
+        .offset(x = 2.dp, y = 8.dp)
+        .graphicsLayer { rotationZ = -8f }
+        .border(2.dp, Color.Black.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
+    )
+    Column(
+      modifier = Modifier
+        .size(width = 70.dp, height = 84.dp)
+        .align(Alignment.TopStart)
+        .offset(x = 24.dp, y = 0.dp)
+        .clip(RoundedCornerShape(10.dp))
+        .background(Color.White)
+        .border(2.dp, Color.Black, RoundedCornerShape(10.dp))
+        .padding(12.dp),
+      horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+      Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = Color.Black, modifier = Modifier.size(28.dp))
+      Spacer(modifier = Modifier.height(11.dp))
+      Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(Color.Black))
+      Spacer(modifier = Modifier.height(7.dp))
+      Box(modifier = Modifier.fillMaxWidth(0.7f).height(2.dp).background(Color.Black))
+    }
+    DeleteIcon(
+      tint = Color.Black,
+      modifier = Modifier
+        .size(26.dp)
+        .align(Alignment.BottomEnd)
+    )
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DeleteAccountDialog(viewModel: ChatViewModel, onDismiss: () -> Unit) {
+  val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Color.White) {
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 20.dp)
+        .padding(bottom = 28.dp)
+    ) {
+      Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Text(
+          "Delete Account",
+          color = Color.Black,
+          fontSize = 20.sp,
+          fontWeight = FontWeight.Bold,
+          fontFamily = FontFamily.Monospace,
+          modifier = Modifier.weight(1f)
+        )
+        Icon(
+          Icons.Filled.Close,
+          contentDescription = "Close",
+          tint = Color.Black,
+          modifier = Modifier.size(22.dp).clickable(onClick = onDismiss)
+        )
+      }
+      Spacer(modifier = Modifier.height(20.dp))
+      Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        DeleteAccountIllustration()
+      }
+      Spacer(modifier = Modifier.height(20.dp))
+      Text(
+        "Are you sure you want to delete your account?",
+        color = Color.Black,
+        fontSize = 17.sp,
+        fontWeight = FontWeight.Bold,
+        fontFamily = FontFamily.Monospace,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth()
+      )
+      Spacer(modifier = Modifier.height(20.dp))
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(14.dp))
+          .background(Color(0xFFF4F4F4))
+          .padding(16.dp)
+      ) {
+        Text(
+          "Applies to this Main Account and all Subaccounts",
+          color = Color.Black,
+          fontSize = 13.sp,
+          fontWeight = FontWeight.Bold,
+          fontFamily = FontFamily.Monospace
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        listOf(
+          "All conversations, media, and subaccounts are permanently erased",
+          "This action cannot be undone"
+        ).forEach { line ->
+          Row(modifier = Modifier.padding(vertical = 3.dp)) {
+            Text("• ", color = Color.Black, fontSize = 13.sp, fontFamily = FontFamily.Monospace)
+            Text(line, color = Color.Black, fontSize = 13.sp, fontFamily = FontFamily.Monospace, lineHeight = 18.sp)
+          }
+        }
+      }
+      if (viewModel.errorMessage != null) {
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(viewModel.errorMessage!!, color = Color(0xFFE14050), fontSize = 13.sp, fontFamily = FontFamily.Monospace)
+      }
+      Spacer(modifier = Modifier.height(24.dp))
+      Button(
+        onClick = { viewModel.deleteAccount() },
+        enabled = !viewModel.deletingAccount,
+        shape = RoundedCornerShape(28.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE14050)),
+        modifier = Modifier.fillMaxWidth().height(52.dp)
+      ) {
+        if (viewModel.deletingAccount) {
+          CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+        } else {
+          Text("Delete", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace)
         }
       }
       Spacer(modifier = Modifier.height(16.dp))
