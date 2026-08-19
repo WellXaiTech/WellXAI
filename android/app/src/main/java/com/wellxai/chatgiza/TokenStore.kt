@@ -71,6 +71,10 @@ class TokenStore(context: Context) {
     prefs.edit().putString(KEY_NAME, name).apply()
   }
 
+  fun setUserEmail(email: String) {
+    prefs.edit().putString(KEY_EMAIL, email).apply()
+  }
+
   fun setUserImage(image: String) {
     prefs.edit().putString(KEY_IMAGE, image).apply()
   }

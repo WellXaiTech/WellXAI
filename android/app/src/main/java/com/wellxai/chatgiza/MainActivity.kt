@@ -565,6 +565,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.StorageManagement -> StorageManagementScreen(viewModel)
             is AppScreen.ChangePassword -> ChangePasswordScreen(viewModel)
             is AppScreen.MobileNumber -> MobileNumberScreen(viewModel)
+            is AppScreen.ChangeEmail -> ChangeEmailScreen(viewModel)
             is AppScreen.TwoFactorSetup -> TwoFactorSetupScreen(viewModel)
             is AppScreen.TotpLoginVerify -> TotpLoginVerifyScreen(viewModel)
             is AppScreen.AppLockSetup -> AppLockSetupScreen(viewModel)
@@ -5139,7 +5140,12 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
         ) {
-          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mail_outline), iconSize = 23.dp, label = "Email", onClick = { comingSoon("Email") }) {
+          MyInfoRow(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mail_outline),
+            iconSize = 23.dp,
+            label = "Email",
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openChangeEmail() } }
+          ) {
             Text(maskEmail(viewModel.userEmail), color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
           }
           MyInfoDivider()
@@ -10564,33 +10570,50 @@ private fun MobileNumberScreen(viewModel: ChatViewModel) {
       Spacer(modifier = Modifier.height(20.dp))
 
       Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(14.dp))
-          .background(Color.Black.copy(alpha = 0.05f))
-          .padding(horizontal = 16.dp, vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Icon(
-          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mobile_outline),
-          contentDescription = null,
-          tint = Color.Black.copy(alpha = 0.4f),
-          modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Box(modifier = Modifier.weight(1f).padding(vertical = 11.dp)) {
-          if (viewModel.phoneInput.isEmpty()) {
-            Text("Phone number", color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
+        // Country selector -- tap opens a searchable picker; typing a
+        // number that already starts with a recognized "+code" also
+        // auto-switches this (see onPhoneInputChange), so picking one by
+        // hand first is convenient but never required.
+        Row(
+          modifier = Modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color.Black.copy(alpha = 0.05f))
+            .clickable { viewModel.openCountryPicker() }
+            .padding(horizontal = 12.dp, vertical = 15.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Text(viewModel.phoneCountry.flag, fontSize = 16.sp)
+          Spacer(modifier = Modifier.width(6.dp))
+          Text(viewModel.phoneCountry.dialCode, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+          Spacer(modifier = Modifier.width(4.dp))
+          Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "Choose country", tint = Color.Black.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Row(
+          modifier = Modifier
+            .weight(1f)
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color.Black.copy(alpha = 0.05f))
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Box(modifier = Modifier.weight(1f).padding(vertical = 11.dp)) {
+            if (viewModel.phoneInput.isEmpty()) {
+              Text("Phone number", color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
+            }
+            BasicTextField(
+              value = viewModel.phoneInput,
+              onValueChange = { new -> if (new.length <= 20) viewModel.onPhoneInputChange(new) },
+              singleLine = true,
+              textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp),
+              cursorBrush = SolidColor(Color.Black),
+              keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone),
+              modifier = Modifier.fillMaxWidth()
+            )
           }
-          BasicTextField(
-            value = viewModel.phoneInput,
-            onValueChange = { new -> if (new.length <= 20) viewModel.onPhoneInputChange(new) },
-            singleLine = true,
-            textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp),
-            cursorBrush = SolidColor(Color.Black),
-            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone),
-            modifier = Modifier.fillMaxWidth()
-          )
         }
       }
 
@@ -10609,6 +10632,181 @@ private fun MobileNumberScreen(viewModel: ChatViewModel) {
         modifier = Modifier.fillMaxWidth().height(52.dp)
       ) {
         if (viewModel.phoneUpdateBusy) {
+          CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+        } else {
+          Text("Save", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        }
+      }
+    }
+  }
+
+  if (viewModel.phoneCountryPickerOpen) {
+    CountryPickerSheet(
+      onDismiss = { viewModel.closeCountryPicker() },
+      onSelect = { viewModel.selectCountry(it) }
+    )
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CountryPickerSheet(onDismiss: () -> Unit, onSelect: (CountryDialCode) -> Unit) {
+  var query by remember { mutableStateOf("") }
+  val filtered = remember(query) {
+    if (query.isBlank()) COUNTRY_DIAL_CODES
+    else COUNTRY_DIAL_CODES.filter { it.name.contains(query, ignoreCase = true) || it.dialCode.contains(query) }
+  }
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color.White) {
+    Column(modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp).padding(horizontal = 16.dp)) {
+      Text("Choose a country", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+      Spacer(modifier = Modifier.height(12.dp))
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(14.dp))
+          .background(Color.Black.copy(alpha = 0.05f))
+          .padding(horizontal = 16.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Icon(Icons.Outlined.Search, contentDescription = null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
+        Spacer(modifier = Modifier.width(10.dp))
+        Box(modifier = Modifier.weight(1f).padding(vertical = 11.dp)) {
+          if (query.isEmpty()) {
+            Text("Search country", color = Color.Black.copy(alpha = 0.35f), fontSize = 15.sp)
+          }
+          BasicTextField(
+            value = query,
+            onValueChange = { query = it },
+            singleLine = true,
+            textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 15.sp),
+            cursorBrush = SolidColor(Color.Black),
+            modifier = Modifier.fillMaxWidth()
+          )
+        }
+      }
+      Spacer(modifier = Modifier.height(8.dp))
+      LazyColumn(modifier = Modifier.fillMaxWidth()) {
+        items(filtered, key = { it.name }) { country ->
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .clickable { onSelect(country) }
+              .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Text(country.flag, fontSize = 18.sp)
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(country.name, color = Color.Black, fontSize = 15.sp, modifier = Modifier.weight(1f))
+            Text(country.dialCode, color = Color.Black.copy(alpha = 0.5f), fontSize = 14.sp, fontFamily = FontFamily.Monospace)
+          }
+        }
+      }
+      Spacer(modifier = Modifier.height(20.dp))
+    }
+  }
+}
+
+// Security > Email. Same trust level as Mobile -- there's no separate
+// email-sending pipeline to confirm this with, so it just updates the
+// address on file directly.
+@Composable
+private fun ChangeEmailScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeChangeEmail() }
+  val focusManager = LocalFocusManager.current
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color.White)
+      .statusBarsPadding()
+      .pointerInput(Unit) {
+        detectTapGestures(onTap = { focusManager.clearFocus() })
+      }
+  ) {
+    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+      Text(
+        "Change Email",
+        color = Color.Black,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.align(Alignment.Center)
+      )
+      IconButton(onClick = { viewModel.closeChangeEmail() }, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(24.dp))
+      }
+    }
+
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(14.dp))
+          .background(Color(0xFFFFF3E5))
+          .padding(12.dp)
+      ) {
+        Icon(
+          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_warning_circle),
+          contentDescription = null,
+          tint = Color.Black,
+          modifier = Modifier.size(16.dp).padding(top = 1.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+          "Note: This updates the contact email ChatGiZa has on file -- it doesn't change your Google sign-in.",
+          color = Color.Black,
+          fontSize = 10.sp,
+          lineHeight = 14.sp,
+          fontWeight = FontWeight.Medium
+        )
+      }
+
+      Spacer(modifier = Modifier.height(20.dp))
+
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(14.dp))
+          .background(Color.Black.copy(alpha = 0.05f))
+          .padding(horizontal = 16.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Icon(
+          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mail_outline),
+          contentDescription = null,
+          tint = Color.Black.copy(alpha = 0.4f),
+          modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Box(modifier = Modifier.weight(1f).padding(vertical = 11.dp)) {
+          if (viewModel.emailInput.isEmpty()) {
+            Text("Email address", color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
+          }
+          BasicTextField(
+            value = viewModel.emailInput,
+            onValueChange = { new -> if (new.length <= 254) viewModel.onEmailInputChange(new) },
+            singleLine = true,
+            textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp),
+            cursorBrush = SolidColor(Color.Black),
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Email),
+            modifier = Modifier.fillMaxWidth()
+          )
+        }
+      }
+
+      if (viewModel.emailError != null) {
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(viewModel.emailError!!, color = Color(0xFFE14050), fontSize = 13.sp)
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+
+      Button(
+        onClick = { viewModel.submitEmail() },
+        enabled = !viewModel.emailUpdateBusy,
+        shape = RoundedCornerShape(28.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
+        modifier = Modifier.fillMaxWidth().height(52.dp)
+      ) {
+        if (viewModel.emailUpdateBusy) {
           CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
         } else {
           Text("Save", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)

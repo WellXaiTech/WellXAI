@@ -102,6 +102,7 @@ sealed class AppScreen {
   object ShareTarget : AppScreen()
   object ChangePassword : AppScreen()
   object MobileNumber : AppScreen()
+  object ChangeEmail : AppScreen()
   object TwoFactorSetup : AppScreen()
   object TotpLoginVerify : AppScreen()
   object AppLockSetup : AppScreen()
@@ -1143,6 +1144,10 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   // the way Change Password has one.
   var phoneInput by mutableStateOf("")
     private set
+  var phoneCountry by mutableStateOf(DEFAULT_COUNTRY_DIAL_CODE)
+    private set
+  var phoneCountryPickerOpen by mutableStateOf(false)
+    private set
   var phoneError by mutableStateOf<String?>(null)
     private set
   var phoneUpdateBusy by mutableStateOf(false)
@@ -1150,8 +1155,19 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun openMobileNumber() {
     screen = AppScreen.MobileNumber
-    phoneInput = userPhone.orEmpty()
     phoneError = null
+    // Split whatever's already saved back into country + local number so
+    // re-opening the screen doesn't show the full "+255712345678" string
+    // jammed into the plain number field.
+    val saved = userPhone.orEmpty()
+    val matched = matchCountryByDialCode(saved)
+    if (matched != null) {
+      phoneCountry = matched
+      phoneInput = saved.removePrefix(matched.dialCode).trim()
+    } else {
+      phoneCountry = DEFAULT_COUNTRY_DIAL_CODE
+      phoneInput = saved
+    }
   }
 
   fun closeMobileNumber() {
@@ -1159,31 +1175,107 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     screen = AppScreen.ProfileHub
   }
 
+  fun openCountryPicker() {
+    phoneCountryPickerOpen = true
+  }
+
+  fun closeCountryPicker() {
+    phoneCountryPickerOpen = false
+  }
+
+  fun selectCountry(country: CountryDialCode) {
+    phoneCountry = country
+    phoneCountryPickerOpen = false
+  }
+
   fun onPhoneInputChange(value: String) {
-    phoneInput = value
+    // Typing/pasting a number that already starts with a recognized dial
+    // code (e.g. "+254712345678") auto-detects and switches the selected
+    // country instead of leaving it jammed onto the front of the local
+    // number field.
+    val matched = matchCountryByDialCode(value)
+    if (matched != null) {
+      phoneCountry = matched
+      phoneInput = value.removePrefix(matched.dialCode).trim()
+    } else {
+      phoneInput = value
+    }
     phoneError = null
   }
 
   fun submitPhoneNumber() {
-    val trimmed = phoneInput.trim()
+    val trimmed = phoneInput.trim().trimStart('0')
     if (trimmed.isEmpty()) {
       phoneError = "Enter a phone number"
       return
     }
+    val fullNumber = "${phoneCountry.dialCode}$trimmed"
     val token = tokenStore.getToken() ?: return
     phoneUpdateBusy = true
     phoneError = null
     viewModelScope.launch {
-      when (val result = ChatGizaApi.updatePhone(token, trimmed)) {
+      when (val result = ChatGizaApi.updatePhone(token, fullNumber)) {
         is ApiResult.Success -> {
-          userPhone = trimmed
-          tokenStore.setUserPhone(trimmed)
+          userPhone = fullNumber
+          tokenStore.setUserPhone(fullNumber)
           phoneUpdateBusy = false
           closeMobileNumber()
         }
         is ApiResult.Failure -> {
           phoneUpdateBusy = false
           phoneError = result.message
+        }
+      }
+    }
+  }
+
+  // Security > Email. Same trust level as Mobile/the in-app password --
+  // no confirmation email is sent (no separate email-sending pipeline
+  // beyond the TOTP/passkey ones this account already has), it just
+  // updates the address ChatGiZa has on file.
+  var emailInput by mutableStateOf("")
+    private set
+  var emailError by mutableStateOf<String?>(null)
+    private set
+  var emailUpdateBusy by mutableStateOf(false)
+    private set
+
+  fun openChangeEmail() {
+    screen = AppScreen.ChangeEmail
+    emailInput = userEmail.orEmpty()
+    emailError = null
+  }
+
+  fun closeChangeEmail() {
+    returnToAccountTabsIfPending()
+    screen = AppScreen.ProfileHub
+  }
+
+  fun onEmailInputChange(value: String) {
+    emailInput = value
+    emailError = null
+  }
+
+  fun submitEmail() {
+    val trimmed = emailInput.trim()
+    if (trimmed.isEmpty() || !trimmed.contains("@")) {
+      emailError = "Enter a valid email address"
+      return
+    }
+    val token = tokenStore.getToken() ?: return
+    emailUpdateBusy = true
+    emailError = null
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.updateEmail(token, trimmed)) {
+        is ApiResult.Success -> {
+          userEmail = trimmed
+          tokenStore.setUserEmail(trimmed)
+          emailUpdateBusy = false
+          closeChangeEmail()
+        }
+        is ApiResult.Failure -> {
+          emailUpdateBusy = false
+          emailError = result.message
         }
       }
     }
