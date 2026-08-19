@@ -5081,7 +5081,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             .padding(horizontal = 16.dp)
         ) {
           MyInfoRow(
-            icon = Icons.Outlined.AccountCircle,
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_profile_circle_outline),
             label = "Profile Picture",
             // AvatarPickerDialog only ever renders from within
             // ProfileHubScreen's own composition (see its showAvatarPicker
@@ -5258,7 +5258,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           // Moved here from General -- how ChatGiZa sounds is a
           // preference, alongside how it behaves (Customize GiZa above).
           MyInfoRow(
-            icon = Icons.Outlined.GraphicEq,
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_voice_bars),
             label = "Voice",
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openVoice() } }
           ) {}
@@ -5353,7 +5353,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           ) {}
           // Moved here from My info -- business/community links, not identity.
           MyInfoRow(
-            icon = Icons.Outlined.Business,
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_briefcase),
             label = "Advertise on ChatGiZa",
             onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/advertise"))) }
           ) {}
