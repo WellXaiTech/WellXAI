@@ -1,0 +1,19 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Home-button dot. -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M11,17.937A1,1 0 1,0 13,17.937A1,1 0 1,0 11,17.937Z" />
+    <!-- Outer phone silhouette + inner rounded-rect combined into one
+         nonzero-fill path -- opposite-winding subpaths (matching the source
+         SVG's opposite sweep flags) so the shared area cancels out, leaving
+         just the ring between them, same technique as ic_switch_account.xml. -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M16.727,21.937H7.273a2.384,2.384 0 0,1 -2.239,-2.5V4.563a2.384,2.384 0 0,1 2.239,-2.5h9.454a2.384,2.384 0 0,1 2.239,2.5v14.874a2.384,2.384 0 0,1 -2.239,2.5M7.273,3.063a1.39,1.39 0 0,0 -1.239,1.5v14.874a1.39,1.39 0 0,0 1.239,1.5h9.454a1.39,1.39 0 0,0 1.239,-1.5V4.563a1.39,1.39 0 0,0 -1.239,-1.5Z" />
+
+</vector>
