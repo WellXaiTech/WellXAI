@@ -4798,16 +4798,16 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
         lineHeight = 14.sp
       )
       Spacer(modifier = Modifier.height(8.dp))
-      HorizontalDivider(modifier = Modifier.fillMaxWidth(0.45f), color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
+      HorizontalDivider(modifier = Modifier.fillMaxWidth(0.9f), color = Color(0xFFE0E0E0), thickness = 2.dp)
       Spacer(modifier = Modifier.height(6.dp))
-      Text("Current plan: Free", color = Color.Black.copy(alpha = 0.4f), fontSize = 10.sp)
+      Text("Current plan: Free", color = Color.Black.copy(alpha = 0.3f), fontSize = 11.sp)
       Spacer(modifier = Modifier.height(8.dp))
       Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
           "Pro Benefits ›",
-          color = Color.Black.copy(alpha = 0.6f),
-          fontSize = 11.sp,
-          fontWeight = FontWeight.Medium,
+          color = Color.Black,
+          fontSize = 14.sp,
+          fontWeight = FontWeight.Bold,
           modifier = Modifier.weight(1f).clickable { comingSoon("Pro Benefits") }
         )
         Box(
