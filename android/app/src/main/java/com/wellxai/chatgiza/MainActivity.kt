@@ -190,6 +190,7 @@ import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Share
@@ -5857,6 +5858,38 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
       }
 
       Spacer(modifier = Modifier.height(28.dp))
+
+      Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+        Image(
+          painter = androidx.compose.ui.res.painterResource(R.mipmap.ic_launcher),
+          contentDescription = null,
+          modifier = Modifier.size(88.dp).clip(RoundedCornerShape(22.dp))
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Text("ChatGiZa", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text("Version ${BuildConfig.VERSION_NAME}", color = Color.Black.copy(alpha = 0.5f), fontSize = 14.sp)
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+      HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
+
+      // Same real update check the (unreachable) old Settings footer used --
+      // silently compares against the public GitHub Release the CI pipeline
+      // already publishes, no App Store to defer to since this is sideloaded.
+      LaunchedEffect(Unit) { viewModel.checkForUpdate() }
+      val latestVersion = viewModel.latestVersionInfo
+      val updateAvailable = latestVersion != null && latestVersion.runNumber > BuildConfig.VERSION_CODE
+      AboutUsRow(icon = Icons.Filled.Refresh, label = if (updateAvailable) "Update Available" else "Check for Updates") {
+        if (updateAvailable) {
+          context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(latestVersion!!.downloadUrl)))
+        } else {
+          Toast.makeText(context, "You're on the latest version", Toast.LENGTH_SHORT).show()
+        }
+      }
+      HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
+
+      Spacer(modifier = Modifier.height(24.dp))
 
       Column(
         modifier = Modifier
