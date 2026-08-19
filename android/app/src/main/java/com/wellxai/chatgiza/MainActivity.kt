@@ -8125,6 +8125,7 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
   val context = LocalContext.current
   val clipboard = LocalClipboardManager.current
   val mainUid = remember(viewModel.userId) { derivedUid(viewModel.userId.orEmpty()) }
+  var subaccountsExpanded by remember { mutableStateOf(true) }
   LaunchedEffect(Unit) { viewModel.loadSubaccounts() }
 
   fun copyUid(uid: String) {
@@ -8214,28 +8215,43 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
           Spacer(modifier = Modifier.height(14.dp))
           HorizontalDivider(color = Color.Black.copy(alpha = 0.08f))
           Spacer(modifier = Modifier.height(14.dp))
-          Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .clickable { subaccountsExpanded = !subaccountsExpanded },
+            verticalAlignment = Alignment.CenterVertically
+          ) {
             Text("Subaccount", color = Color.Black.copy(alpha = 0.4f), fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.weight(1f))
             Text("${viewModel.subaccounts.size}", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace)
+            Icon(
+              Icons.Outlined.KeyboardArrowDown,
+              contentDescription = if (subaccountsExpanded) "Collapse" else "Expand",
+              tint = Color.Black,
+              modifier = Modifier
+                .size(18.dp)
+                .graphicsLayer { rotationZ = if (subaccountsExpanded) 180f else 0f }
+            )
           }
-          Spacer(modifier = Modifier.height(10.dp))
-          viewModel.subaccounts.forEach { sub ->
-            val subUid = derivedUid(sub.id)
-            Row(
-              modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Text(sub.name, color = Color.Black, fontSize = 13.sp, fontFamily = FontFamily.Monospace)
-              Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("UID: $subUid", color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp, fontFamily = FontFamily.Monospace)
-                Spacer(modifier = Modifier.width(4.dp))
-                Icon(
-                  painter = androidx.compose.ui.res.painterResource(R.drawable.ic_copy),
-                  contentDescription = "Copy UID",
-                  tint = Color.Black.copy(alpha = 0.4f),
-                  modifier = Modifier.size(11.dp).clickable { copyUid(subUid) }
-                )
+          if (subaccountsExpanded) {
+            Spacer(modifier = Modifier.height(10.dp))
+            viewModel.subaccounts.forEach { sub ->
+              val subUid = derivedUid(sub.id)
+              Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Text(sub.name, color = Color.Black, fontSize = 13.sp, fontFamily = FontFamily.Monospace)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  Text("UID: $subUid", color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                  Spacer(modifier = Modifier.width(4.dp))
+                  Icon(
+                    painter = androidx.compose.ui.res.painterResource(R.drawable.ic_copy),
+                    contentDescription = "Copy UID",
+                    tint = Color.Black.copy(alpha = 0.4f),
+                    modifier = Modifier.size(11.dp).clickable { copyUid(subUid) }
+                  )
+                }
               }
             }
           }
