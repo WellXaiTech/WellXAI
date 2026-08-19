@@ -122,6 +122,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
@@ -8105,25 +8106,48 @@ private fun AccountSettingsScreen(viewModel: ChatViewModel) {
   }
 }
 
+// A rounded rect with the bottom-left corner cut into a diagonal --
+// matches the "folded page corner" look on the reference's document
+// illustration instead of a plain rounded corner there.
+private fun foldedCornerShape(cornerRadius: Dp, foldSize: Dp) = GenericShape { size, density ->
+  val r = with(density) { cornerRadius.toPx() }
+  val fold = with(density) { foldSize.toPx() }
+  val w = size.width
+  val h = size.height
+  moveTo(r, 0f)
+  lineTo(w - r, 0f)
+  quadraticBezierTo(w, 0f, w, r)
+  lineTo(w, h - r)
+  quadraticBezierTo(w, h, w - r, h)
+  lineTo(fold, h)
+  lineTo(0f, h - fold)
+  lineTo(0f, r)
+  quadraticBezierTo(0f, 0f, r, 0f)
+  close()
+}
+
 @Composable
 private fun DeactivateAccountIllustration() {
+  val cardShape = remember { foldedCornerShape(12.dp, 16.dp) }
   Box(modifier = Modifier.size(width = 140.dp, height = 128.dp)) {
+    // Less tilt and tucked further under the front card so its corner
+    // doesn't poke out messily at the bottom-left.
     Box(
       modifier = Modifier
         .size(width = 84.dp, height = 100.dp)
         .align(Alignment.TopStart)
-        .offset(x = 3.dp, y = 10.dp)
-        .graphicsLayer { rotationZ = -8f }
-        .border(2.dp, Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+        .offset(x = 9.dp, y = 13.dp)
+        .graphicsLayer { rotationZ = -5f }
+        .border(1.dp, Color.Black.copy(alpha = 0.6f), cardShape)
     )
     Column(
       modifier = Modifier
         .size(width = 84.dp, height = 100.dp)
         .align(Alignment.TopStart)
         .offset(x = 29.dp, y = 0.dp)
-        .clip(RoundedCornerShape(12.dp))
+        .clip(cardShape)
         .background(Color.White)
-        .border(2.dp, Color.Black, RoundedCornerShape(12.dp))
+        .border(1.dp, Color.Black, cardShape)
         .padding(14.dp),
       horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -8140,6 +8164,8 @@ private fun DeactivateAccountIllustration() {
       Spacer(modifier = Modifier.height(5.dp))
       Box(modifier = Modifier.fillMaxWidth(0.65f).height(1.dp).background(Color.Black))
     }
+    // Pulled up and inward (instead of hanging fully outside the corner)
+    // so it reads as sitting on the card, not floating separately below it.
     Icon(
       painter = androidx.compose.ui.res.painterResource(R.drawable.ic_padlock_outline),
       contentDescription = null,
@@ -8147,6 +8173,7 @@ private fun DeactivateAccountIllustration() {
       modifier = Modifier
         .size(30.dp)
         .align(Alignment.BottomEnd)
+        .offset(x = (-8).dp, y = (-10).dp)
     )
   }
 }
@@ -8335,23 +8362,24 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
 // different actions.
 @Composable
 private fun DeleteAccountIllustration() {
+  val cardShape = remember { foldedCornerShape(12.dp, 16.dp) }
   Box(modifier = Modifier.size(width = 140.dp, height = 128.dp)) {
     Box(
       modifier = Modifier
         .size(width = 84.dp, height = 100.dp)
         .align(Alignment.TopStart)
-        .offset(x = 3.dp, y = 10.dp)
-        .graphicsLayer { rotationZ = -8f }
-        .border(2.dp, Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+        .offset(x = 9.dp, y = 13.dp)
+        .graphicsLayer { rotationZ = -5f }
+        .border(1.dp, Color.Black.copy(alpha = 0.6f), cardShape)
     )
     Column(
       modifier = Modifier
         .size(width = 84.dp, height = 100.dp)
         .align(Alignment.TopStart)
         .offset(x = 29.dp, y = 0.dp)
-        .clip(RoundedCornerShape(12.dp))
+        .clip(cardShape)
         .background(Color.White)
-        .border(2.dp, Color.Black, RoundedCornerShape(12.dp))
+        .border(1.dp, Color.Black, cardShape)
         .padding(14.dp),
       horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -8373,6 +8401,7 @@ private fun DeleteAccountIllustration() {
       modifier = Modifier
         .size(30.dp)
         .align(Alignment.BottomEnd)
+        .offset(x = (-8).dp, y = (-10).dp)
     )
   }
 }
