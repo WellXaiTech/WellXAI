@@ -49,6 +49,8 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.Animatable
@@ -8262,25 +8264,37 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
                 .graphicsLayer { rotationZ = if (subaccountsExpanded) 180f else 0f }
             )
           }
-          if (subaccountsExpanded) {
-            Spacer(modifier = Modifier.height(10.dp))
-            viewModel.subaccounts.forEach { sub ->
-              val subUid = derivedUid(sub.id)
-              Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                Text(sub.name, color = Color.Black, fontSize = 13.sp, fontFamily = FontFamily.Monospace)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                  Text("UID: $subUid", color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp, fontFamily = FontFamily.Monospace)
-                  Spacer(modifier = Modifier.width(4.dp))
-                  Icon(
-                    painter = androidx.compose.ui.res.painterResource(R.drawable.ic_copy),
-                    contentDescription = "Copy UID",
-                    tint = Color.Black.copy(alpha = 0.4f),
-                    modifier = Modifier.size(11.dp).clickable { copyUid(subUid) }
-                  )
+          // AnimatedVisibility instead of a plain `if` -- collapsing the
+          // list used to remove this content in one recomposition frame,
+          // yanking the sheet's whole height (and everything below it)
+          // down instantly, which read as the sheet itself slamming shut.
+          // Animating the height/fade change smooths that out to just the
+          // list opening and closing in place.
+          AnimatedVisibility(
+            visible = subaccountsExpanded,
+            enter = expandVertically(animationSpec = tween(200)) + fadeIn(animationSpec = tween(200)),
+            exit = shrinkVertically(animationSpec = tween(200)) + fadeOut(animationSpec = tween(150))
+          ) {
+            Column {
+              Spacer(modifier = Modifier.height(10.dp))
+              viewModel.subaccounts.forEach { sub ->
+                val subUid = derivedUid(sub.id)
+                Row(
+                  modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Text(sub.name, color = Color.Black, fontSize = 13.sp, fontFamily = FontFamily.Monospace)
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("UID: $subUid", color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                      painter = androidx.compose.ui.res.painterResource(R.drawable.ic_copy),
+                      contentDescription = "Copy UID",
+                      tint = Color.Black.copy(alpha = 0.4f),
+                      modifier = Modifier.size(11.dp).clickable { copyUid(subUid) }
+                    )
+                  }
                 }
               }
             }
