@@ -5142,7 +5142,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         ) {
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mail_outline),
-            iconSize = 23.dp,
+            iconSize = 26.dp,
             label = "Email",
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openChangeEmail() } }
           ) {
@@ -5155,7 +5155,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           // password.
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mobile_outline),
-            iconSize = 23.dp,
+            iconSize = 26.dp,
             label = "Mobile",
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openMobileNumber() } }
           ) {
@@ -5193,7 +5193,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoDivider()
           // Moved here from My info -- linking another account is an
           // access/security action, not identity.
-          MyInfoRow(icon = Icons.Outlined.AlternateEmail, label = "Link Account", onClick = { comingSoon("Link Account") }) {}
+          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_at_circle), label = "Link Account", onClick = { comingSoon("Link Account") }) {}
         }
 
         Spacer(modifier = Modifier.height(18.dp))
@@ -5289,7 +5289,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           // same feature, so it's gone rather than kept as a second path
           // to the same place.
           MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_bell_outline), label = "Notification Settings", onClick = { comingSoon("Notification Settings") }) {}
-          MyInfoRow(icon = Icons.Outlined.Email, label = "Email Subscriptions", onClick = { comingSoon("Email Subscriptions") }) {}
+          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mail_outline), label = "Email Subscriptions", onClick = { comingSoon("Email Subscriptions") }) {}
         }
         Spacer(modifier = Modifier.height(20.dp))
       } else if (tabForPage == "General") {
