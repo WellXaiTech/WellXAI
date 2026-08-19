@@ -4,8 +4,16 @@
 // all. expectedOrigin covers both the website itself and the native app's
 // origin, which Android derives from the app's signing cert fingerprint
 // per the android:apk-key-hash: scheme WebAuthn defines for native apps.
+//
+// Must be "www.chatgiza.com", NOT the bare "chatgiza.com" -- the bare
+// domain 308-redirects to www (confirmed: curl -I https://chatgiza.com/...
+// returns a redirect, not the file), and Android's Digital Asset Links
+// check does not follow redirects when fetching
+// https://<rpID>/.well-known/assetlinks.json. Using the bare domain here
+// produced "[50152] RP ID cannot be validated" even though the file itself
+// was correctly published and reachable at the www host.
 export const RP_NAME = "ChatGiZa";
-export const RP_ID = "chatgiza.com";
+export const RP_ID = "www.chatgiza.com";
 
 // The Android APK origin string Google's Credential Manager sends as
 // `origin` when a passkey ceremony happens inside the native app (not a
@@ -17,7 +25,7 @@ export const RP_ID = "chatgiza.com";
 // new fingerprint or native passkeys silently stop working.
 export const ANDROID_APK_ORIGIN = "android:apk-key-hash:vwarkOSK_Tmtp1eSzsIS-Ftt1T4YicrYvzUTt95FbZI";
 
-export const EXPECTED_ORIGINS = [`https://${RP_ID}`, `https://www.${RP_ID}`, ANDROID_APK_ORIGIN];
+export const EXPECTED_ORIGINS = [`https://${RP_ID}`, ANDROID_APK_ORIGIN];
 
 // KV keys for the two ceremonies' staged challenges. Kept here (not
 // exported from a route.ts, which Next's App Router only allows specific
