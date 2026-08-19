@@ -4741,12 +4741,11 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         .fillMaxSize()
         .background(Color.White)
     ) {
-    // Real drag-follows-finger feel instead of the earlier version, which
-    // only reacted once on release (content sat still while dragging, then
-    // snapped instantly) -- tabOffsetAnim tracks the live finger position
-    // during the drag via snapTo (instant, no easing) and only switches to
-    // eased animateTo for the settle/slide-through on release, so it reads
-    // as a real swipe rather than a toggle.
+    // tabOffsetAnim/tabDragScope drive only the tab-content Box further
+    // below now, not this whole Column -- wrapping the header/avatar/tab
+    // bar in the drag too made the entire screen (title, avatar, tab
+    // labels included) slide together, which read as the whole page
+    // leaving rather than just the content underneath the tabs switching.
     val tabOffsetAnim = remember { Animatable(0f) }
     val tabDragScope = rememberCoroutineScope()
     Column(
@@ -4754,36 +4753,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         .fillMaxSize()
         .statusBarsPadding()
         .verticalScroll(rememberScrollState())
-        .pointerInput(Unit) {
-          detectHorizontalDragGestures(
-            onDragEnd = {
-              val idx = accountTabsOrder.indexOf(viewModel.activeAccountTab)
-              val current = tabOffsetAnim.value
-              val screenWidth = size.width.toFloat().coerceAtLeast(1f)
-              tabDragScope.launch {
-                when {
-                  current <= -80f && idx < accountTabsOrder.lastIndex -> {
-                    tabOffsetAnim.animateTo(-screenWidth, tween(160))
-                    viewModel.activeAccountTab = accountTabsOrder[idx + 1]
-                    tabOffsetAnim.snapTo(screenWidth)
-                    tabOffsetAnim.animateTo(0f, tween(160))
-                  }
-                  current >= 80f && idx > 0 -> {
-                    tabOffsetAnim.animateTo(screenWidth, tween(160))
-                    viewModel.activeAccountTab = accountTabsOrder[idx - 1]
-                    tabOffsetAnim.snapTo(-screenWidth)
-                    tabOffsetAnim.animateTo(0f, tween(160))
-                  }
-                  else -> tabOffsetAnim.animateTo(0f, tween(200))
-                }
-              }
-            },
-            onDragCancel = { tabDragScope.launch { tabOffsetAnim.animateTo(0f, tween(200)) } }
-          ) { _, dragAmount ->
-            tabDragScope.launch { tabOffsetAnim.snapTo(tabOffsetAnim.value + dragAmount) }
-          }
-        }
-        .offset { IntOffset(tabOffsetAnim.value.roundToInt(), 0) }
         .padding(horizontal = 16.dp)
         .padding(bottom = if (viewModel.activeAccountTab == "My info") 76.dp else 0.dp)
     ) {
@@ -4889,6 +4858,42 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
 
       Spacer(modifier = Modifier.height(24.dp))
 
+      // Only this content area follows the finger/slides on swipe -- the
+      // header, avatar row, and tab bar above stay fixed in place, matching
+      // the reference behavior (only the list under the tabs moves).
+      Box(
+        modifier = Modifier
+          .pointerInput(Unit) {
+            detectHorizontalDragGestures(
+              onDragEnd = {
+                val idx = accountTabsOrder.indexOf(viewModel.activeAccountTab)
+                val current = tabOffsetAnim.value
+                val screenWidth = size.width.toFloat().coerceAtLeast(1f)
+                tabDragScope.launch {
+                  when {
+                    current <= -80f && idx < accountTabsOrder.lastIndex -> {
+                      tabOffsetAnim.animateTo(-screenWidth, tween(160))
+                      viewModel.activeAccountTab = accountTabsOrder[idx + 1]
+                      tabOffsetAnim.snapTo(screenWidth)
+                      tabOffsetAnim.animateTo(0f, tween(160))
+                    }
+                    current >= 80f && idx > 0 -> {
+                      tabOffsetAnim.animateTo(screenWidth, tween(160))
+                      viewModel.activeAccountTab = accountTabsOrder[idx - 1]
+                      tabOffsetAnim.snapTo(-screenWidth)
+                      tabOffsetAnim.animateTo(0f, tween(160))
+                    }
+                    else -> tabOffsetAnim.animateTo(0f, tween(200))
+                  }
+                }
+              },
+              onDragCancel = { tabDragScope.launch { tabOffsetAnim.animateTo(0f, tween(200)) } }
+            ) { _, dragAmount ->
+              tabDragScope.launch { tabOffsetAnim.snapTo(tabOffsetAnim.value + dragAmount) }
+            }
+          }
+          .offset { IntOffset(tabOffsetAnim.value.roundToInt(), 0) }
+      ) {
       if (viewModel.activeAccountTab == "My info") {
         // Identity only -- who you are, not app behavior or account
         // security, which now live in Preference/Security respectively
@@ -5163,6 +5168,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(icon = Icons.Outlined.SupportAgent, label = "Join Our Community", onClick = { viewModel.leaveAccountTabsFor { viewModel.openCommunity() } }) {}
         }
         Spacer(modifier = Modifier.height(20.dp))
+      }
       }
     }
 
