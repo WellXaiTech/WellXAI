@@ -9,7 +9,7 @@
         android:fillColor="#FF000000"
         android:pathData="M11,17.937A1,1 0 1,0 13,17.937A1,1 0 1,0 11,17.937Z" />
     <!-- Outer phone silhouette + inner rounded-rect combined into one
-         nonzero-fill path -- opposite-winding subpaths (matching the source
+         nonzero-fill path, opposite-winding subpaths (matching the source
          SVG's opposite sweep flags) so the shared area cancels out, leaving
          just the ring between them, same technique as ic_switch_account.xml. -->
     <path
