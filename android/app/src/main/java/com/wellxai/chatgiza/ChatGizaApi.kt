@@ -280,6 +280,48 @@ object ChatGizaApi {
     }
   }
 
+  // Sign-in via the in-app password instead of Google -- identifier is
+  // either the account's email or its saved contact phone number,
+  // depending on which tab was selected. Same TotpRequired/SignedIn shape
+  // as mobileAuth, so callers handle both the exact same way.
+  suspend fun authWithPassword(identifier: String, method: String, password: String): ApiResult<MobileAuthOutcome> = withContext(Dispatchers.IO) {
+    try {
+      val body = JSONObject()
+        .put("identifier", identifier)
+        .put("method", method)
+        .put("password", password)
+        .put("deviceModel", android.os.Build.MODEL ?: "")
+        .toString().toRequestBody(JSON)
+      val request = Request.Builder().url("$BASE_URL/api/mobile/auth-password").post(body).build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val json = JSONObject(text)
+        if (json.optBoolean("totpRequired", false)) {
+          return@withContext ApiResult.Success(MobileAuthOutcome.TotpRequired(json.getString("pendingId")))
+        }
+        val userJson = json.getJSONObject("user")
+        ApiResult.Success(
+          MobileAuthOutcome.SignedIn(
+            AuthResult(
+              token = json.getString("token"),
+              user = MobileUser(
+                id = userJson.getString("id"),
+                name = userJson.optString("name", null),
+                email = userJson.optString("email", null),
+                image = userJson.optString("image", null)
+              )
+            )
+          )
+        )
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
   // Step 2 of a 2FA-gated sign-in -- verifies the authenticator code against
   // the identity mobileAuth staged under pendingId, then returns the same
   // AuthResult mobileAuth would have if 2FA weren't on.

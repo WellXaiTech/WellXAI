@@ -528,8 +528,7 @@ class MainActivity : ComponentActivity() {
           when (viewModel.screen) {
             is AppScreen.Loading -> LoadingScreen()
             is AppScreen.SignedOut -> SignedOutScreen(
-              signingIn = viewModel.signingIn,
-              error = viewModel.errorMessage,
+              viewModel = viewModel,
               onSignIn = ::startGoogleSignIn,
               onSignInWithPasskey = ::startPasskeySignIn
             )
@@ -1207,53 +1206,236 @@ private fun LoadingScreen() {
   }
 }
 
+// Bybit-style layout: brand on a plain field up top, a white rounded-top
+// card below holding an Email/Mobile tab switch, identifier + password
+// fields, and "Or go with" social buttons. The Email/Mobile password
+// sign-in is real (see ChatViewModel.submitPasswordSignIn/authWithPassword)
+// but only works for accounts that have set an in-app password from
+// Security > Change Password -- Google (and the existing passkey option)
+// stay as the only way in for accounts that haven't.
 @Composable
-private fun SignedOutScreen(signingIn: Boolean, error: String?, onSignIn: () -> Unit, onSignInWithPasskey: () -> Unit) {
+private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit, onSignInWithPasskey: () -> Unit) {
+  val focusManager = LocalFocusManager.current
+  val signingIn = viewModel.signingIn
   Column(
-    modifier = Modifier.fillMaxSize().padding(32.dp),
-    verticalArrangement = Arrangement.Center,
-    horizontalAlignment = Alignment.CenterHorizontally
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color(0xFFF4F4F4))
+      .pointerInput(Unit) {
+        detectTapGestures(onTap = { focusManager.clearFocus() })
+      }
   ) {
-    Text("ChatGiZa", fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, color = colorScheme.onBackground)
-    Spacer(modifier = Modifier.height(12.dp))
-    Text(
-      "Sign in to start chatting",
-      fontSize = 15.sp,
-      color = colorScheme.onBackground.copy(alpha = 0.7f)
-    )
-    Spacer(modifier = Modifier.height(32.dp))
-    Button(
-      onClick = onSignIn,
-      enabled = !signingIn,
-      shape = RoundedCornerShape(24.dp),
-      modifier = Modifier.fillMaxWidth().height(52.dp)
+    Box(
+      modifier = Modifier.fillMaxWidth().weight(1f),
+      contentAlignment = Alignment.Center
     ) {
-      Text(if (signingIn) "Signing in…" else "Continue with Google")
+      Text("ChatGiZa", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
     }
-    Spacer(modifier = Modifier.height(12.dp))
-    // Only shows up for accounts that already registered a passkey (see
-    // Security > Passkeys) -- Credential Manager itself is what actually
-    // decides whether any are available on this device and cancels
-    // gracefully with nothing to offer if not.
-    OutlinedButton(
-      onClick = onSignInWithPasskey,
-      enabled = !signingIn,
-      shape = RoundedCornerShape(24.dp),
-      modifier = Modifier.fillMaxWidth().height(52.dp)
+
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+        .background(Color.White)
+        .navigationBarsPadding()
+        .verticalScroll(rememberScrollState())
+        .padding(horizontal = 20.dp, vertical = 24.dp)
     ) {
-      Icon(
-        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_passkey),
-        contentDescription = null,
-        tint = colorScheme.onBackground,
-        modifier = Modifier.size(18.dp)
+      // Email / Mobile pill switch
+      Row(
+        modifier = Modifier
+          .clip(RoundedCornerShape(50))
+          .background(Color.Black.copy(alpha = 0.06f))
+          .padding(4.dp)
+      ) {
+        listOf("email" to "Email", "mobile" to "Mobile").forEach { (key, label) ->
+          val selected = viewModel.signInTab == key
+          Box(
+            modifier = Modifier
+              .clip(RoundedCornerShape(50))
+              .background(if (selected) Color.White else Color.Transparent)
+              .clickable { viewModel.onSignInTabChange(key) }
+              .padding(horizontal = 20.dp, vertical = 8.dp)
+          ) {
+            Text(
+              label,
+              color = Color.Black,
+              fontSize = 14.sp,
+              fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+            )
+          }
+        }
+      }
+
+      Spacer(modifier = Modifier.height(20.dp))
+
+      if (viewModel.signInTab == "mobile") {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+          Row(
+            modifier = Modifier
+              .clip(RoundedCornerShape(14.dp))
+              .background(Color.Black.copy(alpha = 0.05f))
+              .clickable { viewModel.openSignInCountryPicker() }
+              .padding(horizontal = 12.dp, vertical = 15.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Text(viewModel.signInCountry.flag, fontSize = 16.sp)
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(viewModel.signInCountry.dialCode, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "Choose country", tint = Color.Black.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
+          }
+          Spacer(modifier = Modifier.width(8.dp))
+          Row(
+            modifier = Modifier
+              .weight(1f)
+              .clip(RoundedCornerShape(14.dp))
+              .background(Color.Black.copy(alpha = 0.05f))
+              .padding(horizontal = 16.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Box(modifier = Modifier.weight(1f).padding(vertical = 11.dp)) {
+              if (viewModel.signInIdentifierInput.isEmpty()) {
+                Text("Mobile number", color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
+              }
+              BasicTextField(
+                value = viewModel.signInIdentifierInput,
+                onValueChange = { new -> if (new.length <= 20) viewModel.onSignInIdentifierChange(new) },
+                singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp),
+                cursorBrush = SolidColor(Color.Black),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone),
+                modifier = Modifier.fillMaxWidth()
+              )
+            }
+          }
+        }
+      } else {
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color.Black.copy(alpha = 0.05f))
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Icon(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mail_outline),
+            contentDescription = null,
+            tint = Color.Black.copy(alpha = 0.4f),
+            modifier = Modifier.size(18.dp)
+          )
+          Spacer(modifier = Modifier.width(12.dp))
+          Box(modifier = Modifier.weight(1f).padding(vertical = 11.dp)) {
+            if (viewModel.signInIdentifierInput.isEmpty()) {
+              Text("Email", color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
+            }
+            BasicTextField(
+              value = viewModel.signInIdentifierInput,
+              onValueChange = { new -> viewModel.onSignInIdentifierChange(new) },
+              singleLine = true,
+              textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp),
+              cursorBrush = SolidColor(Color.Black),
+              keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Email),
+              modifier = Modifier.fillMaxWidth()
+            )
+          }
+        }
+      }
+
+      Spacer(modifier = Modifier.height(12.dp))
+
+      PasswordField(
+        value = viewModel.signInPasswordInput,
+        onValueChange = viewModel::onSignInPasswordChange,
+        placeholder = "Password"
       )
-      Spacer(modifier = Modifier.width(8.dp))
-      Text("Sign in with a passkey", color = colorScheme.onBackground)
+
+      if (viewModel.signInError != null) {
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(viewModel.signInError!!, color = Color(0xFFE14050), fontSize = 13.sp)
+      }
+
+      Spacer(modifier = Modifier.height(20.dp))
+
+      Button(
+        onClick = { viewModel.submitPasswordSignIn() },
+        enabled = !viewModel.signInBusy,
+        shape = RoundedCornerShape(28.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
+        modifier = Modifier.fillMaxWidth().height(52.dp)
+      ) {
+        if (viewModel.signInBusy) {
+          CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+        } else {
+          Text("Next", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        }
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        HorizontalDivider(modifier = Modifier.weight(1f), color = Color.Black.copy(alpha = 0.1f))
+        Text(
+          "Or go with",
+          color = Color.Black.copy(alpha = 0.4f),
+          fontSize = 12.sp,
+          modifier = Modifier.padding(horizontal = 10.dp)
+        )
+        HorizontalDivider(modifier = Modifier.weight(1f), color = Color.Black.copy(alpha = 0.1f))
+      }
+
+      Spacer(modifier = Modifier.height(20.dp))
+
+      OutlinedButton(
+        onClick = onSignIn,
+        enabled = !signingIn,
+        shape = RoundedCornerShape(28.dp),
+        colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.Black.copy(alpha = 0.04f)),
+        modifier = Modifier.fillMaxWidth().height(52.dp)
+      ) {
+        Icon(
+          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_google_g),
+          contentDescription = null,
+          tint = Color.Unspecified,
+          modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(if (signingIn) "Signing in…" else "Google", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+      }
+
+      Spacer(modifier = Modifier.height(12.dp))
+
+      // Only shows up for accounts that already registered a passkey (see
+      // Security > Passkeys) -- Credential Manager itself is what actually
+      // decides whether any are available on this device and cancels
+      // gracefully with nothing to offer if not.
+      OutlinedButton(
+        onClick = onSignInWithPasskey,
+        enabled = !signingIn,
+        shape = RoundedCornerShape(28.dp),
+        colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.Black.copy(alpha = 0.04f)),
+        modifier = Modifier.fillMaxWidth().height(52.dp)
+      ) {
+        Icon(
+          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_passkey),
+          contentDescription = null,
+          tint = Color.Black,
+          modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text("Sign in with a passkey", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+      }
+
+      Spacer(modifier = Modifier.height(8.dp))
     }
-    if (error != null) {
-      Spacer(modifier = Modifier.height(16.dp))
-      Text(error, color = Color.Black, fontSize = 13.sp)
-    }
+  }
+
+  if (viewModel.signInCountryPickerOpen) {
+    CountryPickerSheet(
+      onDismiss = { viewModel.closeSignInCountryPicker() },
+      onSelect = { viewModel.selectSignInCountry(it) }
+    )
   }
 }
 

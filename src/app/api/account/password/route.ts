@@ -1,28 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { randomBytes, randomInt, scryptSync, timingSafeEqual } from "crypto";
+import { randomInt } from "crypto";
 import { kv } from "@vercel/kv";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getRequestUser } from "@/lib/requestUser";
 import { sendMail } from "@/lib/mailer";
 import { passwordChangeCodeEmail } from "@/lib/emailTemplates";
-
-// Node's built-in scrypt instead of a bcrypt dependency -- no native
-// bindings to worry about on Vercel's serverless runtime, and it's already
-// a recommended password-hashing KDF.
-function hashPassword(password: string): string {
-  const salt = randomBytes(16).toString("hex");
-  const hash = scryptSync(password, salt, 64).toString("hex");
-  return `${salt}:${hash}`;
-}
-
-function verifyPassword(password: string, stored: string): boolean {
-  const [salt, hash] = stored.split(":");
-  if (!salt || !hash) return false;
-  const candidate = scryptSync(password, salt, 64);
-  const expected = Buffer.from(hash, "hex");
-  if (candidate.length !== expected.length) return false;
-  return timingSafeEqual(candidate, expected);
-}
+import { hashPassword, verifyPassword } from "@/lib/password";
 
 export function pendingPasswordKey(userId: string) {
   return `chatgiza:password-otp:${userId}`;

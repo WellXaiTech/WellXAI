@@ -2126,6 +2126,92 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     errorMessage = message
   }
 
+  // Password sign-in tab (Email/Mobile) on SignedOutScreen -- an
+  // alternate way in for accounts that have set an in-app password
+  // (Security > Change Password), not a separate identity from the
+  // Google-linked account. Reuses the exact same TotpRequired/SignedIn
+  // dispatch as onGoogleIdToken below, including the TOTP-verify screen,
+  // since the backend stages both paths into the same pending-login spot.
+  var signInTab by mutableStateOf("email")
+    private set
+  var signInIdentifierInput by mutableStateOf("")
+    private set
+  var signInPasswordInput by mutableStateOf("")
+    private set
+  var signInCountry by mutableStateOf(DEFAULT_COUNTRY_DIAL_CODE)
+    private set
+  var signInCountryPickerOpen by mutableStateOf(false)
+    private set
+  var signInError by mutableStateOf<String?>(null)
+    private set
+  var signInBusy by mutableStateOf(false)
+    private set
+
+  fun onSignInTabChange(tab: String) {
+    signInTab = tab
+    signInError = null
+  }
+
+  fun onSignInIdentifierChange(value: String) {
+    signInIdentifierInput = value
+    signInError = null
+  }
+
+  fun onSignInPasswordChange(value: String) {
+    signInPasswordInput = value
+    signInError = null
+  }
+
+  fun openSignInCountryPicker() {
+    signInCountryPickerOpen = true
+  }
+
+  fun closeSignInCountryPicker() {
+    signInCountryPickerOpen = false
+  }
+
+  fun selectSignInCountry(country: CountryDialCode) {
+    signInCountry = country
+    signInCountryPickerOpen = false
+  }
+
+  fun submitPasswordSignIn() {
+    val identifier = if (signInTab == "mobile") {
+      "${signInCountry.dialCode}${signInIdentifierInput.trim().trimStart('0')}"
+    } else {
+      signInIdentifierInput.trim()
+    }
+    if (signInIdentifierInput.isBlank() || signInPasswordInput.isEmpty()) {
+      signInError = "Enter your details and password"
+      return
+    }
+    signInBusy = true
+    signInError = null
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.authWithPassword(identifier, signInTab, signInPasswordInput)) {
+        is ApiResult.Success -> {
+          when (val outcome = result.value) {
+            is MobileAuthOutcome.SignedIn -> {
+              signInBusy = false
+              applySignedInResult(outcome.result)
+            }
+            is MobileAuthOutcome.TotpRequired -> {
+              signInBusy = false
+              pendingLoginTotpId = outcome.pendingId
+              loginTotpCodeInput = ""
+              loginTotpError = null
+              screen = AppScreen.TotpLoginVerify
+            }
+          }
+        }
+        is ApiResult.Failure -> {
+          signInBusy = false
+          signInError = result.message
+        }
+      }
+    }
+  }
+
   fun signOut() {
     // viewModelScope lives for the whole app process (this ViewModel is a
     // single instance, not re-created per session), so an in-flight
