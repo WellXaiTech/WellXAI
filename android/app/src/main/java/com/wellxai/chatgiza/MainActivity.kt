@@ -10170,20 +10170,26 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
               }
             )
           }
-          Spacer(modifier = Modifier.height(16.dp))
-          // QR + the "add a new entry" badge sit side by side now, both
-          // small and pulled to the start instead of each filling the
-          // width inside its own gray background box.
+          Spacer(modifier = Modifier.height(24.dp))
+          NumberedTotpStep(number = "02", text = "Open your authenticator app and add a new entry using the 16-digit key that you just copied.")
+          Spacer(modifier = Modifier.height(12.dp))
+          // QR + the "add a new entry" badge sit together in a bordered
+          // box right under step 02, matching the reference layout.
           val qrBitmap = rememberQrBitmap(viewModel.totpSetupUri.orEmpty())
-          Row(verticalAlignment = Alignment.CenterVertically) {
+          Row(
+            modifier = Modifier
+              .border(1.dp, Color.Black.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+              .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
             if (qrBitmap != null) {
               Image(
                 bitmap = qrBitmap.asImageBitmap(),
                 contentDescription = "2FA QR code",
-                modifier = Modifier.size(110.dp)
+                modifier = Modifier.size(90.dp)
               )
             }
-            Spacer(modifier = Modifier.width(20.dp))
+            Spacer(modifier = Modifier.width(16.dp))
             // Small illustrative "add a new entry" badge -- generic "+"
             // rather than a specific authenticator app's logo, since this
             // works with any of them.
@@ -10197,8 +10203,6 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
               Text("+", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
           }
-          Spacer(modifier = Modifier.height(24.dp))
-          NumberedTotpStep(number = "02", text = "Open your authenticator app and add a new entry using the 16-digit key that you just copied.")
           Spacer(modifier = Modifier.height(24.dp))
           NumberedTotpStep(number = "03", text = "Come back and enter the 6-digit code it shows to finish verifying.")
           Spacer(modifier = Modifier.height(24.dp))
@@ -10223,7 +10227,8 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
             onPaste = {
               val pasted = clipboard.getText()?.text.orEmpty().filter { it.isDigit() }.take(6)
               if (pasted.isNotEmpty()) viewModel.onTotpSetupCodeChange(pasted)
-            }
+            },
+            showIcon = false
           )
           if (viewModel.totpError != null) {
             Spacer(modifier = Modifier.height(10.dp))
@@ -10328,7 +10333,7 @@ private fun TotpLoginVerifyScreen(viewModel: ChatViewModel) {
       textAlign = androidx.compose.ui.text.style.TextAlign.Center
     )
     Spacer(modifier = Modifier.height(28.dp))
-    CodeField(value = viewModel.loginTotpCodeInput, onValueChange = viewModel::onLoginTotpCodeChange)
+    CodeField(value = viewModel.loginTotpCodeInput, onValueChange = viewModel::onLoginTotpCodeChange, showIcon = false)
     if (viewModel.loginTotpError != null) {
       Spacer(modifier = Modifier.height(10.dp))
       Text(viewModel.loginTotpError!!, color = Color(0xFFE14050), fontSize = 13.sp)
@@ -10764,7 +10769,11 @@ private fun CodeField(
   // verify step wants this (matching the reference), the other CodeField
   // call sites (password change, login 2FA) stay as they were.
   onPaste: (() -> Unit)? = null,
-  placeholder: String = "6-digit code"
+  placeholder: String = "6-digit code",
+  // The Authenticator App screens (setup verify + login verify) don't want
+  // the leading lock icon; the other CodeField call sites (password change,
+  // App Lock PIN) keep it.
+  showIcon: Boolean = true
 ) {
   var focused by remember { mutableStateOf(false) }
   Row(
@@ -10776,8 +10785,10 @@ private fun CodeField(
       .padding(horizontal = 16.dp, vertical = 4.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded), contentDescription = null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
-    Spacer(modifier = Modifier.width(12.dp))
+    if (showIcon) {
+      Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded), contentDescription = null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
+      Spacer(modifier = Modifier.width(12.dp))
+    }
     Box(modifier = Modifier.weight(1f).padding(vertical = 11.dp)) {
       if (value.isEmpty()) {
         Text(placeholder, color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
