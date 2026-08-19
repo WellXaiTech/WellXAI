@@ -1,5 +1,51 @@
 import { mintMobileToken } from "@/lib/mobileAuth";
 import { recordSession, clientIpFromHeaders } from "@/lib/sessions";
+import { kv } from "@vercel/kv";
+import { supabaseAdmin } from "@/lib/supabase";
+import { verifyTotp } from "@/lib/totp";
+
+function pendingLoginKey(pendingId: string) {
+  return `chatgiza:totp-login:${pendingId}`;
+}
+
+type PendingLogin = {
+  sub: string;
+  email: string;
+  name: string | null;
+  picture: string | null;
+  deviceModel: string | null;
+};
+
+// Records the Trusted Devices session and mints the bearer token -- the
+// tail end shared by a normal (non-2FA) sign-in and a 2FA sign-in that just
+// cleared its authenticator-code check.
+async function finishSignIn(request: Request, pending: PendingLogin) {
+  const sessionId = crypto.randomUUID();
+  try {
+    const ip = clientIpFromHeaders(request.headers);
+    await recordSession(pending.sub, sessionId, request.headers.get("user-agent"), ip, "mobile", pending.deviceModel);
+  } catch (err) {
+    console.error("recordSession (mobile) failed:", err);
+  }
+
+  const token = await mintMobileToken({
+    sub: pending.sub,
+    email: pending.email,
+    name: pending.name,
+    picture: pending.picture,
+    sessionId,
+  });
+
+  return Response.json({
+    token,
+    user: {
+      id: pending.sub,
+      email: pending.email,
+      name: pending.name,
+      image: pending.picture,
+    },
+  });
+}
 
 // Verifies a Google ID token obtained natively (Android Credential Manager)
 // the same way the web "google-one-tap" Credentials provider does (see
@@ -26,33 +72,52 @@ export async function POST(request: Request) {
     return Response.json({ error: "Incomplete Google profile" }, { status: 401 });
   }
 
-  // Minted fresh on every native sign-in (not reused across app
-  // reinstalls/logins), same as the web JWT callback's per-sign-in
-  // sessionId -- each one is its own row on the Trusted Devices list.
-  const sessionId = crypto.randomUUID();
   const deviceModel = typeof body?.deviceModel === "string" && body.deviceModel.trim() ? body.deviceModel.trim().slice(0, 60) : null;
-  try {
-    const ip = clientIpFromHeaders(request.headers);
-    await recordSession(payload.sub, sessionId, request.headers.get("user-agent"), ip, "mobile", deviceModel);
-  } catch (err) {
-    console.error("recordSession (mobile) failed:", err);
-  }
 
-  const token = await mintMobileToken({
+  const pending: PendingLogin = {
     sub: payload.sub,
     email: payload.email,
     name: payload.name ?? null,
     picture: payload.picture ?? null,
-    sessionId,
-  });
+    deviceModel,
+  };
 
-  return Response.json({
-    token,
-    user: {
-      id: payload.sub,
-      email: payload.email,
-      name: payload.name ?? null,
-      image: payload.picture ?? null,
-    },
-  });
+  // Authenticator App 2FA gate: if this account has it turned on, the
+  // Google sign-in alone isn't enough to mint a real session token yet --
+  // stage the verified identity under a short-lived pendingId and make the
+  // app collect a TOTP code (see PUT below) before actually signing in.
+  const { data: userRow } = await supabaseAdmin.from("users").select("totp_enabled").eq("id", payload.sub).maybeSingle();
+  if (userRow?.totp_enabled) {
+    const pendingId = crypto.randomUUID();
+    await kv.set(pendingLoginKey(pendingId), pending, { ex: 300 });
+    return Response.json({ totpRequired: true, pendingId });
+  }
+
+  return finishSignIn(request, pending);
+}
+
+// Step 2 of a 2FA-gated sign-in: verifies the authenticator code against the
+// identity POST staged above, then finishes minting the token exactly the
+// way POST would have if 2FA weren't on.
+export async function PUT(request: Request) {
+  const body = await request.json().catch(() => null);
+  const pendingId = typeof body?.pendingId === "string" ? body.pendingId : "";
+  const code = typeof body?.code === "string" ? body.code.trim() : "";
+  if (!pendingId || !code) {
+    return Response.json({ error: "pendingId and code are required" }, { status: 400 });
+  }
+
+  const pending = await kv.get<PendingLogin>(pendingLoginKey(pendingId));
+  if (!pending) {
+    return Response.json({ error: "This sign-in attempt expired -- try again" }, { status: 400 });
+  }
+
+  const { data: userRow } = await supabaseAdmin.from("users").select("totp_secret").eq("id", pending.sub).maybeSingle();
+  const secret = userRow?.totp_secret as string | null;
+  if (!secret || !verifyTotp(secret, code)) {
+    return Response.json({ error: "That code is incorrect" }, { status: 401 });
+  }
+
+  await kv.del(pendingLoginKey(pendingId));
+  return finishSignIn(request, pending);
 }

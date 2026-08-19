@@ -353,6 +353,8 @@ import androidx.credentials.exceptions.GetCredentialException
 import coil.compose.AsyncImage
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.qrcode.QRCodeWriter
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.Locale
@@ -543,6 +545,8 @@ class MainActivity : ComponentActivity() {
             is AppScreen.TrustedDevices -> TrustedDevicesScreen(viewModel)
             is AppScreen.StorageManagement -> StorageManagementScreen(viewModel)
             is AppScreen.ChangePassword -> ChangePasswordScreen(viewModel)
+            is AppScreen.TwoFactorSetup -> TwoFactorSetupScreen(viewModel)
+            is AppScreen.TotpLoginVerify -> TotpLoginVerifyScreen(viewModel)
             is AppScreen.SubaccountSettings -> SubaccountSettingsScreen(viewModel)
             is AppScreen.NsfwPreferences -> NsfwPreferencesScreen(viewModel)
             is AppScreen.Connectors -> ConnectorsScreen(viewModel)
@@ -4730,6 +4734,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
   fun comingSoon(label: String) {
     Toast.makeText(context, "$label — coming soon", Toast.LENGTH_SHORT).show()
   }
+  LaunchedEffect(Unit) { viewModel.loadTotpStatus() }
   val accountTabsOrder = listOf("My info", "Security", "Preference", "General")
   Dialog(
     onDismissRequest = { viewModel.closeAccountTabs() },
@@ -4982,23 +4987,22 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             Text("Not linked", color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
           }
           MyInfoDivider()
-          // Sign-in here is Google-only -- ChatGiZa has no account password
-          // or its own 2FA to toggle, and can't read whether the user's
-          // Google account has 2FA on. A fake in-app switch used to sit here
-          // (local state only, no backend, reset to "on" every recompose);
-          // this instead sends them to where their sign-in's real 2FA
-          // actually lives and can actually be changed.
+          // Real in-app Authenticator App (TOTP) 2FA -- ChatGiZa's own
+          // second factor on top of Google sign-in, not a hand-off to
+          // Google's account settings (which this row used to just open a
+          // browser tab to, since ChatGiZa itself had no 2FA of its own
+          // yet).
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_google_g),
             iconSize = 19.dp,
             label = "Google 2FA Authentication",
-            onClick = {
-              runCatching {
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://myaccount.google.com/security")))
-              }
-            }
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openTwoFactorSetup() } }
           ) {
-            Text("Manage on Google", color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
+            Text(
+              if (viewModel.totpEnabled == true) "On" else "Off",
+              color = Color.Black.copy(alpha = 0.5f),
+              fontSize = 13.sp
+            )
           }
           MyInfoDivider()
           MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_passkey), iconSize = 23.dp, label = "Passkeys", onClick = { comingSoon("Passkeys") }) {}
@@ -9773,6 +9777,235 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
           Text("Confirm", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
       }
+    }
+  }
+}
+
+// Renders an otpauth:// URI as a scannable QR bitmap fully on-device --
+// no backend image endpoint, no network round trip for something that's
+// really just an encoding of a string the backend already returned.
+@Composable
+private fun rememberQrBitmap(content: String, sizePx: Int = 640): Bitmap? {
+  return remember(content) {
+    if (content.isEmpty()) return@remember null
+    runCatching {
+      val bitMatrix = QRCodeWriter().encode(content, BarcodeFormat.QR_CODE, sizePx, sizePx)
+      val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.RGB_565)
+      for (x in 0 until sizePx) {
+        for (y in 0 until sizePx) {
+          bmp.setPixel(x, y, if (bitMatrix.get(x, y)) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+        }
+      }
+      bmp
+    }.getOrNull()
+  }
+}
+
+@Composable
+private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeTwoFactorSetup() }
+  val focusManager = LocalFocusManager.current
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color.White)
+      .statusBarsPadding()
+      .pointerInput(Unit) {
+        detectTapGestures(onTap = { focusManager.clearFocus() })
+      }
+  ) {
+    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+      Text(
+        "Google 2FA Authentication",
+        color = Color.Black,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.align(Alignment.Center)
+      )
+      IconButton(onClick = { viewModel.closeTwoFactorSetup() }, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(24.dp))
+      }
+    }
+
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .weight(1f)
+        .verticalScroll(rememberScrollState())
+        .padding(horizontal = 16.dp)
+    ) {
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(14.dp))
+          .background(Color(0xFFFFF3E5))
+          .padding(12.dp)
+      ) {
+        Icon(
+          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_warning_circle),
+          contentDescription = null,
+          tint = Color.Black,
+          modifier = Modifier.size(16.dp).padding(top = 1.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+          if (viewModel.totpEnabled == true) {
+            "Note: 2FA is currently ON. Every sign-in needs a fresh code from your authenticator app after your Google sign-in, on top of it -- not instead of it. Turning it off below only needs a currently-valid code."
+          } else {
+            "Note: This adds a second step on top of your Google sign-in -- an authenticator app (like Google Authenticator or Authy) generates a new 6-digit code every 30 seconds, and you'll need one to finish signing in from now on."
+          },
+          color = Color.Black,
+          fontSize = 10.sp,
+          lineHeight = 14.sp,
+          fontWeight = FontWeight.Medium
+        )
+      }
+
+      Spacer(modifier = Modifier.height(20.dp))
+
+      when {
+        viewModel.totpEnabled == true -> {
+          Text("Turn off 2FA", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+          Spacer(modifier = Modifier.height(10.dp))
+          CodeField(value = viewModel.totpDisableCodeInput, onValueChange = viewModel::onTotpDisableCodeChange)
+          if (viewModel.totpError != null) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(viewModel.totpError!!, color = Color(0xFFE14050), fontSize = 13.sp)
+          }
+          Spacer(modifier = Modifier.height(24.dp))
+          Button(
+            onClick = { viewModel.disableTotp() },
+            enabled = !viewModel.totpBusy,
+            shape = RoundedCornerShape(28.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE14050)),
+            modifier = Modifier.fillMaxWidth().height(52.dp)
+          ) {
+            if (viewModel.totpBusy) {
+              CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            } else {
+              Text("Turn Off", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            }
+          }
+        }
+        viewModel.totpSetupSecret == null -> {
+          Button(
+            onClick = { viewModel.startTotpSetup() },
+            enabled = !viewModel.totpBusy,
+            shape = RoundedCornerShape(28.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
+            modifier = Modifier.fillMaxWidth().height(52.dp)
+          ) {
+            if (viewModel.totpBusy) {
+              CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            } else {
+              Text("Get Started", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            }
+          }
+          if (viewModel.totpError != null) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(viewModel.totpError!!, color = Color(0xFFE14050), fontSize = 13.sp)
+          }
+        }
+        else -> {
+          Text("1. Scan this QR code with your authenticator app", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+          Spacer(modifier = Modifier.height(12.dp))
+          val qrBitmap = rememberQrBitmap(viewModel.totpSetupUri.orEmpty())
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .clip(RoundedCornerShape(14.dp))
+              .background(Color.Black.copy(alpha = 0.05f))
+              .padding(20.dp),
+            contentAlignment = Alignment.Center
+          ) {
+            if (qrBitmap != null) {
+              Image(
+                bitmap = qrBitmap.asImageBitmap(),
+                contentDescription = "2FA QR code",
+                modifier = Modifier.size(200.dp)
+              )
+            }
+          }
+          Spacer(modifier = Modifier.height(14.dp))
+          Text("Or enter this code manually:", color = Color.Black.copy(alpha = 0.6f), fontSize = 12.sp)
+          Spacer(modifier = Modifier.height(4.dp))
+          Text(
+            viewModel.totpSetupSecret.orEmpty(),
+            color = Color.Black,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 2.sp
+          )
+          Spacer(modifier = Modifier.height(20.dp))
+          Text("2. Enter the 6-digit code it shows", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+          Spacer(modifier = Modifier.height(10.dp))
+          CodeField(value = viewModel.totpSetupCodeInput, onValueChange = viewModel::onTotpSetupCodeChange)
+          if (viewModel.totpError != null) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(viewModel.totpError!!, color = Color(0xFFE14050), fontSize = 13.sp)
+          }
+          Spacer(modifier = Modifier.height(24.dp))
+          Button(
+            onClick = { viewModel.confirmTotpSetup() },
+            enabled = !viewModel.totpBusy,
+            shape = RoundedCornerShape(28.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
+            modifier = Modifier.fillMaxWidth().height(52.dp)
+          ) {
+            if (viewModel.totpBusy) {
+              CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            } else {
+              Text("Confirm", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            }
+          }
+        }
+      }
+      Spacer(modifier = Modifier.height(24.dp))
+    }
+  }
+}
+
+// Shown right after Google sign-in succeeds when the account has 2FA on --
+// mobileAuth() returned a pendingId instead of a token, and this is the
+// only thing standing between here and AppScreen.Chat.
+@Composable
+private fun TotpLoginVerifyScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.cancelLoginTotp() }
+  Column(
+    modifier = Modifier.fillMaxSize().padding(32.dp),
+    verticalArrangement = Arrangement.Center,
+    horizontalAlignment = Alignment.CenterHorizontally
+  ) {
+    Text("Enter your 2FA code", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+    Spacer(modifier = Modifier.height(10.dp))
+    Text(
+      "Open your authenticator app and enter the current 6-digit code for ChatGiZa",
+      fontSize = 14.sp,
+      color = Color.Black.copy(alpha = 0.6f),
+      textAlign = androidx.compose.ui.text.style.TextAlign.Center
+    )
+    Spacer(modifier = Modifier.height(28.dp))
+    CodeField(value = viewModel.loginTotpCodeInput, onValueChange = viewModel::onLoginTotpCodeChange)
+    if (viewModel.loginTotpError != null) {
+      Spacer(modifier = Modifier.height(10.dp))
+      Text(viewModel.loginTotpError!!, color = Color(0xFFE14050), fontSize = 13.sp)
+    }
+    Spacer(modifier = Modifier.height(24.dp))
+    Button(
+      onClick = { viewModel.submitLoginTotpCode() },
+      enabled = !viewModel.loginTotpBusy,
+      shape = RoundedCornerShape(24.dp),
+      modifier = Modifier.fillMaxWidth().height(52.dp)
+    ) {
+      if (viewModel.loginTotpBusy) {
+        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+      } else {
+        Text("Continue")
+      }
+    }
+    Spacer(modifier = Modifier.height(12.dp))
+    TextButton(onClick = { viewModel.cancelLoginTotp() }) {
+      Text("Cancel", color = Color.Black.copy(alpha = 0.6f))
     }
   }
 }

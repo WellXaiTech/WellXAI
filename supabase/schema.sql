@@ -13,6 +13,13 @@ create table if not exists users (
   -- `salt:scryptHash` (hex), null until the user sets one via Change
   -- Password. Never stored or returned as plaintext.
   password_hash text,
+  -- Authenticator App (TOTP) 2FA -- totp_secret is the base32 shared secret,
+  -- null until Security > Google 2FA Authentication's setup flow confirms
+  -- the first code from the app. totp_enabled gates the mobile sign-in flow
+  -- (see /api/mobile/auth) into requiring a second-factor code after Google
+  -- sign-in succeeds.
+  totp_secret text,
+  totp_enabled boolean not null default false,
   created_at timestamptz not null default now(),
   last_seen_at timestamptz not null default now()
 );
@@ -22,6 +29,10 @@ create table if not exists users (
 
 -- Run once for existing databases created before password_hash existed:
 -- alter table users add column if not exists password_hash text;
+
+-- Run once for existing databases created before totp_secret/totp_enabled existed:
+-- alter table users add column if not exists totp_secret text;
+-- alter table users add column if not exists totp_enabled boolean not null default false;
 
 -- Lightweight sub-identities under one signed-in Google account (up to 5,
 -- enforced in the API, not here) -- each gets its own name/avatar and its
