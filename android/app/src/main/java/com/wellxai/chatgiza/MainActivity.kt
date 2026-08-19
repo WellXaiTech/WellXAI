@@ -9671,12 +9671,14 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
       }
 
       when (viewModel.passwordStep) {
+        // No minLength/onFocusLost here -- unlike New Password, there's no
+        // "you're partway there" concept for verifying an existing
+        // password of unknown length, so this field only validates on
+        // Confirm (confirmOldPassword()'s empty check), not on blur.
         "old" -> PasswordField(
           value = viewModel.oldPasswordInput,
           onValueChange = viewModel::onOldPasswordInputChange,
           placeholder = "Current password",
-          minLength = 1,
-          onFocusLost = viewModel::checkOldPasswordOnBlur,
           onFocusGained = viewModel::clearPasswordError
         )
         "new" -> PasswordField(
