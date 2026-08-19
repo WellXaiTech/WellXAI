@@ -5271,7 +5271,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           // screen already links to -- a duplicate entry point for the
           // same feature, so it's gone rather than kept as a second path
           // to the same place.
-          MyInfoRow(icon = Icons.Outlined.Notifications, label = "Notification Settings", onClick = { comingSoon("Notification Settings") }) {}
+          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_bell_outline), label = "Notification Settings", onClick = { comingSoon("Notification Settings") }) {}
           MyInfoRow(icon = Icons.Outlined.Email, label = "Email Subscriptions", onClick = { comingSoon("Email Subscriptions") }) {}
         }
         Spacer(modifier = Modifier.height(20.dp))
