@@ -8192,11 +8192,11 @@ private fun DeactivateAccountIllustration() {
         modifier = Modifier.size(38.dp)
       )
       Spacer(modifier = Modifier.height(13.dp))
-      Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.Black))
+      Box(modifier = Modifier.fillMaxWidth().height(0.75.dp).background(Color.Black))
       Spacer(modifier = Modifier.height(5.dp))
-      Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.Black))
+      Box(modifier = Modifier.fillMaxWidth().height(0.75.dp).background(Color.Black))
       Spacer(modifier = Modifier.height(5.dp))
-      Box(modifier = Modifier.fillMaxWidth(0.65f).height(1.dp).background(Color.Black))
+      Box(modifier = Modifier.fillMaxWidth(0.65f).height(0.75.dp).background(Color.Black))
     }
     // Pulled up and inward (instead of hanging fully outside the corner)
     // so it reads as sitting on the card, not floating separately below it.
@@ -8231,12 +8231,26 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
   // down at the bottom is even visible.
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+  // Locks the sheet's height the first time it lays out (starts expanded,
+  // so this captures the tallest state) so collapsing Subaccount afterward
+  // can't shrink the whole sheet -- without this the sheet auto-sizes to
+  // content, so toggling the list moved the entire sheet (and the scrim
+  // edge above it) up and down instead of just the list itself.
+  val density = LocalDensity.current
+  var lockedHeightPx by remember { mutableStateOf(0) }
+
   ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Color.White) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
+        .then(
+          if (lockedHeightPx > 0) Modifier.height(with(density) { lockedHeightPx.toDp() }) else Modifier
+        )
         .padding(horizontal = 20.dp)
         .padding(bottom = 28.dp)
+        .onGloballyPositioned { coords ->
+          if (coords.size.height > lockedHeightPx) lockedHeightPx = coords.size.height
+        }
     ) {
       Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -8424,11 +8438,11 @@ private fun DeleteAccountIllustration() {
         modifier = Modifier.size(38.dp)
       )
       Spacer(modifier = Modifier.height(13.dp))
-      Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.Black))
+      Box(modifier = Modifier.fillMaxWidth().height(0.75.dp).background(Color.Black))
       Spacer(modifier = Modifier.height(5.dp))
-      Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.Black))
+      Box(modifier = Modifier.fillMaxWidth().height(0.75.dp).background(Color.Black))
       Spacer(modifier = Modifier.height(5.dp))
-      Box(modifier = Modifier.fillMaxWidth(0.65f).height(1.dp).background(Color.Black))
+      Box(modifier = Modifier.fillMaxWidth(0.65f).height(0.75.dp).background(Color.Black))
     }
     DeleteIcon(
       tint = Color.Black,
