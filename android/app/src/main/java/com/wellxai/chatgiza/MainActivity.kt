@@ -5081,6 +5081,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
     Toast.makeText(context, "$label — coming soon", Toast.LENGTH_SHORT).show()
   }
   LaunchedEffect(Unit) { viewModel.loadTotpStatus() }
+  LaunchedEffect(Unit) { viewModel.loadBilling() }
   val accountTabsOrder = listOf("My info", "Security", "Preference", "General")
   Box(
     modifier = Modifier
@@ -5167,7 +5168,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             (viewModel.avatarName ?: viewModel.userName ?: "You").uppercase(),
             color = Color.Black,
             fontSize = 20.sp,
-            fontWeight = FontWeight.ExtraBold,
+            fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(top = 3.dp)
           )
           Spacer(modifier = Modifier.height(4.dp))
@@ -5183,46 +5184,47 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
 
       Spacer(modifier = Modifier.height(20.dp))
 
-      // Mirrors the reference's "Bybit Protect" card -- shown only while
-      // this account hasn't turned on Google 2FA yet (loadTotpStatus()
-      // above), pointing straight at the same Authenticator setup flow
-      // Security > 2FA already opens. Disappears on its own once
-      // totpEnabled flips true, no separate dismiss action needed.
-      if (viewModel.totpEnabled != true) {
+      // Real payment nudge, not a security one -- shown only once
+      // loadBilling() (below) has actually come back with no active
+      // subscription, same "hasn't paid" signal Billing itself uses.
+      // Opens the same real Stripe checkout the Media caption paywall
+      // already uses (startCheckout("starter")), not a stub.
+      var openingProCheckout by remember { mutableStateOf(false) }
+      val hasNoSubscription = viewModel.billingSummary != null && viewModel.billingSummary?.subscription == null
+      if (hasNoSubscription) {
         Column(
           modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .border(1.dp, Color.Black.copy(alpha = 0.1f), RoundedCornerShape(14.dp))
-            .padding(14.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.dp, Color.Black.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+            .padding(12.dp)
         ) {
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("ChatGiZa Protect", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.width(4.dp))
-            Icon(
-              painter = androidx.compose.ui.res.painterResource(R.drawable.ic_question_circle),
-              contentDescription = null,
-              tint = Color.Black.copy(alpha = 0.4f),
-              modifier = Modifier.size(14.dp)
-            )
-          }
+          Text("Upgrade to GiZa Pro", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+          Spacer(modifier = Modifier.height(4.dp))
+          Text(
+            "Unlimited chats, priority responses, and exclusive perks.",
+            color = Color.Black.copy(alpha = 0.55f),
+            fontSize = 12.sp,
+            lineHeight = 16.sp
+          )
           Spacer(modifier = Modifier.height(6.dp))
           Text(
-            "Add a security check for key actions to help protect your account.",
-            color = Color.Black.copy(alpha = 0.55f),
-            fontSize = 13.sp,
-            lineHeight = 18.sp
-          )
-          Spacer(modifier = Modifier.height(8.dp))
-          Text(
-            "Set up Google Authenticator →",
+            if (openingProCheckout) "Opening…" else "Upgrade now →",
             color = Color(0xFFFF9C2D),
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.clickable { viewModel.leaveAccountTabsFor { viewModel.openTwoFactorSetup() } }
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.clickable(enabled = !openingProCheckout) {
+              openingProCheckout = true
+              viewModel.startCheckout("starter") { url ->
+                openingProCheckout = false
+                if (url != null) {
+                  runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+                }
+              }
+            }
           )
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
       }
 
       // Per-tab offset/width in px, measured live via onGloballyPositioned/
@@ -5254,7 +5256,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
                 tab,
                 color = if (viewModel.activeAccountTab == tab) Color.Black else Color.Black.copy(alpha = 0.4f),
                 fontSize = 15.sp,
-                fontWeight = if (viewModel.activeAccountTab == tab) FontWeight.Bold else FontWeight.Normal,
+                fontWeight = if (viewModel.activeAccountTab == tab) FontWeight.SemiBold else FontWeight.Normal,
                 onTextLayout = { result ->
                   tabWidthsPx[index] = result.size.width.toFloat()
                   tabTextHeightPx = result.size.height.toFloat()
@@ -5383,7 +5385,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           ) {
             Text(maskEmail(viewModel.userEmail), color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
           }
-          MyInfoDivider()
           // Real, self-reported phone number (users.phone) -- linked/changed
           // from MobileNumberScreen. No SMS provider is wired up here, so
           // this isn't OTP-verified, same trust level as the in-app
@@ -5400,7 +5401,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
               fontSize = 13.sp
             )
           }
-          MyInfoDivider()
           // Real in-app Authenticator App (TOTP) 2FA -- ChatGiZa's own
           // second factor on top of Google sign-in, not a hand-off to
           // Google's account settings (which this row used to just open a
@@ -5418,14 +5418,12 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
               fontSize = 13.sp
             )
           }
-          MyInfoDivider()
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_passkey),
             iconSize = 23.dp,
             label = "Passkeys",
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openPasskeysScreen() } }
           ) {}
-          MyInfoDivider()
           // Moved here from My info -- linking another account is an
           // access/security action, not identity.
           MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_at_circle), label = "Link Account", onClick = { comingSoon("Link Account") }) {}
@@ -5447,15 +5445,12 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             label = "Change Password",
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openChangePassword() } }
           ) {}
-          MyInfoDivider()
           MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_trusted_device), iconSize = 23.dp, label = "Trusted Devices", onClick = { viewModel.leaveAccountTabsFor { viewModel.openTrustedDevices() } }) {}
-          MyInfoDivider()
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_dashboard_grid),
             label = "Data Dashboard",
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openDataDashboard() } }
           ) {}
-          MyInfoDivider()
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded),
             iconSize = 23.dp,
@@ -5464,7 +5459,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           ) {
             Text(if (viewModel.appLockEnabled) "On" else "Off", color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
           }
-          MyInfoDivider()
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_account_settings),
             iconSize = 19.dp,
@@ -5772,7 +5766,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
 @Composable
 private fun SecurityGroupHeader(title: String, subtitle: String? = null, titleSize: androidx.compose.ui.unit.TextUnit = 16.sp) {
   Column(modifier = Modifier.padding(bottom = 10.dp)) {
-    Text(title, color = Color.Black, fontSize = titleSize, fontWeight = FontWeight.Bold)
+    Text(title, color = Color.Black, fontSize = titleSize, fontWeight = FontWeight.SemiBold)
     if (subtitle != null) {
       Spacer(modifier = Modifier.height(2.dp))
       Text(subtitle, color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp)
