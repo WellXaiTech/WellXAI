@@ -351,8 +351,13 @@ import androidx.compose.ui.window.DialogWindowProvider
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.items
+import androidx.credentials.CreatePublicKeyCredentialRequest
+import androidx.credentials.CreatePublicKeyCredentialResponse
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.GetPublicKeyCredentialOption
+import androidx.credentials.PublicKeyCredential
+import androidx.credentials.exceptions.CreateCredentialException
 import androidx.credentials.exceptions.GetCredentialException
 import coil.compose.AsyncImage
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
@@ -516,7 +521,8 @@ class MainActivity : ComponentActivity() {
             is AppScreen.SignedOut -> SignedOutScreen(
               signingIn = viewModel.signingIn,
               error = viewModel.errorMessage,
-              onSignIn = ::startGoogleSignIn
+              onSignIn = ::startGoogleSignIn,
+              onSignInWithPasskey = ::startPasskeySignIn
             )
             is AppScreen.Chat -> ChatScreenUi(viewModel)
             is AppScreen.History -> HistoryScreen(viewModel)
@@ -552,6 +558,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.TwoFactorSetup -> TwoFactorSetupScreen(viewModel)
             is AppScreen.TotpLoginVerify -> TotpLoginVerifyScreen(viewModel)
             is AppScreen.AppLockSetup -> AppLockSetupScreen(viewModel)
+            is AppScreen.PasskeysManage -> PasskeysManageScreen(viewModel, onAddPasskey = ::startPasskeyRegistration)
             is AppScreen.SubaccountSettings -> SubaccountSettingsScreen(viewModel)
             is AppScreen.NsfwPreferences -> NsfwPreferencesScreen(viewModel)
             is AppScreen.Connectors -> ConnectorsScreen(viewModel)
@@ -652,6 +659,78 @@ class MainActivity : ComponentActivity() {
         viewModel.onSignInFailed(e.message ?: "Sign-in was cancelled")
       } catch (e: Exception) {
         viewModel.onSignInFailed(e.message ?: "Sign-in failed")
+      }
+    }
+  }
+
+  // Fetches a fresh registration challenge, runs the actual passkey
+  // creation ceremony (needs an Activity, unlike everything else this
+  // touches), then hands the attestation to the backend to verify and
+  // store. Mirrors startGoogleSignIn's shape: this function owns the whole
+  // flow end to end rather than splitting it across ViewModel callbacks.
+  private fun startPasskeyRegistration() {
+    val token = viewModel.currentToken() ?: return
+    viewModel.setPasskeyRegisterBusy(true)
+    viewModel.setPasskeyError(null)
+    lifecycleScope.launch {
+      when (val optionsResult = ChatGizaApi.passkeyRegisterOptions(token)) {
+        is ApiResult.Success -> {
+          try {
+            val credentialManager = CredentialManager.create(this@MainActivity)
+            val createRequest = CreatePublicKeyCredentialRequest(requestJson = optionsResult.value)
+            val response = credentialManager.createCredential(this@MainActivity, createRequest) as CreatePublicKeyCredentialResponse
+            when (val verifyResult = ChatGizaApi.passkeyRegisterVerify(token, response.registrationResponseJson, Build.MODEL)) {
+              is ApiResult.Success -> viewModel.onPasskeyRegistered()
+              is ApiResult.Failure -> viewModel.setPasskeyError(verifyResult.message)
+            }
+          } catch (e: CreateCredentialException) {
+            viewModel.setPasskeyError(e.message ?: "Couldn't create a passkey")
+          } catch (e: Exception) {
+            viewModel.setPasskeyError(e.message ?: "Couldn't create a passkey")
+          }
+        }
+        is ApiResult.Failure -> viewModel.setPasskeyError(optionsResult.message)
+      }
+      viewModel.setPasskeyRegisterBusy(false)
+    }
+  }
+
+  // Sign-in counterpart -- allowCredentials is empty in the options the
+  // backend generates, so Credential Manager offers every passkey
+  // registered for chatgiza.com rather than requiring this app to already
+  // know which account is signing in.
+  private fun startPasskeySignIn() {
+    viewModel.onPasskeySignInStart()
+    lifecycleScope.launch {
+      when (val optionsResult = ChatGizaApi.passkeyLoginOptions()) {
+        is ApiResult.Success -> {
+          try {
+            val credentialManager = CredentialManager.create(this@MainActivity)
+            val getPasskeyOption = GetPublicKeyCredentialOption(requestJson = optionsResult.value.optionsJson)
+            val getRequest = GetCredentialRequest(listOf(getPasskeyOption))
+            val result = credentialManager.getCredential(this@MainActivity, getRequest)
+            val credential = result.credential as? PublicKeyCredential
+            if (credential == null) {
+              viewModel.onSignInFailed("Couldn't read that passkey")
+            } else {
+              when (
+                val verifyResult = ChatGizaApi.passkeyLoginVerify(
+                  optionsResult.value.requestId,
+                  credential.authenticationResponseJson,
+                  Build.MODEL ?: ""
+                )
+              ) {
+                is ApiResult.Success -> viewModel.onPasskeySignedIn(verifyResult.value)
+                is ApiResult.Failure -> viewModel.onSignInFailed(verifyResult.message)
+              }
+            }
+          } catch (e: GetCredentialException) {
+            viewModel.onSignInFailed(e.message ?: "Passkey sign-in was cancelled")
+          } catch (e: Exception) {
+            viewModel.onSignInFailed(e.message ?: "Passkey sign-in failed")
+          }
+        }
+        is ApiResult.Failure -> viewModel.onSignInFailed(optionsResult.message)
       }
     }
   }
@@ -1118,7 +1197,7 @@ private fun LoadingScreen() {
 }
 
 @Composable
-private fun SignedOutScreen(signingIn: Boolean, error: String?, onSignIn: () -> Unit) {
+private fun SignedOutScreen(signingIn: Boolean, error: String?, onSignIn: () -> Unit, onSignInWithPasskey: () -> Unit) {
   Column(
     modifier = Modifier.fillMaxSize().padding(32.dp),
     verticalArrangement = Arrangement.Center,
@@ -1139,6 +1218,26 @@ private fun SignedOutScreen(signingIn: Boolean, error: String?, onSignIn: () -> 
       modifier = Modifier.fillMaxWidth().height(52.dp)
     ) {
       Text(if (signingIn) "Signing in…" else "Continue with Google")
+    }
+    Spacer(modifier = Modifier.height(12.dp))
+    // Only shows up for accounts that already registered a passkey (see
+    // Security > Passkeys) -- Credential Manager itself is what actually
+    // decides whether any are available on this device and cancels
+    // gracefully with nothing to offer if not.
+    OutlinedButton(
+      onClick = onSignInWithPasskey,
+      enabled = !signingIn,
+      shape = RoundedCornerShape(24.dp),
+      modifier = Modifier.fillMaxWidth().height(52.dp)
+    ) {
+      Icon(
+        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_passkey),
+        contentDescription = null,
+        tint = colorScheme.onBackground,
+        modifier = Modifier.size(18.dp)
+      )
+      Spacer(modifier = Modifier.width(8.dp))
+      Text("Sign in with a passkey", color = colorScheme.onBackground)
     }
     if (error != null) {
       Spacer(modifier = Modifier.height(16.dp))
@@ -5036,7 +5135,12 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             )
           }
           MyInfoDivider()
-          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_passkey), iconSize = 23.dp, label = "Passkeys", onClick = { comingSoon("Passkeys") }) {}
+          MyInfoRow(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_passkey),
+            iconSize = 23.dp,
+            label = "Passkeys",
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openPasskeysScreen() } }
+          ) {}
           MyInfoDivider()
           // Moved here from My info -- linking another account is an
           // access/security action, not identity.
@@ -10388,6 +10492,156 @@ private fun AppLockGateScreen(viewModel: ChatViewModel) {
     ) {
       Text("Unlock")
     }
+  }
+}
+
+// Reached from Security > Passkeys -- lists registered passkeys and starts
+// the registration ceremony via onAddPasskey (MainActivity's
+// startPasskeyRegistration, which needs an Activity so it isn't part of
+// ChatViewModel itself).
+@Composable
+private fun PasskeysManageScreen(viewModel: ChatViewModel, onAddPasskey: () -> Unit) {
+  BackHandler { viewModel.closePasskeysScreen() }
+  var confirmRemoveId by remember { mutableStateOf<String?>(null) }
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color.White)
+      .statusBarsPadding()
+  ) {
+    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+      Text(
+        "Passkeys",
+        color = Color.Black,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.align(Alignment.Center)
+      )
+      IconButton(onClick = { viewModel.closePasskeysScreen() }, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(24.dp))
+      }
+    }
+
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .weight(1f)
+        .verticalScroll(rememberScrollState())
+        .padding(horizontal = 16.dp)
+    ) {
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(14.dp))
+          .background(Color(0xFFFFF3E5))
+          .padding(12.dp)
+      ) {
+        Icon(
+          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_warning_circle),
+          contentDescription = null,
+          tint = Color.Black,
+          modifier = Modifier.size(16.dp).padding(top = 1.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+          "Note: A passkey lets you sign in with just your device's screen lock (fingerprint, face, or PIN) instead of typing anything -- it's tied to this device (or synced through your Google Password Manager) and works alongside your Google sign-in.",
+          color = Color.Black,
+          fontSize = 10.sp,
+          lineHeight = 14.sp,
+          fontWeight = FontWeight.Medium
+        )
+      }
+
+      Spacer(modifier = Modifier.height(20.dp))
+
+      Button(
+        onClick = onAddPasskey,
+        enabled = !viewModel.passkeyRegisterBusy,
+        shape = RoundedCornerShape(28.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
+        modifier = Modifier.fillMaxWidth().height(52.dp)
+      ) {
+        if (viewModel.passkeyRegisterBusy) {
+          CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+        } else {
+          Text("Add a passkey", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        }
+      }
+      if (viewModel.passkeyError != null) {
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(viewModel.passkeyError!!, color = Color(0xFFE14050), fontSize = 13.sp)
+      }
+
+      Spacer(modifier = Modifier.height(28.dp))
+
+      if (viewModel.passkeysLoading && viewModel.passkeys.isEmpty()) {
+        Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
+          CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+        }
+      } else if (viewModel.passkeys.isEmpty()) {
+        Text(
+          "No passkeys yet",
+          color = Color.Black.copy(alpha = 0.5f),
+          fontSize = 14.sp,
+          modifier = Modifier.padding(vertical = 12.dp)
+        )
+      } else {
+        Text("Your passkeys", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Spacer(modifier = Modifier.height(8.dp))
+        viewModel.passkeys.forEachIndexed { index, passkey ->
+          Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Icon(
+              painter = androidx.compose.ui.res.painterResource(R.drawable.ic_passkey),
+              contentDescription = null,
+              tint = Color.Black.copy(alpha = 0.7f),
+              modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+              Text(passkey.deviceName?.takeIf { it.isNotBlank() } ?: "Passkey", color = Color.Black, fontSize = 15.sp)
+              if (passkey.createdAt != null) {
+                Text("Added ${passkey.createdAt.take(10)}", color = Color.Black.copy(alpha = 0.5f), fontSize = 12.sp)
+              }
+            }
+            Text(
+              "Remove",
+              color = Color(0xFFE14050),
+              fontSize = 13.sp,
+              fontWeight = FontWeight.SemiBold,
+              modifier = Modifier.clickable { confirmRemoveId = passkey.id }
+            )
+          }
+          if (index < viewModel.passkeys.lastIndex) {
+            MyInfoDivider()
+          }
+        }
+      }
+      Spacer(modifier = Modifier.height(24.dp))
+    }
+  }
+
+  if (confirmRemoveId != null) {
+    AlertDialog(
+      onDismissRequest = { confirmRemoveId = null },
+      title = { Text("Remove this passkey?") },
+      text = { Text("You won't be able to sign in with it anymore.") },
+      confirmButton = {
+        TextButton(onClick = {
+          viewModel.removePasskey(confirmRemoveId!!)
+          confirmRemoveId = null
+        }) {
+          Text("Remove", color = Color(0xFFE14050))
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = { confirmRemoveId = null }) {
+          Text("Cancel")
+        }
+      }
+    )
   }
 }
 

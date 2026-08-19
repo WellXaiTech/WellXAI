@@ -28,6 +28,8 @@ sealed class MobileAuthOutcome {
 
 data class TotpSetup(val secret: String, val otpauthUri: String)
 
+data class PasskeyInfo(val id: String, val deviceName: String?, val createdAt: String?, val lastUsedAt: String?)
+
 data class ApiMessage(val id: String, val role: String, val content: String, val createdAt: Long?, val pairId: String = "")
 
 data class ApiConversation(
@@ -744,6 +746,161 @@ object ChatGizaApi {
           return@withContext ApiResult.Failure(errorMessage(text, response.code))
         }
         ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun getPasskeys(token: String): ApiResult<List<PasskeyInfo>> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/account/passkeys")
+        .header("Authorization", "Bearer $token")
+        .get()
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val arr = JSONObject(text).getJSONArray("passkeys")
+        val list = (0 until arr.length()).map { i ->
+          val obj = arr.getJSONObject(i)
+          PasskeyInfo(
+            id = obj.getString("id"),
+            deviceName = obj.optString("deviceName", null),
+            createdAt = obj.optString("createdAt", null),
+            lastUsedAt = obj.optString("lastUsedAt", null)
+          )
+        }
+        ApiResult.Success(list)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun deletePasskey(token: String, id: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject().put("id", id).toString().toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/account/passkeys")
+        .header("Authorization", "Bearer $token")
+        .delete(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          val text = response.body?.string().orEmpty()
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  // Returns the raw options JSON exactly as the backend produced it -- it's
+  // passed straight through to CreatePublicKeyCredentialRequest(requestJson)
+  // unmodified, so there's no reason to parse it into Kotlin types here.
+  suspend fun passkeyRegisterOptions(token: String): ApiResult<String> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/account/passkeys/register-options")
+        .header("Authorization", "Bearer $token")
+        .post("".toRequestBody(JSON))
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(JSONObject(text).getJSONObject("options").toString())
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  // responseJson is CreatePublicKeyCredentialResponse.registrationResponseJson
+  // straight from Credential Manager -- forwarded to the backend as-is.
+  suspend fun passkeyRegisterVerify(token: String, responseJson: String, deviceName: String?): ApiResult<Unit> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject()
+        .put("response", JSONObject(responseJson))
+        .apply { if (deviceName != null) put("deviceName", deviceName) }
+        .toString()
+        .toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/account/passkeys/register-verify")
+        .header("Authorization", "Bearer $token")
+        .post(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          val text = response.body?.string().orEmpty()
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  data class PasskeyLoginOptions(val optionsJson: String, val requestId: String)
+
+  // Unauthenticated -- there's no token yet, this is how sign-in starts.
+  suspend fun passkeyLoginOptions(): ApiResult<PasskeyLoginOptions> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/mobile/auth/passkey-options")
+        .post("".toRequestBody(JSON))
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val json = JSONObject(text)
+        ApiResult.Success(PasskeyLoginOptions(json.getJSONObject("options").toString(), json.getString("requestId")))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun passkeyLoginVerify(requestId: String, responseJson: String, deviceModel: String): ApiResult<AuthResult> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject()
+        .put("requestId", requestId)
+        .put("response", JSONObject(responseJson))
+        .put("deviceModel", deviceModel)
+        .toString()
+        .toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/mobile/auth/passkey-verify")
+        .post(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val json = JSONObject(text)
+        val userJson = json.getJSONObject("user")
+        ApiResult.Success(
+          AuthResult(
+            token = json.getString("token"),
+            user = MobileUser(
+              id = userJson.getString("id"),
+              name = userJson.optString("name", null),
+              email = userJson.optString("email", null),
+              image = userJson.optString("image", null)
+            )
+          )
+        )
       }
     } catch (e: Exception) {
       ApiResult.Failure(e.message ?: "Network error")

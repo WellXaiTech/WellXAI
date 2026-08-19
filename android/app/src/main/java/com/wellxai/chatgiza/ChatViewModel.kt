@@ -104,6 +104,7 @@ sealed class AppScreen {
   object TwoFactorSetup : AppScreen()
   object TotpLoginVerify : AppScreen()
   object AppLockSetup : AppScreen()
+  object PasskeysManage : AppScreen()
 }
 
 // A file/text shared into ChatGiZa from another app (system Share sheet),
@@ -383,6 +384,20 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var appLockGateInput by mutableStateOf("")
     private set
   var appLockGateError by mutableStateOf<String?>(null)
+    private set
+
+  // Passkeys -- WebAuthn credentials registered against this account (see
+  // Security > Passkeys). The actual create/get ceremonies need an
+  // Activity (see MainActivity.startPasskeyRegistration/startPasskeySignIn),
+  // so this state is written to from there via the setPasskey*/on Passkey*
+  // functions below rather than driving the ceremony itself.
+  var passkeys by mutableStateOf<List<PasskeyInfo>>(emptyList())
+    private set
+  var passkeysLoading by mutableStateOf(false)
+    private set
+  var passkeyRegisterBusy by mutableStateOf(false)
+    private set
+  var passkeyError by mutableStateOf<String?>(null)
     private set
 
   init {
@@ -2397,6 +2412,70 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
       appLockGateError = "That PIN is incorrect"
       appLockGateInput = ""
     }
+  }
+
+  // Exposed so MainActivity's Credential Manager flows (which need an
+  // Activity, unlike everything else here) can read the bearer token
+  // without a second TokenStore instance.
+  fun currentToken(): String? = tokenStore.getToken()
+
+  fun openPasskeysScreen() {
+    screen = AppScreen.PasskeysManage
+    passkeyError = null
+    loadPasskeys()
+  }
+
+  fun closePasskeysScreen() {
+    returnToAccountTabsIfPending()
+    screen = AppScreen.ProfileHub
+  }
+
+  fun loadPasskeys() {
+    val token = tokenStore.getToken() ?: return
+    passkeysLoading = true
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.getPasskeys(token)) {
+        is ApiResult.Success -> {
+          passkeys = result.value
+          passkeyError = null
+        }
+        is ApiResult.Failure -> passkeyError = result.message
+      }
+      passkeysLoading = false
+    }
+  }
+
+  fun removePasskey(id: String) {
+    val token = tokenStore.getToken() ?: return
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.deletePasskey(token, id)) {
+        is ApiResult.Success -> passkeys = passkeys.filter { it.id != id }
+        is ApiResult.Failure -> passkeyError = result.message
+      }
+    }
+  }
+
+  fun setPasskeyRegisterBusy(value: Boolean) {
+    passkeyRegisterBusy = value
+  }
+
+  fun setPasskeyError(value: String?) {
+    passkeyError = value
+  }
+
+  fun onPasskeyRegistered() {
+    passkeyError = null
+    loadPasskeys()
+  }
+
+  fun onPasskeySignInStart() {
+    signingIn = true
+    errorMessage = null
+  }
+
+  fun onPasskeySignedIn(result: AuthResult) {
+    signingIn = false
+    applySignedInResult(result)
   }
 
   fun loadSubaccounts() {
