@@ -9781,14 +9781,13 @@ private fun PasswordField(
           }
       )
     }
-    // Visible state uses the proven-safe Material eye (no crossed-out
-    // counterpart exists in this project's icon set -- see the
-    // Icons.Outlined.VisibilityOff notes elsewhere in this file); hidden
-    // state now uses the pasted eye-slash SVG instead of the earlier
-    // manual Canvas-drawn line workaround.
+    // Both states now use pasted SVGs -- ic_eye_open for visible,
+    // ic_eye_slash for hidden -- instead of the earlier mix of the
+    // Material Icons Extended eye (which has no crossed-out counterpart
+    // in this project's icon set) and the pasted slash.
     if (visible) {
       Icon(
-        Icons.Outlined.Visibility,
+        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_eye_open),
         contentDescription = "Hide password",
         tint = Color.Black.copy(alpha = 0.5f),
         modifier = Modifier.size(20.dp).clickable { visible = !visible }
