@@ -4913,7 +4913,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           // No phone number exists anywhere on the account (sign-in here is
           // Google-only) -- the row used to show a fixed fake masked number
           // ("75****182") to every single user regardless of who they were.
-          MyInfoRow(icon = Icons.Outlined.Smartphone, label = "Mobile", onClick = { comingSoon("Mobile") }) {
+          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mobile_outline), label = "Mobile", onClick = { comingSoon("Mobile") }) {
             Text("Not linked", color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
           }
           MyInfoDivider()
