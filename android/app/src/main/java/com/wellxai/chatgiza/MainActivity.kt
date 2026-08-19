@@ -9662,7 +9662,9 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
           onValueChange = viewModel::onNewPasswordInputChange,
           placeholder = "New password",
           maxLength = 16,
-          onFocusLost = viewModel::checkNewPasswordOnBlur
+          minLength = 6,
+          onFocusLost = viewModel::checkNewPasswordOnBlur,
+          onFocusGained = viewModel::clearPasswordError
         )
         else -> CodeField(
           value = viewModel.passwordCodeInput,
@@ -9713,10 +9715,21 @@ private fun PasswordField(
   onValueChange: (String) -> Unit,
   placeholder: String,
   maxLength: Int? = null,
-  onFocusLost: () -> Unit = {}
+  minLength: Int? = null,
+  onFocusLost: () -> Unit = {},
+  onFocusGained: () -> Unit = {}
 ) {
   var visible by remember { mutableStateOf(false) }
   var focused by remember { mutableStateOf(false) }
+  // Set on blur when still under minLength, cleared once typing reaches it
+  // again -- stays red across a re-focus even though the error text below
+  // hides again the moment they tap back in.
+  var invalid by remember { mutableStateOf(false) }
+  val borderColor = when {
+    invalid -> Color(0xFFE14050)
+    focused -> Color.Black
+    else -> Color.Transparent
+  }
   Row(
     modifier = Modifier
       .fillMaxWidth()
@@ -9725,8 +9738,8 @@ private fun PasswordField(
       // Border only shows once the field is actually focused instead of
       // being permanently visible -- an untouched field reads as plain/flat
       // like the rest of the screen, and tapping in is what draws the eye
-      // to it.
-      .border(1.dp, if (focused) Color.Black else Color.Transparent, RoundedCornerShape(14.dp))
+      // to it. Overridden red while invalid regardless of focus.
+      .border(1.dp, borderColor, RoundedCornerShape(14.dp))
       .padding(horizontal = 16.dp, vertical = 4.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
@@ -9738,7 +9751,12 @@ private fun PasswordField(
       }
       BasicTextField(
         value = value,
-        onValueChange = { new -> if (maxLength == null || new.length <= maxLength) onValueChange(new) },
+        onValueChange = { new ->
+          if (maxLength == null || new.length <= maxLength) {
+            onValueChange(new)
+            if (minLength != null && new.length >= minLength) invalid = false
+          }
+        },
         singleLine = true,
         textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp),
         cursorBrush = SolidColor(Color.Black),
@@ -9754,7 +9772,12 @@ private fun PasswordField(
           .fillMaxWidth()
           .onFocusChanged { state ->
             focused = state.isFocused
-            if (!state.isFocused) onFocusLost()
+            if (state.isFocused) {
+              onFocusGained()
+            } else {
+              if (minLength != null && value.length < minLength) invalid = true
+              onFocusLost()
+            }
           }
       )
     }

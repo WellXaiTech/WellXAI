@@ -1953,6 +1953,13 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     }
   }
 
+  // Fires when the New Password field regains focus -- hides the error
+  // text immediately even though the field's own border stays red (via its
+  // local invalid state) until the input actually reaches 6 characters.
+  fun clearPasswordError() {
+    passwordError = null
+  }
+
   fun onPasswordCodeInputChange(value: String) {
     passwordCodeInput = value
     passwordError = null

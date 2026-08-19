@@ -4,7 +4,7 @@
     android:viewportWidth="24"
     android:viewportHeight="24">
 
-    <!-- rect(x=2.682, y=3.5, w=18.5, h=17, rx=4) converted to path data --
+    <!-- rect(x=2.682, y=3.5, w=18.5, h=17, rx=4) converted to path data.
          Android vector drawables have no native rounded-rect primitive. -->
     <path
         android:fillColor="#00000000"
