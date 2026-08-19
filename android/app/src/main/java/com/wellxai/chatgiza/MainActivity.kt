@@ -8239,7 +8239,7 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
   val density = LocalDensity.current
   var lockedHeightPx by remember { mutableStateOf(0) }
 
-  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Color.White) {
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Color.White, dragHandle = null) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
@@ -8247,7 +8247,7 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
           if (lockedHeightPx > 0) Modifier.height(with(density) { lockedHeightPx.toDp() }) else Modifier
         )
         .padding(horizontal = 20.dp)
-        .padding(bottom = 28.dp)
+        .padding(top = 20.dp, bottom = 28.dp)
         .onGloballyPositioned { coords ->
           if (coords.size.height > lockedHeightPx) lockedHeightPx = coords.size.height
         }
@@ -8459,27 +8459,19 @@ private fun DeleteAccountIllustration() {
 private fun DeleteAccountDialog(viewModel: ChatViewModel, onDismiss: () -> Unit) {
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Color.White) {
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Color.White, dragHandle = null) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
         .padding(horizontal = 20.dp)
-        .padding(bottom = 28.dp)
+        .padding(top = 20.dp, bottom = 28.dp)
     ) {
-      Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        Text(
-          "Delete Account",
-          color = Color.Black,
-          fontSize = 20.sp,
-          fontWeight = FontWeight.Bold,
-          fontFamily = FontFamily.Monospace,
-          modifier = Modifier.weight(1f)
-        )
+      Box(modifier = Modifier.fillMaxWidth()) {
         Icon(
           Icons.Filled.Close,
           contentDescription = "Close",
           tint = Color.Black,
-          modifier = Modifier.size(22.dp).clickable(onClick = onDismiss)
+          modifier = Modifier.size(22.dp).align(Alignment.CenterEnd).clickable(onClick = onDismiss)
         )
       }
       Spacer(modifier = Modifier.height(20.dp))
@@ -8492,6 +8484,15 @@ private fun DeleteAccountDialog(viewModel: ChatViewModel, onDismiss: () -> Unit)
         color = Color.Black,
         fontSize = 17.sp,
         fontWeight = FontWeight.Bold,
+        fontFamily = FontFamily.Monospace,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth()
+      )
+      Spacer(modifier = Modifier.height(8.dp))
+      Text(
+        "This permanently deletes your account and all its data.",
+        color = Color.Black.copy(alpha = 0.5f),
+        fontSize = 13.sp,
         fontFamily = FontFamily.Monospace,
         textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth()
@@ -8537,7 +8538,7 @@ private fun DeleteAccountDialog(viewModel: ChatViewModel, onDismiss: () -> Unit)
         if (viewModel.deletingAccount) {
           CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
         } else {
-          Text("Delete", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace)
+          Text("I Understand", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace)
         }
       }
       Spacer(modifier = Modifier.height(16.dp))
