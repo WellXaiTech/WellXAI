@@ -5154,6 +5154,48 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
 
       Spacer(modifier = Modifier.height(20.dp))
 
+      // Mirrors the reference's "Bybit Protect" card -- shown only while
+      // this account hasn't turned on Google 2FA yet (loadTotpStatus()
+      // above), pointing straight at the same Authenticator setup flow
+      // Security > 2FA already opens. Disappears on its own once
+      // totpEnabled flips true, no separate dismiss action needed.
+      if (viewModel.totpEnabled != true) {
+        Column(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .border(1.dp, Color.Black.copy(alpha = 0.1f), RoundedCornerShape(14.dp))
+            .padding(14.dp)
+        ) {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("ChatGiZa Protect", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(
+              painter = androidx.compose.ui.res.painterResource(R.drawable.ic_question_circle),
+              contentDescription = null,
+              tint = Color.Black.copy(alpha = 0.4f),
+              modifier = Modifier.size(14.dp)
+            )
+          }
+          Spacer(modifier = Modifier.height(6.dp))
+          Text(
+            "Add a security check for key actions to help protect your account.",
+            color = Color.Black.copy(alpha = 0.55f),
+            fontSize = 13.sp,
+            lineHeight = 18.sp
+          )
+          Spacer(modifier = Modifier.height(8.dp))
+          Text(
+            "Set up Google Authenticator →",
+            color = Color(0xFFFF9C2D),
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.clickable { viewModel.leaveAccountTabsFor { viewModel.openTwoFactorSetup() } }
+          )
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+      }
+
       // Per-tab offset/width in px, measured live via onGloballyPositioned/
       // onTextLayout below -- fillMaxWidth() on the underline used to
       // stretch it way beyond the tab's own label (the earlier "thick
