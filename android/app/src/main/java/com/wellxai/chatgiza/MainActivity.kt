@@ -298,7 +298,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Path
@@ -8132,27 +8134,35 @@ private fun AccountSettingsScreen(viewModel: ChatViewModel) {
 
 // A rounded rect with the bottom-left corner cut into a diagonal --
 // matches the "folded page corner" look on the reference's document
-// illustration instead of a plain rounded corner there.
-private fun foldedCornerShape(cornerRadius: Dp, foldSize: Dp) = GenericShape { size: Size, density: Density ->
-  val r = with(density) { cornerRadius.toPx() }
-  val fold = with(density) { foldSize.toPx() }
-  val w = size.width
-  val h = size.height
-  moveTo(r, 0f)
-  lineTo(w - r, 0f)
-  quadraticBezierTo(w, 0f, w, r)
-  lineTo(w, h - r)
-  quadraticBezierTo(w, h, w - r, h)
-  lineTo(fold, h)
-  lineTo(0f, h - fold)
-  lineTo(0f, r)
-  quadraticBezierTo(0f, 0f, r, 0f)
-  close()
+// illustration instead of a plain rounded corner there. GenericShape's
+// builder only gets (size, layoutDirection), not density, so the Dp->px
+// conversion has to happen before the shape is built, not inside it.
+@Composable
+private fun rememberFoldedCornerShape(cornerRadius: Dp, foldSize: Dp): Shape {
+  val density = LocalDensity.current
+  return remember(cornerRadius, foldSize, density) {
+    val r = with(density) { cornerRadius.toPx() }
+    val fold = with(density) { foldSize.toPx() }
+    GenericShape { size: Size, _: LayoutDirection ->
+      val w = size.width
+      val h = size.height
+      moveTo(r, 0f)
+      lineTo(w - r, 0f)
+      quadraticBezierTo(w, 0f, w, r)
+      lineTo(w, h - r)
+      quadraticBezierTo(w, h, w - r, h)
+      lineTo(fold, h)
+      lineTo(0f, h - fold)
+      lineTo(0f, r)
+      quadraticBezierTo(0f, 0f, r, 0f)
+      close()
+    }
+  }
 }
 
 @Composable
 private fun DeactivateAccountIllustration() {
-  val cardShape = remember { foldedCornerShape(12.dp, 16.dp) }
+  val cardShape = rememberFoldedCornerShape(12.dp, 16.dp)
   Box(modifier = Modifier.size(width = 140.dp, height = 128.dp)) {
     // Less tilt and tucked further under the front card so its corner
     // doesn't poke out messily at the bottom-left.
@@ -8386,7 +8396,7 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
 // different actions.
 @Composable
 private fun DeleteAccountIllustration() {
-  val cardShape = remember { foldedCornerShape(12.dp, 16.dp) }
+  val cardShape = rememberFoldedCornerShape(12.dp, 16.dp)
   Box(modifier = Modifier.size(width = 140.dp, height = 128.dp)) {
     Box(
       modifier = Modifier
