@@ -73,18 +73,6 @@ jobs:
           keyPassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           EOF
 
-      # One-off: prints the release cert's SHA-256 fingerprint so it can be
-      # published as public/.well-known/assetlinks.json (Digital Asset
-      # Links -- required before Android will trust this app for passkey
-      # creation against the chatgiza.com domain). Not a secret -- this
-      # fingerprint is meant to be published. Removed once captured.
-      - name: Print release cert SHA-256 fingerprint
-        working-directory: android
-        shell: bash
-        run: |
-          keytool -list -v -alias chatgiza -keystore release.keystore -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" | grep -A1 "SHA256:" | tee /tmp/fingerprint.txt
-          echo "::notice::CERT_FINGERPRINT $(grep 'SHA256:' /tmp/fingerprint.txt)"
-
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
