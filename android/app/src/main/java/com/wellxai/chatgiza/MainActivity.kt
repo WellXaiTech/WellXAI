@@ -597,6 +597,12 @@ class MainActivity : ComponentActivity() {
             is AppScreen.ShareTarget -> ShareTargetPickerScreen(viewModel)
           }
         }
+        // Root-level, not screen-gated -- see the comment on
+        // AccountTabsDialog's definition for why (avoids a Dialog-window-
+        // creation flash of whatever's behind it on every return trip).
+        if (viewModel.showAccountTabs) {
+          AccountTabsDialog(viewModel)
+        }
         ScreenshotShareOverlay(viewModel)
         PreferenceWizardOverlay(viewModel)
         MemorySuggestionOverlay(viewModel)
@@ -5035,9 +5041,8 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
   if (viewModel.showAboutUs) {
     AboutUsDialog(viewModel)
   }
-  if (viewModel.showAccountTabs) {
-    AccountTabsDialog(viewModel)
-  }
+  // AccountTabsDialog itself moved to the root level (see the comment on
+  // its definition) so it no longer mounts here.
 }
 
 // Opened by tapping the chevron next to the Site row -- the
@@ -5045,9 +5050,24 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
 // inline on the main Profile Hub screen. Only "My info" is real (it
 // just points back at the profile fields already shown on the main
 // screen); the rest are stub taps.
+//
+// Mounted at the root level (setContent, alongside the screen router),
+// NOT nested inside ProfileHubScreen, and rendered as a plain full-size
+// Box instead of a platform Dialog(). It used to be a Dialog opened
+// conditionally from inside ProfileHubScreen, which meant every close-a-
+// sub-screen-and-return-here path (Mobile Number, Change Email,
+// Nickname, ...) required ProfileHubScreen -- with its "Unlock GiZa Pro
+// Perks" banner -- to mount for the very first time in the SAME frame
+// the dialog was supposed to cover it. Creating a real Android Dialog
+// window is never instant, so that banner was visible for a frame or
+// two before the dialog's window actually drew on top of it -- the
+// flash the user kept hitting on every single return trip. Being a
+// normal composable now, drawn after the screen router in the same
+// window/frame, removes that window-creation lag entirely.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AccountTabsDialog(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeAccountTabs() }
   var showRateDialog by remember { mutableStateOf(false) }
   var showEmailOptions by remember { mutableStateOf(false) }
   var confirmUnlinkEmail by remember { mutableStateOf(false) }
@@ -5062,16 +5082,11 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
   }
   LaunchedEffect(Unit) { viewModel.loadTotpStatus() }
   val accountTabsOrder = listOf("My info", "Security", "Preference", "General")
-  Dialog(
-    onDismissRequest = { viewModel.closeAccountTabs() },
-    properties = DialogProperties(usePlatformDefaultWidth = false)
+  Box(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color.White)
   ) {
-    EdgeToEdgeDialogWindow()
-    Box(
-      modifier = Modifier
-        .fillMaxSize()
-        .background(Color.White)
-    ) {
     // HorizontalPager instead of a hand-rolled offset -- the two earlier
     // manual Animatable attempts could only ever move the CURRENT tab's
     // content, never render the neighboring tab underneath during the drag
@@ -5752,7 +5767,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         Toast.makeText(context, emailUnlinkError, Toast.LENGTH_SHORT).show()
       }
     }
-  }
 }
 
 @Composable
