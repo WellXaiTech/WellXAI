@@ -529,8 +529,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Loading -> LoadingScreen()
             is AppScreen.SignedOut -> SignedOutScreen(
               viewModel = viewModel,
-              onSignIn = ::startGoogleSignIn,
-              onSignInWithPasskey = ::startPasskeySignIn
+              onSignIn = ::startGoogleSignIn
             )
             is AppScreen.Chat -> ChatScreenUi(viewModel)
             is AppScreen.History -> HistoryScreen(viewModel)
@@ -648,23 +647,51 @@ class MainActivity : ComponentActivity() {
     super.onStop()
   }
 
+  // One combined Credential Manager request instead of Google and passkey
+  // sign-in being two separate buttons/flows -- Credential Manager's own
+  // picker offers a saved passkey (if this account registered one under
+  // Security > Passkeys) alongside Google accounts in the same sheet, so a
+  // single "Google" tap surfaces whichever the person actually has.
   private fun startGoogleSignIn() {
     viewModel.onSignInStart()
     val googleIdOption = GetGoogleIdOption.Builder()
       .setFilterByAuthorizedAccounts(false)
       .setServerClientId(GOOGLE_WEB_CLIENT_ID)
       .build()
-    val request = GetCredentialRequest.Builder()
-      .addCredentialOption(googleIdOption)
-      .build()
 
     lifecycleScope.launch {
+      // Fetching passkey options needs a network round trip; Google's
+      // option doesn't. If that fetch fails for any reason, sign-in still
+      // proceeds with Google alone rather than blocking on it.
+      val passkeyOptions = ChatGizaApi.passkeyLoginOptions()
+      val requestBuilder = GetCredentialRequest.Builder().addCredentialOption(googleIdOption)
+      var passkeyRequestId: String? = null
+      if (passkeyOptions is ApiResult.Success) {
+        passkeyRequestId = passkeyOptions.value.requestId
+        requestBuilder.addCredentialOption(GetPublicKeyCredentialOption(requestJson = passkeyOptions.value.optionsJson))
+      }
+      val request = requestBuilder.build()
+
       try {
         val credentialManager = CredentialManager.create(this@MainActivity)
         val response = credentialManager.getCredential(this@MainActivity, request)
-        val credential = response.credential
-        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-        viewModel.onGoogleIdToken(googleIdTokenCredential.idToken)
+        when (val credential = response.credential) {
+          is PublicKeyCredential -> {
+            val reqId = passkeyRequestId
+            if (reqId == null) {
+              viewModel.onSignInFailed("Couldn't complete passkey sign-in")
+            } else {
+              when (val verifyResult = ChatGizaApi.passkeyLoginVerify(reqId, credential.authenticationResponseJson, Build.MODEL ?: "")) {
+                is ApiResult.Success -> viewModel.onPasskeySignedIn(verifyResult.value)
+                is ApiResult.Failure -> viewModel.onSignInFailed(verifyResult.message)
+              }
+            }
+          }
+          else -> {
+            val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+            viewModel.onGoogleIdToken(googleIdTokenCredential.idToken)
+          }
+        }
       } catch (e: GetCredentialException) {
         viewModel.onSignInFailed(e.message ?: "Sign-in was cancelled")
       } catch (e: Exception) {
@@ -705,45 +732,6 @@ class MainActivity : ComponentActivity() {
     }
   }
 
-  // Sign-in counterpart -- allowCredentials is empty in the options the
-  // backend generates, so Credential Manager offers every passkey
-  // registered for chatgiza.com rather than requiring this app to already
-  // know which account is signing in.
-  private fun startPasskeySignIn() {
-    viewModel.onPasskeySignInStart()
-    lifecycleScope.launch {
-      when (val optionsResult = ChatGizaApi.passkeyLoginOptions()) {
-        is ApiResult.Success -> {
-          try {
-            val credentialManager = CredentialManager.create(this@MainActivity)
-            val getPasskeyOption = GetPublicKeyCredentialOption(requestJson = optionsResult.value.optionsJson)
-            val getRequest = GetCredentialRequest(listOf(getPasskeyOption))
-            val result = credentialManager.getCredential(this@MainActivity, getRequest)
-            val credential = result.credential as? PublicKeyCredential
-            if (credential == null) {
-              viewModel.onSignInFailed("Couldn't read that passkey")
-            } else {
-              when (
-                val verifyResult = ChatGizaApi.passkeyLoginVerify(
-                  optionsResult.value.requestId,
-                  credential.authenticationResponseJson,
-                  Build.MODEL ?: ""
-                )
-              ) {
-                is ApiResult.Success -> viewModel.onPasskeySignedIn(verifyResult.value)
-                is ApiResult.Failure -> viewModel.onSignInFailed(verifyResult.message)
-              }
-            }
-          } catch (e: GetCredentialException) {
-            viewModel.onSignInFailed(e.message ?: "Passkey sign-in was cancelled")
-          } catch (e: Exception) {
-            viewModel.onSignInFailed(e.message ?: "Passkey sign-in failed")
-          }
-        }
-        is ApiResult.Failure -> viewModel.onSignInFailed(optionsResult.message)
-      }
-    }
-  }
 }
 
 // Floats over whichever screen is showing when a screenshot is taken --
@@ -1214,7 +1202,7 @@ private fun LoadingScreen() {
 // Security > Change Password -- Google (and the existing passkey option)
 // stay as the only way in for accounts that haven't.
 @Composable
-private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit, onSignInWithPasskey: () -> Unit) {
+private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
   val focusManager = LocalFocusManager.current
   val signingIn = viewModel.signingIn
   Column(
@@ -1387,44 +1375,28 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit, onSi
 
       Spacer(modifier = Modifier.height(20.dp))
 
-      OutlinedButton(
-        onClick = onSignIn,
-        enabled = !signingIn,
-        shape = RoundedCornerShape(28.dp),
-        colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.Black.copy(alpha = 0.04f)),
-        modifier = Modifier.fillMaxWidth().height(52.dp)
-      ) {
-        Icon(
-          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_google_g),
-          contentDescription = null,
-          tint = Color.Unspecified,
-          modifier = Modifier.size(18.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(if (signingIn) "Signing in…" else "Google", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-      }
-
-      Spacer(modifier = Modifier.height(12.dp))
-
-      // Only shows up for accounts that already registered a passkey (see
-      // Security > Passkeys) -- Credential Manager itself is what actually
-      // decides whether any are available on this device and cancels
-      // gracefully with nothing to offer if not.
-      OutlinedButton(
-        onClick = onSignInWithPasskey,
-        enabled = !signingIn,
-        shape = RoundedCornerShape(28.dp),
-        colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.Black.copy(alpha = 0.04f)),
-        modifier = Modifier.fillMaxWidth().height(52.dp)
-      ) {
-        Icon(
-          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_passkey),
-          contentDescription = null,
-          tint = Color.Black,
-          modifier = Modifier.size(18.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text("Sign in with a passkey", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+      // One button, not two -- Credential Manager's own picker offers a
+      // saved passkey alongside Google accounts in the same sheet (see
+      // startGoogleSignIn), so this single tap covers both instead of a
+      // separate "Sign in with a passkey" button underneath it.
+      Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        OutlinedButton(
+          onClick = onSignIn,
+          enabled = !signingIn,
+          shape = RoundedCornerShape(50),
+          colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.Black.copy(alpha = 0.04f)),
+          contentPadding = PaddingValues(horizontal = 28.dp, vertical = 12.dp),
+          modifier = Modifier.height(44.dp)
+        ) {
+          Icon(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_google_logo_color),
+            contentDescription = null,
+            tint = Color.Unspecified,
+            modifier = Modifier.size(18.dp)
+          )
+          Spacer(modifier = Modifier.width(8.dp))
+          Text(if (signingIn) "Signing in…" else "Google", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        }
       }
 
       Spacer(modifier = Modifier.height(8.dp))
