@@ -4786,7 +4786,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
       modifier = Modifier
         .fillMaxWidth()
         .clip(RoundedCornerShape(18.dp))
-        .background(Color.White)
+        .background(Color(0xFFF4F4F4))
         .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
       Text("Unlock GiZa Pro Perks", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold)
