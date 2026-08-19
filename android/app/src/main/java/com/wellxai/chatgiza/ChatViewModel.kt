@@ -332,6 +332,11 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     private set
   var totpSetupUri by mutableStateOf<String?>(null)
     private set
+  // "link" (QR/key + Next) or "verify" (code entry + Submit) -- only
+  // meaningful once totpSetupSecret is set; the intro screen before that
+  // doesn't consult this at all.
+  var totpSetupStep by mutableStateOf("link")
+    private set
   var totpSetupCodeInput by mutableStateOf("")
     private set
   // Reused for both turning 2FA on (confirming the first code) and turning
@@ -2145,6 +2150,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     screen = AppScreen.TwoFactorSetup
     totpSetupSecret = null
     totpSetupUri = null
+    totpSetupStep = "link"
     totpSetupCodeInput = ""
     totpDisableCodeInput = ""
     totpError = null
@@ -2173,11 +2179,36 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         is ApiResult.Success -> {
           totpSetupSecret = result.value.secret
           totpSetupUri = result.value.otpauthUri
+          totpSetupStep = "link"
         }
         is ApiResult.Failure -> totpError = result.message
       }
       totpBusy = false
     }
+  }
+
+  // From the "link" step's Next button -- there's nothing to actually
+  // validate client-side before a code exists, so this just moves to the
+  // verify step; confirmTotpSetup() is what does the real check.
+  fun goToTotpVerifyStep() {
+    totpSetupStep = "verify"
+    totpError = null
+  }
+
+  fun backToTotpLinkStep() {
+    totpSetupStep = "link"
+    totpSetupCodeInput = ""
+    totpError = null
+  }
+
+  // Back out of the "link" step to the intro screen (e.g. to re-download
+  // the app first) -- discards the staged secret; startTotpSetup() issues
+  // a fresh one if they tap "Enable Authenticator App" again.
+  fun backToTotpIntro() {
+    totpSetupSecret = null
+    totpSetupUri = null
+    totpSetupStep = "link"
+    totpError = null
   }
 
   fun onTotpSetupCodeChange(value: String) {

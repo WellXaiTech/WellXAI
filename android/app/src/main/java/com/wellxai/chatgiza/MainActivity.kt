@@ -9787,8 +9787,22 @@ private fun rememberQrBitmap(content: String, sizePx: Int = 640): Bitmap? {
 
 @Composable
 private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
-  BackHandler { viewModel.closeTwoFactorSetup() }
+  val context = LocalContext.current
+  val clipboard = LocalClipboardManager.current
   val focusManager = LocalFocusManager.current
+  val onBack: () -> Unit = when {
+    viewModel.totpEnabled == true -> viewModel::closeTwoFactorSetup
+    viewModel.totpSetupSecret == null -> viewModel::closeTwoFactorSetup
+    viewModel.totpSetupStep == "verify" -> viewModel::backToTotpLinkStep
+    else -> viewModel::backToTotpIntro
+  }
+  BackHandler(onBack = onBack)
+  val title = when {
+    viewModel.totpEnabled == true -> "Google 2FA Authentication"
+    viewModel.totpSetupSecret == null -> "Authenticator App Verification"
+    viewModel.totpSetupStep == "link" -> "Link an Authenticator"
+    else -> "Verify Authenticator"
+  }
   Column(
     modifier = Modifier
       .fillMaxSize()
@@ -9800,13 +9814,13 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
   ) {
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
       Text(
-        "Google 2FA Authentication",
+        title,
         color = Color.Black,
         fontSize = 18.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.align(Alignment.Center)
       )
-      IconButton(onClick = { viewModel.closeTwoFactorSetup() }, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
+      IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(24.dp))
       }
     }
@@ -9818,37 +9832,35 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
         .verticalScroll(rememberScrollState())
         .padding(horizontal = 16.dp)
     ) {
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(14.dp))
-          .background(Color(0xFFFFF3E5))
-          .padding(12.dp)
-      ) {
-        Icon(
-          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_warning_circle),
-          contentDescription = null,
-          tint = Color.Black,
-          modifier = Modifier.size(16.dp).padding(top = 1.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-          if (viewModel.totpEnabled == true) {
-            "Note: 2FA is currently ON. Every sign-in needs a fresh code from your authenticator app after your Google sign-in, on top of it -- not instead of it. Turning it off below only needs a currently-valid code."
-          } else {
-            "Note: This adds a second step on top of your Google sign-in -- an authenticator app (like Google Authenticator or Authy) generates a new 6-digit code every 30 seconds, and you'll need one to finish signing in from now on."
-          },
-          color = Color.Black,
-          fontSize = 10.sp,
-          lineHeight = 14.sp,
-          fontWeight = FontWeight.Medium
-        )
-      }
-
-      Spacer(modifier = Modifier.height(20.dp))
-
       when {
+        // Turning 2FA back off -- unrelated to the enroll flow below, kept
+        // as its own single-screen branch since disabling doesn't have
+        // the same multi-step shape as enrolling.
         viewModel.totpEnabled == true -> {
+          Spacer(modifier = Modifier.height(6.dp))
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .clip(RoundedCornerShape(14.dp))
+              .background(Color(0xFFFFF3E5))
+              .padding(12.dp)
+          ) {
+            Icon(
+              painter = androidx.compose.ui.res.painterResource(R.drawable.ic_warning_circle),
+              contentDescription = null,
+              tint = Color.Black,
+              modifier = Modifier.size(16.dp).padding(top = 1.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+              "Note: 2FA is currently ON. Every sign-in needs a fresh code from your authenticator app after your Google sign-in, on top of it -- not instead of it. Turning it off below only needs a currently-valid code.",
+              color = Color.Black,
+              fontSize = 10.sp,
+              lineHeight = 14.sp,
+              fontWeight = FontWeight.Medium
+            )
+          }
+          Spacer(modifier = Modifier.height(20.dp))
           Text("Turn off 2FA", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
           Spacer(modifier = Modifier.height(10.dp))
           CodeField(value = viewModel.totpDisableCodeInput, onValueChange = viewModel::onTotpDisableCodeChange)
@@ -9870,8 +9882,92 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
               Text("Turn Off", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
           }
+          Spacer(modifier = Modifier.height(24.dp))
         }
+
+        // Step 1: intro -- explains what this is and gets the authenticator
+        // app installed before anything account-specific is shown.
         viewModel.totpSetupSecret == null -> {
+          Spacer(modifier = Modifier.height(24.dp))
+          Box(
+            modifier = Modifier
+              .size(72.dp)
+              .clip(CircleShape)
+              .background(Color.Black.copy(alpha = 0.06f)),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(
+              painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded),
+              contentDescription = null,
+              tint = Color.Black,
+              modifier = Modifier.size(34.dp)
+            )
+          }
+          Spacer(modifier = Modifier.height(16.dp))
+          Text(
+            "Instead of waiting for text messages, get verification codes from an authenticator app like Google Authenticator. It works even if your phone is offline.",
+            color = Color.Black.copy(alpha = 0.6f),
+            fontSize = 13.sp,
+            lineHeight = 19.sp
+          )
+          Spacer(modifier = Modifier.height(20.dp))
+          HorizontalDivider(color = Color.Black.copy(alpha = 0.08f))
+          Spacer(modifier = Modifier.height(20.dp))
+          Text("1. Download Authenticator App", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+          Spacer(modifier = Modifier.height(10.dp))
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .clip(RoundedCornerShape(14.dp))
+              .background(Color.Black.copy(alpha = 0.05f))
+              .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Text("Google Authenticator", color = Color.Black, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            Text(
+              "Download",
+              color = Color.Black,
+              fontSize = 13.sp,
+              fontWeight = FontWeight.SemiBold,
+              modifier = Modifier
+                .clip(RoundedCornerShape(50))
+                .background(Color.Black.copy(alpha = 0.08f))
+                .clickable {
+                  runCatching {
+                    context.startActivity(
+                      Intent(Intent.ACTION_VIEW, Uri.parse("market://search?q=google+authenticator"))
+                    )
+                  }.onFailure {
+                    context.startActivity(
+                      Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/search?q=google+authenticator"))
+                    )
+                  }
+                }
+                .padding(horizontal = 14.dp, vertical = 8.dp)
+            )
+          }
+          Spacer(modifier = Modifier.height(20.dp))
+          Text("2. Link Authenticator App", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+          Spacer(modifier = Modifier.height(10.dp))
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .clip(RoundedCornerShape(14.dp))
+              .border(1.dp, Color.Black.copy(alpha = 0.1f), RoundedCornerShape(14.dp))
+              .padding(14.dp)
+          ) {
+            Text(
+              "Tap 'Enable Authenticator App' below and follow the instructions to complete the link.",
+              color = Color.Black.copy(alpha = 0.6f),
+              fontSize = 12.sp,
+              lineHeight = 17.sp
+            )
+          }
+          if (viewModel.totpError != null) {
+            Spacer(modifier = Modifier.height(14.dp))
+            Text(viewModel.totpError!!, color = Color(0xFFE14050), fontSize = 13.sp)
+          }
+          Spacer(modifier = Modifier.height(28.dp))
           Button(
             onClick = { viewModel.startTotpSetup() },
             enabled = !viewModel.totpBusy,
@@ -9882,17 +9978,46 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
             if (viewModel.totpBusy) {
               CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
             } else {
-              Text("Get Started", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+              Text("Enable Authenticator App", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
           }
-          if (viewModel.totpError != null) {
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(viewModel.totpError!!, color = Color(0xFFE14050), fontSize = 13.sp)
-          }
+          Spacer(modifier = Modifier.height(24.dp))
         }
-        else -> {
-          Text("1. Scan this QR code with your authenticator app", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-          Spacer(modifier = Modifier.height(12.dp))
+
+        // Step 2: link -- the QR code / manual key, shown as the same
+        // numbered 01/02/03 layout as the reference.
+        viewModel.totpSetupStep == "link" -> {
+          Spacer(modifier = Modifier.height(20.dp))
+          NumberedTotpStep(number = "01", text = "Copy the 16-digit key. Or you can scan the QR code.")
+          Spacer(modifier = Modifier.height(10.dp))
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .clip(RoundedCornerShape(14.dp))
+              .background(Color.Black.copy(alpha = 0.05f))
+              .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Text(
+              viewModel.totpSetupSecret.orEmpty(),
+              color = Color.Black,
+              fontSize = 15.sp,
+              fontWeight = FontWeight.SemiBold,
+              letterSpacing = 1.sp,
+              modifier = Modifier.weight(1f)
+            )
+            Text(
+              "Copy",
+              color = Color(0xFFFF9C2D),
+              fontSize = 13.sp,
+              fontWeight = FontWeight.SemiBold,
+              modifier = Modifier.clickable {
+                clipboard.setText(AnnotatedString(viewModel.totpSetupSecret.orEmpty()))
+                Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
+              }
+            )
+          }
+          Spacer(modifier = Modifier.height(14.dp))
           val qrBitmap = rememberQrBitmap(viewModel.totpSetupUri.orEmpty())
           Box(
             modifier = Modifier
@@ -9910,20 +10035,43 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
               )
             }
           }
-          Spacer(modifier = Modifier.height(14.dp))
-          Text("Or enter this code manually:", color = Color.Black.copy(alpha = 0.6f), fontSize = 12.sp)
-          Spacer(modifier = Modifier.height(4.dp))
-          Text(
-            viewModel.totpSetupSecret.orEmpty(),
-            color = Color.Black,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold,
-            letterSpacing = 2.sp
-          )
+          Spacer(modifier = Modifier.height(24.dp))
+          NumberedTotpStep(number = "02", text = "Open your authenticator app and add a new entry using the 16-digit key that you just copied.")
+          Spacer(modifier = Modifier.height(24.dp))
+          NumberedTotpStep(number = "03", text = "Come back and enter the 6-digit code it shows to finish verifying.")
+          Spacer(modifier = Modifier.height(28.dp))
+          Button(
+            onClick = { viewModel.goToTotpVerifyStep() },
+            shape = RoundedCornerShape(28.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
+            modifier = Modifier.fillMaxWidth().height(52.dp)
+          ) {
+            Text("Next", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+          }
+          Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // Step 3: verify -- the only step that actually calls the backend
+        // to turn 2FA on.
+        else -> {
           Spacer(modifier = Modifier.height(20.dp))
-          Text("2. Enter the 6-digit code it shows", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-          Spacer(modifier = Modifier.height(10.dp))
-          CodeField(value = viewModel.totpSetupCodeInput, onValueChange = viewModel::onTotpSetupCodeChange)
+          Text(
+            "Enter the 6-digit code generated by the Authenticator App.",
+            color = Color.Black.copy(alpha = 0.6f),
+            fontSize = 14.sp,
+            lineHeight = 20.sp
+          )
+          Spacer(modifier = Modifier.height(24.dp))
+          Text("Authenticator App Code", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+          Spacer(modifier = Modifier.height(8.dp))
+          CodeField(
+            value = viewModel.totpSetupCodeInput,
+            onValueChange = viewModel::onTotpSetupCodeChange,
+            onPaste = {
+              val pasted = clipboard.getText()?.text.orEmpty().filter { it.isDigit() }.take(6)
+              if (pasted.isNotEmpty()) viewModel.onTotpSetupCodeChange(pasted)
+            }
+          )
           if (viewModel.totpError != null) {
             Spacer(modifier = Modifier.height(10.dp))
             Text(viewModel.totpError!!, color = Color(0xFFE14050), fontSize = 13.sp)
@@ -9939,13 +10087,28 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
             if (viewModel.totpBusy) {
               CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
             } else {
-              Text("Confirm", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+              Text("Submit", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
           }
+          Spacer(modifier = Modifier.height(24.dp))
         }
       }
-      Spacer(modifier = Modifier.height(24.dp))
     }
+  }
+}
+
+@Composable
+private fun NumberedTotpStep(number: String, text: String) {
+  Row(verticalAlignment = Alignment.Top) {
+    Text(number, color = Color.Black.copy(alpha = 0.25f), fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+    Spacer(modifier = Modifier.width(12.dp))
+    Text(
+      text,
+      color = Color.Black,
+      fontSize = 14.sp,
+      lineHeight = 20.sp,
+      modifier = Modifier.padding(top = 3.dp)
+    )
   }
 }
 
@@ -10092,7 +10255,14 @@ private fun PasswordField(
 }
 
 @Composable
-private fun CodeField(value: String, onValueChange: (String) -> Unit) {
+private fun CodeField(
+  value: String,
+  onValueChange: (String) -> Unit,
+  // Opt-in trailing "Paste" affordance -- only the Authenticator App setup
+  // verify step wants this (matching the reference), the other CodeField
+  // call sites (password change, login 2FA) stay as they were.
+  onPaste: (() -> Unit)? = null
+) {
   var focused by remember { mutableStateOf(false) }
   Row(
     modifier = Modifier
@@ -10119,6 +10289,15 @@ private fun CodeField(value: String, onValueChange: (String) -> Unit) {
         modifier = Modifier
           .fillMaxWidth()
           .onFocusChanged { state -> focused = state.isFocused }
+      )
+    }
+    if (onPaste != null) {
+      Text(
+        "Paste",
+        color = Color(0xFFFF9C2D),
+        fontSize = 13.sp,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.clickable(onClick = onPaste)
       )
     }
   }
