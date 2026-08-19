@@ -8172,7 +8172,7 @@ private fun DeactivateAccountIllustration() {
         .align(Alignment.TopStart)
         .offset(x = 9.dp, y = 13.dp)
         .graphicsLayer { rotationZ = -5f }
-        .border(1.dp, Color.Black.copy(alpha = 0.6f), cardShape)
+        .border(0.5.dp, Color.Black.copy(alpha = 0.6f), cardShape)
     )
     Column(
       modifier = Modifier
@@ -8181,7 +8181,7 @@ private fun DeactivateAccountIllustration() {
         .offset(x = 29.dp, y = 0.dp)
         .clip(cardShape)
         .background(Color.White)
-        .border(1.dp, Color.Black, cardShape)
+        .border(0.5.dp, Color.Black, cardShape)
         .padding(14.dp),
       horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -8200,12 +8200,14 @@ private fun DeactivateAccountIllustration() {
     }
     // Pulled up and inward (instead of hanging fully outside the corner)
     // so it reads as sitting on the card, not floating separately below it.
+    // Smaller than before too -- it's a solid-fill icon, not a stroke, so
+    // shrinking it is what makes it read as thinner/lighter.
     Icon(
       painter = androidx.compose.ui.res.painterResource(R.drawable.ic_padlock_outline),
       contentDescription = null,
       tint = Color.Black,
       modifier = Modifier
-        .size(30.dp)
+        .size(22.dp)
         .align(Alignment.BottomEnd)
         .offset(x = (-8).dp, y = (-10).dp)
     )
@@ -8244,7 +8246,12 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
       modifier = Modifier
         .fillMaxWidth()
         .then(
-          if (lockedHeightPx > 0) Modifier.height(with(density) { lockedHeightPx.toDp() }) else Modifier
+          // heightIn(min=...) not height(...) -- an exact fixed height came
+          // up short of the sheet's own bottom-inset padding, leaving a gap
+          // between the sheet and the true bottom of the screen. A floor
+          // still stops collapsing Subaccount from shrinking the sheet, but
+          // lets it grow to whatever the sheet actually needs below that.
+          if (lockedHeightPx > 0) Modifier.heightIn(min = with(density) { lockedHeightPx.toDp() }) else Modifier
         )
         .padding(horizontal = 20.dp)
         .padding(top = 20.dp, bottom = 28.dp)
@@ -8418,7 +8425,7 @@ private fun DeleteAccountIllustration() {
         .align(Alignment.TopStart)
         .offset(x = 9.dp, y = 13.dp)
         .graphicsLayer { rotationZ = -5f }
-        .border(1.dp, Color.Black.copy(alpha = 0.6f), cardShape)
+        .border(0.5.dp, Color.Black.copy(alpha = 0.6f), cardShape)
     )
     Column(
       modifier = Modifier
@@ -8427,7 +8434,7 @@ private fun DeleteAccountIllustration() {
         .offset(x = 29.dp, y = 0.dp)
         .clip(cardShape)
         .background(Color.White)
-        .border(1.dp, Color.Black, cardShape)
+        .border(0.5.dp, Color.Black, cardShape)
         .padding(14.dp),
       horizontalAlignment = Alignment.CenterHorizontally
     ) {
