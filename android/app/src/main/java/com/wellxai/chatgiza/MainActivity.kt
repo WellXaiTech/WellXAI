@@ -4741,30 +4741,49 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         .fillMaxSize()
         .background(Color.White)
     ) {
-    var tabDragAccum by remember { mutableStateOf(0f) }
+    // Real drag-follows-finger feel instead of the earlier version, which
+    // only reacted once on release (content sat still while dragging, then
+    // snapped instantly) -- tabOffsetAnim tracks the live finger position
+    // during the drag via snapTo (instant, no easing) and only switches to
+    // eased animateTo for the settle/slide-through on release, so it reads
+    // as a real swipe rather than a toggle.
+    val tabOffsetAnim = remember { Animatable(0f) }
+    val tabDragScope = rememberCoroutineScope()
     Column(
       modifier = Modifier
         .fillMaxSize()
         .statusBarsPadding()
         .verticalScroll(rememberScrollState())
-        // Swipe left/right anywhere on the tab content to move between My
-        // info/Security/Preference/General, same as tapping a tab label --
-        // coexists with the vertical scroll above since drag detection here
-        // only reacts to horizontal movement.
         .pointerInput(Unit) {
           detectHorizontalDragGestures(
             onDragEnd = {
               val idx = accountTabsOrder.indexOf(viewModel.activeAccountTab)
-              if (tabDragAccum <= -80f && idx < accountTabsOrder.lastIndex) {
-                viewModel.activeAccountTab = accountTabsOrder[idx + 1]
-              } else if (tabDragAccum >= 80f && idx > 0) {
-                viewModel.activeAccountTab = accountTabsOrder[idx - 1]
+              val current = tabOffsetAnim.value
+              val screenWidth = size.width.toFloat().coerceAtLeast(1f)
+              tabDragScope.launch {
+                when {
+                  current <= -80f && idx < accountTabsOrder.lastIndex -> {
+                    tabOffsetAnim.animateTo(-screenWidth, tween(160))
+                    viewModel.activeAccountTab = accountTabsOrder[idx + 1]
+                    tabOffsetAnim.snapTo(screenWidth)
+                    tabOffsetAnim.animateTo(0f, tween(160))
+                  }
+                  current >= 80f && idx > 0 -> {
+                    tabOffsetAnim.animateTo(screenWidth, tween(160))
+                    viewModel.activeAccountTab = accountTabsOrder[idx - 1]
+                    tabOffsetAnim.snapTo(-screenWidth)
+                    tabOffsetAnim.animateTo(0f, tween(160))
+                  }
+                  else -> tabOffsetAnim.animateTo(0f, tween(200))
+                }
               }
-              tabDragAccum = 0f
             },
-            onDragCancel = { tabDragAccum = 0f }
-          ) { _, dragAmount -> tabDragAccum += dragAmount }
+            onDragCancel = { tabDragScope.launch { tabOffsetAnim.animateTo(0f, tween(200)) } }
+          ) { _, dragAmount ->
+            tabDragScope.launch { tabOffsetAnim.snapTo(tabOffsetAnim.value + dragAmount) }
+          }
         }
+        .offset { IntOffset(tabOffsetAnim.value.roundToInt(), 0) }
         .padding(horizontal = 16.dp)
         .padding(bottom = if (viewModel.activeAccountTab == "My info") 76.dp else 0.dp)
     ) {
@@ -4960,7 +4979,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           // actually lives and can actually be changed.
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_google_g),
-            iconSize = 23.dp,
+            iconSize = 19.dp,
             label = "Google 2FA Authentication",
             onClick = {
               runCatching {
