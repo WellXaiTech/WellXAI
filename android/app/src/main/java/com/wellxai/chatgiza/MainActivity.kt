@@ -9652,7 +9652,10 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
         "old" -> PasswordField(
           value = viewModel.oldPasswordInput,
           onValueChange = viewModel::onOldPasswordInputChange,
-          placeholder = "Current password"
+          placeholder = "Current password",
+          minLength = 1,
+          onFocusLost = viewModel::checkOldPasswordOnBlur,
+          onFocusGained = viewModel::clearPasswordError
         )
         "new" -> PasswordField(
           value = viewModel.newPasswordInput,

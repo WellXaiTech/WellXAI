@@ -1973,6 +1973,15 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     passwordStep = "new"
   }
 
+  // Mirrors checkNewPasswordOnBlur() for the Current Password step -- there's
+  // no length rule for an existing password, just "must not be empty",
+  // which is also PasswordField's minLength = 1 trigger for that field.
+  fun checkOldPasswordOnBlur() {
+    if (oldPasswordInput.isEmpty()) {
+      passwordError = "Enter your current password"
+    }
+  }
+
   // Sends the verification code -- doesn't change the password yet, that
   // only happens once submitPasswordCode confirms the code below.
   fun submitNewPassword() {
