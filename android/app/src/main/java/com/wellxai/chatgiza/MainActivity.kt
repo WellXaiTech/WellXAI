@@ -5025,7 +5025,8 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded), iconSize = 23.dp, label = "App Lock", onClick = { comingSoon("App Lock") }) {}
           MyInfoDivider()
           MyInfoRow(
-            icon = Icons.Filled.Person,
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_account_settings),
+            iconSize = 19.dp,
             label = "Account Settings",
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openAccountSettings() } }
           ) {}
@@ -7904,7 +7905,7 @@ private fun AccountSettingsScreen(viewModel: ChatViewModel) {
   ) {
     DataControlsAppBar("Account Settings") { viewModel.closeAccountSettings() }
     AccountSettingsRow(
-      icon = Icons.Outlined.Lock,
+      painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded),
       title = "Deactivate an Account",
       description = "Something wrong with your account? Temporarily deactivate it while keeping your data intact.",
       onClick = { comingSoon("Deactivate an Account") }
@@ -7929,7 +7930,13 @@ private fun AccountSettingsScreen(viewModel: ChatViewModel) {
 }
 
 @Composable
-private fun AccountSettingsRow(icon: ImageVector, title: String, description: String, onClick: () -> Unit) {
+private fun AccountSettingsRow(
+  icon: ImageVector? = null,
+  painter: androidx.compose.ui.graphics.painter.Painter? = null,
+  title: String,
+  description: String,
+  onClick: () -> Unit
+) {
   Column(
     modifier = Modifier
       .fillMaxWidth()
@@ -7939,7 +7946,11 @@ private fun AccountSettingsRow(icon: ImageVector, title: String, description: St
       .padding(16.dp)
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-      Icon(icon, contentDescription = null, tint = Color.Black, modifier = Modifier.size(22.dp))
+      if (painter != null) {
+        Icon(painter, contentDescription = null, tint = Color.Black, modifier = Modifier.size(20.dp))
+      } else if (icon != null) {
+        Icon(icon, contentDescription = null, tint = Color.Black, modifier = Modifier.size(22.dp))
+      }
       Spacer(modifier = Modifier.width(14.dp))
       Text(title, color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
       Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
