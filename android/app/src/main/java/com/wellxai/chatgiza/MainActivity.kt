@@ -4995,7 +4995,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openChangePassword() } }
           ) {}
           MyInfoDivider()
-          MyInfoRow(icon = Icons.Outlined.ScreenShare, label = "Trusted Devices", onClick = { viewModel.leaveAccountTabsFor { viewModel.openTrustedDevices() } }) {}
+          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_trusted_device), iconSize = 23.dp, label = "Trusted Devices", onClick = { viewModel.leaveAccountTabsFor { viewModel.openTrustedDevices() } }) {}
           MyInfoDivider()
           MyInfoRow(
             icon = Icons.Outlined.QueryStats,
@@ -5003,7 +5003,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openDataDashboard() } }
           ) {}
           MyInfoDivider()
-          MyInfoRow(icon = Icons.Outlined.Lock, label = "App Lock", onClick = { comingSoon("App Lock") }) {}
+          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded), iconSize = 23.dp, label = "App Lock", onClick = { comingSoon("App Lock") }) {}
           MyInfoDivider()
           MyInfoRow(
             icon = Icons.Filled.Person,
