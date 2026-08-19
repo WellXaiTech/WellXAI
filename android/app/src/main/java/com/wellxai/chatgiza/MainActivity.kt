@@ -8110,7 +8110,7 @@ private fun AccountSettingsScreen(viewModel: ChatViewModel) {
   ) {
     DataControlsAppBar("Account Settings", centered = true, titleFontSize = 18.sp) { viewModel.closeAccountSettings() }
     AccountSettingsRow(
-      painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded),
+      painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_solid),
       title = "Deactivate an Account",
       description = "Something wrong with your account? Temporarily deactivate it while keeping your data intact.",
       onClick = { showDeactivateDialog = true }
