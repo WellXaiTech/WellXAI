@@ -8131,6 +8131,7 @@ private fun DeactivateAccountIllustration() {
   }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> Unit) {
   val context = LocalContext.current
@@ -8277,7 +8278,7 @@ private fun AccountSettingsRow(
     modifier = Modifier
       .fillMaxWidth()
       .clip(RoundedCornerShape(16.dp))
-      .background(Color.Black.copy(alpha = 0.06f))
+      .background(Color(0xFFF4F4F4))
       .clickable(onClick = onClick)
       .padding(16.dp)
   ) {
@@ -10962,7 +10963,7 @@ private fun CodeField(
     modifier = Modifier
       .fillMaxWidth()
       .clip(RoundedCornerShape(14.dp))
-      .background(Color.Black.copy(alpha = 0.05f))
+      .background(Color(0xFFF4F4F4))
       .border(1.dp, if (focused) Color.Black else Color.Transparent, RoundedCornerShape(14.dp))
       .padding(horizontal = 16.dp, vertical = 4.dp),
     verticalAlignment = Alignment.CenterVertically
