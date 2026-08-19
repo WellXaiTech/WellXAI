@@ -1060,8 +1060,22 @@ private fun EdgeToEdgeDialogWindow() {
     }
     val window = provider?.window ?: return@SideEffect
     WindowCompat.setDecorFitsSystemWindows(window, false)
-    window.statusBarColor = android.graphics.Color.TRANSPARENT
-    window.navigationBarColor = android.graphics.Color.TRANSPARENT
+    // This app targets SDK 36 (Android 15+), where Window.statusBarColor /
+    // navigationBarColor are deprecated no-ops -- the platform now forces
+    // transparent bars unconditionally, so setting these does nothing and
+    // was never the actual fix. What a Dialog() DOES still add on its own,
+    // independent of edge-to-edge, is the standard modal dim/scrim behind
+    // it (WindowManager's own dim, not anything this file draws) -- with
+    // the window now told to draw full-bleed but the dim still covering
+    // the whole window including the status-bar strip the Compose content
+    // hasn't visually claimed yet, that scrim is what was reading as a
+    // seam across every full-screen Dialog. Clearing it here removes that
+    // layer entirely.
+    window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+    // Window.setDimAmount(Float) only exists from API 30 -- this app's
+    // minSdk is 24, so setting attributes.dimAmount directly and
+    // reassigning it is the version-safe way to do the same thing.
+    window.attributes = window.attributes.apply { dimAmount = 0f }
     window.setBackgroundDrawableResource(android.R.color.transparent)
     val controller = WindowCompat.getInsetsController(window, view)
     controller.isAppearanceLightStatusBars = true
