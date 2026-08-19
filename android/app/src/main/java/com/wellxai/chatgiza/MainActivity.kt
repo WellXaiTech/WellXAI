@@ -9962,6 +9962,7 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
   // of a small centered app-bar title -- matching the reference, where
   // only a bare back arrow sits in the top row on that screen.
   val totpIntroStep = viewModel.totpEnabled != true && viewModel.totpSetupSecret == null
+  val totpLinkStep = viewModel.totpEnabled != true && viewModel.totpSetupSecret != null && viewModel.totpSetupStep == "link"
   Column(
     modifier = Modifier
       .fillMaxSize()
@@ -10142,20 +10143,22 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
           Spacer(modifier = Modifier.height(20.dp))
           NumberedTotpStep(number = "01", text = "Copy the 16-digit key. Or you can scan the QR code.")
           Spacer(modifier = Modifier.height(10.dp))
+          Text("16-digit key", color = Color.Black.copy(alpha = 0.5f), fontSize = 11.sp)
+          Spacer(modifier = Modifier.height(4.dp))
           Row(
             modifier = Modifier
               .fillMaxWidth()
               .clip(RoundedCornerShape(14.dp))
               .background(Color.Black.copy(alpha = 0.05f))
-              .padding(horizontal = 16.dp, vertical = 14.dp),
+              .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
           ) {
             Text(
               viewModel.totpSetupSecret.orEmpty(),
               color = Color.Black,
-              fontSize = 15.sp,
+              fontSize = 13.sp,
               fontWeight = FontWeight.SemiBold,
-              letterSpacing = 1.sp,
+              letterSpacing = 0.5.sp,
               modifier = Modifier.weight(1f)
             )
             Text(
@@ -10176,30 +10179,42 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
               .fillMaxWidth()
               .clip(RoundedCornerShape(14.dp))
               .background(Color.Black.copy(alpha = 0.05f))
-              .padding(20.dp),
+              .padding(16.dp),
             contentAlignment = Alignment.Center
           ) {
             if (qrBitmap != null) {
               Image(
                 bitmap = qrBitmap.asImageBitmap(),
                 contentDescription = "2FA QR code",
-                modifier = Modifier.size(200.dp)
+                modifier = Modifier.size(140.dp)
               )
             }
           }
           Spacer(modifier = Modifier.height(24.dp))
           NumberedTotpStep(number = "02", text = "Open your authenticator app and add a new entry using the 16-digit key that you just copied.")
+          Spacer(modifier = Modifier.height(10.dp))
+          // A small illustrative "add a new entry" badge under step 02,
+          // matching the reference -- generic "+" rather than a specific
+          // authenticator app's logo, since this works with any of them.
+          Box(
+            modifier = Modifier
+              .size(width = 56.dp, height = 96.dp)
+              .clip(RoundedCornerShape(12.dp))
+              .border(1.dp, Color.Black.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+          ) {
+            Box(
+              modifier = Modifier
+                .size(28.dp)
+                .clip(CircleShape)
+                .background(Color(0xFFFF9C2D)),
+              contentAlignment = Alignment.Center
+            ) {
+              Text("+", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
+          }
           Spacer(modifier = Modifier.height(24.dp))
           NumberedTotpStep(number = "03", text = "Come back and enter the 6-digit code it shows to finish verifying.")
-          Spacer(modifier = Modifier.height(28.dp))
-          Button(
-            onClick = { viewModel.goToTotpVerifyStep() },
-            shape = RoundedCornerShape(28.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
-            modifier = Modifier.fillMaxWidth().height(52.dp)
-          ) {
-            Text("Next", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-          }
           Spacer(modifier = Modifier.height(24.dp))
         }
 
@@ -10270,6 +10285,23 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
         } else {
           Text("Enable Authenticator App", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
+      }
+    }
+    if (totpLinkStep) {
+      Button(
+        onClick = { viewModel.goToTotpVerifyStep() },
+        // Same size/shape as Enable Authenticator App above, not the app's
+        // usual 28dp pill.
+        shape = RoundedCornerShape(10.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(horizontal = 16.dp)
+          .navigationBarsPadding()
+          .padding(bottom = 16.dp)
+          .height(44.dp)
+      ) {
+        Text("Next", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
       }
     }
   }
