@@ -1041,10 +1041,26 @@ private fun ChatGizaTheme(themeMode: String, content: @Composable () -> Unit) {
 private fun EdgeToEdgeDialogWindow() {
   val view = LocalView.current
   SideEffect {
-    val window = (view.parent as? DialogWindowProvider)?.window ?: return@SideEffect
+    // Walking one level up (view.parent as DialogWindowProvider) assumed a
+    // fixed hierarchy that didn't actually match at runtime -- the seam
+    // stayed even with that in place. Walking the full ancestor chain
+    // instead is the same technique with no assumption about how many
+    // wrapper views Compose's Dialog puts between the content and the
+    // DialogWindowProvider.
+    var ancestor: android.view.View? = view
+    var provider: DialogWindowProvider? = null
+    while (ancestor != null) {
+      if (ancestor is DialogWindowProvider) {
+        provider = ancestor
+        break
+      }
+      ancestor = ancestor.parent as? android.view.View
+    }
+    val window = provider?.window ?: return@SideEffect
     WindowCompat.setDecorFitsSystemWindows(window, false)
     window.statusBarColor = android.graphics.Color.TRANSPARENT
     window.navigationBarColor = android.graphics.Color.TRANSPARENT
+    window.setBackgroundDrawableResource(android.R.color.transparent)
     val controller = WindowCompat.getInsetsController(window, view)
     controller.isAppearanceLightStatusBars = true
     controller.isAppearanceLightNavigationBars = true
