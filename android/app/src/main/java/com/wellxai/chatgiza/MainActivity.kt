@@ -7889,22 +7889,45 @@ private fun ReportProblemScreen(viewModel: ChatViewModel) {
 }
 
 @Composable
-private fun DataControlsAppBar(title: String, onBack: () -> Unit) {
-  Row(
-    modifier = Modifier.fillMaxWidth().padding(top = 26.dp, bottom = 20.dp),
-    verticalAlignment = Alignment.CenterVertically
-  ) {
-    IconButton(onClick = onBack, modifier = Modifier.size(24.dp)) {
-      Icon(Icons.Filled.ArrowBackIosNew, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(24.dp))
+private fun DataControlsAppBar(
+  title: String,
+  // Account Settings wants a smaller, centered title with the long-arrow
+  // back icon (matching its own reference); Data Controls/Data Dashboard
+  // keep the original left-aligned, larger-title layout untouched.
+  centered: Boolean = false,
+  titleFontSize: androidx.compose.ui.unit.TextUnit = 22.sp,
+  onBack: () -> Unit
+) {
+  if (centered) {
+    Box(modifier = Modifier.fillMaxWidth().padding(top = 26.dp, bottom = 20.dp)) {
+      IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart).size(24.dp)) {
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(22.dp))
+      }
+      Text(
+        title,
+        color = Color.Black,
+        fontSize = titleFontSize,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.align(Alignment.Center)
+      )
     }
-    Spacer(modifier = Modifier.width(20.dp))
-    Text(
-      title,
-      color = Color.Black,
-      fontSize = 22.sp,
-      fontWeight = FontWeight.Bold,
-      modifier = Modifier.padding(top = 2.dp)
-    )
+  } else {
+    Row(
+      modifier = Modifier.fillMaxWidth().padding(top = 26.dp, bottom = 20.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      IconButton(onClick = onBack, modifier = Modifier.size(24.dp)) {
+        Icon(Icons.Filled.ArrowBackIosNew, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(24.dp))
+      }
+      Spacer(modifier = Modifier.width(20.dp))
+      Text(
+        title,
+        color = Color.Black,
+        fontSize = titleFontSize,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(top = 2.dp)
+      )
+    }
   }
 }
 
@@ -8082,7 +8105,7 @@ private fun AccountSettingsScreen(viewModel: ChatViewModel) {
       .statusBarsPadding()
       .padding(horizontal = 16.dp)
   ) {
-    DataControlsAppBar("Account Settings") { viewModel.closeAccountSettings() }
+    DataControlsAppBar("Account Settings", centered = true, titleFontSize = 18.sp) { viewModel.closeAccountSettings() }
     AccountSettingsRow(
       painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded),
       title = "Deactivate an Account",
@@ -8529,11 +8552,11 @@ private fun AccountSettingsRow(
         Icon(icon, contentDescription = null, tint = Color.Black, modifier = Modifier.size(22.dp))
       }
       Spacer(modifier = Modifier.width(14.dp))
-      Text(title, color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-      Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+      Text(title, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+      Icon(Icons.Filled.ArrowForwardIos, contentDescription = null, tint = Color.Black.copy(alpha = 0.45f), modifier = Modifier.size(14.dp))
     }
     Spacer(modifier = Modifier.height(10.dp))
-    Text(description, color = Color.Black.copy(alpha = 0.5f), fontSize = 14.sp, lineHeight = 20.sp)
+    Text(description, color = Color.Black.copy(alpha = 0.4f), fontSize = 12.5.sp, lineHeight = 18.sp)
   }
 }
 
