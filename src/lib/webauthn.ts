@@ -18,3 +18,15 @@ export const RP_ID = "chatgiza.com";
 export const ANDROID_APK_ORIGIN = "android:apk-key-hash:vwarkOSK_Tmtp1eSzsIS-Ftt1T4YicrYvzUTt95FbZI";
 
 export const EXPECTED_ORIGINS = [`https://${RP_ID}`, `https://www.${RP_ID}`, ANDROID_APK_ORIGIN];
+
+// KV keys for the two ceremonies' staged challenges. Kept here (not
+// exported from a route.ts, which Next's App Router only allows specific
+// exports from) so the options and verify routes for each ceremony can
+// share them.
+export function pendingPasskeyRegKey(userId: string) {
+  return `chatgiza:passkey-reg:${userId}`;
+}
+
+export function pendingPasskeyLoginKey(requestId: string) {
+  return `chatgiza:passkey-login:${requestId}`;
+}
