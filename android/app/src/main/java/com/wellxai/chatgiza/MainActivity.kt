@@ -8275,16 +8275,8 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
             tint = Color.Black,
             modifier = Modifier.size(22.dp).clickable { deactivateConfirmStep = false }
           )
-          Spacer(modifier = Modifier.width(12.dp))
         }
-        Text(
-          "Deactivate Account",
-          color = Color.Black,
-          fontSize = 20.sp,
-          fontWeight = FontWeight.Bold,
-          fontFamily = FontFamily.Monospace,
-          modifier = Modifier.weight(1f)
-        )
+        Spacer(modifier = Modifier.weight(1f))
         Icon(
           Icons.Filled.Close,
           contentDescription = "Close",
