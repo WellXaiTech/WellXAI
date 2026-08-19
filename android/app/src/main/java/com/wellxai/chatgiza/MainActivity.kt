@@ -4860,8 +4860,14 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
 
       // Only this content area follows the finger/slides on swipe -- the
       // header, avatar row, and tab bar above stay fixed in place, matching
-      // the reference behavior (only the list under the tabs moves).
-      Box(
+      // the reference behavior (only the list under the tabs moves). Must
+      // be a Column, not a Box -- each tab branch below emits several
+      // top-level siblings (a SecurityGroupHeader, a Column, a Spacer,
+      // another SecurityGroupHeader...) that need to stack vertically like
+      // they did in the old single outer Column; a Box instead stacked them
+      // all on top of each other at the same position (the overlapping-text
+      // bug seen right after this swipe change shipped).
+      Column(
         modifier = Modifier
           .pointerInput(Unit) {
             detectHorizontalDragGestures(
