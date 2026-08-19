@@ -4085,7 +4085,7 @@ private fun ChatGizaEventsCard(viewModel: ChatViewModel) {
       .fillMaxWidth()
       .padding(horizontal = 10.dp, vertical = 2.dp)
       .clip(RoundedCornerShape(16.dp))
-      .background(Color.White)
+      .background(Color(0xFFF4F4F4))
       .padding(horizontal = 10.dp, vertical = 6.dp)
   ) {
     // A real swipeable page for every announcement -- not just a crossfading
