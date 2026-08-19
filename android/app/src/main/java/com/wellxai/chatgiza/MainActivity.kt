@@ -4813,11 +4813,11 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
         Box(
           modifier = Modifier
             .clip(RoundedCornerShape(50))
-            .background(Color.Black)
+            .background(Color(0xFFFF9C2D))
             .clickable { comingSoon("Enter GiZa Max") }
             .padding(horizontal = 12.dp, vertical = 4.dp)
         ) {
-          Text("Enter GiZa Max", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+          Text("Enter GiZa Max", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
       }
     }
