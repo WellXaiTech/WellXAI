@@ -11,6 +11,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -102,6 +103,7 @@ sealed class AppScreen {
   object ChangePassword : AppScreen()
   object TwoFactorSetup : AppScreen()
   object TotpLoginVerify : AppScreen()
+  object AppLockSetup : AppScreen()
 }
 
 // A file/text shared into ChatGiZa from another app (system Share sheet),
@@ -361,6 +363,28 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var loginTotpBusy by mutableStateOf(false)
     private set
 
+  // App Lock -- a device-local PIN gate, independent of the signed-in
+  // account (see TokenStore.setAppLock). appLockGateActive is what
+  // actually blocks the app: true means MainActivity renders the PIN
+  // gate instead of the normal screen, regardless of what `screen` is.
+  var appLockEnabled by mutableStateOf(tokenStore.getAppLockEnabled())
+    private set
+  var appLockGateActive by mutableStateOf(false)
+    private set
+  var appLockSetupStep by mutableStateOf("enter")
+    private set
+  var appLockPinInput by mutableStateOf("")
+    private set
+  private var appLockFirstEnteredPin: String? = null
+  var appLockDisableInput by mutableStateOf("")
+    private set
+  var appLockError by mutableStateOf<String?>(null)
+    private set
+  var appLockGateInput by mutableStateOf("")
+    private set
+  var appLockGateError by mutableStateOf<String?>(null)
+    private set
+
   init {
     if (tokenStore.getToken() != null) {
       userId = tokenStore.getUserId()
@@ -368,6 +392,9 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
       userEmail = tokenStore.getUserEmail()
       userImage = tokenStore.getUserImage()
       screen = AppScreen.Chat
+      // Cold start with App Lock on -- gate immediately, same as returning
+      // from the background (see armAppLockIfEnabled).
+      appLockGateActive = appLockEnabled
       loadHistory()
       loadProfile()
       loadDigitalTwin()
@@ -2264,6 +2291,111 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         is ApiResult.Failure -> totpError = result.message
       }
       totpBusy = false
+    }
+  }
+
+  private fun sha256Hex(value: String): String {
+    val digest = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
+    return digest.joinToString("") { "%02x".format(it) }
+  }
+
+  fun openAppLockSetup() {
+    screen = AppScreen.AppLockSetup
+    appLockSetupStep = "enter"
+    appLockPinInput = ""
+    appLockFirstEnteredPin = null
+    appLockDisableInput = ""
+    appLockError = null
+  }
+
+  fun closeAppLockSetup() {
+    returnToAccountTabsIfPending()
+    screen = AppScreen.ProfileHub
+  }
+
+  fun onAppLockPinChange(value: String) {
+    if (value.length <= 6 && value.all { it.isDigit() }) {
+      appLockPinInput = value
+      appLockError = null
+    }
+  }
+
+  fun onAppLockDisableChange(value: String) {
+    if (value.length <= 6 && value.all { it.isDigit() }) {
+      appLockDisableInput = value
+      appLockError = null
+    }
+  }
+
+  // "enter" -> stash the first PIN and ask for it again; "confirm" -> only
+  // turns App Lock on if the second entry matches, catching a fat-fingered
+  // PIN before it becomes the thing standing between the user and their
+  // own app.
+  fun submitAppLockPinStep() {
+    if (appLockPinInput.length < 4) {
+      appLockError = "Enter at least 4 digits"
+      return
+    }
+    when (appLockSetupStep) {
+      "enter" -> {
+        appLockFirstEnteredPin = appLockPinInput
+        appLockPinInput = ""
+        appLockSetupStep = "confirm"
+      }
+      else -> {
+        if (appLockPinInput != appLockFirstEnteredPin) {
+          appLockError = "PINs didn't match -- try again"
+          appLockPinInput = ""
+          appLockFirstEnteredPin = null
+          appLockSetupStep = "enter"
+          return
+        }
+        tokenStore.setAppLock(true, sha256Hex(appLockPinInput))
+        appLockEnabled = true
+        closeAppLockSetup()
+      }
+    }
+  }
+
+  fun disableAppLock() {
+    val storedHash = tokenStore.getAppLockPinHash()
+    if (storedHash == null || sha256Hex(appLockDisableInput) != storedHash) {
+      appLockError = "That PIN is incorrect"
+      return
+    }
+    tokenStore.setAppLock(false, null)
+    appLockEnabled = false
+    appLockDisableInput = ""
+    closeAppLockSetup()
+  }
+
+  // Called from MainActivity.onStop() -- re-arms the gate every time the
+  // app leaves the foreground (not just on cold start), so someone picking
+  // up an already-open phone still hits the PIN screen.
+  fun armAppLockIfEnabled() {
+    if (appLockEnabled) {
+      appLockGateActive = true
+      appLockGateInput = ""
+      appLockGateError = null
+    }
+  }
+
+  fun onAppLockGateInputChange(value: String) {
+    if (value.length <= 6 && value.all { it.isDigit() }) {
+      appLockGateInput = value
+      appLockGateError = null
+    }
+  }
+
+  fun submitAppLockGateUnlock() {
+    val storedHash = tokenStore.getAppLockPinHash()
+    if (storedHash != null && sha256Hex(appLockGateInput) == storedHash) {
+      appLockGateActive = false
+      appLockGateInput = ""
+      appLockGateError = null
+    } else {
+      appLockGateError = "That PIN is incorrect"
+      appLockGateInput = ""
     }
   }
 

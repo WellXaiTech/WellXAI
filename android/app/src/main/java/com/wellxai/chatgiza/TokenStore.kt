@@ -213,6 +213,19 @@ class TokenStore(context: Context) {
     prefs.edit().putBoolean(KEY_BLUR_MATURE_CONTENT_ENABLED, value).apply()
   }
 
+  // App Lock -- a device-local PIN gate shown whenever the app returns to
+  // the foreground (see MainActivity.onStop/ChatViewModel.armAppLockIfEnabled),
+  // independent of the signed-in account. Only the SHA-256 hash is stored,
+  // never the PIN itself; this whole prefs file is already Keystore-backed
+  // encrypted at rest, so a simple hash (vs. the backend password's scrypt)
+  // is enough for what's a casual-snooper deterrent, not a network-facing
+  // credential.
+  fun getAppLockEnabled(): Boolean = prefs.getBoolean(KEY_APP_LOCK_ENABLED, false)
+  fun getAppLockPinHash(): String? = prefs.getString(KEY_APP_LOCK_PIN_HASH, null)
+  fun setAppLock(enabled: Boolean, pinHash: String?) {
+    prefs.edit().putBoolean(KEY_APP_LOCK_ENABLED, enabled).putString(KEY_APP_LOCK_PIN_HASH, pinHash).apply()
+  }
+
   /** Wipes the session but keeps device-level prefs (haptics, voice) that
    * aren't tied to any particular account. Deliberately does NOT preserve
    * the active personality — a new sign-in on a shared device should land
@@ -235,6 +248,8 @@ class TokenStore(context: Context) {
     val chatLinkSharing = getChatLinkSharing()
     val kidsModeEnabled = getKidsModeEnabled()
     val blurMatureContentEnabled = getBlurMatureContentEnabled()
+    val appLockEnabled = getAppLockEnabled()
+    val appLockPinHash = getAppLockPinHash()
     prefs.edit().clear().apply()
     setHapticsEnabled(hapticsEnabled)
     setHapticsOnPress(hapticsOnPress)
@@ -251,6 +266,7 @@ class TokenStore(context: Context) {
     setChatLinkSharing(chatLinkSharing)
     setKidsModeEnabled(kidsModeEnabled)
     setBlurMatureContentEnabled(blurMatureContentEnabled)
+    setAppLock(appLockEnabled, appLockPinHash)
   }
 
   companion object {
@@ -283,5 +299,7 @@ class TokenStore(context: Context) {
     private const val KEY_CHAT_LINK_SHARING = "chat_link_sharing_enabled"
     private const val KEY_KIDS_MODE_ENABLED = "kids_mode_enabled"
     private const val KEY_BLUR_MATURE_CONTENT_ENABLED = "blur_mature_content_enabled"
+    private const val KEY_APP_LOCK_ENABLED = "app_lock_enabled"
+    private const val KEY_APP_LOCK_PIN_HASH = "app_lock_pin_hash"
   }
 }
