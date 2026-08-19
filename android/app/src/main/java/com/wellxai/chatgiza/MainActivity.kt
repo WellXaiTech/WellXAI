@@ -9977,16 +9977,26 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
           Spacer(modifier = Modifier.height(10.dp))
           Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
           ) {
-            Text("Google Authenticator", color = Color.Black, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            Text(
+              "Google Authenticator",
+              color = Color.Black,
+              fontSize = 14.sp,
+              modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color.Black.copy(alpha = 0.05f))
+                .padding(horizontal = 14.dp, vertical = 12.dp)
+            )
             Text(
               "Download",
               color = Color.Black,
               fontSize = 13.sp,
               fontWeight = FontWeight.SemiBold,
               modifier = Modifier
-                .clip(RoundedCornerShape(50))
+                .clip(RoundedCornerShape(12.dp))
                 .background(Color.Black.copy(alpha = 0.08f))
                 .clickable {
                   runCatching {
@@ -9999,7 +10009,7 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
                     )
                   }
                 }
-                .padding(horizontal = 14.dp, vertical = 8.dp)
+                .padding(horizontal = 14.dp, vertical = 12.dp)
             )
           }
           Spacer(modifier = Modifier.height(20.dp))
