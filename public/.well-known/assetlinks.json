@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.get_login_creds"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.wellxai.chatgiza",
+      "sha256_cert_fingerprints": [
+        "BF:06:AB:90:E4:8A:FD:39:AD:A7:57:92:CE:C2:12:F8:5B:6D:D5:3E:18:89:CA:D8:BF:35:13:B7:DE:45:6D:92"
+      ]
+    }
+  }
+]
