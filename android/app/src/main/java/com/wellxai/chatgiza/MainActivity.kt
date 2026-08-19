@@ -427,7 +427,18 @@ class MainActivity : ComponentActivity() {
         // Wrapped in a Box so the screenshot-triggered "Share a link to
         // chat?" prompt can float above whichever screen is showing,
         // instead of being wired into every individual screen separately.
-        Box(Modifier.fillMaxSize()) {
+        // Same Box also owns the app-wide tap-to-dismiss-keyboard behavior:
+        // a tap anywhere that isn't consumed by a child first (a button, a
+        // text field's own click-to-focus, a scroll drag, a bottom sheet in
+        // its own window) reaches here and clears focus, which closes the
+        // keyboard -- covers every screen from one place instead of the
+        // per-screen pointerInput this used to need.
+        val rootFocusManager = LocalFocusManager.current
+        Box(
+          Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) { detectTapGestures(onTap = { rootFocusManager.clearFocus() }) }
+        ) {
         // Android 13+ requires this to be asked for at runtime before a
         // Scheduled Task's firing notification can actually show -- asked
         // once, up front, rather than waiting for the first task to fire
