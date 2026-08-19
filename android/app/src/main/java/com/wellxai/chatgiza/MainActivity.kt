@@ -551,6 +551,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.ChangePassword -> ChangePasswordScreen(viewModel)
             is AppScreen.TwoFactorSetup -> TwoFactorSetupScreen(viewModel)
             is AppScreen.TotpLoginVerify -> TotpLoginVerifyScreen(viewModel)
+            is AppScreen.AppLockSetup -> AppLockSetupScreen(viewModel)
             is AppScreen.SubaccountSettings -> SubaccountSettingsScreen(viewModel)
             is AppScreen.NsfwPreferences -> NsfwPreferencesScreen(viewModel)
             is AppScreen.Connectors -> ConnectorsScreen(viewModel)
@@ -571,6 +572,12 @@ class MainActivity : ComponentActivity() {
         ScreenshotShareOverlay(viewModel)
         PreferenceWizardOverlay(viewModel)
         MemorySuggestionOverlay(viewModel)
+        // Drawn last so it's on top of literally everything else -- blocks
+        // the whole app behind a PIN prompt regardless of which screen was
+        // showing when armAppLockIfEnabled() re-armed it.
+        if (viewModel.appLockGateActive) {
+          AppLockGateScreen(viewModel)
+        }
         }
       }
     }
@@ -617,6 +624,10 @@ class MainActivity : ComponentActivity() {
         runCatching { unregisterScreenCaptureCallback(callback) }
       }
     }
+    // Re-arms App Lock every time the app leaves the foreground (not just
+    // on cold start), so anyone else picking up an already-open phone
+    // still hits the PIN gate on return.
+    viewModel.armAppLockIfEnabled()
     super.onStop()
   }
 
@@ -5057,7 +5068,14 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openDataDashboard() } }
           ) {}
           MyInfoDivider()
-          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded), iconSize = 23.dp, label = "App Lock", onClick = { comingSoon("App Lock") }) {}
+          MyInfoRow(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded),
+            iconSize = 23.dp,
+            label = "App Lock",
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openAppLockSetup() } }
+          ) {
+            Text(if (viewModel.appLockEnabled) "On" else "Off", color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
+          }
           MyInfoDivider()
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_account_settings),
@@ -10205,6 +10223,162 @@ private fun TotpLoginVerifyScreen(viewModel: ChatViewModel) {
   }
 }
 
+// Reached from Security > App Lock -- sets/changes/turns off the
+// device-local PIN gate (see ChatViewModel's appLock* state and
+// TokenStore.setAppLock). Unrelated to the account's Google sign-in or
+// its in-app password; this never leaves the device.
+@Composable
+private fun AppLockSetupScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeAppLockSetup() }
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color.White)
+      .statusBarsPadding()
+  ) {
+    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+      Text(
+        "App Lock",
+        color = Color.Black,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.align(Alignment.Center)
+      )
+      IconButton(onClick = { viewModel.closeAppLockSetup() }, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(24.dp))
+      }
+    }
+
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .weight(1f)
+        .verticalScroll(rememberScrollState())
+        .padding(horizontal = 16.dp)
+    ) {
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(14.dp))
+          .background(Color(0xFFFFF3E5))
+          .padding(12.dp)
+      ) {
+        Icon(
+          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_warning_circle),
+          contentDescription = null,
+          tint = Color.Black,
+          modifier = Modifier.size(16.dp).padding(top = 1.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+          if (viewModel.appLockEnabled) {
+            "Note: App Lock is currently ON. ChatGiZa will ask for this PIN every time you reopen it, even if you're still signed in. Turning it off below only needs your current PIN."
+          } else {
+            "Note: This sets a PIN that's required to open ChatGiZa, on top of being signed in -- so someone else picking up your phone can't get into your chats even if the phone itself is unlocked."
+          },
+          color = Color.Black,
+          fontSize = 10.sp,
+          lineHeight = 14.sp,
+          fontWeight = FontWeight.Medium
+        )
+      }
+
+      Spacer(modifier = Modifier.height(20.dp))
+
+      if (viewModel.appLockEnabled) {
+        Text("Enter your PIN to turn off App Lock", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(modifier = Modifier.height(10.dp))
+        CodeField(value = viewModel.appLockDisableInput, onValueChange = viewModel::onAppLockDisableChange, placeholder = "Enter PIN")
+        if (viewModel.appLockError != null) {
+          Spacer(modifier = Modifier.height(10.dp))
+          Text(viewModel.appLockError!!, color = Color(0xFFE14050), fontSize = 13.sp)
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(
+          onClick = { viewModel.disableAppLock() },
+          shape = RoundedCornerShape(28.dp),
+          colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE14050)),
+          modifier = Modifier.fillMaxWidth().height(52.dp)
+        ) {
+          Text("Turn Off", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        }
+      } else {
+        Text(
+          if (viewModel.appLockSetupStep == "enter") "Choose a PIN (4-6 digits)" else "Enter the same PIN again to confirm",
+          color = Color.Black,
+          fontSize = 15.sp,
+          fontWeight = FontWeight.SemiBold
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        CodeField(value = viewModel.appLockPinInput, onValueChange = viewModel::onAppLockPinChange, placeholder = "Enter PIN")
+        if (viewModel.appLockError != null) {
+          Spacer(modifier = Modifier.height(10.dp))
+          Text(viewModel.appLockError!!, color = Color(0xFFE14050), fontSize = 13.sp)
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(
+          onClick = { viewModel.submitAppLockPinStep() },
+          shape = RoundedCornerShape(28.dp),
+          colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
+          modifier = Modifier.fillMaxWidth().height(52.dp)
+        ) {
+          Text(
+            if (viewModel.appLockSetupStep == "enter") "Continue" else "Confirm",
+            color = Color.Black,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold
+          )
+        }
+      }
+      Spacer(modifier = Modifier.height(24.dp))
+    }
+  }
+}
+
+// The actual lock -- rendered on top of everything else (see MainActivity's
+// setContent) whenever viewModel.appLockGateActive is true. No dismiss
+// path except the correct PIN; back just backgrounds the app instead of
+// exposing whatever screen was underneath.
+@Composable
+private fun AppLockGateScreen(viewModel: ChatViewModel) {
+  val activity = LocalContext.current as? Activity
+  BackHandler { activity?.moveTaskToBack(true) }
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color.White)
+      .statusBarsPadding()
+      .padding(32.dp),
+    verticalArrangement = Arrangement.Center,
+    horizontalAlignment = Alignment.CenterHorizontally
+  ) {
+    Icon(
+      painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded),
+      contentDescription = null,
+      tint = Color.Black,
+      modifier = Modifier.size(40.dp)
+    )
+    Spacer(modifier = Modifier.height(16.dp))
+    Text("Enter your PIN", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+    Spacer(modifier = Modifier.height(6.dp))
+    Text("ChatGiZa is locked", fontSize = 14.sp, color = Color.Black.copy(alpha = 0.6f))
+    Spacer(modifier = Modifier.height(28.dp))
+    CodeField(value = viewModel.appLockGateInput, onValueChange = viewModel::onAppLockGateInputChange, placeholder = "Enter PIN")
+    if (viewModel.appLockGateError != null) {
+      Spacer(modifier = Modifier.height(10.dp))
+      Text(viewModel.appLockGateError!!, color = Color(0xFFE14050), fontSize = 13.sp)
+    }
+    Spacer(modifier = Modifier.height(24.dp))
+    Button(
+      onClick = { viewModel.submitAppLockGateUnlock() },
+      shape = RoundedCornerShape(24.dp),
+      modifier = Modifier.fillMaxWidth().height(52.dp)
+    ) {
+      Text("Unlock")
+    }
+  }
+}
+
 @Composable
 private fun PasswordField(
   value: String,
@@ -10309,7 +10483,8 @@ private fun CodeField(
   // Opt-in trailing "Paste" affordance -- only the Authenticator App setup
   // verify step wants this (matching the reference), the other CodeField
   // call sites (password change, login 2FA) stay as they were.
-  onPaste: (() -> Unit)? = null
+  onPaste: (() -> Unit)? = null,
+  placeholder: String = "6-digit code"
 ) {
   var focused by remember { mutableStateOf(false) }
   Row(
@@ -10325,7 +10500,7 @@ private fun CodeField(
     Spacer(modifier = Modifier.width(12.dp))
     Box(modifier = Modifier.weight(1f).padding(vertical = 11.dp)) {
       if (value.isEmpty()) {
-        Text("6-digit code", color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
+        Text(placeholder, color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
       }
       BasicTextField(
         value = value,
