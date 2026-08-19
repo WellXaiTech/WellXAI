@@ -100,6 +100,8 @@ sealed class AppScreen {
   object SubaccountSettings : AppScreen()
   object ShareTarget : AppScreen()
   object ChangePassword : AppScreen()
+  object TwoFactorSetup : AppScreen()
+  object TotpLoginVerify : AppScreen()
 }
 
 // A file/text shared into ChatGiZa from another app (system Share sheet),
@@ -318,6 +320,40 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var passwordError by mutableStateOf<String?>(null)
     private set
   var changingPassword by mutableStateOf(false)
+    private set
+
+  // Authenticator App 2FA -- null while the account's on/off status hasn't
+  // loaded yet, same "don't guess" reasoning as hasPassword above.
+  var totpEnabled by mutableStateOf<Boolean?>(null)
+    private set
+  // Set once setupTotp() returns a fresh secret to enroll -- shown as a QR
+  // code (rendered from totpSetupUri) plus the raw secret for manual entry.
+  var totpSetupSecret by mutableStateOf<String?>(null)
+    private set
+  var totpSetupUri by mutableStateOf<String?>(null)
+    private set
+  var totpSetupCodeInput by mutableStateOf("")
+    private set
+  // Reused for both turning 2FA on (confirming the first code) and turning
+  // it back off (proving a currently-valid code) -- only one of those flows
+  // is ever active at a time, driven by whether totpSetupSecret is set.
+  var totpDisableCodeInput by mutableStateOf("")
+    private set
+  var totpError by mutableStateOf<String?>(null)
+    private set
+  var totpBusy by mutableStateOf(false)
+    private set
+
+  // Set when mobileAuth() reports totpRequired instead of signing straight
+  // in -- carries the short-lived id the backend staged the verified Google
+  // identity under, so submitLoginTotpCode() knows what it's confirming.
+  var pendingLoginTotpId by mutableStateOf<String?>(null)
+    private set
+  var loginTotpCodeInput by mutableStateOf("")
+    private set
+  var loginTotpError by mutableStateOf<String?>(null)
+    private set
+  var loginTotpBusy by mutableStateOf(false)
     private set
 
   init {
@@ -1811,19 +1847,19 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     viewModelScope.launch {
       when (val result = ChatGizaApi.mobileAuth(idToken)) {
         is ApiResult.Success -> {
-          tokenStore.setToken(result.value.token)
-          tokenStore.setUser(result.value.user.id, result.value.user.name, result.value.user.email, result.value.user.image)
-          userId = result.value.user.id
-          userName = result.value.user.name
-          userEmail = result.value.user.email
-          userImage = result.value.user.image
-          signingIn = false
-          screen = AppScreen.Chat
-          loadHistory()
-          loadProfile()
-          loadSettings()
-          loadProjects()
-          loadScheduled()
+          when (val outcome = result.value) {
+            is MobileAuthOutcome.SignedIn -> {
+              signingIn = false
+              applySignedInResult(outcome.result)
+            }
+            is MobileAuthOutcome.TotpRequired -> {
+              signingIn = false
+              pendingLoginTotpId = outcome.pendingId
+              loginTotpCodeInput = ""
+              loginTotpError = null
+              screen = AppScreen.TotpLoginVerify
+            }
+          }
         }
         is ApiResult.Failure -> {
           signingIn = false
@@ -1831,6 +1867,63 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         }
       }
     }
+  }
+
+  // Shared by a normal sign-in and a 2FA-verified one -- both end up with
+  // the same AuthResult, just via a different number of steps to get there.
+  private fun applySignedInResult(result: AuthResult) {
+    tokenStore.setToken(result.token)
+    tokenStore.setUser(result.user.id, result.user.name, result.user.email, result.user.image)
+    userId = result.user.id
+    userName = result.user.name
+    userEmail = result.user.email
+    userImage = result.user.image
+    screen = AppScreen.Chat
+    loadHistory()
+    loadProfile()
+    loadSettings()
+    loadProjects()
+    loadScheduled()
+  }
+
+  fun onLoginTotpCodeChange(value: String) {
+    if (value.length <= 6 && value.all { it.isDigit() }) {
+      loginTotpCodeInput = value
+      loginTotpError = null
+    }
+  }
+
+  fun submitLoginTotpCode() {
+    val pendingId = pendingLoginTotpId ?: return
+    if (loginTotpCodeInput.length != 6) {
+      loginTotpError = "Enter the 6-digit code from your authenticator app"
+      return
+    }
+    loginTotpBusy = true
+    loginTotpError = null
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.verifyLoginTotp(pendingId, loginTotpCodeInput)) {
+        is ApiResult.Success -> {
+          loginTotpBusy = false
+          pendingLoginTotpId = null
+          loginTotpCodeInput = ""
+          applySignedInResult(result.value)
+        }
+        is ApiResult.Failure -> {
+          loginTotpBusy = false
+          loginTotpError = result.message
+        }
+      }
+    }
+  }
+
+  // Backs out of the code screen to a fresh sign-in instead of leaving the
+  // user stuck if they can't get to their authenticator app right now.
+  fun cancelLoginTotp() {
+    pendingLoginTotpId = null
+    loginTotpCodeInput = ""
+    loginTotpError = null
+    screen = AppScreen.SignedOut
   }
 
   fun onSignInFailed(message: String) {
@@ -2032,6 +2125,114 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         is ApiResult.Success -> closeChangePassword()
         is ApiResult.Failure -> passwordError = result.message
       }
+    }
+  }
+
+  // Just the on/off status, no navigation -- called once when the Security
+  // tab becomes reachable so its "On"/"Off" row label is accurate without
+  // requiring the user to open the setup screen first.
+  fun loadTotpStatus() {
+    val token = tokenStore.getToken() ?: return
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.getTotpStatus(token)) {
+        is ApiResult.Success -> totpEnabled = result.value
+        is ApiResult.Failure -> {}
+      }
+    }
+  }
+
+  fun openTwoFactorSetup() {
+    screen = AppScreen.TwoFactorSetup
+    totpSetupSecret = null
+    totpSetupUri = null
+    totpSetupCodeInput = ""
+    totpDisableCodeInput = ""
+    totpError = null
+    val token = tokenStore.getToken() ?: return
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.getTotpStatus(token)) {
+        is ApiResult.Success -> totpEnabled = result.value
+        is ApiResult.Failure -> totpError = result.message
+      }
+    }
+  }
+
+  fun closeTwoFactorSetup() {
+    returnToAccountTabsIfPending()
+    screen = AppScreen.ProfileHub
+  }
+
+  // Requests a fresh secret to enroll -- called once the screen knows 2FA
+  // is currently off (see the enabled == false branch in the UI).
+  fun startTotpSetup() {
+    val token = tokenStore.getToken() ?: return
+    totpBusy = true
+    totpError = null
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.setupTotp(token)) {
+        is ApiResult.Success -> {
+          totpSetupSecret = result.value.secret
+          totpSetupUri = result.value.otpauthUri
+        }
+        is ApiResult.Failure -> totpError = result.message
+      }
+      totpBusy = false
+    }
+  }
+
+  fun onTotpSetupCodeChange(value: String) {
+    if (value.length <= 6 && value.all { it.isDigit() }) {
+      totpSetupCodeInput = value
+      totpError = null
+    }
+  }
+
+  fun confirmTotpSetup() {
+    if (totpSetupCodeInput.length != 6) {
+      totpError = "Enter the 6-digit code from your authenticator app"
+      return
+    }
+    val token = tokenStore.getToken() ?: return
+    totpBusy = true
+    totpError = null
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.confirmTotpSetup(token, totpSetupCodeInput)) {
+        is ApiResult.Success -> {
+          totpEnabled = true
+          totpSetupSecret = null
+          totpSetupUri = null
+          totpSetupCodeInput = ""
+        }
+        is ApiResult.Failure -> totpError = result.message
+      }
+      totpBusy = false
+    }
+  }
+
+  fun onTotpDisableCodeChange(value: String) {
+    if (value.length <= 6 && value.all { it.isDigit() }) {
+      totpDisableCodeInput = value
+      totpError = null
+    }
+  }
+
+  fun disableTotp() {
+    if (totpDisableCodeInput.length != 6) {
+      totpError = "Enter your current authenticator code"
+      return
+    }
+    val token = tokenStore.getToken() ?: return
+    totpBusy = true
+    totpError = null
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.disableTotp(token, totpDisableCodeInput)) {
+        is ApiResult.Success -> {
+          totpEnabled = false
+          totpDisableCodeInput = ""
+        }
+        is ApiResult.Failure -> totpError = result.message
+      }
+      totpBusy = false
     }
   }
 

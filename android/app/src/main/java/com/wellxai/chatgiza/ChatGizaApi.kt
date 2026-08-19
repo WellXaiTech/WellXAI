@@ -17,6 +17,17 @@ data class MobileUser(val id: String, val name: String?, val email: String?, val
 
 data class AuthResult(val token: String, val user: MobileUser)
 
+// mobileAuth returns one of these instead of AuthResult directly -- when the
+// account has Authenticator App 2FA on, Google sign-in alone only produces a
+// pendingId; the real AuthResult only comes back once verifyLoginTotp
+// confirms a code against it.
+sealed class MobileAuthOutcome {
+  data class SignedIn(val result: AuthResult) : MobileAuthOutcome()
+  data class TotpRequired(val pendingId: String) : MobileAuthOutcome()
+}
+
+data class TotpSetup(val secret: String, val otpauthUri: String)
+
 data class ApiMessage(val id: String, val role: String, val content: String, val createdAt: Long?, val pairId: String = "")
 
 data class ApiConversation(
@@ -231,13 +242,49 @@ object ChatGizaApi {
     .writeTimeout(20, TimeUnit.SECONDS)
     .build()
 
-  suspend fun mobileAuth(idToken: String): ApiResult<AuthResult> = withContext(Dispatchers.IO) {
+  suspend fun mobileAuth(idToken: String): ApiResult<MobileAuthOutcome> = withContext(Dispatchers.IO) {
     try {
       // Device model (e.g. "TECNO CK6") is what the Trusted Devices list
       // shows for this sign-in -- sent once here, at token-mint time, not
       // on every request.
       val body = JSONObject().put("idToken", idToken).put("deviceModel", android.os.Build.MODEL ?: "").toString().toRequestBody(JSON)
       val request = Request.Builder().url("$BASE_URL/api/mobile/auth").post(body).build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val json = JSONObject(text)
+        if (json.optBoolean("totpRequired", false)) {
+          return@withContext ApiResult.Success(MobileAuthOutcome.TotpRequired(json.getString("pendingId")))
+        }
+        val userJson = json.getJSONObject("user")
+        ApiResult.Success(
+          MobileAuthOutcome.SignedIn(
+            AuthResult(
+              token = json.getString("token"),
+              user = MobileUser(
+                id = userJson.getString("id"),
+                name = userJson.optString("name", null),
+                email = userJson.optString("email", null),
+                image = userJson.optString("image", null)
+              )
+            )
+          )
+        )
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  // Step 2 of a 2FA-gated sign-in -- verifies the authenticator code against
+  // the identity mobileAuth staged under pendingId, then returns the same
+  // AuthResult mobileAuth would have if 2FA weren't on.
+  suspend fun verifyLoginTotp(pendingId: String, code: String): ApiResult<AuthResult> = withContext(Dispatchers.IO) {
+    try {
+      val body = JSONObject().put("pendingId", pendingId).put("code", code).toString().toRequestBody(JSON)
+      val request = Request.Builder().url("$BASE_URL/api/mobile/auth").put(body).build()
       client.newCall(request).execute().use { response ->
         val text = response.body?.string().orEmpty()
         if (!response.isSuccessful) {
@@ -609,6 +656,87 @@ object ChatGizaApi {
         .url("$BASE_URL/api/account/password")
         .header("Authorization", "Bearer $token")
         .put(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          val text = response.body?.string().orEmpty()
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun getTotpStatus(token: String): ApiResult<Boolean> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/account/totp")
+        .header("Authorization", "Bearer $token")
+        .get()
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(JSONObject(text).optBoolean("enabled", false))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  // Starts an Authenticator App 2FA enrollment -- the returned secret isn't
+  // active yet, only confirmTotpSetup below turns it on.
+  suspend fun setupTotp(token: String): ApiResult<TotpSetup> = withContext(Dispatchers.IO) {
+    try {
+      val request = Request.Builder()
+        .url("$BASE_URL/api/account/totp")
+        .header("Authorization", "Bearer $token")
+        .post("".toRequestBody(JSON))
+        .build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val json = JSONObject(text)
+        ApiResult.Success(TotpSetup(secret = json.getString("secret"), otpauthUri = json.getString("otpauthUri")))
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun confirmTotpSetup(token: String, code: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject().put("code", code).toString().toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/account/totp")
+        .header("Authorization", "Bearer $token")
+        .put(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          val text = response.body?.string().orEmpty()
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun disableTotp(token: String, code: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject().put("code", code).toString().toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/account/totp")
+        .header("Authorization", "Bearer $token")
+        .delete(payload)
         .build()
       client.newCall(request).execute().use { response ->
         if (!response.isSuccessful) {
