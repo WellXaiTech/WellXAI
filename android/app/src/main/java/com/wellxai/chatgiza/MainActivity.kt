@@ -4800,9 +4800,9 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
         lineHeight = 14.sp
       )
       Spacer(modifier = Modifier.height(8.dp))
-      HorizontalDivider(modifier = Modifier.fillMaxWidth(0.45f), color = Color(0xFFE0E0E0), thickness = 2.dp)
+      HorizontalDivider(modifier = Modifier.fillMaxWidth(0.45f), color = Color(0xFFE0E0E0), thickness = 3.dp)
       Spacer(modifier = Modifier.height(6.dp))
-      Text("Current plan: Free", color = Color.Black.copy(alpha = 0.3f), fontSize = 11.sp)
+      Text("Current plan: Free", color = Color.Black.copy(alpha = 0.3f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(8.dp))
       Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
