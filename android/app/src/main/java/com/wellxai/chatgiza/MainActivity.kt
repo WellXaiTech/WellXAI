@@ -4906,7 +4906,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
         ) {
-          MyInfoRow(icon = Icons.Outlined.Email, label = "Email", onClick = { comingSoon("Email") }) {
+          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mail_outline), label = "Email", onClick = { comingSoon("Email") }) {
             Text(maskEmail(viewModel.userEmail), color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
           }
           MyInfoDivider()
