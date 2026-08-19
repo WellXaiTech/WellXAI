@@ -5266,11 +5266,11 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             label = "Connectors",
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openConnectors() } }
           ) {}
-          MyInfoRow(
-            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_automations),
-            label = "Automations",
-            onClick = { viewModel.leaveAccountTabsFor { viewModel.openScheduled() } }
-          ) {}
+          // Automations used to be here as its own row, but it opened the
+          // exact same Scheduled screen the "Arranged" card on the main
+          // screen already links to -- a duplicate entry point for the
+          // same feature, so it's gone rather than kept as a second path
+          // to the same place.
           MyInfoRow(icon = Icons.Outlined.Notifications, label = "Notification Settings", onClick = { comingSoon("Notification Settings") }) {}
           MyInfoRow(icon = Icons.Outlined.Email, label = "Email Subscriptions", onClick = { comingSoon("Email Subscriptions") }) {}
         }
