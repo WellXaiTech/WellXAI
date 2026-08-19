@@ -8252,31 +8252,20 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
   // down at the bottom is even visible.
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-  // Locks the sheet's height the first time it lays out (starts expanded,
-  // so this captures the tallest state) so collapsing Subaccount afterward
-  // can't shrink the whole sheet -- without this the sheet auto-sizes to
-  // content, so toggling the list moved the entire sheet (and the scrim
-  // edge above it) up and down instead of just the list itself.
-  val density = LocalDensity.current
-  var lockedHeightPx by remember { mutableStateOf(0) }
-
   ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Color.White, dragHandle = null) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
-        .then(
-          // heightIn(min=...) not height(...) -- an exact fixed height came
-          // up short of the sheet's own bottom-inset padding, leaving a gap
-          // between the sheet and the true bottom of the screen. A floor
-          // still stops collapsing Subaccount from shrinking the sheet, but
-          // lets it grow to whatever the sheet actually needs below that.
-          if (lockedHeightPx > 0) Modifier.heightIn(min = with(density) { lockedHeightPx.toDp() }) else Modifier
-        )
+        // A fixed 85% of screen height instead of sizing to content --
+        // content-driven sizing meant collapsing Subaccount visibly shrank
+        // the whole sheet (its top edge, and the scrim above it, slid
+        // down). A constant fraction never changes regardless of what's
+        // toggled inside it, and reaches close to the top of the screen
+        // like the reference instead of stopping partway down.
+        .fillMaxHeight(0.85f)
+        .verticalScroll(rememberScrollState())
         .padding(horizontal = 20.dp)
         .padding(top = 20.dp, bottom = 28.dp)
-        .onGloballyPositioned { coords ->
-          if (coords.size.height > lockedHeightPx) lockedHeightPx = coords.size.height
-        }
     ) {
       Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         if (deactivateConfirmStep) {
