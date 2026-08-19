@@ -575,6 +575,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.ChangePassword -> ChangePasswordScreen(viewModel)
             is AppScreen.MobileNumber -> MobileNumberScreen(viewModel)
             is AppScreen.ChangeEmail -> ChangeEmailScreen(viewModel)
+            is AppScreen.Nickname -> NicknameScreen(viewModel)
             is AppScreen.TwoFactorSetup -> TwoFactorSetupScreen(viewModel)
             is AppScreen.TotpLoginVerify -> TotpLoginVerifyScreen(viewModel)
             is AppScreen.AppLockSetup -> AppLockSetupScreen(viewModel)
@@ -5035,8 +5036,6 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
 // screen); the rest are stub taps.
 @Composable
 private fun AccountTabsDialog(viewModel: ChatViewModel) {
-  var showNicknameEditor by remember { mutableStateOf(false) }
-  var nicknameText by remember(viewModel.userName) { mutableStateOf(viewModel.userName ?: "") }
   var showRateDialog by remember { mutableStateOf(false) }
   val context = LocalContext.current
   val clipboard = LocalClipboardManager.current
@@ -5268,7 +5267,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
               Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = Color.Black.copy(alpha = 0.5f), modifier = Modifier.size(40.dp))
             }
           }
-          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_id_lines), iconSize = 24.dp, label = "Nickname", onClick = { showNicknameEditor = true }) {
+          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_id_lines), iconSize = 24.dp, label = "Nickname", onClick = { viewModel.leaveAccountTabsFor { viewModel.openNickname() } }) {
             Text(viewModel.userName?.takeIf { it.isNotBlank() } ?: "-", color = Color.Black.copy(alpha = 0.5f), fontSize = 14.sp)
           }
           MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_id_rounded), iconSize = 26.dp, label = "UID", showChevron = false, onClick = {}) {
@@ -5566,44 +5565,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
     // up while User Center was open. A second copy here, layered inside this
     // dialog's own window, makes the screenshot on-taken state visible here too.
     ScreenshotShareOverlay(viewModel)
-    }
-    if (showNicknameEditor) {
-      AlertDialog(
-        onDismissRequest = { showNicknameEditor = false },
-        title = { Text("Nickname") },
-        text = {
-          Column {
-            OutlinedTextField(
-              value = nicknameText,
-              onValueChange = { nicknameText = it },
-              singleLine = true,
-              shape = RoundedCornerShape(12.dp)
-            )
-            // This becomes the account's real display name -- shown
-            // everywhere userName is, ChatGiZa Media posts/profile
-            // included, not just here.
-            Text(
-              "This is the name shown across your whole account.",
-              color = Color.Black.copy(alpha = 0.5f),
-              fontSize = 12.sp,
-              modifier = Modifier.padding(top = 8.dp)
-            )
-          }
-        },
-        confirmButton = {
-          TextButton(onClick = {
-            viewModel.updateUserName(nicknameText)
-            showNicknameEditor = false
-          }) {
-            Text("Save", fontWeight = FontWeight.Bold)
-          }
-        },
-        dismissButton = {
-          TextButton(onClick = { showNicknameEditor = false }) {
-            Text("Cancel")
-          }
-        }
-      )
     }
     if (showRateDialog) {
       AlertDialog(
@@ -10972,6 +10933,83 @@ private fun ChangeEmailScreen(viewModel: ChatViewModel) {
         modifier = Modifier.fillMaxWidth().height(52.dp)
       ) {
         if (viewModel.emailUpdateBusy) {
+          CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+        } else {
+          Text("Save", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        }
+      }
+    }
+  }
+}
+
+// Profile Hub > My info > Nickname -- a plain boxed field (no icon, no
+// warning banner, unlike Mobile/Email) since this is just the display
+// name shown across the account, same shape/black cursor as the other
+// full-screen field editors.
+@Composable
+private fun NicknameScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeNickname() }
+  val focusManager = LocalFocusManager.current
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color.White)
+      .statusBarsPadding()
+      .pointerInput(Unit) {
+        detectTapGestures(onTap = { focusManager.clearFocus() })
+      }
+  ) {
+    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+      Text(
+        "Nickname",
+        color = Color.Black,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.align(Alignment.Center)
+      )
+      IconButton(onClick = { viewModel.closeNickname() }, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(24.dp))
+      }
+    }
+
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+      Spacer(modifier = Modifier.height(20.dp))
+
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(14.dp))
+          .background(Color.Black.copy(alpha = 0.08f))
+          .padding(horizontal = 16.dp, vertical = 18.dp)
+      ) {
+        if (viewModel.nicknameInput.isEmpty()) {
+          Text("Nickname", color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
+        }
+        BasicTextField(
+          value = viewModel.nicknameInput,
+          onValueChange = { viewModel.onNicknameInputChange(it) },
+          singleLine = true,
+          textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp),
+          cursorBrush = SolidColor(Color.Black),
+          modifier = Modifier.fillMaxWidth()
+        )
+      }
+
+      if (viewModel.nameUpdateError != null) {
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(viewModel.nameUpdateError!!, color = Color(0xFFE14050), fontSize = 13.sp)
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+
+      Button(
+        onClick = { viewModel.submitNickname() },
+        enabled = viewModel.nicknameInput.isNotBlank() && !viewModel.nicknameUpdateBusy,
+        shape = RoundedCornerShape(28.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
+        modifier = Modifier.fillMaxWidth().height(52.dp)
+      ) {
+        if (viewModel.nicknameUpdateBusy) {
           CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
         } else {
           Text("Save", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
