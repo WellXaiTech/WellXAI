@@ -8405,10 +8405,13 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
       }
       }
       } else {
-        // No weight/scroll here on purpose -- see the comment above. This
-        // sits at its natural height so the checkbox ends up right next to
-        // the button below instead of pinned apart by a stretched gap.
-        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+        // weight(1f) + Arrangement.Bottom, not a plain natural-height
+        // Column -- this fills the same space step 1's content does, but
+        // bottom-aligns instead of top-aligns, so the checkbox stays right
+        // above the button (no gap between them) while the whole cluster
+        // still sits down near the true bottom of the sheet instead of
+        // floating high up with empty space below Cancel.
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Bottom) {
         // Second, harder-to-miss step -- the actual deactivateAccount()
         // call only happens from here, gated behind reading the checkbox
         // and a few seconds' countdown so it can't be tapped on reflex.
