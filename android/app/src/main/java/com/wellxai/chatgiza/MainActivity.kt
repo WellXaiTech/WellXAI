@@ -670,8 +670,8 @@ class MainActivity : ComponentActivity() {
   // flow end to end rather than splitting it across ViewModel callbacks.
   private fun startPasskeyRegistration() {
     val token = viewModel.currentToken() ?: return
-    viewModel.setPasskeyRegisterBusy(true)
-    viewModel.setPasskeyError(null)
+    viewModel.updatePasskeyRegisterBusy(true)
+    viewModel.updatePasskeyError(null)
     lifecycleScope.launch {
       when (val optionsResult = ChatGizaApi.passkeyRegisterOptions(token)) {
         is ApiResult.Success -> {
@@ -681,17 +681,17 @@ class MainActivity : ComponentActivity() {
             val response = credentialManager.createCredential(this@MainActivity, createRequest) as CreatePublicKeyCredentialResponse
             when (val verifyResult = ChatGizaApi.passkeyRegisterVerify(token, response.registrationResponseJson, Build.MODEL)) {
               is ApiResult.Success -> viewModel.onPasskeyRegistered()
-              is ApiResult.Failure -> viewModel.setPasskeyError(verifyResult.message)
+              is ApiResult.Failure -> viewModel.updatePasskeyError(verifyResult.message)
             }
           } catch (e: CreateCredentialException) {
-            viewModel.setPasskeyError(e.message ?: "Couldn't create a passkey")
+            viewModel.updatePasskeyError(e.message ?: "Couldn't create a passkey")
           } catch (e: Exception) {
-            viewModel.setPasskeyError(e.message ?: "Couldn't create a passkey")
+            viewModel.updatePasskeyError(e.message ?: "Couldn't create a passkey")
           }
         }
-        is ApiResult.Failure -> viewModel.setPasskeyError(optionsResult.message)
+        is ApiResult.Failure -> viewModel.updatePasskeyError(optionsResult.message)
       }
-      viewModel.setPasskeyRegisterBusy(false)
+      viewModel.updatePasskeyRegisterBusy(false)
     }
   }
 
@@ -5292,7 +5292,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             // privacy).
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openStorageManagement() } }
           ) {}
-          MyInfoRow(icon = Icons.Outlined.ThumbUp, label = "Rate Our App", onClick = { showRateDialog = true }) {}
+          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_thumb_up), label = "Rate Our App", onClick = { showRateDialog = true }) {}
         }
 
         Spacer(modifier = Modifier.height(14.dp))
@@ -5314,10 +5314,6 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             label = "Advertise on ChatGiZa",
             onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/advertise"))) }
           ) {}
-          MyInfoRow(icon = Icons.Outlined.Business, label = "Affiliate's community", onClick = { comingSoon("Affiliate's community") }) {
-            Text("Joined", color = Color.Black.copy(alpha = 0.5f), fontSize = 14.sp)
-          }
-          MyInfoRow(icon = Icons.Outlined.SupportAgent, label = "Join Our Community", onClick = { viewModel.leaveAccountTabsFor { viewModel.openCommunity() } }) {}
         }
         Spacer(modifier = Modifier.height(20.dp))
       }
@@ -10258,9 +10254,9 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
       Button(
         onClick = { viewModel.startTotpSetup() },
         enabled = !viewModel.totpBusy,
-        // A more rectangular 14dp radius instead of the app's usual 28dp
-        // pill, per reference -- specific to this button only.
-        shape = RoundedCornerShape(14.dp),
+        // A more rectangular radius instead of the app's usual 28dp pill,
+        // per reference -- specific to this button only.
+        shape = RoundedCornerShape(10.dp),
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
         modifier = Modifier
           .fillMaxWidth()

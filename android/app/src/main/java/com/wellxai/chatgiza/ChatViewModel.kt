@@ -2455,11 +2455,16 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     }
   }
 
-  fun setPasskeyRegisterBusy(value: Boolean) {
+  // Named update*/not set* -- a Kotlin property named passkeyRegisterBusy
+  // already generates a setPasskeyRegisterBusy(Boolean) JVM accessor (even
+  // with `private set`, since JVM signature clashes are checked regardless
+  // of Kotlin-level visibility); a same-named function here collided with
+  // it and failed the build.
+  fun updatePasskeyRegisterBusy(value: Boolean) {
     passkeyRegisterBusy = value
   }
 
-  fun setPasskeyError(value: String?) {
+  fun updatePasskeyError(value: String?) {
     passkeyError = value
   }
 
