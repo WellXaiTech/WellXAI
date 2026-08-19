@@ -1291,10 +1291,10 @@ private fun TwoLineMenuIcon(tint: Color) {
 // this Compose version. Drawn as separate stroke/fill primitives instead:
 // a lid line, a handle outline, a body outline, and two solid bars.
 @Composable
-private fun DeleteIcon(tint: Color, modifier: Modifier = Modifier) {
+private fun DeleteIcon(tint: Color, modifier: Modifier = Modifier, strokeScale: Float = 1.6f) {
   Canvas(modifier = modifier.size(22.dp)) {
     val scale = size.width / 24f
-    val strokeW = 1.6f * scale
+    val strokeW = strokeScale * scale
     drawLine(
       color = tint,
       start = Offset(4f * scale, 6f * scale),
@@ -8534,6 +8534,7 @@ private fun DeleteAccountIllustration() {
     }
     DeleteIcon(
       tint = Color.Black,
+      strokeScale = 1.1f,
       modifier = Modifier
         .size(30.dp)
         .align(Alignment.BottomEnd)
