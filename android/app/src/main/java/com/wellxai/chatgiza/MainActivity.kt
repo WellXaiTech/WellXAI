@@ -9604,31 +9604,14 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
       }
     }
 
-    // A failed status fetch used to leave hasPassword permanently null with
-    // no way out of the spinner -- passwordError now breaks out of it into
-    // a retry state instead of spinning forever.
-    if (viewModel.hasPassword == null && viewModel.passwordError == null) {
-      Box(modifier = Modifier.fillMaxWidth().padding(top = 60.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
-      }
-      return@Column
-    }
-
-    if (viewModel.hasPassword == null && viewModel.passwordError != null) {
-      Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 60.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(viewModel.passwordError!!, color = Color.Black.copy(alpha = 0.6f), fontSize = 14.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(
-          onClick = { viewModel.openChangePassword() },
-          shape = RoundedCornerShape(28.dp),
-          colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
-        ) {
-          Text("Try again", color = Color.White)
-        }
-      }
-      return@Column
-    }
-
+    // Used to block the whole screen behind a spinner until the
+    // hasPassword status fetch resolved. The form now renders immediately
+    // (defaulting to the "old" step -- openChangePassword() already sets
+    // that) instead of making every open wait on a network round trip; if
+    // the fetch later reveals there's no password set yet, passwordStep
+    // just flips to "new" underneath the user with no visible loading
+    // state, and a failed fetch surfaces via the same inline passwordError
+    // text as any other validation error instead of a full-screen retry.
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
       Row(
         modifier = Modifier
