@@ -28,3 +28,25 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Failed to update email" }, { status: 500 });
   }
 }
+
+// Unlinks the contact email (sets users.email to null). Safe to do because
+// the account's real identity is the Google sub stored in users.id, not
+// this address -- Google sign-in and passkeys keep working. The one real
+// consequence: email-based password sign-in (POST /api/mobile/auth-password
+// with method "email") can no longer find this account until an email is
+// set again.
+export async function DELETE(req: NextRequest) {
+  const user = await getRequestUser(req);
+  if (!user) {
+    return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  }
+
+  try {
+    const { error } = await supabaseAdmin.from("users").update({ email: null }).eq("id", user.id);
+    if (error) throw error;
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("Email unlink error:", err);
+    return NextResponse.json({ error: "Failed to unlink email" }, { status: 500 });
+  }
+}
