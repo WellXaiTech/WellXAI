@@ -5861,9 +5861,9 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
 
       Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         Image(
-          painter = androidx.compose.ui.res.painterResource(R.mipmap.ic_launcher),
+          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_chatgiza_logo),
           contentDescription = null,
-          modifier = Modifier.size(88.dp).clip(RoundedCornerShape(22.dp))
+          modifier = Modifier.size(88.dp)
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text("ChatGiZa", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
