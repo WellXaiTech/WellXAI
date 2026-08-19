@@ -4939,6 +4939,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           // actually lives and can actually be changed.
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_google_g),
+            iconSize = 23.dp,
             label = "Google 2FA Authentication",
             onClick = {
               runCatching {
