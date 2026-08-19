@@ -8045,11 +8045,8 @@ private fun DataControlsScreen(viewModel: ChatViewModel) {
 @Composable
 private fun AccountSettingsScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeAccountSettings() }
-  val context = LocalContext.current
   var confirmDeleteAccount by remember { mutableStateOf(false) }
-  fun comingSoon(label: String) {
-    Toast.makeText(context, "$label — coming soon", Toast.LENGTH_SHORT).show()
-  }
+  var showDeactivateDialog by remember { mutableStateOf(false) }
 
   Column(
     modifier = Modifier
@@ -8063,7 +8060,7 @@ private fun AccountSettingsScreen(viewModel: ChatViewModel) {
       painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded),
       title = "Deactivate an Account",
       description = "Something wrong with your account? Temporarily deactivate it while keeping your data intact.",
-      onClick = { comingSoon("Deactivate an Account") }
+      onClick = { showDeactivateDialog = true }
     )
     Spacer(modifier = Modifier.height(14.dp))
     AccountSettingsRow(
@@ -8081,6 +8078,190 @@ private fun AccountSettingsScreen(viewModel: ChatViewModel) {
       onConfirm = { viewModel.deleteAccount() },
       onDismiss = { confirmDeleteAccount = false }
     )
+  }
+  if (showDeactivateDialog) {
+    DeactivateAccountDialog(viewModel = viewModel, onDismiss = { showDeactivateDialog = false })
+  }
+}
+
+@Composable
+private fun DeactivateAccountIllustration() {
+  Box(modifier = Modifier.size(width = 110.dp, height = 100.dp)) {
+    Box(
+      modifier = Modifier
+        .size(width = 68.dp, height = 82.dp)
+        .align(Alignment.TopStart)
+        .offset(x = 2.dp, y = 6.dp)
+        .graphicsLayer { rotationZ = -8f }
+        .border(1.5.dp, Color.Black.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+    )
+    Column(
+      modifier = Modifier
+        .size(width = 68.dp, height = 82.dp)
+        .align(Alignment.TopStart)
+        .offset(x = 22.dp, y = 0.dp)
+        .clip(RoundedCornerShape(8.dp))
+        .background(Color.White)
+        .border(1.5.dp, Color.Black, RoundedCornerShape(8.dp))
+        .padding(12.dp),
+      horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+      Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = Color.Black, modifier = Modifier.size(26.dp))
+      Spacer(modifier = Modifier.height(10.dp))
+      Box(modifier = Modifier.fillMaxWidth().height(1.5.dp).background(Color.Black.copy(alpha = 0.7f)))
+      Spacer(modifier = Modifier.height(6.dp))
+      Box(modifier = Modifier.fillMaxWidth(0.7f).height(1.5.dp).background(Color.Black.copy(alpha = 0.7f)))
+    }
+    Box(
+      modifier = Modifier
+        .size(30.dp)
+        .align(Alignment.BottomEnd)
+        .clip(CircleShape)
+        .background(Color.White)
+        .border(1.5.dp, Color.Black, CircleShape),
+      contentAlignment = Alignment.Center
+    ) {
+      Icon(
+        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded),
+        contentDescription = null,
+        tint = Color.Black,
+        modifier = Modifier.size(15.dp)
+      )
+    }
+  }
+}
+
+@Composable
+private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> Unit) {
+  val context = LocalContext.current
+  val clipboard = LocalClipboardManager.current
+  val mainUid = remember(viewModel.userId) { derivedUid(viewModel.userId.orEmpty()) }
+  LaunchedEffect(Unit) { viewModel.loadSubaccounts() }
+
+  fun copyUid(uid: String) {
+    clipboard.setText(AnnotatedString(uid))
+    Toast.makeText(context, "UID copied", Toast.LENGTH_SHORT).show()
+  }
+
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color.White) {
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 20.dp)
+        .padding(bottom = 28.dp)
+    ) {
+      Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Text("Deactivate Account", color = Color.Black, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+        Icon(
+          Icons.Filled.Close,
+          contentDescription = "Close",
+          tint = Color.Black,
+          modifier = Modifier.size(22.dp).clickable(onClick = onDismiss)
+        )
+      }
+      Spacer(modifier = Modifier.height(20.dp))
+      Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        DeactivateAccountIllustration()
+      }
+      Spacer(modifier = Modifier.height(20.dp))
+      Text(
+        "Are you sure you want to deactivate your account?",
+        color = Color.Black,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Bold,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth()
+      )
+      Spacer(modifier = Modifier.height(20.dp))
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .border(1.dp, Color.Black.copy(alpha = 0.1f), RoundedCornerShape(14.dp))
+          .padding(16.dp)
+      ) {
+        Text("Account to be deactivated", color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp)
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          if (viewModel.userImage != null) {
+            AsyncImage(model = viewModel.userImage, contentDescription = null, modifier = Modifier.size(36.dp).clip(CircleShape))
+          } else {
+            Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = Color.Black, modifier = Modifier.size(36.dp))
+          }
+          Spacer(modifier = Modifier.width(10.dp))
+          Column {
+            Text(
+              viewModel.userName?.takeIf { it.isNotBlank() } ?: "You",
+              color = Color.Black,
+              fontSize = 15.sp,
+              fontWeight = FontWeight.SemiBold
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Text("UID: $mainUid", color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+              Spacer(modifier = Modifier.width(4.dp))
+              Icon(
+                painter = androidx.compose.ui.res.painterResource(R.drawable.ic_copy),
+                contentDescription = "Copy UID",
+                tint = Color.Black.copy(alpha = 0.4f),
+                modifier = Modifier.size(11.dp).clickable { copyUid(mainUid) }
+              )
+            }
+          }
+        }
+        if (viewModel.subaccounts.isNotEmpty()) {
+          Spacer(modifier = Modifier.height(14.dp))
+          HorizontalDivider(color = Color.Black.copy(alpha = 0.08f))
+          Spacer(modifier = Modifier.height(14.dp))
+          Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Subaccount", color = Color.Black.copy(alpha = 0.4f), fontSize = 13.sp, modifier = Modifier.weight(1f))
+            Text("${viewModel.subaccounts.size}", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+          }
+          Spacer(modifier = Modifier.height(10.dp))
+          viewModel.subaccounts.forEach { sub ->
+            val subUid = derivedUid(sub.id)
+            Row(
+              modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Text(sub.name, color = Color.Black, fontSize = 13.sp)
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("UID: $subUid", color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                  painter = androidx.compose.ui.res.painterResource(R.drawable.ic_copy),
+                  contentDescription = "Copy UID",
+                  tint = Color.Black.copy(alpha = 0.4f),
+                  modifier = Modifier.size(11.dp).clickable { copyUid(subUid) }
+                )
+              }
+            }
+          }
+        }
+      }
+      Spacer(modifier = Modifier.height(24.dp))
+      Button(
+        onClick = { viewModel.deactivateAccount() },
+        enabled = !viewModel.deactivatingAccount,
+        shape = RoundedCornerShape(28.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
+        modifier = Modifier.fillMaxWidth().height(52.dp)
+      ) {
+        if (viewModel.deactivatingAccount) {
+          CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+        } else {
+          Text("Deactivate", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        }
+      }
+      Spacer(modifier = Modifier.height(16.dp))
+      Text(
+        "Cancel",
+        color = Color.Black,
+        fontSize = 15.sp,
+        fontWeight = FontWeight.SemiBold,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onDismiss)
+      )
+    }
   }
 }
 
