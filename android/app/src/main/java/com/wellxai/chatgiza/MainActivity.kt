@@ -130,6 +130,7 @@ import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Typography
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
@@ -348,8 +349,10 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -1142,6 +1145,46 @@ private fun WizardSkipRow(label: String, onSkip: () -> Unit) {
   }
 }
 
+// Plus Jakarta Sans (SIL Open Font License, see PLUS_JAKARTA_SANS_OFL.txt) --
+// a free geometric/rounded sans, the closest good-quality open alternative
+// to commercial rounded fonts like Circular or Google Sans that this app's
+// UI text was compared against. It ships as a single variable-weight file
+// (res/font/plus_jakarta_sans.ttf), so each named weight below points at
+// the same file with a different FontVariation weight axis value rather
+// than separate per-weight files.
+private val PlusJakartaSans = FontFamily(
+  Font(R.font.plus_jakarta_sans, FontWeight.Normal, variationSettings = FontVariation.Settings(FontVariation.weight(400))),
+  Font(R.font.plus_jakarta_sans, FontWeight.Medium, variationSettings = FontVariation.Settings(FontVariation.weight(500))),
+  Font(R.font.plus_jakarta_sans, FontWeight.SemiBold, variationSettings = FontVariation.Settings(FontVariation.weight(600))),
+  Font(R.font.plus_jakarta_sans, FontWeight.Bold, variationSettings = FontVariation.Settings(FontVariation.weight(700))),
+  Font(R.font.plus_jakarta_sans, FontWeight.ExtraBold, variationSettings = FontVariation.Settings(FontVariation.weight(800)))
+)
+
+// Every Material3 Typography slot rebound to PlusJakartaSans -- Text()
+// calls that don't set their own fontFamily explicitly (the vast majority
+// in this file) inherit it from whichever of these slots LocalTextStyle
+// resolves to, so this alone changes the font app-wide without needing to
+// touch each individual Text() call.
+private val ChatGizaTypography = Typography().let { base ->
+  Typography(
+    displayLarge = base.displayLarge.copy(fontFamily = PlusJakartaSans),
+    displayMedium = base.displayMedium.copy(fontFamily = PlusJakartaSans),
+    displaySmall = base.displaySmall.copy(fontFamily = PlusJakartaSans),
+    headlineLarge = base.headlineLarge.copy(fontFamily = PlusJakartaSans),
+    headlineMedium = base.headlineMedium.copy(fontFamily = PlusJakartaSans),
+    headlineSmall = base.headlineSmall.copy(fontFamily = PlusJakartaSans),
+    titleLarge = base.titleLarge.copy(fontFamily = PlusJakartaSans),
+    titleMedium = base.titleMedium.copy(fontFamily = PlusJakartaSans),
+    titleSmall = base.titleSmall.copy(fontFamily = PlusJakartaSans),
+    bodyLarge = base.bodyLarge.copy(fontFamily = PlusJakartaSans),
+    bodyMedium = base.bodyMedium.copy(fontFamily = PlusJakartaSans),
+    bodySmall = base.bodySmall.copy(fontFamily = PlusJakartaSans),
+    labelLarge = base.labelLarge.copy(fontFamily = PlusJakartaSans),
+    labelMedium = base.labelMedium.copy(fontFamily = PlusJakartaSans),
+    labelSmall = base.labelSmall.copy(fontFamily = PlusJakartaSans)
+  )
+}
+
 @Composable
 private fun ChatGizaTheme(themeMode: String, content: @Composable () -> Unit) {
   // Forced to the light scheme everywhere while colors are being rebuilt
@@ -1210,7 +1253,7 @@ private fun ChatGizaTheme(themeMode: String, content: @Composable () -> Unit) {
       onPrimary = Color.White
     )
   }
-  MaterialTheme(colorScheme = colors, content = content)
+  MaterialTheme(colorScheme = colors, typography = ChatGizaTypography, content = content)
 }
 
 // A Dialog(...) opens its own separate Android Window, so the
