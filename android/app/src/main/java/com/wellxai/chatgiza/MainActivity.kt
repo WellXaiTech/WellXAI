@@ -8644,11 +8644,11 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
         // sizing meant collapsing Subaccount visibly shrank the whole sheet
         // (its top edge, and the scrim above it, slid down). A constant
         // fraction never changes regardless of what's toggled inside it.
-        // 1f (not 0.85f) so it reaches the very top of the screen like the
-        // reference, instead of leaving the screen behind it (and its dark
-        // scrim) visible in a gap above the sheet.
-        .fillMaxHeight(1f)
-        .statusBarsPadding()
+        // 0.88f closes the gap that was left below the "Account Settings"
+        // header at 0.85f, without going all the way to 1f -- that covered
+        // the header itself, which was never the ask; only the leftover
+        // empty scrim gap below it needed to go.
+        .fillMaxHeight(0.88f)
         .padding(horizontal = 20.dp)
         .padding(top = 20.dp, bottom = 28.dp)
     ) {
