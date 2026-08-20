@@ -6229,6 +6229,19 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
         AboutUsRow(icon = Icons.Outlined.HelpOutline, label = "Help Center") { comingSoon("Help Center") }
         HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
         AboutUsRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_compose), label = "User feedback") { comingSoon("User feedback") }
+        HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
+        AboutUsRow(icon = Icons.Outlined.BugReport, label = "Crash Log") {
+          val crash = ChatGizaApplication.lastCrash(context)
+          if (crash == null) {
+            Toast.makeText(context, "No crash recorded on this device yet", Toast.LENGTH_SHORT).show()
+          } else {
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+              type = "text/plain"
+              putExtra(Intent.EXTRA_TEXT, crash)
+            }
+            context.startActivity(Intent.createChooser(shareIntent, "Share crash log"))
+          }
+        }
       }
     }
     ScreenshotShareOverlay(viewModel)
