@@ -45,6 +45,16 @@
 
         </activity>
 
+        <!-- Foreground service required on Android 14+ before
+             MediaProjectionManager#getMediaProjection can be called --
+             the actual capture (VirtualDisplay/ImageReader) is still
+             driven from LiveVisionScreen itself, this just satisfies the
+             OS requirement and shows the mandatory sharing notification. -->
+        <service
+            android:name=".ScreenCaptureService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -61,6 +71,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Required to run ScreenCaptureService (below) while sharing the
+         screen during a Live Vision call. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <!-- Required (install-time, auto-granted) for Activity.registerScreenCaptureCallback
          on Android 14+: without declaring this, the callback silently
          never fires, no crash and no error, which is why the screenshot
