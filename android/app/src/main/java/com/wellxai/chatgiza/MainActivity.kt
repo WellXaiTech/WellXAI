@@ -13660,8 +13660,11 @@ private fun CreateScheduledTaskSheet(viewModel: ChatViewModel, onDismiss: () -> 
       val month = utcCal.get(java.util.Calendar.MONTH)
       val day = utcCal.get(java.util.Calendar.DAY_OF_MONTH)
 
+      // CLOCK_12H (AM/PM) per the user's reference screenshot -- the
+      // MaterialTimePicker still returns hour in 24-hour form either way
+      // (getHour()), this only changes the dial's own display format.
       val timePicker = com.google.android.material.timepicker.MaterialTimePicker.Builder()
-        .setTimeFormat(com.google.android.material.timepicker.TimeFormat.CLOCK_24H)
+        .setTimeFormat(com.google.android.material.timepicker.TimeFormat.CLOCK_12H)
         .setHour(now.get(java.util.Calendar.HOUR_OF_DAY))
         .setMinute(now.get(java.util.Calendar.MINUTE))
         .setTitleText("Select time")
