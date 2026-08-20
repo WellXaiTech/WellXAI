@@ -5878,12 +5878,17 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
         .padding(horizontal = 16.dp)
     ) {
       Spacer(modifier = Modifier.height(12.dp))
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = { viewModel.closeAboutUs() }, modifier = Modifier.size(32.dp)) {
+      Box(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+        Text(
+          "About Us",
+          color = Color.Black,
+          fontSize = 18.sp,
+          fontWeight = FontWeight.Bold,
+          modifier = Modifier.align(Alignment.Center)
+        )
+        IconButton(onClick = { viewModel.closeAboutUs() }, modifier = Modifier.align(Alignment.CenterStart).size(32.dp)) {
           Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
         }
-        Spacer(modifier = Modifier.width(20.dp))
-        Text("About Us", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
       }
 
       Spacer(modifier = Modifier.height(28.dp))
@@ -5931,7 +5936,7 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
           context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/terms")))
         }
         HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
-        AboutUsRow(icon = Icons.Outlined.Lock, label = "Privacy Policy") {
+        AboutUsRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_solid), label = "Privacy Policy") {
           context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/privacy")))
         }
         HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
