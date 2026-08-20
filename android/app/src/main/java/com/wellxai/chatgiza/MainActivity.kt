@@ -2773,7 +2773,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
         viewModel.onInputChange("Create an image of ")
         focusRequester.requestFocus()
       }
-      QuickActionChip(icon = { Icon(Icons.Outlined.Description, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(22.dp)) }, label = "Analyze Doc") {
+      QuickActionChip(icon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_files), contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(22.dp)) }, label = "Analyze Doc") {
         filePicker.launch("*/*")
       }
       QuickActionChip(icon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_waveform_speak), contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(22.dp)) }, label = "Voice Mode") {
