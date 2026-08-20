@@ -4255,7 +4255,7 @@ private data class PersonalityOption(
 // than dropping safety guardrails or asserting misinformation as fact.
 private val PERSONALITY_OPTIONS = listOf(
   PersonalityOption("custom", "Custom", null),
-  PersonalityOption("assistant", "Assistant", Icons.Outlined.SupportAgent),
+  PersonalityOption("assistant", "Assistant", null, iconRes = R.drawable.ic_advanced),
   PersonalityOption("therapist", "\"Therapist\"", null, iconRes = R.drawable.ic_therapist),
   PersonalityOption("storyteller", "Storyteller", null, iconRes = R.drawable.ic_storyteller),
   PersonalityOption("story_time", "Story Time", null, tag = "Kids", iconRes = R.drawable.ic_story_time),
