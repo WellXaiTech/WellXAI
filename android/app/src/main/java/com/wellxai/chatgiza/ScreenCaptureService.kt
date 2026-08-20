@@ -69,12 +69,17 @@ class ScreenCaptureService : Service() {
     ChatGizaApplication.breadcrumb(this, "service: onCreate entered")
     instance = this
     startedAt = System.currentTimeMillis()
-    // Reordering so startForeground() runs first here (only channel creation
-    // precedes it) turned out NOT to be enough on its own -- the crash still
-    // happens on device. Breadcrumbs below exist to see whether onCreate()
-    // itself is what's slow/failing, since ForegroundServiceDidNotStartInTimeException
-    // is thrown remotely by the OS and its own stack trace never shows any
-    // of our code, only the system's generic delivery frames.
+    // Found via breadcrumbs, not guessing: startForegroundService() is
+    // async -- it only queues the service start -- and MainActivity used to
+    // call getMediaProjection() on the very next line, before this
+    // onCreate() had actually run. getMediaProjection() threw
+    // SecurityException immediately (service not foreground yet), the
+    // caller's failure handler called stopService() on a service that
+    // hadn't even started yet, and THEN this onCreate() ran anyway and
+    // called startForeground() successfully on a service already marked to
+    // stop -- which is what the OS was actually rejecting as "didn't call
+    // startForeground in time". onForegroundStarted lets the caller await
+    // real confirmation instead of racing this.
     runCatching {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -89,6 +94,8 @@ class ScreenCaptureService : Service() {
         startForeground(NOTIFICATION_ID, buildNotification())
       }
       ChatGizaApplication.breadcrumb(this, "service: startForeground returned OK")
+      onForegroundStarted?.invoke()
+      onForegroundStarted = null
     }.onFailure {
       ChatGizaApplication.breadcrumb(this, "service: startForeground FAILED: ${it}")
       stopSelf()
@@ -161,5 +168,11 @@ class ScreenCaptureService : Service() {
      * connection just for that. */
     var instance: ScreenCaptureService? = null
       private set
+
+    /** Fired once, right after startForeground() actually succeeds --
+     * see the long comment in onCreate() for why this exists. Cleared
+     * after firing so a stale callback from an earlier attempt can never
+     * fire again. */
+    var onForegroundStarted: (() -> Unit)? = null
   }
 }
