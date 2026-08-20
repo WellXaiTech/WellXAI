@@ -13522,70 +13522,6 @@ private fun CreateScheduledTaskSheet(viewModel: ChatViewModel, onDismiss: () -> 
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
   var pickedMillis by remember { mutableStateOf<Long?>(null) }
   val displayFormat = remember { java.text.SimpleDateFormat("EEE, MMM d · HH:mm", Locale.US) }
-  val scope = rememberCoroutineScope()
-  var attachMenuOpen by remember { mutableStateOf(false) }
-  var attachError by remember { mutableStateOf(false) }
-  var attachBusy by remember { mutableStateOf(false) }
-
-  // Lets a task creator attach a photo of their calendar (or any picture),
-  // a PDF page, or a plain-text file so ScheduledTaskWorker has that
-  // context when the task actually fires later -- same idea as an
-  // attached file in live chat (readAttachedFile/uriToPostImageDataUrl),
-  // just persisted on the task itself instead of sent right away.
-  fun attachPickedImage(uri: Uri) {
-    attachError = false
-    attachBusy = true
-    scope.launch {
-      val dataUrl = withContext(Dispatchers.IO) { uriToPostImageDataUrl(context, uri) }
-      attachBusy = false
-      if (dataUrl != null) {
-        viewModel.setNewTaskAttachmentImage("Photo", dataUrl)
-      } else {
-        attachError = true
-      }
-    }
-  }
-
-  fun attachPickedFile(uri: Uri) {
-    attachError = false
-    attachBusy = true
-    scope.launch {
-      val name = withContext(Dispatchers.IO) { queryFileDisplayName(context, uri) }
-      val file = withContext(Dispatchers.IO) { readAttachedFile(context, uri, name) }
-      attachBusy = false
-      when {
-        file?.text != null -> viewModel.setNewTaskAttachmentText(file.name, file.text)
-        file?.imageDataUrls?.isNotEmpty() == true -> viewModel.setNewTaskAttachmentImage(file.name, file.imageDataUrls.first())
-        else -> attachError = true
-      }
-    }
-  }
-
-  val galleryPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-    if (uri != null) attachPickedImage(uri)
-  }
-  val taskFilePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-    if (uri != null) attachPickedFile(uri)
-  }
-  var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
-  val cameraCapture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
-    val uri = pendingCameraUri
-    if (success && uri != null) attachPickedImage(uri)
-  }
-  var hasCameraPermission by remember {
-    mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
-  }
-  fun launchCamera() {
-    val photoFile = File(context.cacheDir, "task_camera_${System.currentTimeMillis()}.jpg")
-    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
-    pendingCameraUri = uri
-    cameraCapture.launch(uri)
-  }
-  val cameraPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-    hasCameraPermission = granted
-    if (granted) launchCamera()
-  }
-
   // Compact in-sheet dictation into the prompt field -- same
   // SpeechRecognizer approach as the main chat composer's mic button, just
   // scoped to this one field instead of viewModel.input.
@@ -13733,46 +13669,16 @@ private fun CreateScheduledTaskSheet(viewModel: ChatViewModel, onDismiss: () -> 
         )
       }
       Spacer(modifier = Modifier.height(8.dp))
+      // Photo/PDF attachments were deliberately pulled back out of this
+      // sheet -- most tasks aren't calendar-related, so a generic attach
+      // button here was a mismatched place for it. That flow now lives in
+      // the main chat instead: upload there, the AI reads it and offers to
+      // create a task itself (see scheduleReminderFromChat's attachment
+      // params and the calendar-recognition instructions in ai.ts's
+      // CAPABILITIES_PROMPT) rather than every screen needing its own
+      // upload UI. Voice dictation stays here since it's about this one
+      // field, not a general upload.
       Row(verticalAlignment = Alignment.CenterVertically) {
-        Box {
-          FilledIconButton(
-            onClick = { attachMenuOpen = true },
-            modifier = Modifier.size(34.dp),
-            colors = IconButtonDefaults.filledIconButtonColors(
-              containerColor = colorScheme.onBackground.copy(alpha = 0.08f),
-              contentColor = colorScheme.onBackground
-            )
-          ) {
-            Icon(Icons.Filled.Add, contentDescription = "Attach", modifier = Modifier.size(16.dp))
-          }
-          DropdownMenu(
-            expanded = attachMenuOpen,
-            onDismissRequest = { attachMenuOpen = false },
-            shape = RoundedCornerShape(32.dp),
-            containerColor = Color.White,
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A2A2A))
-          ) {
-            AttachMenuRow(
-              iconRes = R.drawable.ic_camera,
-              label = "Camera",
-              onClick = {
-                attachMenuOpen = false
-                if (hasCameraPermission) launchCamera() else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-              }
-            )
-            AttachMenuRow(
-              iconRes = R.drawable.ic_gallery,
-              label = "Gallery",
-              onClick = { attachMenuOpen = false; galleryPicker.launch("image/*") }
-            )
-            AttachMenuRow(
-              iconRes = R.drawable.ic_files,
-              label = "Files (PDF, text)",
-              onClick = { attachMenuOpen = false; taskFilePicker.launch("*/*") }
-            )
-          }
-        }
-        Spacer(modifier = Modifier.width(8.dp))
         Box(
           modifier = Modifier
             .size(34.dp)
@@ -13788,48 +13694,6 @@ private fun CreateScheduledTaskSheet(viewModel: ChatViewModel, onDismiss: () -> 
             modifier = Modifier.size(16.dp)
           )
         }
-        if (attachBusy) {
-          Spacer(modifier = Modifier.width(10.dp))
-          CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = colorScheme.onBackground.copy(alpha = 0.5f))
-        }
-      }
-      val attachmentName = viewModel.newTaskAttachmentName
-      if (attachmentName.isNotBlank()) {
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(colorScheme.onBackground.copy(alpha = 0.08f))
-            .padding(horizontal = 10.dp, vertical = 8.dp)
-        ) {
-          Icon(
-            if (viewModel.newTaskAttachmentImageDataUrl.isNotBlank()) Icons.Outlined.Image else Icons.Outlined.Description,
-            contentDescription = null,
-            tint = colorScheme.onBackground,
-            modifier = Modifier.size(18.dp)
-          )
-          Spacer(modifier = Modifier.width(8.dp))
-          Text(
-            attachmentName,
-            color = colorScheme.onBackground,
-            fontSize = 13.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.widthIn(max = 200.dp)
-          )
-          Spacer(modifier = Modifier.width(8.dp))
-          Icon(
-            Icons.Outlined.Close,
-            contentDescription = "Remove attachment",
-            tint = colorScheme.onBackground.copy(alpha = 0.6f),
-            modifier = Modifier.size(16.dp).clickable { viewModel.clearNewTaskAttachment() }
-          )
-        }
-      }
-      if (attachError) {
-        Spacer(modifier = Modifier.height(6.dp))
-        Text("Couldn't attach that — try a different file", color = Color(0xFFCC3333), fontSize = 12.sp)
       }
       Spacer(modifier = Modifier.height(12.dp))
       Row(

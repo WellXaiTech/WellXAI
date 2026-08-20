@@ -276,17 +276,6 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var newTaskRunAt by mutableStateOf("")
   var newTaskCategory by mutableStateOf("Chat")
   var newTaskTitle by mutableStateOf("")
-  // Attachment for the task being created (calendar photo, PDF page, or a
-  // plain-text file) -- see ApiScheduledTask's own attachment* fields for
-  // how this is persisted and later folded back into the prompt when the
-  // task fires. Only one of newTaskAttachmentText/newTaskAttachmentImageDataUrl
-  // is ever non-blank at a time.
-  var newTaskAttachmentName by mutableStateOf("")
-    private set
-  var newTaskAttachmentText by mutableStateOf("")
-    private set
-  var newTaskAttachmentImageDataUrl by mutableStateOf("")
-    private set
 
   var billingSummary by mutableStateOf<BillingSummary?>(null)
     private set
@@ -2089,24 +2078,6 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     newTaskTitle = value
   }
 
-  fun setNewTaskAttachmentImage(name: String, dataUrl: String) {
-    newTaskAttachmentName = name
-    newTaskAttachmentImageDataUrl = dataUrl
-    newTaskAttachmentText = ""
-  }
-
-  fun setNewTaskAttachmentText(name: String, text: String) {
-    newTaskAttachmentName = name
-    newTaskAttachmentText = text
-    newTaskAttachmentImageDataUrl = ""
-  }
-
-  fun clearNewTaskAttachment() {
-    newTaskAttachmentName = ""
-    newTaskAttachmentText = ""
-    newTaskAttachmentImageDataUrl = ""
-  }
-
   // addScheduledTask/scheduleReminderFromChat/deleteScheduledTask all re-fetch
   // the list from the server right before writing, instead of mutating
   // whatever `scheduledTasks` already held in memory. ScheduledTaskWorker
@@ -2128,22 +2099,11 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     // typed, instead of a placeholder like "Task" -- still real text the
     // user wrote, just not artificially split into two fields.
     val title = newTaskTitle.trim().ifBlank { prompt.take(48) }
-    val newTask = ApiScheduledTask(
-      UUID.randomUUID().toString(),
-      prompt,
-      runAt,
-      false,
-      category = newTaskCategory,
-      title = title,
-      attachmentName = newTaskAttachmentName,
-      attachmentText = newTaskAttachmentText,
-      attachmentImageDataUrl = newTaskAttachmentImageDataUrl
-    )
+    val newTask = ApiScheduledTask(UUID.randomUUID().toString(), prompt, runAt, false, category = newTaskCategory, title = title)
     newTaskPrompt = ""
     newTaskRunAt = ""
     newTaskCategory = "Chat"
     newTaskTitle = ""
-    clearNewTaskAttachment()
     viewModelScope.launch {
       val current = when (val result = ChatGizaApi.getScheduled(token)) {
         is ApiResult.Success -> result.value
@@ -2157,11 +2117,25 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   /** Same effect as [addScheduledTask], but driven by the AI's own
    * [[REMINDER_START]] marker instead of the manual Automations form --
-   * doesn't touch newTaskPrompt/newTaskRunAt since there's no form open. */
-  private fun scheduleReminderFromChat(reminder: ChatReminderRequest) {
+   * doesn't touch newTaskPrompt/newTaskRunAt since there's no form open.
+   * [imageDataUrl]/[file] carry over whatever photo/PDF/text the user had
+   * attached on the very message that triggered this reminder -- e.g. they
+   * uploaded a calendar screenshot and the AI recognized it and offered to
+   * schedule something from it (see CAPABILITIES_PROMPT in ai.ts). Same
+   * attachment fields ScheduledTaskWorker already knows how to fold back
+   * into the prompt when the task fires. */
+  private fun scheduleReminderFromChat(reminder: ChatReminderRequest, imageDataUrl: String? = null, file: AttachedFile? = null) {
     val token = tokenStore.getToken() ?: return
     val runAt = reminder.runAt.replaceFirst(" ", "T")
-    val newTask = ApiScheduledTask(UUID.randomUUID().toString(), reminder.prompt, runAt, false)
+    val newTask = ApiScheduledTask(
+      UUID.randomUUID().toString(),
+      reminder.prompt,
+      runAt,
+      false,
+      attachmentName = file?.name ?: if (!imageDataUrl.isNullOrBlank()) "Photo" else "",
+      attachmentText = file?.text ?: "",
+      attachmentImageDataUrl = file?.imageDataUrls?.firstOrNull() ?: imageDataUrl ?: ""
+    )
     viewModelScope.launch {
       val current = when (val result = ChatGizaApi.getScheduled(token)) {
         is ApiResult.Success -> result.value
@@ -3491,7 +3465,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         val (cleaned, reminder) = extractReminderRequest(finalContent)
         if (reminder != null) {
           messages = messages.map { m -> if (m.id == assistantId) m.copy(content = cleaned) else m }
-          scheduleReminderFromChat(reminder)
+          scheduleReminderFromChat(reminder, imageToSend, fileToSend)
         }
         maybeCheckForMemorySuggestions()
       }
