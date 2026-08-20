@@ -246,6 +246,7 @@ import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Feedback
+import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material.icons.outlined.GraphicEq
 import androidx.compose.material.icons.outlined.Headset
 import androidx.compose.material.icons.outlined.Hearing
@@ -1567,33 +1568,39 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
           Spacer(modifier = Modifier.height(8.dp))
         }
       } else {
-      // Email / Mobile pill switch
-      Row(
-        modifier = Modifier
-          .clip(RoundedCornerShape(50))
-          .background(Color.Black.copy(alpha = 0.06f))
-          .padding(4.dp)
-      ) {
-        listOf("email" to "Email", "mobile" to "Mobile").forEach { (key, label) ->
-          val selected = viewModel.signInTab == key
-          Box(
-            modifier = Modifier
-              .clip(RoundedCornerShape(50))
-              .background(if (selected) Color.White else Color.Transparent)
-              .clickable { viewModel.onSignInTabChange(key) }
-              .padding(horizontal = 20.dp, vertical = 8.dp)
-          ) {
-            Text(
-              label,
-              color = Color.Black,
-              fontSize = 14.sp,
-              fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
-            )
-          }
+      if (viewModel.rememberedAccountEmail != null) {
+        IconButton(onClick = { viewModel.hideFullSignInForm() }, modifier = Modifier.size(32.dp)) {
+          Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
         }
+        Spacer(modifier = Modifier.height(4.dp))
       }
 
-      Spacer(modifier = Modifier.height(20.dp))
+      Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+        Image(
+          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_chatgiza_logo),
+          contentDescription = null,
+          modifier = Modifier.size(48.dp)
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+        Text("Log in or sign up", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+          "You'll get smarter responses and can upload files, images and more.",
+          color = Color.Black.copy(alpha = 0.5f),
+          fontSize = 14.sp,
+          textAlign = TextAlign.Center
+        )
+      }
+
+      Spacer(modifier = Modifier.height(28.dp))
+
+      Text(
+        if (viewModel.signInTab == "mobile") "Mobile" else "Email",
+        color = Color.Black.copy(alpha = 0.5f),
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Medium
+      )
+      Spacer(modifier = Modifier.height(6.dp))
 
       if (viewModel.signInTab == "mobile") {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -1687,25 +1694,26 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
       Button(
         onClick = { viewModel.submitPasswordSignIn() },
         enabled = !viewModel.signInBusy,
-        shape = RoundedCornerShape(28.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
+        shape = RoundedCornerShape(50),
+        colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
         modifier = Modifier.fillMaxWidth().height(52.dp)
       ) {
         if (viewModel.signInBusy) {
-          CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+          CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
         } else {
-          Text("Next", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+          Text("Continue", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
       }
 
-      Spacer(modifier = Modifier.height(24.dp))
+      Spacer(modifier = Modifier.height(20.dp))
 
       Row(verticalAlignment = Alignment.CenterVertically) {
         HorizontalDivider(modifier = Modifier.weight(1f), color = Color.Black.copy(alpha = 0.1f))
         Text(
-          "Or go with",
+          "OR",
           color = Color.Black.copy(alpha = 0.4f),
           fontSize = 12.sp,
+          fontWeight = FontWeight.Medium,
           modifier = Modifier.padding(horizontal = 10.dp)
         )
         HorizontalDivider(modifier = Modifier.weight(1f), color = Color.Black.copy(alpha = 0.1f))
@@ -1717,24 +1725,76 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
       // saved passkey alongside Google accounts in the same sheet (see
       // startGoogleSignIn), so this single tap covers both instead of a
       // separate "Sign in with a passkey" button underneath it.
-      Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        OutlinedButton(
-          onClick = onSignIn,
-          enabled = !signingIn,
-          shape = RoundedCornerShape(50),
-          colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.Black.copy(alpha = 0.04f)),
-          contentPadding = PaddingValues(horizontal = 28.dp, vertical = 12.dp),
-          modifier = Modifier.height(44.dp)
-        ) {
-          Icon(
-            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_google_logo_color),
-            contentDescription = null,
-            tint = Color.Unspecified,
-            modifier = Modifier.size(18.dp)
-          )
-          Spacer(modifier = Modifier.width(8.dp))
-          Text(if (signingIn) "Signing in…" else "Google", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-        }
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(50))
+          .background(Color.Black.copy(alpha = 0.04f))
+          .clickable(enabled = !signingIn, onClick = onSignIn)
+          .padding(vertical = 14.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Icon(
+          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_google_logo_color),
+          contentDescription = null,
+          tint = Color.Unspecified,
+          modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(if (signingIn) "Signing in…" else "Continue with Google", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+      }
+
+      Spacer(modifier = Modifier.height(12.dp))
+
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(50))
+          .background(Color.Black.copy(alpha = 0.04f))
+          .clickable {
+            viewModel.onSignInTabChange(if (viewModel.signInTab == "mobile") "email" else "mobile")
+          }
+          .padding(vertical = 14.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Icon(
+          if (viewModel.signInTab == "mobile") Icons.Outlined.Email else Icons.Outlined.Phone,
+          contentDescription = null,
+          tint = Color.Black.copy(alpha = 0.7f),
+          modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+          if (viewModel.signInTab == "mobile") "Continue with email" else "Continue with phone",
+          color = Color.Black,
+          fontSize = 15.sp,
+          fontWeight = FontWeight.Medium
+        )
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+
+      val footerContext = LocalContext.current
+      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+        Text(
+          "Terms of Use",
+          color = Color.Black.copy(alpha = 0.4f),
+          fontSize = 12.sp,
+          modifier = Modifier.clickable {
+            footerContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/terms")))
+          }
+        )
+        Text(" · ", color = Color.Black.copy(alpha = 0.3f), fontSize = 12.sp)
+        Text(
+          "Privacy Policy",
+          color = Color.Black.copy(alpha = 0.4f),
+          fontSize = 12.sp,
+          modifier = Modifier.clickable {
+            footerContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/privacy")))
+          }
+        )
       }
 
       Spacer(modifier = Modifier.height(8.dp))
