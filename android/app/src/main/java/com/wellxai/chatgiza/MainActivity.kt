@@ -804,9 +804,26 @@ class MainActivity : AppCompatActivity() {
               is ApiResult.Failure -> viewModel.updatePasskeyError(verifyResult.message)
             }
           } catch (e: CreateCredentialException) {
-            viewModel.updatePasskeyError(e.message ?: "Couldn't create a passkey")
+            // Full exception class name + message + cause chain, not just
+            // .message -- "[50152] RP ID cannot be validated" alone hasn't
+            // been enough to pin down the real failure after multiple
+            // rounds of server-side verification all coming back clean.
+            val detail = buildString {
+              append(e.javaClass.simpleName)
+              append(": ")
+              append(e.message ?: "no message")
+              var cause = e.cause
+              while (cause != null) {
+                append(" | caused by ")
+                append(cause.javaClass.simpleName)
+                append(": ")
+                append(cause.message ?: "no message")
+                cause = cause.cause
+              }
+            }
+            viewModel.updatePasskeyError(detail)
           } catch (e: Exception) {
-            viewModel.updatePasskeyError(e.message ?: "Couldn't create a passkey")
+            viewModel.updatePasskeyError("${e.javaClass.simpleName}: ${e.message ?: "Couldn't create a passkey"}")
           }
         }
         is ApiResult.Failure -> viewModel.updatePasskeyError(optionsResult.message)
