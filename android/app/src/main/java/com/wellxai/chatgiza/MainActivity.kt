@@ -823,11 +823,12 @@ private fun BoxScope.ScreenshotShareOverlay(viewModel: ChatViewModel) {
       verticalAlignment = Alignment.CenterVertically
     ) {
       Column(modifier = Modifier.weight(1f)) {
-        Text("Share a link to chat?", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text("Share a link to chat?", color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
           "This creates a copy that others can chat with",
-          color = Color.Black.copy(alpha = 0.55f),
-          fontSize = 12.sp
+          color = Color.Black.copy(alpha = 0.5f),
+          fontSize = 13.sp
         )
       }
       Spacer(modifier = Modifier.width(12.dp))
@@ -843,7 +844,7 @@ private fun BoxScope.ScreenshotShareOverlay(viewModel: ChatViewModel) {
         },
         modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.Black)
       ) {
-        Icon(Icons.Filled.Share, contentDescription = "Share", tint = Color.White, modifier = Modifier.size(18.dp))
+        Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_share), contentDescription = "Share", tint = Color.White, modifier = Modifier.size(18.dp))
       }
     }
   }
