@@ -1400,11 +1400,11 @@ private fun LoadingScreen() {
 private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
   val focusManager = LocalFocusManager.current
   val signingIn = viewModel.signingIn
-  // null = the "Log in or sign up" screen shows only method buttons (no
-  // Email/Password visible yet), matching the Welcome Back screen's clean
-  // button list instead of dumping a form on screen immediately. Picking
-  // "phone" or "email" reveals that method's actual fields below.
-  var authMethodChosen by remember { mutableStateOf<String?>(null) }
+  // Defaults straight to "email" -- the "Log in or sign up" screen opens
+  // with the Email field already visible (per the reference), not behind
+  // an extra button-menu step. Still switchable to "mobile" via the
+  // Continue with phone/email toggle further down.
+  var authMethodChosen by remember { mutableStateOf<String?>("email") }
   // Title box keeps weight(1f) -- with the keyboard closed that's what
   // pushes the white card flush to the bottom, no gap underneath it. The
   // trick for the keyboard is imePadding() on this outer Column: that
