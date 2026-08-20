@@ -1427,8 +1427,22 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     // hadn't moved off AppScreen.ProfileHub yet, flashing Profile Hub (with
     // its "Enter GiZa Max" banner) underneath the dialog as it dismissed,
     // on every single row tap.
+    //
+    // open() alone still isn't enough: the screen router (AnimatedContent)
+    // needs at least one recomposition/frame to actually swap its rendered
+    // content over to the new screen, even with the transition itself
+    // skipped. Closing the dialog in the very same synchronous call raced
+    // that -- it could disappear a frame before the new screen had actually
+    // taken over underneath, showing ProfileHub for that one frame. A short
+    // delay here (imperceptible, well under what a tap-to-navigate already
+    // feels like) guarantees the new screen has already rendered by the
+    // time the dialog goes away, instead of depending on both happening to
+    // land in the same frame.
     open()
-    closeAccountTabs()
+    viewModelScope.launch {
+      delay(80)
+      closeAccountTabs()
+    }
   }
 
   private fun returnToAccountTabsIfPending() {
