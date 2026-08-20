@@ -401,11 +401,13 @@ import java.util.Locale
 import kotlin.math.roundToInt
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 
 private const val GOOGLE_WEB_CLIENT_ID =
   "302265706031-imsr5i7elinlqkdcjfv3sgicuul1m39g.apps.googleusercontent.com"
@@ -3306,6 +3308,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
     screenShareEnabled = false
     LiveVisionCallBridge.onHangUp = null
     LiveVisionCallBridge.onToggleMute = null
+    ScreenCaptureService.onForegroundStarted = null
     runCatching { context.stopService(Intent(context, ScreenCaptureService::class.java)) }
   }
 
@@ -3335,15 +3338,28 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
     // stuck showing "sharing" when nothing is really being captured.
     screenShareEnabled = true
     ChatGizaApplication.breadcrumb(context, "launcher: got RESULT_OK from system dialog")
-    runCatching {
-      val manager = mediaProjectionManager ?: error("Screen sharing isn't available on this device")
-      ChatGizaApplication.breadcrumb(context, "launcher: calling startForegroundService")
-      ContextCompat.startForegroundService(context, Intent(context, ScreenCaptureService::class.java))
-      ChatGizaApplication.breadcrumb(context, "launcher: calling getMediaProjection")
-      val projection = manager.getMediaProjection(result.resultCode, data)
-        ?: error("Screen sharing isn't available on this device")
-      ChatGizaApplication.breadcrumb(context, "launcher: got projection, registering callback")
-      projection.registerCallback(object : MediaProjection.Callback() {
+    // Breadcrumbs from a real device crash proved startForegroundService()
+    // is async: getMediaProjection() used to run on the very next line and
+    // threw immediately (service not foreground yet), and by the time the
+    // failure handler's stopService() call landed, the service's own
+    // onCreate() had already been queued and went on to call
+    // startForeground() successfully on a service already told to stop --
+    // which the OS then killed the whole process over. Now this actually
+    // waits for ScreenCaptureService to confirm startForeground() before
+    // touching getMediaProjection() at all.
+    coroutineScope.launch {
+      runCatching {
+        val manager = mediaProjectionManager ?: error("Screen sharing isn't available on this device")
+        val foregroundStarted = CompletableDeferred<Unit>()
+        ScreenCaptureService.onForegroundStarted = { foregroundStarted.complete(Unit) }
+        ChatGizaApplication.breadcrumb(context, "launcher: calling startForegroundService")
+        ContextCompat.startForegroundService(context, Intent(context, ScreenCaptureService::class.java))
+        withTimeout(4000) { foregroundStarted.await() }
+        ChatGizaApplication.breadcrumb(context, "launcher: service confirmed foreground, calling getMediaProjection")
+        val projection = manager.getMediaProjection(result.resultCode, data)
+          ?: error("Screen sharing isn't available on this device")
+        ChatGizaApplication.breadcrumb(context, "launcher: got projection, registering callback")
+        projection.registerCallback(object : MediaProjection.Callback() {
         // Fires when the system revokes the projection itself (screen off,
         // user stops it from the system share-notification, etc.) -- not
         // just when stopScreenShare() asks for it, so this has to release
@@ -3378,10 +3394,11 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
         micMuted = !micMuted
         controller.setMicMuted(micMuted)
       }
-    }.onFailure {
-      ChatGizaApplication.breadcrumb(context, "launcher: setup FAILED: $it")
-      stopScreenShare()
-      controller.reportCameraError(it.message ?: "Screen sharing failed to start")
+      }.onFailure {
+        ChatGizaApplication.breadcrumb(context, "launcher: setup FAILED: $it")
+        stopScreenShare()
+        controller.reportCameraError(it.message ?: "Screen sharing failed to start")
+      }
     }
   }
 
