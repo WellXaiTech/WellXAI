@@ -274,6 +274,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     private set
   var newTaskPrompt by mutableStateOf("")
   var newTaskRunAt by mutableStateOf("")
+  var newTaskCategory by mutableStateOf("Chat")
 
   var billingSummary by mutableStateOf<BillingSummary?>(null)
     private set
@@ -1986,6 +1987,10 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     newTaskRunAt = value
   }
 
+  fun onNewTaskCategoryChange(value: String) {
+    newTaskCategory = value
+  }
+
   // addScheduledTask/scheduleReminderFromChat/deleteScheduledTask all re-fetch
   // the list from the server right before writing, instead of mutating
   // whatever `scheduledTasks` already held in memory. ScheduledTaskWorker
@@ -2003,9 +2008,10 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     val runAt = newTaskRunAt.trim().replaceFirst(" ", "T")
     if (prompt.isEmpty() || runAt.isEmpty()) return
     val token = tokenStore.getToken() ?: return
-    val newTask = ApiScheduledTask(UUID.randomUUID().toString(), prompt, runAt, false)
+    val newTask = ApiScheduledTask(UUID.randomUUID().toString(), prompt, runAt, false, category = newTaskCategory)
     newTaskPrompt = ""
     newTaskRunAt = ""
+    newTaskCategory = "Chat"
     viewModelScope.launch {
       val current = when (val result = ChatGizaApi.getScheduled(token)) {
         is ApiResult.Success -> result.value
