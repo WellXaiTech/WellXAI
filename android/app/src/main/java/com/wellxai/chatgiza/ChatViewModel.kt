@@ -2063,6 +2063,22 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     }
   }
 
+  // Real pause, not cosmetic -- ScheduledTaskWorker skips any task with
+  // paused=true, so this actually stops it from firing instead of just
+  // hiding it from a filtered view.
+  fun toggleTaskPaused(id: String) {
+    val token = tokenStore.getToken() ?: return
+    viewModelScope.launch {
+      val current = when (val result = ChatGizaApi.getScheduled(token)) {
+        is ApiResult.Success -> result.value
+        is ApiResult.Failure -> scheduledTasks
+      }
+      val updated = current.map { if (it.id == id) it.copy(paused = !it.paused) else it }
+      scheduledTasks = updated
+      ChatGizaApi.saveScheduled(token, updated)
+    }
+  }
+
   fun loadBilling() {
     val token = tokenStore.getToken() ?: return
     loadingBilling = true

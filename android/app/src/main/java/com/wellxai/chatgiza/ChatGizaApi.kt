@@ -181,7 +181,7 @@ data class SettingsData(
 
 data class ApiProject(val id: String, val name: String, val createdAt: Long?)
 
-data class ApiScheduledTask(val id: String, val prompt: String, val runAt: String, val fired: Boolean)
+data class ApiScheduledTask(val id: String, val prompt: String, val runAt: String, val fired: Boolean, val paused: Boolean = false)
 
 data class ApiAd(val id: String, val headline: String, val subtitle: String, val imageUrl: String, val linkUrl: String)
 
@@ -1398,7 +1398,8 @@ object ChatGizaApi {
             id = t.getString("id"),
             prompt = t.optString("prompt", ""),
             runAt = t.optString("runAt", ""),
-            fired = t.optBoolean("fired", false)
+            fired = t.optBoolean("fired", false),
+            paused = t.optBoolean("paused", false)
           )
         })
       }
@@ -1417,6 +1418,7 @@ object ChatGizaApi {
             .put("prompt", t.prompt)
             .put("runAt", t.runAt)
             .put("fired", t.fired)
+            .put("paused", t.paused)
         )
       }
       val payload = JSONObject().put("tasks", arr).toString().toRequestBody(JSON)
