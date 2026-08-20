@@ -12472,17 +12472,19 @@ private fun AppLanguageScreen(viewModel: ChatViewModel) {
       .background(Color.White)
       .padding(horizontal = 20.dp)
   ) {
-    Row(
-      modifier = Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 16.dp),
-      verticalAlignment = Alignment.CenterVertically
-    ) {
-      IconButton(onClick = { viewModel.closeAppLanguage() }, modifier = Modifier.size(28.dp)) {
-        Icon(Icons.Filled.ArrowBackIosNew, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(28.dp))
+    Box(modifier = Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 16.dp)) {
+      Text(
+        "Language",
+        color = Color.Black,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.align(Alignment.Center)
+      )
+      IconButton(onClick = { viewModel.closeAppLanguage() }, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
+        Icon(Icons.Filled.ArrowBackIosNew, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(24.dp))
       }
-      Spacer(modifier = Modifier.width(18.dp))
-      Text("App Language", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-      IconButton(onClick = { searchOpen = !searchOpen }, modifier = Modifier.size(28.dp)) {
-        Icon(Icons.Outlined.Search, contentDescription = "Search languages", tint = Color.Black, modifier = Modifier.size(28.dp))
+      IconButton(onClick = { searchOpen = !searchOpen }, modifier = Modifier.align(Alignment.CenterEnd).size(28.dp)) {
+        Icon(Icons.Outlined.Search, contentDescription = "Search languages", tint = Color.Black, modifier = Modifier.size(24.dp))
       }
     }
 
@@ -12499,28 +12501,6 @@ private fun AppLanguageScreen(viewModel: ChatViewModel) {
     }
 
     if (query.isBlank()) {
-      Card(
-        modifier = Modifier.fillMaxWidth().height(120.dp),
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
-      ) {
-        Row(modifier = Modifier.fillMaxSize().padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-          Box(
-            modifier = Modifier.size(48.dp).clip(CircleShape).background(Color.Black),
-            contentAlignment = Alignment.Center
-          ) {
-            Text("G", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-          }
-          Spacer(modifier = Modifier.width(16.dp))
-          Column {
-            Text("Current Language", color = Color(0xFFA8A8A8), fontSize = 13.sp)
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(currentLabel, color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-          }
-        }
-      }
-
-      Spacer(modifier = Modifier.height(20.dp))
       Text("Suggested", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
       LanguageRow("System Default", selected = isAutoDetect) { applyLocale(null) }
       suggested.forEach { e ->
