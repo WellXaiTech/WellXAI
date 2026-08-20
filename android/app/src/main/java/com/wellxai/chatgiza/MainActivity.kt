@@ -3401,7 +3401,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           lastSentAt = now
           runCatching { controller.sendFrame(screenImageToJpeg(image, width, height)) }
         }
-        image.close()
+        runCatching { image.close() }
       }, Handler(Looper.getMainLooper()))
 
       virtualDisplay = projection.createVirtualDisplay(
