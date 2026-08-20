@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, Manrope, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import AuthProvider from "@/components/AuthProvider";
 import GoogleOneTap from "@/components/GoogleOneTap";
@@ -10,6 +10,14 @@ import "./globals.css";
 // Fonts. Swap this import if real Ginto font files become available.
 const bodyFont = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta-sans",
+  subsets: ["latin"],
+});
+
+// Second option in the Font picker (Settings > General > Chat font) --
+// loaded here (not per-component) since next/font/google fonts have to be
+// instantiated at module scope to generate their CSS variable correctly.
+const manropeFont = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin"],
 });
 
@@ -89,7 +97,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${bodyFont.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${bodyFont.variable} ${manropeFont.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
@@ -99,7 +107,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }}
         />
         <Script id="theme-init" strategy="beforeInteractive">
-          {`(function(){try{var t=localStorage.getItem("chatgiza:theme");if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t);}var f=localStorage.getItem("chatgiza:font-size");if(f==="small"||f==="medium"||f==="large"||f==="xlarge"){document.documentElement.setAttribute("data-font-size",f);}var a=localStorage.getItem("chatgiza:assistant-color");if(a==="warm"){document.documentElement.setAttribute("data-assistant-color",a);}var c=localStorage.getItem("chatgiza:contrast");if(c==="medium"||c==="increased"){document.documentElement.setAttribute("data-contrast",c);}}catch(e){}})();`}
+          {`(function(){try{var t=localStorage.getItem("chatgiza:theme");if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t);}var f=localStorage.getItem("chatgiza:font-size");if(f==="small"||f==="medium"||f==="large"||f==="xlarge"){document.documentElement.setAttribute("data-font-size",f);}var a=localStorage.getItem("chatgiza:assistant-color");if(a==="warm"){document.documentElement.setAttribute("data-assistant-color",a);}var c=localStorage.getItem("chatgiza:contrast");if(c==="medium"||c==="increased"){document.documentElement.setAttribute("data-contrast",c);}var cf=localStorage.getItem("chatgiza:chat-font");if(cf==="manrope"||cf==="system"){document.documentElement.setAttribute("data-chat-font",cf);}}catch(e){}})();`}
         </Script>
         {/* Standard, well-known SW registration idiom (register on window load) —
             PWA analysis tools like PWABuilder/Lighthouse specifically look for

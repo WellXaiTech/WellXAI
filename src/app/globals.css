@@ -159,11 +159,15 @@ textarea:-webkit-autofill:focus {
   --chat-font-size: 19px;
   --chat-line-height: 1.85;
 }
-:root[data-chat-font="serif"] {
-  --chat-font-family: Georgia, "Times New Roman", Times, serif;
+/* "plus_jakarta_sans" (the default -- see chatFont.ts) is left unset here
+   on purpose: --chat-font-family already inherits the page's own
+   --font-sans above, which IS Plus Jakarta Sans, so nothing needs
+   overriding for that option. */
+:root[data-chat-font="manrope"] {
+  --chat-font-family: var(--font-manrope), Arial, Helvetica, sans-serif;
 }
-:root[data-chat-font="mono"] {
-  --chat-font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+:root[data-chat-font="system"] {
+  --chat-font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 :root[data-contrast="medium"] {
