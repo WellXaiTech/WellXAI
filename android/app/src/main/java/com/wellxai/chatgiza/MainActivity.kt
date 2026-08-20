@@ -1561,15 +1561,19 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
             Text("Continue with Google", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
           }
 
-          Spacer(modifier = Modifier.height(16.dp))
+          Spacer(modifier = Modifier.height(12.dp))
 
-          Text(
-            "Log in another way",
-            color = Color.Black.copy(alpha = 0.5f),
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.clickable { viewModel.showFullSignInForm() }
-          )
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .clip(RoundedCornerShape(50))
+              .border(1.dp, Color.Black.copy(alpha = 0.15f), RoundedCornerShape(50))
+              .clickable { viewModel.showFullSignInForm() }
+              .padding(vertical = 14.dp),
+            horizontalArrangement = Arrangement.Center
+          ) {
+            Text("Log in another way", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+          }
           Spacer(modifier = Modifier.height(8.dp))
         }
       } else {
