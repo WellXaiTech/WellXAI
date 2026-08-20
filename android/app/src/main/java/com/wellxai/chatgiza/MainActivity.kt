@@ -4128,115 +4128,6 @@ private fun SpinningIcon(painter: androidx.compose.ui.graphics.painter.Painter, 
   )
 }
 
-// Fixed cumulus-style puff layout (position/size/opacity as fractions of
-// the card) -- a hand-placed cluster reads as one coherent cloud shape
-// instead of random circles.
-private data class VoiceCloudPuff(val cx: Float, val cy: Float, val scale: Float, val alpha: Float, val phase: Float)
-
-private val VOICE_CLOUD_PUFFS = listOf(
-  VoiceCloudPuff(0.30f, 0.55f, 0.85f, 0.55f, 0f),
-  VoiceCloudPuff(0.42f, 0.35f, 1.05f, 0.6f, 45f),
-  VoiceCloudPuff(0.55f, 0.50f, 0.95f, 0.5f, 90f),
-  VoiceCloudPuff(0.66f, 0.32f, 0.8f, 0.55f, 135f),
-  VoiceCloudPuff(0.75f, 0.55f, 0.9f, 0.45f, 180f),
-  VoiceCloudPuff(0.48f, 0.68f, 0.75f, 0.4f, 225f),
-  VoiceCloudPuff(0.62f, 0.68f, 0.7f, 0.4f, 270f)
-)
-
-@Composable
-private fun VoiceGradientCard(option: VoiceOption, selected: Boolean, onClick: () -> Unit) {
-  val cardWidth = 188.dp
-  val cardHeight = 64.dp
-  val density = LocalDensity.current
-  val widthPx = with(density) { cardWidth.toPx() }
-  val heightPx = with(density) { cardHeight.toPx() }
-
-  val isOrin = option.name == "Orin"
-
-  // Reference design: the selected card becomes a full pill and its
-  // background reads as a soft, shifting cloud of color rather than a flat
-  // swatch or a crisp geometric gradient -- three overlapping, independently
-  // drifting radial blobs (each a color fading to transparent) blended over
-  // a dark base, instead of one hard-edged brush.
-  val infiniteTransition = rememberInfiniteTransition(label = "voiceCloud")
-  val t by infiniteTransition.animateFloat(
-    initialValue = 0f,
-    targetValue = 360f,
-    animationSpec = infiniteRepeatable(animation = tween(5000, easing = LinearEasing), repeatMode = RepeatMode.Restart),
-    label = "voiceCloudAngle"
-  )
-  val blobSize = with(density) { (kotlin.math.max(widthPx, heightPx) * 0.95f).toDp() }
-  val midColor = lerp(option.gradientStart, option.gradientEnd, 0.5f)
-
-  Box(
-    modifier = Modifier
-      .width(cardWidth)
-      .height(cardHeight)
-      .clip(RoundedCornerShape(percent = 50))
-      .clickable(onClick = onClick)
-  ) {
-    if (selected) {
-      Box(modifier = Modifier.matchParentSize().background(Color.White))
-      listOf(
-        Triple(option.gradientStart, 0f, 0.85f),
-        Triple(option.gradientEnd, 130f, 0.8f),
-        Triple(midColor, 250f, 0.7f)
-      ).forEach { (color, phase, alpha) ->
-        val rad = Math.toRadians((t + phase).toDouble())
-        val ox = (kotlin.math.cos(rad) * widthPx * 0.2f).toFloat()
-        val oy = (kotlin.math.sin(rad) * heightPx * 0.35f).toFloat()
-        Box(
-          modifier = Modifier
-            .size(blobSize)
-            .align(Alignment.Center)
-            .offset { IntOffset(ox.roundToInt(), oy.roundToInt()) }
-            .graphicsLayer { this.alpha = alpha }
-            .background(Brush.radialGradient(listOf(color, Color.Transparent)))
-        )
-      }
-      // A cluster of small white puffs drifting over the color blobs --
-      // reads as an actual fluffy cloud silhouette (per the literal cloud
-      // photo reference) rather than smooth color blur alone.
-      VOICE_CLOUD_PUFFS.forEach { puff ->
-        val rad = Math.toRadians((t * 0.6f + puff.phase).toDouble())
-        val ox = (kotlin.math.cos(rad) * widthPx * 0.03f).toFloat()
-        val oy = (kotlin.math.sin(rad) * heightPx * 0.06f).toFloat()
-        val puffSizeDp = with(density) { (heightPx * puff.scale).toDp() }
-        Box(
-          modifier = Modifier
-            .size(puffSizeDp)
-            .offset {
-              IntOffset(
-                (widthPx * puff.cx - heightPx * puff.scale / 2f + ox).roundToInt(),
-                (heightPx * puff.cy - heightPx * puff.scale / 2f + oy).roundToInt()
-              )
-            }
-            .graphicsLayer { this.alpha = puff.alpha }
-            .background(Brush.radialGradient(listOf(Color.Black, Color.Black.copy(alpha = 0f))))
-        )
-      }
-    } else {
-      Box(modifier = Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.08f)))
-    }
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(option.name, color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-        // Orin specifically, not every voice -- next to the name rather than
-        // a corner badge.
-        if (isOrin) {
-          Spacer(modifier = Modifier.width(6.dp))
-          OrinVoiceBadge(
-            tint = Color.Black.copy(alpha = if (selected) 0.9f else 0.5f),
-            modifier = Modifier.size(15.dp)
-          )
-        }
-      }
-      Spacer(modifier = Modifier.height(2.dp))
-      Text(option.description, color = Color.Black.copy(alpha = if (selected) 0.85f else 0.55f), fontSize = 12.sp)
-    }
-  }
-}
-
 private data class PersonalityOption(
   val id: String,
   val label: String,
@@ -4315,7 +4206,43 @@ private fun LiveVoiceSettingsSheet(
   onOutputDeviceChange: (String) -> Unit,
   onDismiss: () -> Unit
 ) {
+  var showVoiceLibrary by remember { mutableStateOf(false) }
   ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color.White) {
+    if (showVoiceLibrary) {
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(horizontal = 20.dp)
+          .padding(bottom = 32.dp)
+      ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+          IconButton(onClick = { showVoiceLibrary = false }, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
+            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(28.dp))
+          }
+          Text(
+            "Voice Library",
+            color = Color.Black,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.Center)
+          )
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+          VOICE_OPTIONS.forEach { option ->
+            VoiceCard(
+              option = option,
+              selected = selectedVoiceId == option.id,
+              onClick = {
+                onVoiceChange(option.id)
+                onPreviewVoice(option.id)
+              }
+            )
+          }
+        }
+      }
+      return@ModalBottomSheet
+    }
     Column(
       modifier = Modifier
         .fillMaxWidth()
@@ -4335,17 +4262,28 @@ private fun LiveVoiceSettingsSheet(
       Text("Voice", color = Color.Black.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
       Spacer(modifier = Modifier.height(10.dp))
       Row(
-        modifier = Modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(16.dp))
+          .background(Color(0xFFF4F4F4))
+          .clickable { showVoiceLibrary = true }
+          .padding(horizontal = 16.dp, vertical = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
       ) {
-        VOICE_OPTIONS.forEach { option ->
-          VoiceGradientCard(
-            option = option,
-            selected = selectedVoiceId == option.id,
-            onClick = {
-              onVoiceChange(option.id)
-              onPreviewVoice(option.id)
-            }
+        Text("Voice", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Text(
+            VOICE_OPTIONS.find { it.id == selectedVoiceId }?.name ?: selectedVoiceId,
+            color = Color.Black.copy(alpha = 0.5f),
+            fontSize = 15.sp
+          )
+          Spacer(modifier = Modifier.width(4.dp))
+          Icon(
+            Icons.Filled.ChevronRight,
+            contentDescription = null,
+            tint = Color.Black.copy(alpha = 0.4f),
+            modifier = Modifier.size(20.dp)
           )
         }
       }
