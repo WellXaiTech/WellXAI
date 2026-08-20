@@ -5732,7 +5732,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             Text(
               "Unlink my Registered Email",
               color = Color.Black,
-              fontWeight = FontWeight.Bold,
+              fontWeight = FontWeight.Normal,
               fontSize = 16.sp,
               textAlign = TextAlign.Center,
               modifier = Modifier
@@ -5740,11 +5740,10 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
                 .clickable { showEmailOptions = false; confirmUnlinkEmail = true }
                 .padding(vertical = 16.dp)
             )
-            HorizontalDivider(color = Color.Black.copy(alpha = 0.08f))
             Text(
               "Change my Registered Email",
               color = Color.Black,
-              fontWeight = FontWeight.Bold,
+              fontWeight = FontWeight.Normal,
               fontSize = 16.sp,
               textAlign = TextAlign.Center,
               modifier = Modifier
