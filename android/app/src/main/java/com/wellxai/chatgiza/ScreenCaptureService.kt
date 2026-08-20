@@ -66,13 +66,15 @@ class ScreenCaptureService : Service() {
 
   override fun onCreate() {
     super.onCreate()
+    ChatGizaApplication.breadcrumb(this, "service: onCreate entered")
     instance = this
     startedAt = System.currentTimeMillis()
-    // The OS kills the whole app process (ForegroundServiceDidNotStartInTimeException)
-    // if startForeground() isn't the very next thing called after the service
-    // starts -- everything not strictly required before it (the channel is)
-    // used to run first here, and that delay was enough to blow the window.
-    // Now only channel creation precedes it; the receiver registers after.
+    // Reordering so startForeground() runs first here (only channel creation
+    // precedes it) turned out NOT to be enough on its own -- the crash still
+    // happens on device. Breadcrumbs below exist to see whether onCreate()
+    // itself is what's slow/failing, since ForegroundServiceDidNotStartInTimeException
+    // is thrown remotely by the OS and its own stack trace never shows any
+    // of our code, only the system's generic delivery frames.
     runCatching {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -80,12 +82,15 @@ class ScreenCaptureService : Service() {
           NotificationChannel(CHANNEL_ID, "Screen sharing", NotificationManager.IMPORTANCE_LOW)
         )
       }
+      ChatGizaApplication.breadcrumb(this, "service: channel ready, calling startForeground")
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
         startForeground(NOTIFICATION_ID, buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
       } else {
         startForeground(NOTIFICATION_ID, buildNotification())
       }
+      ChatGizaApplication.breadcrumb(this, "service: startForeground returned OK")
     }.onFailure {
+      ChatGizaApplication.breadcrumb(this, "service: startForeground FAILED: ${it}")
       stopSelf()
       return
     }
@@ -98,6 +103,7 @@ class ScreenCaptureService : Service() {
       }
       ContextCompat.registerReceiver(this, r, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
     }
+    ChatGizaApplication.breadcrumb(this, "service: onCreate finished")
   }
 
   /** Called from LiveVisionScreen whenever mic-mute state changes so the
