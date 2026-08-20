@@ -4274,7 +4274,7 @@ private fun PersonalityPill(option: PersonalityOption, selected: Boolean, onClic
     verticalAlignment = Alignment.CenterVertically,
     modifier = Modifier
       .clip(RoundedCornerShape(28.dp))
-      .background(if (selected) Color.Black else Color.Black.copy(alpha = 0.08f))
+      .background(if (selected) Color(0xFFFF9C2D) else Color.Black.copy(alpha = 0.08f))
       .clickable(onClick = onClick)
       .padding(horizontal = 18.dp, vertical = 14.dp)
   ) {
@@ -4382,7 +4382,7 @@ private fun LiveVoiceSettingsSheet(
             modifier = Modifier
               .weight(1f)
               .clip(RoundedCornerShape(20.dp))
-              .background(if (selected) Color.Black else Color.Transparent)
+              .background(if (selected) Color(0xFFFF9C2D) else Color.Transparent)
               .clickable { onActivationModeChange(id) }
               .padding(vertical = 10.dp),
             contentAlignment = Alignment.Center
@@ -4430,7 +4430,7 @@ private fun LiveVoiceSettingsSheet(
             modifier = Modifier
               .weight(1f)
               .clip(RoundedCornerShape(20.dp))
-              .background(if (selected) Color.Black else Color.Transparent)
+              .background(if (selected) Color(0xFFFF9C2D) else Color.Transparent)
               .clickable { onOutputDeviceChange(id) }
               .padding(vertical = 10.dp)
           ) {
