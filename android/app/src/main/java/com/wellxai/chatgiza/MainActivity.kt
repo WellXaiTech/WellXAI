@@ -13278,20 +13278,22 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
           }
         }
       }
-      if (viewModel.scheduledTasks.isNotEmpty()) {
+      // Always shown, even with zero tasks total -- switching to Pending/
+      // Paused/Completed must always land on either real items or an
+      // explicit "no X tasks yet" line, never silently show nothing.
+      item {
+        Text("Your tasks ($taskFilter)", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+      }
+      if (filteredTasks.isEmpty()) {
         item {
-          Text("Your tasks ($taskFilter)", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+          Text(
+            "No $taskFilter tasks yet.",
+            color = colorScheme.onBackground.copy(alpha = 0.4f),
+            fontSize = 13.sp,
+            modifier = Modifier.padding(vertical = 4.dp)
+          )
         }
-        if (filteredTasks.isEmpty()) {
-          item {
-            Text(
-              "No $taskFilter tasks.",
-              color = colorScheme.onBackground.copy(alpha = 0.4f),
-              fontSize = 13.sp,
-              modifier = Modifier.padding(vertical = 4.dp)
-            )
-          }
-        }
+      } else {
         items(filteredTasks, key = { it.id }) { task ->
           Column(
             modifier = Modifier
@@ -13366,7 +13368,7 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
       }
 
       item {
-        Spacer(modifier = Modifier.height(if (viewModel.scheduledTasks.isNotEmpty()) 8.dp else 0.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Text("Get started", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
       }
       items(visibleTemplates) { task ->
