@@ -2409,10 +2409,6 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
       }
     )
   }
-
-  if (viewModel.quickSpeakActive) {
-    QuickSpeakOverlay(viewModel)
-  }
   }
 }
 
@@ -3184,7 +3180,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
               .height(44.dp)
               .clip(RoundedCornerShape(22.dp))
               .background(Color.Black)
-              .clickable { tapHaptic(); viewModel.openQuickSpeak() }
+              .clickable { tapHaptic(); viewModel.openLiveVision() }
               .padding(horizontal = 14.dp),
             verticalAlignment = Alignment.CenterVertically
           ) {
@@ -3242,108 +3238,6 @@ private fun QuickActionChip(icon: @Composable () -> Unit, label: String, onClick
 // ui/media/ChatGiZaMediaScreen.kt (own file/package) -- these helpers
 // (composer, create sheet, comment sheet, video player) stay here and are
 // exposed as internal so that file can call them.
-
-// "Speak" from the composer -- a minimal voice-only overlay reusing the
-// same RealtimeVisionController as full Live Vision, but with no camera
-// and no navigation away from whatever screen the user was already on.
-// Audio starts the instant mic permission is available, matching Live
-// Vision's own DisposableEffect(hasMicPermission) pattern, just without
-// any of the camera/personality/settings UI around it.
-@Composable
-private fun QuickSpeakOverlay(viewModel: ChatViewModel) {
-  BackHandler { viewModel.closeQuickSpeak() }
-  val context = LocalContext.current
-  val coroutineScope = rememberCoroutineScope()
-  val tokenStore = remember { TokenStore(context.applicationContext) }
-  val controller = remember { RealtimeVisionController(context, tokenStore, coroutineScope) }
-
-  var hasMicPermission by remember {
-    mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
-  }
-  val micPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-    hasMicPermission = granted
-    if (!granted) viewModel.closeQuickSpeak()
-  }
-  LaunchedEffect(Unit) {
-    if (!hasMicPermission) micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-  }
-
-  DisposableEffect(hasMicPermission) {
-    if (hasMicPermission) {
-      controller.start(
-        language = viewModel.profileData.language,
-        voice = viewModel.selectedVoiceId,
-        pushToTalk = viewModel.voiceActivationMode == "push_to_talk",
-        outputDevice = viewModel.voiceOutputDevice,
-        speed = viewModel.voiceSpeed,
-        personality = viewModel.personality,
-        ageConfirmed = viewModel.ageConfirmed18Plus,
-        customPersonalityText = viewModel.customPersonalityText
-      )
-    }
-    onDispose { controller.stop() }
-  }
-
-  Dialog(
-    onDismissRequest = { viewModel.closeQuickSpeak() },
-    properties = DialogProperties(usePlatformDefaultWidth = false)
-  ) {
-    EdgeToEdgeDialogWindow()
-    Box(
-      modifier = Modifier
-        .fillMaxSize()
-        .background(Color.Black)
-        .statusBarsPadding()
-        .navigationBarsPadding()
-    ) {
-      IconButton(
-        onClick = { viewModel.closeQuickSpeak() },
-        modifier = Modifier.align(Alignment.TopStart).padding(16.dp).size(36.dp)
-      ) {
-        Icon(Icons.Filled.Close, contentDescription = "Stop", tint = Color.White)
-      }
-
-      Column(
-        modifier = Modifier.align(Alignment.Center),
-        horizontalAlignment = Alignment.CenterHorizontally
-      ) {
-        val pulse by rememberInfiniteTransition(label = "quickSpeakPulse").animateFloat(
-          initialValue = if (controller.isAiSpeaking) 1.08f else 1f,
-          targetValue = if (controller.isAiSpeaking) 1.2f else 1.06f,
-          animationSpec = infiniteRepeatable(animation = tween(700, easing = FastOutSlowInEasing), repeatMode = RepeatMode.Reverse),
-          label = "quickSpeakPulseValue"
-        )
-        Box(
-          modifier = Modifier
-            .size(96.dp)
-            .graphicsLayer { scaleX = pulse; scaleY = pulse }
-            .clip(CircleShape)
-            .background(Color.White),
-          contentAlignment = Alignment.Center
-        ) {
-          Icon(
-            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_waveform_speak),
-            contentDescription = null,
-            tint = Color.Black,
-            modifier = Modifier.size(32.dp)
-          )
-        }
-        Spacer(modifier = Modifier.height(20.dp))
-        Text(
-          text = when {
-            controller.errorMessage != null -> controller.errorMessage ?: ""
-            controller.connectionState == RealtimeVisionController.ConnectionState.Connecting -> "Connecting..."
-            controller.isAiSpeaking -> "GiZa is speaking..."
-            else -> "Listening..."
-          },
-          color = Color.White,
-          fontSize = 16.sp,
-          fontWeight = FontWeight.Medium
-        )
-      }
-    }
-  }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -3622,6 +3516,19 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
       // AI-speaking state, regardless of what controller.errorMessage says.
       val isConnecting = controller.connectionState == RealtimeVisionController.ConnectionState.Connecting
       val statusText = if (controller.isAiSpeaking) "ChatGiZa is speaking…" else "Go ahead"
+
+      // Pulses a haptic while the session is still connecting so the wait
+      // is felt, not just read -- stops the instant connectionState leaves
+      // Connecting since this effect is keyed on isConnecting itself.
+      val connectingHaptic = LocalHapticFeedback.current
+      LaunchedEffect(isConnecting) {
+        if (isConnecting && viewModel.hapticsEnabled) {
+          while (true) {
+            connectingHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            delay(600)
+          }
+        }
+      }
 
       // No back arrow here by design — exiting Live Vision happens via the
       // system back gesture (BackHandler above) or the Stop button below.

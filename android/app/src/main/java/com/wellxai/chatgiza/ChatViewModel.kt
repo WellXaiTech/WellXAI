@@ -153,22 +153,6 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     screen = AppScreen.Chat
   }
 
-  // "Speak" in the composer -- starts a voice-only conversation as an
-  // overlay on top of whatever screen is showing, instead of navigating to
-  // the full Live Vision screen (camera, personality picker, etc). A plain
-  // boolean rather than an AppScreen since it's meant to sit over the
-  // current screen, not replace it.
-  var quickSpeakActive by mutableStateOf(false)
-    private set
-
-  fun openQuickSpeak() {
-    quickSpeakActive = true
-  }
-
-  fun closeQuickSpeak() {
-    quickSpeakActive = false
-  }
-
   /** All of the signed-in user's conversations, most-recent-first. */
   var conversations by mutableStateOf<List<ApiConversation>>(emptyList())
     private set
