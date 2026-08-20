@@ -12476,7 +12476,8 @@ private fun AppLanguageScreen(viewModel: ChatViewModel) {
       .background(Color.White)
       .padding(horizontal = 20.dp)
   ) {
-    Box(modifier = Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 16.dp)) {
+    Spacer(modifier = Modifier.height(12.dp))
+    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
       Text(
         "Language",
         color = Color.Black,
@@ -12491,6 +12492,20 @@ private fun AppLanguageScreen(viewModel: ChatViewModel) {
         Icon(Icons.Outlined.Search, contentDescription = "Search languages", tint = Color.Black, modifier = Modifier.size(24.dp))
       }
     }
+
+    // Same hero shape as About Us -- a centered icon standing in for the
+    // logo there -- instead of jumping straight from the title into the
+    // list.
+    Spacer(modifier = Modifier.height(28.dp))
+    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+      Icon(
+        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_world),
+        contentDescription = null,
+        tint = Color.Black,
+        modifier = Modifier.size(56.dp)
+      )
+    }
+    Spacer(modifier = Modifier.height(28.dp))
 
     if (searchOpen) {
       OutlinedTextField(
