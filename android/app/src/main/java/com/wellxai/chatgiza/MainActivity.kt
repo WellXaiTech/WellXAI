@@ -10507,14 +10507,23 @@ private fun TrustedDevicesScreen(viewModel: ChatViewModel) {
           val isCurrent = device.id == viewModel.trustedDevicesCurrentId
           Column(modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(
-                if (device.platform == "mobile") Icons.Outlined.Smartphone else Icons.Outlined.Computer,
-                contentDescription = null,
-                tint = Color.Black.copy(alpha = 0.8f),
-                modifier = Modifier.size(20.dp)
-              )
+              if (device.platform == "mobile") {
+                Icon(
+                  painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mobile_outline),
+                  contentDescription = null,
+                  tint = Color.Black.copy(alpha = 0.8f),
+                  modifier = Modifier.size(20.dp)
+                )
+              } else {
+                Icon(
+                  Icons.Outlined.Computer,
+                  contentDescription = null,
+                  tint = Color.Black.copy(alpha = 0.8f),
+                  modifier = Modifier.size(20.dp)
+                )
+              }
               Spacer(Modifier.width(10.dp))
-              Text(device.device, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+              Text(device.device, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Normal, modifier = Modifier.weight(1f))
               if (isCurrent) {
                 Text(
                   "This device",
@@ -10534,9 +10543,9 @@ private fun TrustedDevicesScreen(viewModel: ChatViewModel) {
               }
             }
             Spacer(Modifier.height(6.dp))
-            Text("Time: ${formatSessionTime(device.signedInAt)}", color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp)
-            Text("Login Location: ${device.location}", color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp)
-            Text("IP Address: ${device.ip}", color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp)
+            Text("Time: ${formatSessionTime(device.signedInAt)}", color = Color.Black.copy(alpha = 0.3f), fontSize = 11.sp)
+            Text("Login Location: ${device.location}", color = Color.Black.copy(alpha = 0.3f), fontSize = 11.sp)
+            Text("IP Address: ${device.ip}", color = Color.Black.copy(alpha = 0.3f), fontSize = 11.sp)
           }
           HorizontalDivider(color = Color.Black.copy(alpha = 0.06f))
         }
