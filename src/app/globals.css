@@ -140,7 +140,7 @@ textarea:-webkit-autofill:focus {
 
 :root {
   --chat-font-size: 16px;
-  --chat-line-height: 1.75;
+  --chat-line-height: 1.85;
   --chat-font-family: inherit;
 }
 :root[data-font-size="small"] {
@@ -149,7 +149,7 @@ textarea:-webkit-autofill:focus {
 }
 :root[data-font-size="medium"] {
   --chat-font-size: 16px;
-  --chat-line-height: 1.75;
+  --chat-line-height: 1.85;
 }
 :root[data-font-size="large"] {
   --chat-font-size: 17px;
