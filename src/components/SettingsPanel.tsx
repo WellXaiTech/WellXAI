@@ -984,14 +984,14 @@ export default function SettingsPanel({
 
               <div className="flex items-center justify-between gap-4 border-b border-border py-3">
                 <h3 className="text-sm font-semibold">Chat font</h3>
-                <div className="w-40 shrink-0">
+                <div className="w-48 shrink-0">
                   <SettingsSelect
                     value={chatFont}
                     onChange={onChatFontChange}
                     options={[
-                      { value: "default" as ChatFont, label: "Default" },
-                      { value: "serif" as ChatFont, label: "Serif" },
-                      { value: "mono" as ChatFont, label: "Monospace" },
+                      { value: "plus_jakarta_sans" as ChatFont, label: "Plus Jakarta Sans" },
+                      { value: "manrope" as ChatFont, label: "Manrope" },
+                      { value: "system" as ChatFont, label: "System Default" },
                     ]}
                   />
                 </div>
