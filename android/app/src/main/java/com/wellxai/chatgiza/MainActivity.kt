@@ -44,11 +44,15 @@ import androidx.core.os.LocaleListCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
@@ -537,12 +541,38 @@ class MainActivity : ComponentActivity() {
             }
             return@Surface
           }
-          // Crossfade instead of the instant swap this used to be -- every
-          // screen routed through here (Appearance/"Color Theme" included)
-          // used to pop in/out with no transition at all, which read as an
-          // abrupt flash rather than a normal back navigation. tween(220)
-          // matches Android's own default activity-transition length.
-          Crossfade(targetState = viewModel.screen, animationSpec = tween(220), label = "screenCrossfade") { screen ->
+          // Fade instead of the instant swap this used to be -- every screen
+          // routed through here (Appearance/"Color Theme" included) used to
+          // pop in/out with no transition at all, which read as an abrupt
+          // flash rather than a normal back navigation. tween(220) matches
+          // Android's own default activity-transition length.
+          //
+          // BUT: any row inside User Center (Mobile, Email, Nickname,
+          // Language, Color Theme, ...) leaves ProfileHub via
+          // leaveAccountTabsFor(), which sets screen to the sub-screen AND
+          // closes AccountTabsDialog (now a plain root-level composable,
+          // not a real Dialog -- see its own comment) in the very same call.
+          // The dialog vanishes on the SAME frame the fade starts, so an
+          // animated transition OUT of ProfileHub has nothing left covering
+          // it for the ~200ms the fade is still running, and ProfileHub's
+          // "Unlock GiZa Pro Perks" banner flashes through underneath. The
+          // reverse direction (sub-screen closing back to ProfileHub) has no
+          // such gap -- returnToAccountTabsIfPending() reopens the dialog
+          // BEFORE screen changes, so it's already covering the animation
+          // from frame one. So: only transitions LEAVING ProfileHub skip
+          // the animation; everything else, including the return trip, still
+          // fades normally.
+          AnimatedContent(
+            targetState = viewModel.screen,
+            transitionSpec = {
+              if (initialState is AppScreen.ProfileHub) {
+                EnterTransition.None togetherWith ExitTransition.None
+              } else {
+                fadeIn(tween(220)) togetherWith fadeOut(tween(180))
+              }
+            },
+            label = "screenTransition"
+          ) { screen ->
           when (screen) {
             is AppScreen.Loading -> LoadingScreen()
             is AppScreen.SignedOut -> SignedOutScreen(
