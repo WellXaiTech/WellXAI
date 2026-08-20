@@ -3,7 +3,23 @@ import { kv } from "@vercel/kv";
 import { auth } from "@/auth";
 import { getMobileUserId } from "@/lib/mobileAuth";
 
-type ScheduledTask = { id: string; title: string; prompt: string; runAt: string; fired: boolean; paused: boolean; category: string };
+type ScheduledTask = {
+  id: string;
+  title: string;
+  prompt: string;
+  runAt: string;
+  fired: boolean;
+  paused: boolean;
+  category: string;
+  // Real lifecycle: tapping a "Get started" template creates a task marked
+  // pending=true immediately (removes it from that list right away); only
+  // fully finishing it (e.g. the preference wizard) clears pending and
+  // marks fired=true. recurrenceDays > 0 means completing it resets runAt
+  // to now + recurrenceDays and fired back to false, so it comes back
+  // after that many days instead of staying done forever.
+  pending: boolean;
+  recurrenceDays: number;
+};
 
 function scheduledKey(userId: string) {
   return `chatgiza:scheduled:${userId}`;
@@ -51,6 +67,8 @@ export async function PUT(req: NextRequest) {
       fired: typeof t.fired === "boolean" ? t.fired : false,
       paused: typeof t.paused === "boolean" ? t.paused : false,
       category: typeof t.category === "string" && t.category ? t.category : "Chat",
+      pending: typeof t.pending === "boolean" ? t.pending : false,
+      recurrenceDays: typeof t.recurrenceDays === "number" ? t.recurrenceDays : 0,
     }))
     .filter((t: ScheduledTask) => t.id);
 

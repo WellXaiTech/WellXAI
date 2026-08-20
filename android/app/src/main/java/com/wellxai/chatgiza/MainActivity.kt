@@ -13076,13 +13076,17 @@ private fun ProjectsScreen(viewModel: ChatViewModel) {
 // each description already says in words ("Every Saturday" -> WEEKLY /
 // Saturdays) -- not a claim that tapping one creates a real recurring job,
 // see the comment on ScheduledScreen for what tapping these actually does.
-private data class MockTaskCard(val emoji: String, val title: String, val description: String, val cadence: String, val detail: String)
+// recurrenceDays > 0 is what makes tapping one real -- see the comment on
+// ChatViewModel.startTaskExample for the full pending -> done -> reappears
+// lifecycle this drives. 0 means it completes on tap (or wizard finish)
+// and stays gone, no scheduled comeback.
+private data class MockTaskCard(val emoji: String, val title: String, val description: String, val cadence: String, val detail: String, val recurrenceDays: Int)
 
 private val MOCK_TASK_CARDS = listOf(
-  MockTaskCard("📖", "Weekend long read", "Every Saturday, find me an exceptional recent long read based on my interests", "WEEKLY", "Saturdays · Morning"),
-  MockTaskCard("🏷️", "Sale monitor", "Watch my favorite stores and let me know when there's a good sale", "ONGOING", "Continuous watch"),
-  MockTaskCard("🎵", "Concert alerts", "Let me know when artists I like announce concerts near me", "ONGOING", "Continuous watch"),
-  MockTaskCard("🎉", "Weekend ideas", "Every Thursday, send me ideas for things to do nearby this weekend", "WEEKLY", "Thursdays · Morning")
+  MockTaskCard("📖", "Weekend long read", "Every Saturday, find me an exceptional recent long read based on my interests", "WEEKLY", "Saturdays · Morning", recurrenceDays = 7),
+  MockTaskCard("🏷️", "Sale monitor", "Watch my favorite stores and let me know when there's a good sale", "ONGOING", "Continuous watch", recurrenceDays = 0),
+  MockTaskCard("🎵", "Concert alerts", "Let me know when artists I like announce concerts near me", "ONGOING", "Continuous watch", recurrenceDays = 0),
+  MockTaskCard("🎉", "Weekend ideas", "Every Thursday, send me ideas for things to do nearby this weekend", "WEEKLY", "Thursdays · Morning", recurrenceDays = 7)
 )
 
 private fun Modifier.dashedBorder(color: Color, cornerRadius: Dp, strokeWidth: Dp = 1.dp): Modifier = this.drawBehind {
@@ -13117,15 +13121,32 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
   // CreateScheduledTaskSheet), stored server-side -- not a cosmetic label.
   var categoryFilter by remember { mutableStateOf("Chat") }
   var categoryMenuOpen by remember { mutableStateOf(false) }
-  // Active = not fired, not paused (upcoming). Paused = real -- toggled
-  // per-task below, and ScheduledTaskWorker actually skips paused tasks
-  // instead of just hiding them from this filter. Completed = fired.
+  // Active = not fired, not paused, not pending (upcoming). Paused = real --
+  // toggled per-task below, and ScheduledTaskWorker actually skips paused
+  // tasks instead of just hiding them from this filter. Pending = a
+  // template was tapped but its wizard hasn't been finished yet (see
+  // ChatViewModel.startTaskExample/dismissPreferenceWizard). Completed =
+  // fired.
   val filteredTasks = remember(viewModel.scheduledTasks, taskFilter, categoryFilter) {
     viewModel.scheduledTasks.filter { task ->
       task.category == categoryFilter && when (taskFilter) {
-        "Paused" -> task.paused && !task.fired
+        "Paused" -> task.paused && !task.fired && !task.pending
+        "Pending" -> task.pending && !task.fired
         "Completed" -> task.fired
-        else -> !task.fired && !task.paused
+        else -> !task.fired && !task.paused && !task.pending
+      }
+    }
+  }
+  // A template stays hidden from "Get started" while there's a real task
+  // behind it that's either pending (tapped, not finished) or scheduled in
+  // the future (a recurring one on its cooldown) -- once that cooldown
+  // passes, runAtMillis <= now and it naturally reappears with no extra
+  // bookkeeping needed.
+  val visibleTemplates = remember(viewModel.scheduledTasks, categoryFilter) {
+    MOCK_TASK_CARDS.filter { template ->
+      viewModel.scheduledTasks.none { t ->
+        t.title == template.title && t.category == categoryFilter &&
+          (t.pending || (!t.fired && !t.paused && (runAtEpochMillis(t.runAt) ?: 0L) > System.currentTimeMillis()))
       }
     }
   }
@@ -13186,7 +13207,7 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
             FilterIconCustom(tint = colorScheme.onBackground, modifier = Modifier.size(18.dp))
           }
           DropdownMenu(expanded = filterMenuOpen, onDismissRequest = { filterMenuOpen = false }) {
-            listOf("Active", "Paused", "Completed").forEach { option ->
+            listOf("Active", "Pending", "Paused", "Completed").forEach { option ->
               val selected = taskFilter == option
               DropdownMenuItem(
                 text = { Text(option, fontWeight = FontWeight.Bold) },
@@ -13271,10 +13292,11 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
               Text(
                 when {
                   task.fired -> "COMPLETED"
+                  task.pending -> "PENDING"
                   task.paused -> "PAUSED"
                   else -> "SCHEDULED"
                 },
-                color = if (!task.fired && !task.paused) Color(0xFF4C8DFF) else colorScheme.onBackground.copy(alpha = 0.5f),
+                color = if (!task.fired && !task.paused && !task.pending) Color(0xFF4C8DFF) else colorScheme.onBackground.copy(alpha = 0.5f),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 0.5.sp,
@@ -13309,7 +13331,15 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
                 fontSize = 12.sp,
                 modifier = Modifier.weight(1f)
               )
-              if (!task.fired) {
+              if (task.pending) {
+                Text(
+                  "Continue",
+                  color = colorScheme.onBackground,
+                  fontSize = 14.sp,
+                  fontWeight = FontWeight.Bold,
+                  modifier = Modifier.clickable { viewModel.resumeWizardForTask(task) }
+                )
+              } else if (!task.fired) {
                 Text(
                   if (task.paused) "Resume" else "Pause",
                   color = colorScheme.onBackground,
@@ -13327,12 +13357,11 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
         Spacer(modifier = Modifier.height(if (viewModel.scheduledTasks.isNotEmpty()) 8.dp else 0.dp))
         Text("Get started", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
       }
-      items(MOCK_TASK_CARDS) { task ->
-        // Unchanged from before: sends the prompt as a one-off chat
-        // message right away, and opens that task's preference wizard
-        // when it has one -- this pre-existing flow is separate from
-        // real scheduling, kept as-is rather than folded into the
-        // create-task sheet below.
+      items(visibleTemplates) { task ->
+        // Sends the prompt as a one-off chat message right away AND
+        // creates a real, pending task behind it -- see the comment on
+        // ChatViewModel.startTaskExample for the full lifecycle. This
+        // card itself disappears from here the instant it's tapped.
         val keyboardController = LocalSoftwareKeyboardController.current
         val focusManager = LocalFocusManager.current
         Column(
@@ -13344,7 +13373,13 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
               focusManager.clearFocus()
               keyboardController?.hide()
               viewModel.closeScheduled()
-              viewModel.startTaskExample(task.title, task.description, hasWizard = task.title in TASK_WIZARDS)
+              viewModel.startTaskExample(
+                task.title,
+                task.description,
+                hasWizard = task.title in TASK_WIZARDS,
+                category = categoryFilter,
+                recurrenceDays = task.recurrenceDays
+              )
             }
             .padding(16.dp)
         ) {
@@ -13407,6 +13442,13 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
     )
   }
 }
+
+// Same parsing as ScheduledTaskWorker's own runAtMillis -- used here just
+// to compare a recurring template's rolled-forward runAt against now, to
+// decide whether it's still on cooldown or should reappear in Get started.
+private fun runAtEpochMillis(runAt: String): Long? = runCatching {
+  java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US).parse(runAt)?.time
+}.getOrNull()
 
 // yyyy-MM-dd'T'HH:mm (naive local time, no seconds/timezone -- same format
 // the AI's own [[REMINDER_START]] marker and the web client use) into

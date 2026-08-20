@@ -181,7 +181,17 @@ data class SettingsData(
 
 data class ApiProject(val id: String, val name: String, val createdAt: Long?)
 
-data class ApiScheduledTask(val id: String, val prompt: String, val runAt: String, val fired: Boolean, val paused: Boolean = false, val category: String = "Chat", val title: String = "")
+data class ApiScheduledTask(
+  val id: String,
+  val prompt: String,
+  val runAt: String,
+  val fired: Boolean,
+  val paused: Boolean = false,
+  val category: String = "Chat",
+  val title: String = "",
+  val pending: Boolean = false,
+  val recurrenceDays: Int = 0
+)
 
 data class ApiAd(val id: String, val headline: String, val subtitle: String, val imageUrl: String, val linkUrl: String)
 
@@ -1401,7 +1411,9 @@ object ChatGizaApi {
             fired = t.optBoolean("fired", false),
             paused = t.optBoolean("paused", false),
             category = t.optString("category", "Chat"),
-            title = t.optString("title", "")
+            title = t.optString("title", ""),
+            pending = t.optBoolean("pending", false),
+            recurrenceDays = t.optInt("recurrenceDays", 0)
           )
         })
       }
@@ -1423,6 +1435,8 @@ object ChatGizaApi {
             .put("paused", t.paused)
             .put("category", t.category)
             .put("title", t.title)
+            .put("pending", t.pending)
+            .put("recurrenceDays", t.recurrenceDays)
         )
       }
       val payload = JSONObject().put("tasks", arr).toString().toRequestBody(JSON)
