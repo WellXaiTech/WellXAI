@@ -108,6 +108,20 @@ jobs:
           set -o pipefail
           ./gradlew assembleRelease --no-daemon --max-workers=1 --stacktrace 2>&1 | tee -a /tmp/build.log
 
+      # Temporary — passkeys keep failing with "[50152] RP ID cannot be
+      # validated" on device even though the domain-side Digital Asset
+      # Links statement (public/.well-known/assetlinks.json) looks correct.
+      # The signing key was rotated at some point (see the note at the top
+      # of this file); this confirms whether the fingerprint actually baked
+      # into the current release APK still matches what assetlinks.json
+      # declares, or whether assetlinks.json is stale from before rotation.
+      - name: Print release APK signing certificate fingerprint
+        working-directory: android
+        shell: bash
+        run: |
+          set -o pipefail
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs app/build/outputs/apk/release/app-release.apk 2>&1 | tee -a /tmp/build.log
+
       # Job logs require a GitHub login to view, even on a public repo —
       # this surfaces the failure as a check-run annotation instead, which
       # IS readable without auth via the public API, so the actual error is
