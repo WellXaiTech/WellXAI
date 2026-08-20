@@ -1053,9 +1053,33 @@ object ChatGizaApi {
     }
   }
 
-  suspend fun updateEmail(token: String, email: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
+  // Step 1 of a two-step change (see ChangeEmailScreen) -- stages the
+  // requested address server-side and emails a 6-digit code to IT, proving
+  // this account actually controls that inbox before confirmEmailChange
+  // below is allowed to write it as the account's contact email.
+  suspend fun requestEmailChange(token: String, email: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
     try {
       val payload = JSONObject().put("email", email).toString().toRequestBody(JSON)
+      val request = Request.Builder()
+        .url("$BASE_URL/api/profile/email")
+        .header("Authorization", "Bearer $token")
+        .post(payload)
+        .build()
+      client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          val text = response.body?.string().orEmpty()
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        ApiResult.Success(Unit)
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  suspend fun confirmEmailChange(token: String, code: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
+    try {
+      val payload = JSONObject().put("code", code).toString().toRequestBody(JSON)
       val request = Request.Builder()
         .url("$BASE_URL/api/profile/email")
         .header("Authorization", "Bearer $token")
