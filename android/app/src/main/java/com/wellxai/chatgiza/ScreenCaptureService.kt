@@ -66,21 +66,14 @@ class ScreenCaptureService : Service() {
 
   override fun onCreate() {
     super.onCreate()
-    // A failure anywhere here (e.g. the OS refusing a background
-    // foreground-service start) used to crash the whole app process --
-    // caught and the service just stops itself instead, and Share Screen
-    // reports a plain error via the same channel as camera errors.
+    instance = this
+    startedAt = System.currentTimeMillis()
+    // The OS kills the whole app process (ForegroundServiceDidNotStartInTimeException)
+    // if startForeground() isn't the very next thing called after the service
+    // starts -- everything not strictly required before it (the channel is)
+    // used to run first here, and that delay was enough to blow the window.
+    // Now only channel creation precedes it; the receiver registers after.
     runCatching {
-      instance = this
-      startedAt = System.currentTimeMillis()
-      val r = ScreenShareActionReceiver()
-      receiver = r
-      val filter = IntentFilter().apply {
-        addAction(ScreenShareActionReceiver.ACTION_HANGUP)
-        addAction(ScreenShareActionReceiver.ACTION_MUTE)
-      }
-      ContextCompat.registerReceiver(this, r, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
-
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(
@@ -92,7 +85,19 @@ class ScreenCaptureService : Service() {
       } else {
         startForeground(NOTIFICATION_ID, buildNotification())
       }
-    }.onFailure { stopSelf() }
+    }.onFailure {
+      stopSelf()
+      return
+    }
+    runCatching {
+      val r = ScreenShareActionReceiver()
+      receiver = r
+      val filter = IntentFilter().apply {
+        addAction(ScreenShareActionReceiver.ACTION_HANGUP)
+        addAction(ScreenShareActionReceiver.ACTION_MUTE)
+      }
+      ContextCompat.registerReceiver(this, r, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+    }
   }
 
   /** Called from LiveVisionScreen whenever mic-mute state changes so the
