@@ -61,7 +61,7 @@ class ScheduledTaskWorker(context: Context, params: WorkerParameters) : Coroutin
     val tasks = (tasksResult as? ApiResult.Success)?.value ?: return Result.success()
 
     val nowMs = System.currentTimeMillis()
-    val dueTasks = tasks.filter { !it.fired && (runAtMillis(it.runAt) ?: Long.MAX_VALUE) <= nowMs }
+    val dueTasks = tasks.filter { !it.fired && !it.paused && (runAtMillis(it.runAt) ?: Long.MAX_VALUE) <= nowMs }
     if (dueTasks.isEmpty()) return Result.success()
 
     val profileData = (ChatGizaApi.getProfile(token) as? ApiResult.Success)?.value

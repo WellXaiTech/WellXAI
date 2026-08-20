@@ -13086,6 +13086,20 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeScheduled() }
   var showCreateSheet by remember { mutableStateOf(false) }
   var confirmDeleteTask by remember { mutableStateOf<ApiScheduledTask?>(null) }
+  var taskFilter by remember { mutableStateOf("Active") }
+  var filterMenuOpen by remember { mutableStateOf(false) }
+  // Active = not fired, not paused (upcoming). Paused = real -- toggled
+  // per-task below, and ScheduledTaskWorker actually skips paused tasks
+  // instead of just hiding them from this filter. Completed = fired.
+  val filteredTasks = remember(viewModel.scheduledTasks, taskFilter) {
+    viewModel.scheduledTasks.filter { task ->
+      when (taskFilter) {
+        "Paused" -> task.paused && !task.fired
+        "Completed" -> task.fired
+        else -> !task.fired && !task.paused
+      }
+    }
+  }
 
   Scaffold(
     containerColor = Color.Transparent,
@@ -13112,16 +13126,25 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
             )
           }
         }
-        IconButton(
-          onClick = { viewModel.loadScheduled() },
-          modifier = Modifier.size(44.dp).clip(CircleShape).background(colorScheme.onBackground.copy(alpha = 0.08f))
-        ) {
-          Icon(
-            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_refresh_thin),
-            contentDescription = "Refresh",
-            tint = colorScheme.onBackground,
-            modifier = Modifier.size(18.dp)
-          )
+        Box {
+          IconButton(
+            onClick = { filterMenuOpen = true },
+            modifier = Modifier.size(44.dp).clip(CircleShape).background(colorScheme.onBackground.copy(alpha = 0.08f))
+          ) {
+            FilterIconCustom(tint = colorScheme.onBackground, modifier = Modifier.size(18.dp))
+          }
+          DropdownMenu(expanded = filterMenuOpen, onDismissRequest = { filterMenuOpen = false }) {
+            listOf("Active", "Paused", "Completed").forEach { option ->
+              DropdownMenuItem(
+                text = { Text(option, fontWeight = FontWeight.Bold) },
+                trailingIcon = { if (taskFilter == option) Icon(Icons.Filled.Check, contentDescription = null) },
+                onClick = {
+                  taskFilter = option
+                  filterMenuOpen = false
+                }
+              )
+            }
+          }
         }
       }
     },
@@ -13166,9 +13189,19 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
       }
       if (viewModel.scheduledTasks.isNotEmpty()) {
         item {
-          Text("Your tasks", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+          Text("Your tasks ($taskFilter)", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         }
-        items(viewModel.scheduledTasks, key = { it.id }) { task ->
+        if (filteredTasks.isEmpty()) {
+          item {
+            Text(
+              "No $taskFilter tasks.",
+              color = colorScheme.onBackground.copy(alpha = 0.4f),
+              fontSize = 13.sp,
+              modifier = Modifier.padding(vertical = 4.dp)
+            )
+          }
+        }
+        items(filteredTasks, key = { it.id }) { task ->
           Row(
             modifier = Modifier
               .fillMaxWidth()
@@ -13181,10 +13214,23 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
               Text(task.prompt, color = colorScheme.onBackground, fontSize = 15.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
               Spacer(modifier = Modifier.height(4.dp))
               Text(
-                if (task.fired) "Sent • ${formatScheduledRunAt(task.runAt)}" else formatScheduledRunAt(task.runAt),
+                when {
+                  task.fired -> "Sent • ${formatScheduledRunAt(task.runAt)}"
+                  task.paused -> "Paused • ${formatScheduledRunAt(task.runAt)}"
+                  else -> formatScheduledRunAt(task.runAt)
+                },
                 color = colorScheme.onBackground.copy(alpha = 0.5f),
                 fontSize = 12.sp
               )
+            }
+            if (!task.fired) {
+              IconButton(onClick = { viewModel.toggleTaskPaused(task.id) }) {
+                Icon(
+                  if (task.paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+                  contentDescription = if (task.paused) "Resume" else "Pause",
+                  tint = colorScheme.onBackground.copy(alpha = 0.5f)
+                )
+              }
             }
             IconButton(onClick = { confirmDeleteTask = task }) {
               DeleteIcon(tint = colorScheme.onBackground.copy(alpha = 0.5f))
