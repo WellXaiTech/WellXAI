@@ -275,7 +275,17 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var newTaskPrompt by mutableStateOf("")
   var newTaskRunAt by mutableStateOf("")
   var newTaskCategory by mutableStateOf("Chat")
-  var newTaskTitle by mutableStateOf("")
+  // Attachment for the task being created (calendar photo, PDF page, or a
+  // plain-text file) -- see ApiScheduledTask's own attachment* fields for
+  // how this is persisted and later folded back into the prompt when the
+  // task fires. Only one of newTaskAttachmentText/newTaskAttachmentImageDataUrl
+  // is ever non-blank at a time.
+  var newTaskAttachmentName by mutableStateOf("")
+    private set
+  var newTaskAttachmentText by mutableStateOf("")
+    private set
+  var newTaskAttachmentImageDataUrl by mutableStateOf("")
+    private set
 
   var billingSummary by mutableStateOf<BillingSummary?>(null)
     private set
@@ -2074,8 +2084,22 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     newTaskCategory = value
   }
 
-  fun onNewTaskTitleChange(value: String) {
-    newTaskTitle = value
+  fun setNewTaskAttachmentImage(name: String, dataUrl: String) {
+    newTaskAttachmentName = name
+    newTaskAttachmentImageDataUrl = dataUrl
+    newTaskAttachmentText = ""
+  }
+
+  fun setNewTaskAttachmentText(name: String, text: String) {
+    newTaskAttachmentName = name
+    newTaskAttachmentText = text
+    newTaskAttachmentImageDataUrl = ""
+  }
+
+  fun clearNewTaskAttachment() {
+    newTaskAttachmentName = ""
+    newTaskAttachmentText = ""
+    newTaskAttachmentImageDataUrl = ""
   }
 
   // addScheduledTask/scheduleReminderFromChat/deleteScheduledTask all re-fetch
@@ -2095,15 +2119,24 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     val runAt = newTaskRunAt.trim().replaceFirst(" ", "T")
     if (prompt.isEmpty() || runAt.isEmpty()) return
     val token = tokenStore.getToken() ?: return
-    // Falls back to the start of the prompt itself when no title was
-    // typed, instead of a placeholder like "Task" -- still real text the
-    // user wrote, just not artificially split into two fields.
-    val title = newTaskTitle.trim().ifBlank { prompt.take(48) }
-    val newTask = ApiScheduledTask(UUID.randomUUID().toString(), prompt, runAt, false, category = newTaskCategory, title = title)
+    // No separate title field in the sheet -- the list row just falls back
+    // to the start of the prompt itself (see task.title.ifBlank{task.prompt}
+    // in ScheduledScreen), so this only ever needs the prompt.
+    val newTask = ApiScheduledTask(
+      UUID.randomUUID().toString(),
+      prompt,
+      runAt,
+      false,
+      category = newTaskCategory,
+      title = prompt.take(48),
+      attachmentName = newTaskAttachmentName,
+      attachmentText = newTaskAttachmentText,
+      attachmentImageDataUrl = newTaskAttachmentImageDataUrl
+    )
     newTaskPrompt = ""
     newTaskRunAt = ""
     newTaskCategory = "Chat"
-    newTaskTitle = ""
+    clearNewTaskAttachment()
     viewModelScope.launch {
       val current = when (val result = ChatGizaApi.getScheduled(token)) {
         is ApiResult.Success -> result.value

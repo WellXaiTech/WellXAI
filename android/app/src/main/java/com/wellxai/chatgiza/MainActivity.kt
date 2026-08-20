@@ -13561,6 +13561,71 @@ private fun CreateScheduledTaskSheet(viewModel: ChatViewModel, onDismiss: () -> 
     if (hasMicPermission) startListening() else micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
   }
 
+  // Camera/Gallery/Files, back in this sheet per the user's own annotated
+  // screenshot -- embedded inside the prompt field itself alongside mic
+  // (bottom-right corner) rather than as a separate row, this time. A
+  // photo of a calendar or a PDF attached here still rides along with the
+  // task and gets folded into the prompt when it fires (see
+  // ApiScheduledTask's attachment* fields and ScheduledTaskWorker).
+  val scope = rememberCoroutineScope()
+  var attachMenuOpen by remember { mutableStateOf(false) }
+  var attachError by remember { mutableStateOf(false) }
+  var attachBusy by remember { mutableStateOf(false) }
+
+  fun attachPickedImage(uri: Uri) {
+    attachError = false
+    attachBusy = true
+    scope.launch {
+      val dataUrl = withContext(Dispatchers.IO) { uriToPostImageDataUrl(context, uri) }
+      attachBusy = false
+      if (dataUrl != null) {
+        viewModel.setNewTaskAttachmentImage("Photo", dataUrl)
+      } else {
+        attachError = true
+      }
+    }
+  }
+
+  fun attachPickedFile(uri: Uri) {
+    attachError = false
+    attachBusy = true
+    scope.launch {
+      val name = withContext(Dispatchers.IO) { queryFileDisplayName(context, uri) }
+      val file = withContext(Dispatchers.IO) { readAttachedFile(context, uri, name) }
+      attachBusy = false
+      when {
+        file?.text != null -> viewModel.setNewTaskAttachmentText(file.name, file.text)
+        file?.imageDataUrls?.isNotEmpty() == true -> viewModel.setNewTaskAttachmentImage(file.name, file.imageDataUrls.first())
+        else -> attachError = true
+      }
+    }
+  }
+
+  val galleryPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    if (uri != null) attachPickedImage(uri)
+  }
+  val taskFilePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    if (uri != null) attachPickedFile(uri)
+  }
+  var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+  val cameraCapture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+    val uri = pendingCameraUri
+    if (success && uri != null) attachPickedImage(uri)
+  }
+  var hasCameraPermission by remember {
+    mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
+  }
+  fun launchCamera() {
+    val photoFile = File(context.cacheDir, "task_camera_${System.currentTimeMillis()}.jpg")
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
+    pendingCameraUri = uri
+    cameraCapture.launch(uri)
+  }
+  val cameraPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+    hasCameraPermission = granted
+    if (granted) launchCamera()
+  }
+
   fun openPicker() {
     val cal = java.util.Calendar.getInstance()
     android.app.DatePickerDialog(
@@ -13591,15 +13656,6 @@ private fun CreateScheduledTaskSheet(viewModel: ChatViewModel, onDismiss: () -> 
     ) {
       Text("New task", color = colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(16.dp))
-      OutlinedTextField(
-        value = viewModel.newTaskTitle,
-        onValueChange = { if (it.length <= 60) viewModel.onNewTaskTitleChange(it) },
-        modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text("Title (optional)") },
-        singleLine = true,
-        shape = RoundedCornerShape(16.dp)
-      )
-      Spacer(modifier = Modifier.height(10.dp))
       if (isListening) {
         Row(
           verticalAlignment = Alignment.CenterVertically,
@@ -13633,62 +13689,121 @@ private fun CreateScheduledTaskSheet(viewModel: ChatViewModel, onDismiss: () -> 
           }
         }
       } else {
-        OutlinedTextField(
-          value = viewModel.newTaskPrompt,
-          onValueChange = { viewModel.onNewTaskPromptChange(it) },
-          modifier = Modifier.fillMaxWidth(),
-          placeholder = { Text("What should ChatGiZa do?") },
-          minLines = 2,
-          maxLines = 4,
-          shape = RoundedCornerShape(16.dp)
-        )
+        // Attach + mic sit inside the field itself, bottom-right corner,
+        // instead of a separate row below it -- extra bottom padding on
+        // the text reserves room so typed text never runs under the icons.
+        Box {
+          OutlinedTextField(
+            value = viewModel.newTaskPrompt,
+            onValueChange = { viewModel.onNewTaskPromptChange(it) },
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text("What should ChatGiZa do?") },
+            minLines = 3,
+            maxLines = 6,
+            shape = RoundedCornerShape(16.dp)
+          )
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 10.dp, bottom = 10.dp)
+          ) {
+            Box {
+              Box(
+                modifier = Modifier
+                  .size(30.dp)
+                  .clip(CircleShape)
+                  .background(colorScheme.onBackground.copy(alpha = 0.08f))
+                  .clickable { attachMenuOpen = true },
+                contentAlignment = Alignment.Center
+              ) {
+                Icon(Icons.Filled.Add, contentDescription = "Attach", tint = colorScheme.onBackground, modifier = Modifier.size(15.dp))
+              }
+              DropdownMenu(
+                expanded = attachMenuOpen,
+                onDismissRequest = { attachMenuOpen = false },
+                shape = RoundedCornerShape(32.dp),
+                containerColor = Color.White,
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A2A2A))
+              ) {
+                AttachMenuRow(
+                  iconRes = R.drawable.ic_camera,
+                  label = "Camera",
+                  onClick = {
+                    attachMenuOpen = false
+                    if (hasCameraPermission) launchCamera() else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                  }
+                )
+                AttachMenuRow(
+                  iconRes = R.drawable.ic_gallery,
+                  label = "Gallery",
+                  onClick = { attachMenuOpen = false; galleryPicker.launch("image/*") }
+                )
+                AttachMenuRow(
+                  iconRes = R.drawable.ic_files,
+                  label = "Files (PDF, text)",
+                  onClick = { attachMenuOpen = false; taskFilePicker.launch("*/*") }
+                )
+              }
+            }
+            Spacer(modifier = Modifier.width(6.dp))
+            Box(
+              modifier = Modifier
+                .size(30.dp)
+                .clip(CircleShape)
+                .background(colorScheme.onBackground.copy(alpha = 0.08f))
+                .clickable { launchSpeech() },
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(
+                painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mic),
+                contentDescription = "Voice input",
+                tint = colorScheme.onBackground,
+                modifier = Modifier.size(15.dp)
+              )
+            }
+            if (attachBusy) {
+              Spacer(modifier = Modifier.width(8.dp))
+              CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = colorScheme.onBackground.copy(alpha = 0.5f))
+            }
+          }
+        }
       }
-      Spacer(modifier = Modifier.height(8.dp))
-      // Photo/PDF attachments were deliberately pulled back out of this
-      // sheet -- most tasks aren't calendar-related, so a generic attach
-      // button here was a mismatched place for it. That flow now lives in
-      // the main chat instead: upload there, the AI reads it and offers to
-      // create a task itself (see scheduleReminderFromChat's attachment
-      // params and the calendar-recognition instructions in ai.ts's
-      // CAPABILITIES_PROMPT) rather than every screen needing its own
-      // upload UI. Voice dictation stays here since it's about this one
-      // field, not a general upload.
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
+      val attachmentName = viewModel.newTaskAttachmentName
+      if (attachmentName.isNotBlank()) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
           modifier = Modifier
-            .size(34.dp)
-            .clip(CircleShape)
-            .background(if (isListening) Color.Black else colorScheme.onBackground.copy(alpha = 0.08f))
-            .clickable { launchSpeech() },
-          contentAlignment = Alignment.Center
+            .clip(RoundedCornerShape(12.dp))
+            .background(colorScheme.onBackground.copy(alpha = 0.08f))
+            .padding(horizontal = 10.dp, vertical = 8.dp)
         ) {
           Icon(
-            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mic),
-            contentDescription = "Voice input",
-            tint = if (isListening) Color.White else colorScheme.onBackground,
-            modifier = Modifier.size(16.dp)
+            if (viewModel.newTaskAttachmentImageDataUrl.isNotBlank()) Icons.Outlined.Image else Icons.Outlined.Description,
+            contentDescription = null,
+            tint = colorScheme.onBackground,
+            modifier = Modifier.size(18.dp)
+          )
+          Spacer(modifier = Modifier.width(8.dp))
+          Text(
+            attachmentName,
+            color = colorScheme.onBackground,
+            fontSize = 13.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.widthIn(max = 200.dp)
+          )
+          Spacer(modifier = Modifier.width(8.dp))
+          Icon(
+            Icons.Outlined.Close,
+            contentDescription = "Remove attachment",
+            tint = colorScheme.onBackground.copy(alpha = 0.6f),
+            modifier = Modifier.size(16.dp).clickable { viewModel.clearNewTaskAttachment() }
           )
         }
       }
-      Spacer(modifier = Modifier.height(12.dp))
-      Row(
-        modifier = Modifier
-          .clip(RoundedCornerShape(50))
-          .background(colorScheme.onBackground.copy(alpha = 0.06f))
-          .padding(4.dp)
-      ) {
-        listOf("Chat", "Work").forEach { option ->
-          val selected = viewModel.newTaskCategory == option
-          Box(
-            modifier = Modifier
-              .clip(RoundedCornerShape(50))
-              .background(if (selected) colorScheme.onBackground.copy(alpha = 0.12f) else Color.Transparent)
-              .clickable { viewModel.onNewTaskCategoryChange(option) }
-              .padding(horizontal = 18.dp, vertical = 8.dp)
-          ) {
-            Text(option, color = colorScheme.onBackground, fontSize = 13.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
-          }
-        }
+      if (attachError) {
+        Spacer(modifier = Modifier.height(6.dp))
+        Text("Couldn't attach that — try a different file", color = Color(0xFFCC3333), fontSize = 12.sp)
       }
       Spacer(modifier = Modifier.height(12.dp))
       Row(
