@@ -23,7 +23,7 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Base64
 import android.widget.Toast
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -393,7 +393,13 @@ import kotlinx.coroutines.withContext
 private const val GOOGLE_WEB_CLIENT_ID =
   "302265706031-imsr5i7elinlqkdcjfv3sgicuul1m39g.apps.googleusercontent.com"
 
-class MainActivity : ComponentActivity() {
+// AppCompatActivity instead of the plain ComponentActivity this used to be
+// -- needed for supportFragmentManager, which MaterialDatePicker/
+// MaterialTimePicker (DialogFragments) require to show. Matches the app's
+// own manifest theme (AppTheme already descends from Theme.AppCompat), so
+// this doesn't change how the window itself is themed; Compose's setContent
+// works the same on any ComponentActivity subclass.
+class MainActivity : AppCompatActivity() {
   private lateinit var viewModel: ChatViewModel
 
   // Screenshot -> "Share a link to chat?" prompt (Android 14+ only).
@@ -13626,28 +13632,50 @@ private fun CreateScheduledTaskSheet(viewModel: ChatViewModel, onDismiss: () -> 
     if (granted) launchCamera()
   }
 
+  // MaterialDatePicker/MaterialTimePicker instead of the plain framework
+  // DatePickerDialog/TimePickerDialog -- those render very differently
+  // across Android versions and OEM skins (old Holo-style spinners on
+  // some), where this gives the same modern rounded calendar-grid dialog
+  // everywhere, matching the reference the user sent.
   fun openPicker() {
-    val cal = java.util.Calendar.getInstance()
-    android.app.DatePickerDialog(
-      context,
-      { _, year, month, day ->
-        android.app.TimePickerDialog(
-          context,
-          { _, hour, minute ->
-            cal.set(year, month, day, hour, minute, 0)
-            pickedMillis = cal.timeInMillis
-            val runAtFormat = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
-            viewModel.onNewTaskRunAtChange(runAtFormat.format(cal.time))
-          },
-          cal.get(java.util.Calendar.HOUR_OF_DAY),
-          cal.get(java.util.Calendar.MINUTE),
-          true
-        ).show()
-      },
-      cal.get(java.util.Calendar.YEAR),
-      cal.get(java.util.Calendar.MONTH),
-      cal.get(java.util.Calendar.DAY_OF_MONTH)
-    ).apply { datePicker.minDate = System.currentTimeMillis() - 1000 }.show()
+    val activity = context as? androidx.fragment.app.FragmentActivity ?: return
+    val now = java.util.Calendar.getInstance()
+    val datePicker = com.google.android.material.datepicker.MaterialDatePicker.Builder.datePicker()
+      .setTitleText("Select date")
+      .setSelection(com.google.android.material.datepicker.MaterialDatePicker.todayInUtcMilliseconds())
+      .setCalendarConstraints(
+        com.google.android.material.datepicker.CalendarConstraints.Builder()
+          .setValidator(com.google.android.material.datepicker.DateValidatorPointForward.now())
+          .build()
+      )
+      .build()
+    datePicker.addOnPositiveButtonClickListener { utcMillis ->
+      // MaterialDatePicker's selection is UTC midnight of the chosen day --
+      // read the calendar fields back out in UTC (not the device's local
+      // zone) so the day itself doesn't shift, then combine with the time
+      // picked next using the device's own local Calendar as before.
+      val utcCal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
+      utcCal.timeInMillis = utcMillis
+      val year = utcCal.get(java.util.Calendar.YEAR)
+      val month = utcCal.get(java.util.Calendar.MONTH)
+      val day = utcCal.get(java.util.Calendar.DAY_OF_MONTH)
+
+      val timePicker = com.google.android.material.timepicker.MaterialTimePicker.Builder()
+        .setTimeFormat(com.google.android.material.timepicker.TimeFormat.CLOCK_24H)
+        .setHour(now.get(java.util.Calendar.HOUR_OF_DAY))
+        .setMinute(now.get(java.util.Calendar.MINUTE))
+        .setTitleText("Select time")
+        .build()
+      timePicker.addOnPositiveButtonClickListener {
+        val cal = java.util.Calendar.getInstance()
+        cal.set(year, month, day, timePicker.hour, timePicker.minute, 0)
+        pickedMillis = cal.timeInMillis
+        val runAtFormat = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
+        viewModel.onNewTaskRunAtChange(runAtFormat.format(cal.time))
+      }
+      timePicker.show(activity.supportFragmentManager, "task_time_picker")
+    }
+    datePicker.show(activity.supportFragmentManager, "task_date_picker")
   }
 
   ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = colorScheme.background) {

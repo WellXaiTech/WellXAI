@@ -6,8 +6,15 @@
          this is pinned light rather than left as the DayNight default —
          otherwise the native window background behind/around the content
          (visible as a flash on launch, and behind the status bar before the
-         page paints) is dark, not the app's actual white. -->
-    <style name="AppTheme" parent="Theme.AppCompat.NoActionBar">
+         page paints) is dark, not the app's actual white.
+
+         Theme.MaterialComponents (not plain Theme.AppCompat) is required
+         here: MaterialDatePicker/MaterialTimePicker (used for the New
+         task sheet's date/time pickers) throw at runtime otherwise
+         ("...requires Theme.MaterialComponents (or descendant)"). It's a
+         drop-in superset of AppCompat, so this doesn't change anything
+         else about how the app looks. -->
+    <style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
