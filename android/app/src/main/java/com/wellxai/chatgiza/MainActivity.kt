@@ -2777,118 +2777,86 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
     colors = CardDefaults.cardColors(containerColor = composerBackground)
   ) {
     Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)) {
-      if (viewModel.attachedImageUri != null) {
-        Box(
-          modifier = Modifier.padding(top = 10.dp),
-          contentAlignment = Alignment.TopEnd
-        ) {
-          AsyncImage(
-            model = viewModel.attachedImageUri,
-            contentDescription = "Attached photo",
-            modifier = Modifier
-              .size(64.dp)
-              .clip(RoundedCornerShape(12.dp)),
-            contentScale = ContentScale.Crop
-          )
-          Box(
-            modifier = Modifier
-              .padding(3.dp)
-              .size(18.dp)
-              .clip(CircleShape)
-              .background(Color.White.copy(alpha = 0.6f))
-              .clickable(onClick = { viewModel.clearAttachedImage() }),
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(Icons.Outlined.Close, contentDescription = "Remove photo", tint = Color.Black, modifier = Modifier.size(12.dp))
-          }
-        }
-      }
+      // Unified attachment preview -- was three different ad hoc treatments
+      // (a bare thumbnail with a corner badge for photos, a bigger bare
+      // thumbnail with a different corner badge for PDFs, a separate chip
+      // style only for plain text files), so a picked photo or PDF looked
+      // like it was floating loose above the input with no real container
+      // of its own. Every attachment type now sits in the same bordered,
+      // labeled row so it reads as one deliberate "here's what you're
+      // about to send" area instead of a leftover thumbnail.
       val attachedFile = viewModel.attachedFile
-      if (attachedFile != null && attachedFile.imageDataUrls.isNotEmpty()) {
-        // PDF -- a real thumbnail of the first rendered page, with a small
-        // "PDF" label overlay, instead of just a filename chip, so you can
-        // actually see what you're about to send before you send it.
-        Box(
-          modifier = Modifier.padding(top = 10.dp),
-          contentAlignment = Alignment.TopEnd
+      val hasPhoto = viewModel.attachedImageUri != null
+      if (hasPhoto || attachedFile != null) {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          modifier = Modifier
+            .padding(top = 10.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(colorScheme.onBackground.copy(alpha = 0.05f))
+            .border(1.dp, colorScheme.onBackground.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
+            .padding(8.dp)
         ) {
+          val previewBitmap = attachedFile?.previewBitmap
           Box(
             modifier = Modifier
-              .size(96.dp)
-              .clip(RoundedCornerShape(12.dp))
-              .background(Color.Black)
+              .size(48.dp)
+              .clip(RoundedCornerShape(11.dp))
+              .background(Color(0xFFEDEDED))
           ) {
-            // Coil's AsyncImage can't decode a data:...;base64 string
-            // directly (it needs a real content:// / http(s) source), so
-            // this uses the actual in-memory Bitmap from render time
-            // instead of the data URL meant for the API request.
-            val preview = attachedFile.previewBitmap
-            if (preview != null) {
-              Image(
-                bitmap = preview.asImageBitmap(),
-                contentDescription = attachedFile.name,
+            when {
+              hasPhoto -> AsyncImage(
+                model = viewModel.attachedImageUri,
+                contentDescription = "Attached photo",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
               )
-            } else {
-              // Visibly different from "blank" -- if rendering the page
-              // itself ever fails, this shows instead of a plain white box
-              // that looks broken/half-loaded.
-              Box(modifier = Modifier.fillMaxSize().background(Color(0xFFEDEDED)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.Description, contentDescription = null, tint = Color(0xFF9A9A9A), modifier = Modifier.size(28.dp))
-              }
-            }
-            Box(
-              modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .background(Color.White.copy(alpha = 0.75f))
-                .padding(vertical = 4.dp),
-              contentAlignment = Alignment.Center
-            ) {
-              Text("PDF", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+              previewBitmap != null -> Image(
+                bitmap = previewBitmap.asImageBitmap(),
+                contentDescription = attachedFile?.name,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+              )
+              else -> Icon(
+                Icons.Outlined.Description,
+                contentDescription = null,
+                tint = Color(0xFF9A9A9A),
+                modifier = Modifier.align(Alignment.Center).size(22.dp)
+              )
             }
           }
+          Spacer(modifier = Modifier.width(10.dp))
+          Column(modifier = Modifier.weight(1f)) {
+            Text(
+              if (hasPhoto) "Photo" else attachedFile?.name.orEmpty(),
+              color = colorScheme.onBackground,
+              fontSize = 14.sp,
+              fontWeight = FontWeight.SemiBold,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis
+            )
+            Text(
+              when {
+                hasPhoto -> "Ready to send"
+                attachedFile != null && attachedFile.imageDataUrls.isNotEmpty() -> "PDF · ready to send"
+                else -> "Text file · ready to send"
+              },
+              color = colorScheme.onBackground.copy(alpha = 0.5f),
+              fontSize = 12.sp
+            )
+          }
+          Spacer(modifier = Modifier.width(8.dp))
           Box(
             modifier = Modifier
-              .padding(3.dp)
-              .size(18.dp)
+              .size(26.dp)
               .clip(CircleShape)
-              .background(Color.White.copy(alpha = 0.6f))
-              .clickable(onClick = { viewModel.clearAttachedFile() }),
+              .background(colorScheme.onBackground.copy(alpha = 0.08f))
+              .clickable(onClick = { if (hasPhoto) viewModel.clearAttachedImage() else viewModel.clearAttachedFile() }),
             contentAlignment = Alignment.Center
           ) {
-            Icon(Icons.Outlined.Close, contentDescription = "Remove file", tint = Color.Black, modifier = Modifier.size(12.dp))
+            Icon(Icons.Outlined.Close, contentDescription = "Remove attachment", tint = colorScheme.onBackground, modifier = Modifier.size(14.dp))
           }
-        }
-      } else if (attachedFile != null) {
-        // Plain text file (.txt/.md/.csv) -- no page image to preview, so
-        // the compact name+icon chip is the best we can show.
-        Row(
-          modifier = Modifier
-            .padding(top = 10.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(colorScheme.onBackground.copy(alpha = 0.08f))
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Icon(Icons.Outlined.Description, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(18.dp))
-          Spacer(modifier = Modifier.width(8.dp))
-          Text(
-            attachedFile.name,
-            color = colorScheme.onBackground,
-            fontSize = 13.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.widthIn(max = 220.dp)
-          )
-          Spacer(modifier = Modifier.width(8.dp))
-          Icon(
-            Icons.Outlined.Close,
-            contentDescription = "Remove file",
-            tint = colorScheme.onBackground.copy(alpha = 0.6f),
-            modifier = Modifier.size(16.dp).clickable(onClick = { viewModel.clearAttachedFile() })
-          )
         }
       }
       if (attachError) {
