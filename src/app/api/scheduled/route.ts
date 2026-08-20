@@ -3,7 +3,7 @@ import { kv } from "@vercel/kv";
 import { auth } from "@/auth";
 import { getMobileUserId } from "@/lib/mobileAuth";
 
-type ScheduledTask = { id: string; prompt: string; runAt: string; fired: boolean; paused: boolean };
+type ScheduledTask = { id: string; prompt: string; runAt: string; fired: boolean; paused: boolean; category: string };
 
 function scheduledKey(userId: string) {
   return `chatgiza:scheduled:${userId}`;
@@ -49,6 +49,7 @@ export async function PUT(req: NextRequest) {
       runAt: typeof t.runAt === "string" ? t.runAt : "",
       fired: typeof t.fired === "boolean" ? t.fired : false,
       paused: typeof t.paused === "boolean" ? t.paused : false,
+      category: typeof t.category === "string" && t.category ? t.category : "Chat",
     }))
     .filter((t: ScheduledTask) => t.id);
 

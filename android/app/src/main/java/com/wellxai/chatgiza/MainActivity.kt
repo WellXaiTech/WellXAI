@@ -13088,12 +13088,16 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
   var confirmDeleteTask by remember { mutableStateOf<ApiScheduledTask?>(null) }
   var taskFilter by remember { mutableStateOf("Active") }
   var filterMenuOpen by remember { mutableStateOf(false) }
+  // Chat/Work is a real category picked when a task is created (see
+  // CreateScheduledTaskSheet), stored server-side -- not a cosmetic label.
+  var categoryFilter by remember { mutableStateOf("Chat") }
+  var categoryMenuOpen by remember { mutableStateOf(false) }
   // Active = not fired, not paused (upcoming). Paused = real -- toggled
   // per-task below, and ScheduledTaskWorker actually skips paused tasks
   // instead of just hiding them from this filter. Completed = fired.
-  val filteredTasks = remember(viewModel.scheduledTasks, taskFilter) {
+  val filteredTasks = remember(viewModel.scheduledTasks, taskFilter, categoryFilter) {
     viewModel.scheduledTasks.filter { task ->
-      when (taskFilter) {
+      task.category == categoryFilter && when (taskFilter) {
         "Paused" -> task.paused && !task.fired
         "Completed" -> task.fired
         else -> !task.fired && !task.paused
@@ -13114,16 +13118,34 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
         ) {
           Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground)
         }
-        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-          Text("Tasks", color = colorScheme.onBackground, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Chat", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 13.sp)
-            Icon(
-              Icons.Outlined.KeyboardArrowDown,
-              contentDescription = null,
-              tint = colorScheme.onBackground.copy(alpha = 0.5f),
-              modifier = Modifier.size(16.dp)
-            )
+        Box(modifier = Modifier.weight(1f)) {
+          Column(modifier = Modifier.fillMaxWidth().clickable { categoryMenuOpen = true }, horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Tasks", color = colorScheme.onBackground, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Text(categoryFilter, color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 13.sp)
+              Icon(
+                Icons.Outlined.KeyboardArrowDown,
+                contentDescription = null,
+                tint = colorScheme.onBackground.copy(alpha = 0.5f),
+                modifier = Modifier.size(16.dp)
+              )
+            }
+          }
+          DropdownMenu(
+            expanded = categoryMenuOpen,
+            onDismissRequest = { categoryMenuOpen = false },
+            modifier = Modifier.align(Alignment.TopCenter)
+          ) {
+            listOf("Chat", "Work").forEach { option ->
+              DropdownMenuItem(
+                text = { Text(option, fontWeight = FontWeight.Bold) },
+                trailingIcon = { if (categoryFilter == option) Icon(Icons.Filled.Check, contentDescription = null) },
+                onClick = {
+                  categoryFilter = option
+                  categoryMenuOpen = false
+                }
+              )
+            }
           }
         }
         Box {
@@ -13160,6 +13182,7 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
           .clickable {
             viewModel.onNewTaskPromptChange("")
             viewModel.onNewTaskRunAtChange("")
+            viewModel.onNewTaskCategoryChange(categoryFilter)
             showCreateSheet = true
           }
           .padding(horizontal = 18.dp),
@@ -13369,6 +13392,26 @@ private fun CreateScheduledTaskSheet(viewModel: ChatViewModel, onDismiss: () -> 
         maxLines = 4,
         shape = RoundedCornerShape(16.dp)
       )
+      Spacer(modifier = Modifier.height(12.dp))
+      Row(
+        modifier = Modifier
+          .clip(RoundedCornerShape(50))
+          .background(colorScheme.onBackground.copy(alpha = 0.06f))
+          .padding(4.dp)
+      ) {
+        listOf("Chat", "Work").forEach { option ->
+          val selected = viewModel.newTaskCategory == option
+          Box(
+            modifier = Modifier
+              .clip(RoundedCornerShape(50))
+              .background(if (selected) colorScheme.onBackground.copy(alpha = 0.12f) else Color.Transparent)
+              .clickable { viewModel.onNewTaskCategoryChange(option) }
+              .padding(horizontal = 18.dp, vertical = 8.dp)
+          ) {
+            Text(option, color = colorScheme.onBackground, fontSize = 13.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+          }
+        }
+      }
       Spacer(modifier = Modifier.height(12.dp))
       Row(
         modifier = Modifier
