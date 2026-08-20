@@ -12008,7 +12008,10 @@ private fun ChangeEmailScreen(viewModel: ChatViewModel) {
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-          "Note: This updates the contact email ChatGiZa has on file -- it doesn't change your Google sign-in.",
+          when (viewModel.emailStep) {
+            "email" -> "Note: This updates the contact email ChatGiZa has on file -- it doesn't change your Google sign-in. We'll send a 6-digit code to the new address to confirm you can receive mail there."
+            else -> "Note: We've sent a 6-digit verification code to ${viewModel.emailInput.trim()}. Enter it below to finish confirming this change -- the code expires in 10 minutes."
+          },
           color = Color.Black,
           fontSize = 10.sp,
           lineHeight = 14.sp,
@@ -12018,35 +12021,42 @@ private fun ChangeEmailScreen(viewModel: ChatViewModel) {
 
       Spacer(modifier = Modifier.height(20.dp))
 
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(14.dp))
-          .background(Color.Black.copy(alpha = 0.05f))
-          .padding(horizontal = 16.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Icon(
-          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mail_outline),
-          contentDescription = null,
-          tint = Color.Black.copy(alpha = 0.4f),
-          modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Box(modifier = Modifier.weight(1f).padding(vertical = 11.dp)) {
-          if (viewModel.emailInput.isEmpty()) {
-            Text("Email address", color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
-          }
-          BasicTextField(
-            value = viewModel.emailInput,
-            onValueChange = { new -> if (new.length <= 254) viewModel.onEmailInputChange(new) },
-            singleLine = true,
-            textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp),
-            cursorBrush = SolidColor(Color.Black),
-            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Email),
-            modifier = Modifier.fillMaxWidth()
+      if (viewModel.emailStep == "email") {
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color.Black.copy(alpha = 0.05f))
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Icon(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mail_outline),
+            contentDescription = null,
+            tint = Color.Black.copy(alpha = 0.4f),
+            modifier = Modifier.size(20.dp)
           )
+          Spacer(modifier = Modifier.width(12.dp))
+          Box(modifier = Modifier.weight(1f).padding(vertical = 11.dp)) {
+            if (viewModel.emailInput.isEmpty()) {
+              Text("Email address", color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
+            }
+            BasicTextField(
+              value = viewModel.emailInput,
+              onValueChange = { new -> if (new.length <= 254) viewModel.onEmailInputChange(new) },
+              singleLine = true,
+              textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp),
+              cursorBrush = SolidColor(Color.Black),
+              keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Email),
+              modifier = Modifier.fillMaxWidth()
+            )
+          }
         }
+      } else {
+        CodeField(
+          value = viewModel.emailCodeInput,
+          onValueChange = viewModel::onEmailCodeInputChange
+        )
       }
 
       if (viewModel.emailError != null) {
@@ -12057,7 +12067,12 @@ private fun ChangeEmailScreen(viewModel: ChatViewModel) {
       Spacer(modifier = Modifier.height(24.dp))
 
       Button(
-        onClick = { viewModel.submitEmail() },
+        onClick = {
+          when (viewModel.emailStep) {
+            "email" -> viewModel.submitEmail()
+            else -> viewModel.submitEmailCode()
+          }
+        },
         enabled = !viewModel.emailUpdateBusy,
         shape = RoundedCornerShape(28.dp),
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
@@ -12066,7 +12081,7 @@ private fun ChangeEmailScreen(viewModel: ChatViewModel) {
         if (viewModel.emailUpdateBusy) {
           CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
         } else {
-          Text("Save", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+          Text(if (viewModel.emailStep == "email") "Continue" else "Confirm", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
       }
     }

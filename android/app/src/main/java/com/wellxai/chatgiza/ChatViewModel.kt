@@ -1341,11 +1341,17 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     }
   }
 
-  // Security > Email. Same trust level as Mobile/the in-app password --
-  // no confirmation email is sent (no separate email-sending pipeline
-  // beyond the TOTP/passkey ones this account already has), it just
-  // updates the address ChatGiZa has on file.
+  // Security > Email -- two steps ("email" then "code"), same shape as
+  // Change Password: the new address only actually becomes users.email
+  // once a code sent TO IT is confirmed, proving this account controls
+  // that inbox before it becomes a password-reset/account-recovery
+  // destination. Used to write the address on request alone with no proof
+  // of ownership at all.
   var emailInput by mutableStateOf("")
+    private set
+  var emailStep by mutableStateOf("email")
+    private set
+  var emailCodeInput by mutableStateOf("")
     private set
   var emailError by mutableStateOf<String?>(null)
     private set
@@ -1355,6 +1361,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   fun openChangeEmail() {
     screen = AppScreen.ChangeEmail
     emailInput = userEmail.orEmpty()
+    emailStep = "email"
+    emailCodeInput = ""
     emailError = null
   }
 
@@ -1368,6 +1376,11 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     emailError = null
   }
 
+  fun onEmailCodeInputChange(value: String) {
+    emailCodeInput = value
+    emailError = null
+  }
+
   fun submitEmail() {
     val trimmed = emailInput.trim()
     if (trimmed.isEmpty() || !trimmed.contains("@")) {
@@ -1378,10 +1391,34 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     emailUpdateBusy = true
     emailError = null
     viewModelScope.launch {
-      when (val result = ChatGizaApi.updateEmail(token, trimmed)) {
+      when (val result = ChatGizaApi.requestEmailChange(token, trimmed)) {
         is ApiResult.Success -> {
-          userEmail = trimmed
-          tokenStore.setUserEmail(trimmed)
+          emailUpdateBusy = false
+          emailCodeInput = ""
+          emailStep = "code"
+        }
+        is ApiResult.Failure -> {
+          emailUpdateBusy = false
+          emailError = result.message
+        }
+      }
+    }
+  }
+
+  fun submitEmailCode() {
+    if (emailCodeInput.isBlank()) {
+      emailError = "Enter the code from your email"
+      return
+    }
+    val token = tokenStore.getToken() ?: return
+    val newEmail = emailInput.trim()
+    emailUpdateBusy = true
+    emailError = null
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.confirmEmailChange(token, emailCodeInput.trim())) {
+        is ApiResult.Success -> {
+          userEmail = newEmail
+          tokenStore.setUserEmail(newEmail)
           emailUpdateBusy = false
           closeChangeEmail()
         }
