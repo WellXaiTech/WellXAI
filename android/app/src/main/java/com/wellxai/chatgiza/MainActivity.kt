@@ -13166,7 +13166,14 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
             expanded = categoryMenuOpen,
             onDismissRequest = { categoryMenuOpen = false },
             modifier = Modifier.align(Alignment.TopCenter).width(210.dp),
-            offset = DpOffset(x = 0.dp, y = 4.dp),
+            // Shifted up to open over the "Tasks" title itself instead of
+            // down over the task list -- it used to drop low enough to
+            // cover the first line or two of "Your tasks"/"No X tasks yet"
+            // behind it while still leaving "Tasks" visible above, which
+            // read as the menu floating in the wrong spot. Opening upward
+            // over the title (which the menu already visually replaces
+            // while it's open) keeps the list below fully clear instead.
+            offset = DpOffset(x = 0.dp, y = (-28).dp),
             shape = RoundedCornerShape(24.dp)
           ) {
             listOf("Chat", "Work").forEach { option ->
