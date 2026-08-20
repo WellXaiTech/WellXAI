@@ -30,7 +30,13 @@ class ChatGizaApplication : Application() {
         val trace = Log.getStackTraceString(throwable)
         val trail = prefs.getString(KEY_BREADCRUMBS, null)
         val body = if (trail != null) "$trace\n\n--- breadcrumbs ---\n$trail" else trace
-        prefs.edit().putString(KEY_LAST_CRASH, "${Date()}\n\n$body").apply()
+        // commit(), not apply() -- apply() queues the disk write on a
+        // background thread and returns immediately, and this exact crash
+        // (a remote, OS-injected kill) can tear the process down before
+        // that write ever lands, silently losing it. commit() blocks this
+        // thread until the write is actually on disk, which is exactly
+        // what's needed in a crash handler about to lose the process.
+        prefs.edit().putString(KEY_LAST_CRASH, "${Date()}\n\n$body").commit()
       }
       previousHandler?.uncaughtException(thread, throwable)
     }
