@@ -103,7 +103,23 @@ class ScheduledTaskWorker(context: Context, params: WorkerParameters) : Coroutin
       // when it can't be reached. The reminder text alone is still spoken
       // either way, so the user gets a real spoken alert offline too.
       speakReminderAloud(task.prompt)
-      updatedTasks = updatedTasks.map { if (it.id == task.id) it.copy(fired = true) else it }
+      // recurrenceDays > 0 ("every Saturday" etc.) means this task should
+      // come back, not stay done forever -- previously every fired task got
+      // fired=true unconditionally, which permanently excluded it from the
+      // dueTasks filter above (line 64: `!it.fired && ...`) regardless of
+      // recurrence, so a repeating task only ever actually fired once. This
+      // advances runAt to the next occurrence still ahead of now (skipping
+      // straight past any cycles missed while the device was off, instead
+      // of firing a burst of catch-up reminders) and leaves fired=false so
+      // it's picked up again next time it's due.
+      updatedTasks = updatedTasks.map {
+        if (it.id != task.id) return@map it
+        if (it.recurrenceDays > 0) {
+          it.copy(fired = false, runAt = nextRunAt(it.runAt, it.recurrenceDays, nowMs))
+        } else {
+          it.copy(fired = true)
+        }
+      }
     }
     ChatGizaApi.saveScheduled(token, updatedTasks)
     return Result.success()
@@ -145,6 +161,20 @@ class ScheduledTaskWorker(context: Context, params: WorkerParameters) : Coroutin
     val pattern = if (normalized.length <= 16) "yyyy-MM-dd'T'HH:mm" else "yyyy-MM-dd'T'HH:mm:ss"
     SimpleDateFormat(pattern, Locale.US).parse(normalized)?.time
   }.getOrNull()
+
+  // Advances a recurring task's runAt by recurrenceDays from its own last
+  // scheduled time (not from "now"), so a "every Saturday at 9am" task stays
+  // at 9am indefinitely instead of drifting later each cycle by however late
+  // WorkManager's 15-minute polling happened to catch it. If the device was
+  // off/offline through one or more whole cycles, this jumps straight to the
+  // next occurrence still ahead of now rather than firing a burst of
+  // catch-up reminders for every missed cycle in between.
+  private fun nextRunAt(currentRunAt: String, recurrenceDays: Int, nowMs: Long): String {
+    val dayMs = TimeUnit.DAYS.toMillis(recurrenceDays.toLong())
+    var next = (runAtMillis(currentRunAt) ?: nowMs) + dayMs
+    while (next <= nowMs) next += dayMs
+    return SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US).format(java.util.Date(next))
+  }
 
   private fun ensureNotificationChannel() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
