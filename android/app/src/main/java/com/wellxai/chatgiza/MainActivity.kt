@@ -25,8 +25,13 @@ import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -396,6 +401,7 @@ import java.util.Locale
 import kotlin.math.roundToInt
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -3363,6 +3369,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
       // comment for why this is a plain callback bridge, not a broadcast
       // carrying state.
       LiveVisionCallBridge.onHangUp = {
+        if (viewModel.hapticsEnabled) playLiveStopCue(context, coroutineScope)
         stopScreenShare()
         controller.stop()
         viewModel.closeLiveVision()
@@ -3383,6 +3390,9 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
   // itself), while a share is actually active.
   LaunchedEffect(micMuted, screenShareEnabled) {
     if (screenShareEnabled) ScreenCaptureService.instance?.setMuted(micMuted)
+  }
+  LaunchedEffect(micMuted) {
+    LiveCallService.instance?.setMuted(micMuted)
   }
 
   // Sets up the VirtualDisplay/ImageReader once a MediaProjection exists,
@@ -3443,6 +3453,9 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
       controller.stop()
       cameraProviderRef?.unbindAll()
       stopScreenShare()
+      LiveVisionCallBridge.onHangUp = null
+      LiveVisionCallBridge.onToggleMute = null
+      runCatching { context.stopService(Intent(context, LiveCallService::class.java)) }
     }
   }
 
@@ -3517,16 +3530,26 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
       val isConnecting = controller.connectionState == RealtimeVisionController.ConnectionState.Connecting
       val statusText = if (controller.isAiSpeaking) "ChatGiZa is speaking…" else "Go ahead"
 
-      // Pulses a haptic while the session is still connecting so the wait
-      // is felt, not just read -- stops the instant connectionState leaves
-      // Connecting since this effect is keyed on isConnecting itself.
-      val connectingHaptic = LocalHapticFeedback.current
-      LaunchedEffect(isConnecting) {
-        if (isConnecting && viewModel.hapticsEnabled) {
-          while (true) {
-            connectingHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            delay(600)
+      // One cue (vibration + chime) the instant the session finishes
+      // connecting and the mic actually opens -- not a repeating buzz
+      // through the wait itself, which read as impatient rather than
+      // helpful. Also brings up the ongoing-call notification (Hang Up,
+      // Mute) for this voice session, matching how the equivalent Share
+      // Screen notification already looks.
+      LaunchedEffect(controller.connectionState) {
+        if (controller.connectionState == RealtimeVisionController.ConnectionState.Listening) {
+          if (viewModel.hapticsEnabled) playLiveStartCue(context, coroutineScope)
+          LiveVisionCallBridge.onHangUp = {
+            if (viewModel.hapticsEnabled) playLiveStopCue(context, coroutineScope)
+            stopScreenShare()
+            controller.stop()
+            viewModel.closeLiveVision()
           }
+          LiveVisionCallBridge.onToggleMute = {
+            micMuted = !micMuted
+            controller.setMicMuted(micMuted)
+          }
+          runCatching { ContextCompat.startForegroundService(context, Intent(context, LiveCallService::class.java)) }
         }
       }
 
@@ -3792,6 +3815,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               .clip(RoundedCornerShape(percent = 50))
               .background(Color.Black)
               .clickable(onClick = {
+                if (viewModel.hapticsEnabled) playLiveStopCue(context, coroutineScope)
                 if (viewModel.input.isNotBlank()) {
                   controller.stop()
                   viewModel.closeLiveVision()
@@ -4451,6 +4475,60 @@ private fun LiveVoiceSettingsSheet(
           }
         }
       }
+    }
+  }
+}
+
+private fun liveVibrator(context: android.content.Context): Vibrator {
+  return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    val manager = context.getSystemService(android.content.Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+    manager.defaultVibrator
+  } else {
+    @Suppress("DEPRECATION")
+    context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as Vibrator
+  }
+}
+
+// A single short pulse + a short upbeat two-tone chime the instant the
+// session actually goes live -- deliberately distinct from
+// [playLiveStopCue] so start and end feel different, not just present.
+private fun playLiveStartCue(context: android.content.Context, scope: CoroutineScope) {
+  runCatching {
+    val vibrator = liveVibrator(context)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      vibrator.vibrate(VibrationEffect.createOneShot(60, VibrationEffect.DEFAULT_AMPLITUDE))
+    } else {
+      @Suppress("DEPRECATION") vibrator.vibrate(60)
+    }
+  }
+  scope.launch {
+    runCatching {
+      val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 85)
+      tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 150)
+      delay(250)
+      tone.release()
+    }
+  }
+}
+
+// A double-pulse + a lower/duller single tone on hang-up -- reads as
+// "ended", not a repeat of the start cue.
+private fun playLiveStopCue(context: android.content.Context, scope: CoroutineScope) {
+  runCatching {
+    val vibrator = liveVibrator(context)
+    val pattern = longArrayOf(0, 50, 70, 50)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1))
+    } else {
+      @Suppress("DEPRECATION") vibrator.vibrate(pattern, -1)
+    }
+  }
+  scope.launch {
+    runCatching {
+      val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 85)
+      tone.startTone(ToneGenerator.TONE_PROP_NACK, 180)
+      delay(280)
+      tone.release()
     }
   }
 }
