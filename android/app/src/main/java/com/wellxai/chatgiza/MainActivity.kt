@@ -1147,16 +1147,24 @@ private fun WizardSkipRow(label: String, onSkip: () -> Unit) {
 // Plus Jakarta Sans (SIL Open Font License, see PLUS_JAKARTA_SANS_OFL.txt) --
 // a free geometric/rounded sans, the closest good-quality open alternative
 // to commercial rounded fonts like Circular or Google Sans that this app's
-// UI text was compared against. It ships as a single variable-weight file
-// (res/font/plus_jakarta_sans.ttf); build #964 tried registering it once
-// per weight via FontVariation (each entry pointing at the same file with
-// a different weight-axis value) and that broke the release build, so this
-// is deliberately just the one plain entry at the font's default instance.
-// Bold/ExtraBold text requests still render (Android synthesizes a bolded
-// version when the family has no dedicated bold face), just without a true
-// separately-drawn bold cut.
+// UI text was compared against.
+//
+// These are proper static single-weight files (fetched from Google Fonts'
+// own CSS2 API, which instances a static TTF per weight even for families
+// whose source is a variable font), not the variable file itself. Two
+// earlier attempts both had real problems: build #964 registered one
+// variable file five times via FontVariation and that broke the release
+// build outright; the plain single-entry fallback that followed it
+// compiled fine but rendered with visibly warped/curved letterforms
+// ("zimepinda") since nothing was telling Android which named instance of
+// the variable font's weight axis to actually draw. Static per-weight
+// files sidestep variable-font instancing on-device entirely.
 private val PlusJakartaSans = FontFamily(
-  Font(R.font.plus_jakarta_sans)
+  Font(R.font.plus_jakarta_sans_regular, FontWeight.Normal),
+  Font(R.font.plus_jakarta_sans_medium, FontWeight.Medium),
+  Font(R.font.plus_jakarta_sans_semibold, FontWeight.SemiBold),
+  Font(R.font.plus_jakarta_sans_bold, FontWeight.Bold),
+  Font(R.font.plus_jakarta_sans_extrabold, FontWeight.ExtraBold)
 )
 
 // Every Material3 Typography slot rebound to PlusJakartaSans -- Text()
