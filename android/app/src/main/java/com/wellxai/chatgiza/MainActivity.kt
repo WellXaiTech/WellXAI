@@ -4165,7 +4165,7 @@ private fun PersonalityPill(option: PersonalityOption, selected: Boolean, onClic
     verticalAlignment = Alignment.CenterVertically,
     modifier = Modifier
       .clip(RoundedCornerShape(28.dp))
-      .background(if (selected) Color(0xFFFF9C2D) else Color.Black.copy(alpha = 0.08f))
+      .background(if (selected) Color.Black else Color.Black.copy(alpha = 0.08f))
       .clickable(onClick = onClick)
       .padding(horizontal = 18.dp, vertical = 14.dp)
   ) {
@@ -4207,6 +4207,14 @@ private fun LiveVoiceSettingsSheet(
   onDismiss: () -> Unit
 ) {
   var showVoiceLibrary by remember { mutableStateOf(false) }
+  var outputDeviceDialogOpen by remember { mutableStateOf(false) }
+  val outputDeviceOptions = remember {
+    listOf(
+      Triple("headset", "Headset", Icons.Outlined.Headset),
+      Triple("speaker", "Speaker", Icons.Outlined.VolumeUp),
+      Triple("earpiece", "Earpiece", Icons.Outlined.Hearing)
+    )
+  }
   ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color.White) {
     if (showVoiceLibrary) {
       Column(
@@ -4320,7 +4328,7 @@ private fun LiveVoiceSettingsSheet(
             modifier = Modifier
               .weight(1f)
               .clip(RoundedCornerShape(20.dp))
-              .background(if (selected) Color(0xFFFF9C2D) else Color.Transparent)
+              .background(if (selected) Color.Black else Color.Transparent)
               .clickable { onActivationModeChange(id) }
               .padding(vertical = 10.dp),
             contentAlignment = Alignment.Center
@@ -4353,40 +4361,74 @@ private fun LiveVoiceSettingsSheet(
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .clip(RoundedCornerShape(24.dp))
-          .background(Color.Black.copy(alpha = 0.08f))
-          .padding(4.dp)
+          .clip(RoundedCornerShape(16.dp))
+          .background(Color(0xFFF4F4F4))
+          .clickable { outputDeviceDialogOpen = true }
+          .padding(horizontal = 16.dp, vertical = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
       ) {
-        listOf(
-          Triple("headset", "Headset", Icons.Outlined.Headset),
-          Triple("speaker", "Speaker", Icons.Outlined.VolumeUp),
-          Triple("earpiece", "Earpiece", Icons.Outlined.Hearing)
-        ).forEach { (id, label, icon) ->
+        Text("Output Device", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Text(
+            outputDeviceOptions.find { it.first == outputDevice }?.second ?: outputDevice,
+            color = Color.Black.copy(alpha = 0.5f),
+            fontSize = 15.sp
+          )
+          Spacer(modifier = Modifier.width(4.dp))
+          Icon(
+            Icons.Filled.ChevronRight,
+            contentDescription = null,
+            tint = Color.Black.copy(alpha = 0.4f),
+            modifier = Modifier.size(20.dp)
+          )
+        }
+      }
+    }
+  }
+
+  if (outputDeviceDialogOpen) {
+    Dialog(onDismissRequest = { outputDeviceDialogOpen = false }) {
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(24.dp))
+          .background(Color.White)
+          .padding(20.dp)
+      ) {
+        Text("Output Device", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(8.dp))
+        outputDeviceOptions.forEach { (id, label, icon) ->
           val selected = outputDevice == id
-          Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
+          Row(
             modifier = Modifier
-              .weight(1f)
-              .clip(RoundedCornerShape(20.dp))
-              .background(if (selected) Color(0xFFFF9C2D) else Color.Transparent)
-              .clickable { onOutputDeviceChange(id) }
-              .padding(vertical = 10.dp)
+              .fillMaxWidth()
+              .clickable {
+                onOutputDeviceChange(id)
+                outputDeviceDialogOpen = false
+              }
+              .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
           ) {
-            if (id == "speaker") {
-              SpeakerIconCustom(
-                tint = if (selected) Color.White else Color.Black,
-                modifier = Modifier.size(18.dp)
-              )
-            } else {
-              Icon(icon, contentDescription = null, tint = if (selected) Color.White else Color.Black, modifier = Modifier.size(18.dp))
+            Box(
+              modifier = Modifier
+                .size(22.dp)
+                .clip(CircleShape)
+                .border(2.dp, if (selected) Color.Black else Color.Black.copy(alpha = 0.3f), CircleShape),
+              contentAlignment = Alignment.Center
+            ) {
+              if (selected) {
+                Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(Color.Black))
+              }
             }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-              label,
-              color = if (selected) Color.White else Color.Black,
-              fontSize = 12.sp,
-              fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
-            )
+            Spacer(modifier = Modifier.width(12.dp))
+            if (id == "speaker") {
+              SpeakerIconCustom(tint = Color.Black, modifier = Modifier.size(18.dp))
+            } else {
+              Icon(icon, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(label, color = Color.Black, fontSize = 16.sp)
           }
         }
       }
