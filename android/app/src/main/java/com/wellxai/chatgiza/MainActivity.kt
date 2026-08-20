@@ -14336,7 +14336,9 @@ private fun MessageBubble(
           Text(
             text = cleanContent.ifEmpty { "…" },
             color = Color.Black,
-            fontSize = 15.sp,
+            // A hair bigger than before (was 15.sp) -- small, deliberate
+            // bump to chat text specifically, not app-wide.
+            fontSize = 16.sp,
             fontWeight = FontWeight.Medium
           )
         }
@@ -14348,7 +14350,7 @@ private fun MessageBubble(
           MarkdownText(
             text = cleanContent.ifEmpty { "…" },
             baseColor = Color.Black,
-            fontSize = 15.sp
+            fontSize = 16.sp
           )
         }
       }
