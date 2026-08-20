@@ -4296,6 +4296,36 @@ private fun LiveVoiceSettingsSheet(
           )
         }
         Spacer(modifier = Modifier.height(20.dp))
+
+        // Same hero orb as Settings > Voice, above the list there too --
+        // requested so this sheet's Voice Library matches that screen, not
+        // just its list rows.
+        val liveHeartbeatScale = remember { Animatable(1f) }
+        val liveHeartbeatScope = rememberCoroutineScope()
+        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+          VoiceLibraryHeroOrb(
+            modifier = Modifier
+              .size(110.dp)
+              .graphicsLayer {
+                scaleX = liveHeartbeatScale.value
+                scaleY = liveHeartbeatScale.value
+              }
+              .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+              ) {
+                liveHeartbeatScope.launch {
+                  liveHeartbeatScale.animateTo(1.18f, tween(140, easing = FastOutSlowInEasing))
+                  liveHeartbeatScale.animateTo(1f, tween(160, easing = FastOutSlowInEasing))
+                  liveHeartbeatScale.animateTo(1.1f, tween(120, easing = FastOutSlowInEasing))
+                  liveHeartbeatScale.animateTo(1f, tween(180, easing = FastOutSlowInEasing))
+                }
+              },
+            tint = Color.Black
+          )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
           VOICE_OPTIONS.forEach { option ->
             VoiceCard(
