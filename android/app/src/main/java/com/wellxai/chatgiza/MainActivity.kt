@@ -1400,6 +1400,11 @@ private fun LoadingScreen() {
 private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
   val focusManager = LocalFocusManager.current
   val signingIn = viewModel.signingIn
+  // null = the "Log in or sign up" screen shows only method buttons (no
+  // Email/Password visible yet), matching the Welcome Back screen's clean
+  // button list instead of dumping a form on screen immediately. Picking
+  // "phone" or "email" reveals that method's actual fields below.
+  var authMethodChosen by remember { mutableStateOf<String?>(null) }
   // Title box keeps weight(1f) -- with the keyboard closed that's what
   // pushes the white card flush to the bottom, no gap underneath it. The
   // trick for the keyboard is imePadding() on this outer Column: that
@@ -1593,6 +1598,101 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
       }
 
       Spacer(modifier = Modifier.height(28.dp))
+
+      if (authMethodChosen == null) {
+        // Buttons only, no visible fields yet -- matching the "Welcome
+        // back" reference's clean button list rather than dumping Email +
+        // Password on screen immediately. Picking a method below is what
+        // reveals its actual fields.
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(50))
+            .background(Color.Black.copy(alpha = 0.04f))
+            .clickable(enabled = !signingIn, onClick = onSignIn)
+            .padding(vertical = 14.dp),
+          horizontalArrangement = Arrangement.Center,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Icon(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_google_logo_color),
+            contentDescription = null,
+            tint = Color.Unspecified,
+            modifier = Modifier.size(18.dp)
+          )
+          Spacer(modifier = Modifier.width(8.dp))
+          Text(if (signingIn) "Signing in…" else "Continue with Google", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(50))
+            .background(Color.Black.copy(alpha = 0.04f))
+            .clickable {
+              viewModel.onSignInTabChange("mobile")
+              authMethodChosen = "mobile"
+            }
+            .padding(vertical = 14.dp),
+          horizontalArrangement = Arrangement.Center,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Icon(Icons.Outlined.Phone, contentDescription = null, tint = Color.Black.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
+          Spacer(modifier = Modifier.width(8.dp))
+          Text("Continue with phone", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(50))
+            .background(Color.Black.copy(alpha = 0.04f))
+            .clickable {
+              viewModel.onSignInTabChange("email")
+              authMethodChosen = "email"
+            }
+            .padding(vertical = 14.dp),
+          horizontalArrangement = Arrangement.Center,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Icon(Icons.Outlined.Email, contentDescription = null, tint = Color.Black.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
+          Spacer(modifier = Modifier.width(8.dp))
+          Text("Continue with email", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        val menuFooterContext = LocalContext.current
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+          Text(
+            "Terms of Use",
+            color = Color.Black.copy(alpha = 0.4f),
+            fontSize = 12.sp,
+            modifier = Modifier.clickable {
+              menuFooterContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/terms")))
+            }
+          )
+          Text(" · ", color = Color.Black.copy(alpha = 0.3f), fontSize = 12.sp)
+          Text(
+            "Privacy Policy",
+            color = Color.Black.copy(alpha = 0.4f),
+            fontSize = 12.sp,
+            modifier = Modifier.clickable {
+              menuFooterContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/privacy")))
+            }
+          )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+      } else {
+
+      IconButton(onClick = { authMethodChosen = null }, modifier = Modifier.size(32.dp)) {
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
+      }
+      Spacer(modifier = Modifier.height(12.dp))
 
       if (viewModel.signInTab == "mobile") {
         // Two stacked full-width labeled fields (Country/Region, then Phone
@@ -1814,6 +1914,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
       }
 
       Spacer(modifier = Modifier.height(8.dp))
+      }
       }
     }
   }
