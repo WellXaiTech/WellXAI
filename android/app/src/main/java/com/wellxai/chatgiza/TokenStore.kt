@@ -141,6 +141,14 @@ class TokenStore(context: Context) {
     prefs.edit().putString(KEY_THEME_MODE, value).apply()
   }
 
+  // "plus_jakarta_sans" | "manrope" | "system" — see ChatGizaTypography in
+  // MainActivity.kt for what each maps to. Device-level like theme, not
+  // account data.
+  fun getFontChoice(): String = prefs.getString(KEY_FONT_CHOICE, "plus_jakarta_sans") ?: "plus_jakarta_sans"
+  fun setFontChoice(value: String) {
+    prefs.edit().putString(KEY_FONT_CHOICE, value).apply()
+  }
+
   // Live Vision voice preferences — device-level, not account data, so they
   // survive sign-out the same way haptics/theme do.
   fun getVoiceName(): String = prefs.getString(KEY_VOICE_NAME, "marin") ?: "marin"
@@ -296,6 +304,7 @@ class TokenStore(context: Context) {
     private const val KEY_ACTIVE_SUBACCOUNT_ID = "active_subaccount_id"
     private const val KEY_ACTIVE_SUBACCOUNT_NAME = "active_subaccount_name"
     private const val KEY_THEME_MODE = "theme_mode"
+    private const val KEY_FONT_CHOICE = "font_choice"
     private const val KEY_VOICE_NAME = "voice_name"
     private const val KEY_VOICE_ACTIVATION_MODE = "voice_activation_mode"
     private const val KEY_VOICE_SPEED = "voice_speed"

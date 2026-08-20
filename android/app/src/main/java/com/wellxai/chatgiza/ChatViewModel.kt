@@ -72,6 +72,7 @@ sealed class AppScreen {
   object AppLanguage : AppScreen()
   object Advanced : AppScreen()
   object Appearance : AppScreen()
+  object FontChoice : AppScreen()
   object Voice : AppScreen()
   object ReportProblem : AppScreen()
   object DataControls : AppScreen()
@@ -1052,6 +1053,25 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   fun updateThemeMode(value: String) {
     themeMode = value
     tokenStore.setThemeMode(value)
+  }
+
+  // "plus_jakarta_sans" | "manrope" | "system" -- see ChatGizaTypography in
+  // MainActivity.kt for what each resolves to.
+  var fontChoice by mutableStateOf(tokenStore.getFontChoice())
+    private set
+
+  fun updateFontChoice(value: String) {
+    fontChoice = value
+    tokenStore.setFontChoice(value)
+  }
+
+  fun openFontChoice() {
+    screen = AppScreen.FontChoice
+  }
+
+  fun closeFontChoice() {
+    returnToAccountTabsIfPending()
+    screen = AppScreen.ProfileHub
   }
 
   // Permission gate for the Chat<->Extra Media bridge: the user connects
