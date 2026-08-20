@@ -56,6 +56,15 @@
             android:exported="false"
             android:foregroundServiceType="mediaProjection" />
 
+        <!-- Shows the ongoing-call notification (chronometer, Hang Up,
+             Mute) for any active Live Vision voice session, not just while
+             screen sharing; ScreenCaptureService above only covers the
+             mediaProjection requirement itself. -->
+        <service
+            android:name=".LiveCallService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -76,6 +85,9 @@
          screen during a Live Vision call. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <!-- Required for LiveCallService's ongoing-call notification during a
+         plain (non-screen-share) Live Vision voice session. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <!-- Required (install-time, auto-granted) for Activity.registerScreenCaptureCallback
          on Android 14+: without declaring this, the callback silently
          never fires, no crash and no error, which is why the screenshot
