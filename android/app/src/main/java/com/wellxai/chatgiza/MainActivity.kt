@@ -10521,7 +10521,7 @@ private fun TrustedDevicesScreen(viewModel: ChatViewModel) {
                 )
               } else {
                 Icon(
-                  Icons.Outlined.Computer,
+                  painter = androidx.compose.ui.res.painterResource(R.drawable.ic_monitor_outline),
                   contentDescription = null,
                   tint = Color.Black.copy(alpha = 0.8f),
                   modifier = Modifier.size(20.dp)
