@@ -3086,27 +3086,31 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             Icon(Icons.Filled.ArrowUpward, contentDescription = "Send", tint = Color.White, modifier = Modifier.size(18.dp))
           }
         } else {
-          // SPEAK BUTTON (waveform icon + label)
+          // SPEAK BUTTON (waveform icon + label) -- icon and text sized up
+          // per feedback; since ic_waveform_speak is a solid-fill vector,
+          // scaling its dp size grows the bars' length and thickness
+          // together (not just length), and the button itself grew to match
+          // instead of the bigger content getting cramped inside the old size.
           Row(
             modifier = Modifier
-              .height(36.dp)
-              .clip(RoundedCornerShape(18.dp))
+              .height(44.dp)
+              .clip(RoundedCornerShape(22.dp))
               .background(Color.Black)
               .clickable { viewModel.openLiveVision() }
-              .padding(horizontal = 12.dp),
+              .padding(horizontal = 14.dp),
             verticalAlignment = Alignment.CenterVertically
           ) {
             Icon(
               painter = androidx.compose.ui.res.painterResource(R.drawable.ic_waveform_speak),
               contentDescription = null,
               tint = Color.White,
-              modifier = Modifier.size(16.dp)
+              modifier = Modifier.size(22.dp)
             )
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
               text = "Speak",
-              fontSize = 13.sp,
-              fontWeight = FontWeight.Bold,
+              fontSize = 17.sp,
+              fontWeight = FontWeight.ExtraBold,
               color = Color.White,
               maxLines = 1,
               softWrap = false
