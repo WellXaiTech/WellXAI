@@ -3328,11 +3328,15 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
     // onFailure if any of that actually fails, so the pill never gets
     // stuck showing "sharing" when nothing is really being captured.
     screenShareEnabled = true
+    ChatGizaApplication.breadcrumb(context, "launcher: got RESULT_OK from system dialog")
     runCatching {
       val manager = mediaProjectionManager ?: error("Screen sharing isn't available on this device")
+      ChatGizaApplication.breadcrumb(context, "launcher: calling startForegroundService")
       ContextCompat.startForegroundService(context, Intent(context, ScreenCaptureService::class.java))
+      ChatGizaApplication.breadcrumb(context, "launcher: calling getMediaProjection")
       val projection = manager.getMediaProjection(result.resultCode, data)
         ?: error("Screen sharing isn't available on this device")
+      ChatGizaApplication.breadcrumb(context, "launcher: got projection, registering callback")
       projection.registerCallback(object : MediaProjection.Callback() {
         // Fires when the system revokes the projection itself (screen off,
         // user stops it from the system share-notification, etc.) -- not
@@ -3368,6 +3372,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
         controller.setMicMuted(micMuted)
       }
     }.onFailure {
+      ChatGizaApplication.breadcrumb(context, "launcher: setup FAILED: $it")
       stopScreenShare()
       controller.reportCameraError(it.message ?: "Screen sharing failed to start")
     }
@@ -3627,6 +3632,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
                     } else {
                       val manager = mediaProjectionManager
                       if (manager != null) {
+                        ChatGizaApplication.breadcrumb(context, "menu: launching system capture dialog")
                         runCatching { screenCaptureLauncher.launch(manager.createScreenCaptureIntent()) }
                           .onFailure { controller.reportCameraError(it.message ?: "Screen sharing isn't available on this device") }
                       } else {
