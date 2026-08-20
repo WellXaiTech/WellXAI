@@ -261,7 +261,6 @@ import androidx.compose.material.icons.outlined.MicNone
 import androidx.compose.material.icons.outlined.ModeEdit
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.Psychology
-import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material.icons.outlined.NoAdultContent
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Palette
@@ -4259,9 +4258,10 @@ private val PERSONALITY_OPTIONS = listOf(
   PersonalityOption("therapist", "\"Therapist\"", null, iconRes = R.drawable.ic_therapist),
   PersonalityOption("storyteller", "Storyteller", null, iconRes = R.drawable.ic_storyteller),
   PersonalityOption("story_time", "Story Time", null, tag = "Kids", iconRes = R.drawable.ic_story_time),
-  PersonalityOption("trivia_game", "Trivia Game", Icons.Outlined.Quiz, tag = "Kids"),
+  PersonalityOption("trivia_game", "Trivia Game", null, tag = "Kids", iconRes = R.drawable.ic_trivia_game),
   PersonalityOption("giza_doc", "GiZa Doc", null, iconRes = R.drawable.ic_giza_doc),
   PersonalityOption("unhinged", "Unhinged", null, tag = "18+", adultOnly = true, iconRes = R.drawable.ic_unhinged),
+  PersonalityOption("meditation", "Meditation", null, iconRes = R.drawable.ic_meditation),
   PersonalityOption("motivation", "Motivation", Icons.Outlined.EmojiEvents),
   PersonalityOption("conspiracy", "Conspiracy", Icons.Outlined.Visibility, tag = "18+", adultOnly = true),
   PersonalityOption("romantic", "Romantic", Icons.Filled.Favorite, tag = "18+", adultOnly = true),
