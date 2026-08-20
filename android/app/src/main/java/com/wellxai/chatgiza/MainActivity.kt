@@ -1424,12 +1424,12 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
         detectTapGestures(onTap = { focusManager.clearFocus() })
       }
   ) {
-    Box(
-      modifier = Modifier.fillMaxWidth().weight(1f),
-      contentAlignment = Alignment.Center
-    ) {
-      Text("ChatGiZa", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
-    }
+    // Empty on purpose now -- the card below carries its own branding
+    // (the small gradient-mark logo on "Log in or sign up", the account
+    // avatar on "Welcome back"), so a second big "ChatGiZa" wordmark up
+    // here just duplicated it. The weight(1f) itself still matters, see
+    // the comment above: it's what makes room for the keyboard.
+    Box(modifier = Modifier.fillMaxWidth().weight(1f))
 
     Column(
       modifier = Modifier
