@@ -1926,26 +1926,61 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   // Tapping "+" on a Tasks example (e.g. "Weekend ideas") sends its prompt
-  // as a real chat message and, for tasks with a wizard, opens a short
-  // multi-step preference wizard specific to that task. Finishing (or
-  // skipping) the wizard sends one summary follow-up message -- it does
-  // NOT create a Scheduled-tasks entry or remove the example from Get
-  // started; that was a bigger change than asked for and got reverted.
+  // as a real chat message AND creates a real, pending Scheduled-tasks
+  // entry -- the template itself disappears from "Get started" the
+  // instant it's tapped (ScheduledScreen hides any template with a
+  // pending or not-yet-due real task behind it), same as tapping it
+  // being irreversible-in-the-moment. For tasks with a wizard, that entry
+  // stays pending=true until the wizard is actually finished (closing or
+  // skipping it leaves the task sitting in Pending, not silently
+  // discarded); tasks with no wizard complete immediately since a single
+  // tap is the whole action. Completing a recurring template
+  // (recurrenceDays > 0) doesn't mark it fired forever -- it rolls runAt
+  // forward that many days and clears fired, so the template reappears
+  // in Get started once that date arrives instead of staying gone.
   var preferenceWizardStep by mutableStateOf(-1)
     private set
   var wizardTaskTitle by mutableStateOf<String?>(null)
     private set
+  var wizardTaskId by mutableStateOf<String?>(null)
+    private set
   var wizardSelections by mutableStateOf<List<Set<String>>>(emptyList())
     private set
 
-  fun startTaskExample(taskTitle: String, description: String, hasWizard: Boolean) {
+  fun startTaskExample(taskTitle: String, description: String, hasWizard: Boolean, category: String, recurrenceDays: Int) {
+    val token = tokenStore.getToken()
+    val newTaskId = UUID.randomUUID().toString()
+    if (token != null) {
+      val entry = ApiScheduledTask(
+        id = newTaskId,
+        prompt = description,
+        runAt = nowRunAtString(),
+        fired = false,
+        category = category,
+        title = taskTitle,
+        pending = true,
+        recurrenceDays = recurrenceDays
+      )
+      viewModelScope.launch {
+        val current = when (val result = ChatGizaApi.getScheduled(token)) {
+          is ApiResult.Success -> result.value
+          is ApiResult.Failure -> scheduledTasks
+        }
+        val updated = listOf(entry) + current
+        scheduledTasks = updated
+        ChatGizaApi.saveScheduled(token, updated)
+      }
+    }
     screen = AppScreen.Chat
     onInputChange(description)
     sendMessage()
     if (hasWizard) {
       wizardTaskTitle = taskTitle
+      wizardTaskId = newTaskId
       wizardSelections = emptyList()
       preferenceWizardStep = 0
+    } else {
+      completeTemplateTask(newTaskId)
     }
   }
 
@@ -1965,18 +2000,65 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     if (preferenceWizardStep < lastStep) preferenceWizardStep++ else finishPreferenceWizard()
   }
 
+  // Closing/skipping without finishing deliberately does NOT complete the
+  // task -- it's left pending=true (already set when it was created), so
+  // the user finds it under the Pending filter instead of it vanishing.
   fun dismissPreferenceWizard() {
     preferenceWizardStep = -1
     wizardTaskTitle = null
+    wizardTaskId = null
+  }
+
+  // "Continue" on a Pending row in Your tasks -- reopens the same wizard
+  // for that specific task's own id, so finishing it completes THAT task
+  // rather than creating a new one.
+  fun resumeWizardForTask(task: ApiScheduledTask) {
+    screen = AppScreen.Chat
+    wizardTaskTitle = task.title
+    wizardTaskId = task.id
+    wizardSelections = emptyList()
+    preferenceWizardStep = 0
   }
 
   private fun finishPreferenceWizard() {
     val allSelected = wizardSelections.flatten().distinct()
+    val taskId = wizardTaskId
     preferenceWizardStep = -1
     wizardTaskTitle = null
+    wizardTaskId = null
+    completeTemplateTask(taskId)
     if (allSelected.isNotEmpty()) {
       onInputChange("My preferences — ${allSelected.joinToString(", ")}")
       sendMessage()
+    }
+  }
+
+  private fun nowRunAtString(): String =
+    java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US).format(java.util.Date())
+
+  private fun runAtPlusDays(days: Int): String {
+    val cal = java.util.Calendar.getInstance()
+    cal.add(java.util.Calendar.DAY_OF_YEAR, days)
+    return java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US).format(cal.time)
+  }
+
+  // Clears pending; if the task recurs, rolls it forward to reappear
+  // after recurrenceDays instead of leaving it fired=true forever.
+  private fun completeTemplateTask(id: String?) {
+    if (id == null) return
+    val token = tokenStore.getToken() ?: return
+    viewModelScope.launch {
+      val current = when (val result = ChatGizaApi.getScheduled(token)) {
+        is ApiResult.Success -> result.value
+        is ApiResult.Failure -> scheduledTasks
+      }
+      val updated = current.map { t ->
+        if (t.id != id) t
+        else if (t.recurrenceDays > 0) t.copy(pending = false, fired = false, runAt = runAtPlusDays(t.recurrenceDays))
+        else t.copy(pending = false, fired = true)
+      }
+      scheduledTasks = updated
+      ChatGizaApi.saveScheduled(token, updated)
     }
   }
 
