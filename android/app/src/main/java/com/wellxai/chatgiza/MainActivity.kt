@@ -5576,7 +5576,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             Text("English", color = Color.Black.copy(alpha = 0.4f), fontSize = 13.sp)
           }
           MyInfoRow(
-            icon = Icons.Filled.LightMode,
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_theme_sun_outline),
             label = "Color Theme",
             // Opens AppearanceScreen's Theme section (a 2x2 grid of mini
             // previews). This was the "Appearance" row's duplicate entry
