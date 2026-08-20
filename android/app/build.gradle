@@ -71,6 +71,10 @@ repositories {
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    // MaterialDatePicker/MaterialTimePicker -- the modern calendar-grid
+    // date/time dialogs (not the framework DatePickerDialog/TimePickerDialog,
+    // which renders very differently across Android versions/OEM skins).
+    implementation 'com.google.android.material:material:1.12.0'
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
