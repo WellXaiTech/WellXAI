@@ -355,6 +355,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -13180,7 +13181,9 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
           DropdownMenu(
             expanded = categoryMenuOpen,
             onDismissRequest = { categoryMenuOpen = false },
-            modifier = Modifier.align(Alignment.TopCenter)
+            modifier = Modifier.align(Alignment.TopCenter).width(210.dp),
+            offset = DpOffset(x = 0.dp, y = 4.dp),
+            shape = RoundedCornerShape(24.dp)
           ) {
             listOf("Chat", "Work").forEach { option ->
               val selected = categoryFilter == option
@@ -13206,7 +13209,13 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
           ) {
             FilterIconCustom(tint = colorScheme.onBackground, modifier = Modifier.size(18.dp))
           }
-          DropdownMenu(expanded = filterMenuOpen, onDismissRequest = { filterMenuOpen = false }) {
+          DropdownMenu(
+            expanded = filterMenuOpen,
+            onDismissRequest = { filterMenuOpen = false },
+            modifier = Modifier.width(210.dp),
+            offset = DpOffset(x = 0.dp, y = 4.dp),
+            shape = RoundedCornerShape(24.dp)
+          ) {
             listOf("Active", "Pending", "Paused", "Completed").forEach { option ->
               val selected = taskFilter == option
               DropdownMenuItem(
