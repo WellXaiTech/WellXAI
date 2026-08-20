@@ -15,9 +15,32 @@
          drop-in superset of AppCompat, so this doesn't change anything
          else about how the app looks. -->
     <style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
-        <item name="colorPrimary">@color/colorPrimary</item>
+        <!-- android:windowBackground/statusBarColor/navigationBarColor
+             below reference the colorPrimary *resource* (white, from
+             colors.xml) directly, which is a separate thing from the
+             colorPrimary *theme attr* set here, so rebinding the attr
+             to colorAccent (black) for Material widget theming doesn't
+             touch the window chrome at all.
+
+             Material widgets (MaterialDatePicker/MaterialTimePicker's
+             header band, selected-date circle, and OK/Cancel button text)
+             read colorPrimary/colorSecondary for their own tinting, and
+             default colorOnPrimary/colorOnSecondary to white when unset;
+             left at this app's white colorPrimary, that made the header
+             text and the buttons render as invisible white-on-white
+             instead of just going unstyled. Binding colorPrimary to black
+             gives a black header band with white text and black button
+             text on the white dialog body, matching the rest of this
+             monochrome app instead of leaving those pieces broken. -->
+        <item name="colorPrimary">@color/colorAccent</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
+        <item name="colorOnPrimary">@color/colorPrimary</item>
+        <item name="colorSecondary">@color/colorAccent</item>
+        <item name="colorOnSecondary">@color/colorPrimary</item>
+        <item name="colorSurface">@color/colorPrimary</item>
+        <item name="colorOnSurface">@color/colorAccent</item>
+        <item name="android:textColorPrimary">@color/colorAccent</item>
         <item name="android:windowBackground">@color/colorPrimary</item>
         <item name="android:statusBarColor">@color/colorPrimaryDark</item>
         <item name="android:navigationBarColor">@color/colorPrimaryDark</item>
