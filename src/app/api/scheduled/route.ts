@@ -19,6 +19,13 @@ type ScheduledTask = {
   // after that many days instead of staying done forever.
   pending: boolean;
   recurrenceDays: number;
+  // Optional attachment captured when the task was created (a photo/PDF
+  // page as a base64 data URL, or a plain-text file's contents) -- folded
+  // into the prompt the app sends when the task actually fires, same as an
+  // attached file works in live chat. At most one of the two is ever set.
+  attachmentName: string;
+  attachmentText: string;
+  attachmentImageDataUrl: string;
 };
 
 function scheduledKey(userId: string) {
@@ -69,6 +76,9 @@ export async function PUT(req: NextRequest) {
       category: typeof t.category === "string" && t.category ? t.category : "Chat",
       pending: typeof t.pending === "boolean" ? t.pending : false,
       recurrenceDays: typeof t.recurrenceDays === "number" ? t.recurrenceDays : 0,
+      attachmentName: typeof t.attachmentName === "string" ? t.attachmentName : "",
+      attachmentText: typeof t.attachmentText === "string" ? t.attachmentText : "",
+      attachmentImageDataUrl: typeof t.attachmentImageDataUrl === "string" ? t.attachmentImageDataUrl : "",
     }))
     .filter((t: ScheduledTask) => t.id);
 

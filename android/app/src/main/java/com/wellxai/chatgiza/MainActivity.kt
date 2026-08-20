@@ -13522,6 +13522,133 @@ private fun CreateScheduledTaskSheet(viewModel: ChatViewModel, onDismiss: () -> 
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
   var pickedMillis by remember { mutableStateOf<Long?>(null) }
   val displayFormat = remember { java.text.SimpleDateFormat("EEE, MMM d · HH:mm", Locale.US) }
+  val scope = rememberCoroutineScope()
+  var attachMenuOpen by remember { mutableStateOf(false) }
+  var attachError by remember { mutableStateOf(false) }
+  var attachBusy by remember { mutableStateOf(false) }
+
+  // Lets a task creator attach a photo of their calendar (or any picture),
+  // a PDF page, or a plain-text file so ScheduledTaskWorker has that
+  // context when the task actually fires later -- same idea as an
+  // attached file in live chat (readAttachedFile/uriToPostImageDataUrl),
+  // just persisted on the task itself instead of sent right away.
+  fun attachPickedImage(uri: Uri) {
+    attachError = false
+    attachBusy = true
+    scope.launch {
+      val dataUrl = withContext(Dispatchers.IO) { uriToPostImageDataUrl(context, uri) }
+      attachBusy = false
+      if (dataUrl != null) {
+        viewModel.setNewTaskAttachmentImage("Photo", dataUrl)
+      } else {
+        attachError = true
+      }
+    }
+  }
+
+  fun attachPickedFile(uri: Uri) {
+    attachError = false
+    attachBusy = true
+    scope.launch {
+      val name = withContext(Dispatchers.IO) { queryFileDisplayName(context, uri) }
+      val file = withContext(Dispatchers.IO) { readAttachedFile(context, uri, name) }
+      attachBusy = false
+      when {
+        file?.text != null -> viewModel.setNewTaskAttachmentText(file.name, file.text)
+        file?.imageDataUrls?.isNotEmpty() == true -> viewModel.setNewTaskAttachmentImage(file.name, file.imageDataUrls.first())
+        else -> attachError = true
+      }
+    }
+  }
+
+  val galleryPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    if (uri != null) attachPickedImage(uri)
+  }
+  val taskFilePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    if (uri != null) attachPickedFile(uri)
+  }
+  var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+  val cameraCapture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+    val uri = pendingCameraUri
+    if (success && uri != null) attachPickedImage(uri)
+  }
+  var hasCameraPermission by remember {
+    mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
+  }
+  fun launchCamera() {
+    val photoFile = File(context.cacheDir, "task_camera_${System.currentTimeMillis()}.jpg")
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
+    pendingCameraUri = uri
+    cameraCapture.launch(uri)
+  }
+  val cameraPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+    hasCameraPermission = granted
+    if (granted) launchCamera()
+  }
+
+  // Compact in-sheet dictation into the prompt field -- same
+  // SpeechRecognizer approach as the main chat composer's mic button, just
+  // scoped to this one field instead of viewModel.input.
+  var isListening by remember { mutableStateOf(false) }
+  var listeningPreview by remember { mutableStateOf("") }
+  val promptBeforeListening = remember { mutableStateOf("") }
+  var hasMicPermission by remember {
+    mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
+  }
+  val speechRecognizer = remember {
+    if (SpeechRecognizer.isRecognitionAvailable(context)) SpeechRecognizer.createSpeechRecognizer(context) else null
+  }
+  DisposableEffect(speechRecognizer) {
+    onDispose { speechRecognizer?.destroy() }
+  }
+  fun applyTranscript(text: String) {
+    if (text.isNotBlank()) {
+      val base = promptBeforeListening.value
+      viewModel.onNewTaskPromptChange(if (base.isBlank()) text else "$base $text")
+    }
+  }
+  fun stopListening(keepResult: Boolean) {
+    isListening = false
+    listeningPreview = ""
+    runCatching { if (keepResult) speechRecognizer?.stopListening() else speechRecognizer?.cancel() }
+  }
+  fun startListening() {
+    val recognizer = speechRecognizer ?: return
+    promptBeforeListening.value = viewModel.newTaskPrompt
+    listeningPreview = ""
+    recognizer.setRecognitionListener(object : RecognitionListener {
+      override fun onReadyForSpeech(params: Bundle?) {}
+      override fun onBeginningOfSpeech() {}
+      override fun onRmsChanged(rmsdB: Float) {}
+      override fun onBufferReceived(buffer: ByteArray?) {}
+      override fun onEndOfSpeech() {}
+      override fun onError(error: Int) { isListening = false; listeningPreview = "" }
+      override fun onPartialResults(partialResults: Bundle?) {
+        val text = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
+        if (text != null) listeningPreview = text
+      }
+      override fun onResults(results: Bundle?) {
+        val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
+        if (text != null) applyTranscript(text)
+        isListening = false
+        listeningPreview = ""
+      }
+      override fun onEvent(eventType: Int, params: Bundle?) {}
+    })
+    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+      putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+      putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+    }
+    isListening = true
+    runCatching { recognizer.startListening(intent) }.onFailure { isListening = false }
+  }
+  val micPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+    hasMicPermission = granted
+    if (granted) startListening()
+  }
+  fun launchSpeech() {
+    if (hasMicPermission) startListening() else micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+  }
 
   fun openPicker() {
     val cal = java.util.Calendar.getInstance()
@@ -13562,15 +13689,148 @@ private fun CreateScheduledTaskSheet(viewModel: ChatViewModel, onDismiss: () -> 
         shape = RoundedCornerShape(16.dp)
       )
       Spacer(modifier = Modifier.height(10.dp))
-      OutlinedTextField(
-        value = viewModel.newTaskPrompt,
-        onValueChange = { viewModel.onNewTaskPromptChange(it) },
-        modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text("What should ChatGiZa do?") },
-        minLines = 2,
-        maxLines = 4,
-        shape = RoundedCornerShape(16.dp)
-      )
+      if (isListening) {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(colorScheme.onBackground.copy(alpha = 0.06f))
+            .padding(horizontal = 14.dp, vertical = 12.dp)
+        ) {
+          Text(
+            listeningPreview.ifBlank { "Listening…" },
+            color = colorScheme.onBackground.copy(alpha = if (listeningPreview.isBlank()) 0.5f else 1f),
+            fontSize = 15.sp,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+          )
+          Spacer(modifier = Modifier.width(8.dp))
+          Box(
+            modifier = Modifier.size(32.dp).clip(CircleShape).background(colorScheme.onBackground.copy(alpha = 0.1f)).clickable { stopListening(keepResult = false) },
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(Icons.Outlined.Close, contentDescription = "Cancel", tint = colorScheme.onBackground, modifier = Modifier.size(16.dp))
+          }
+          Spacer(modifier = Modifier.width(6.dp))
+          Box(
+            modifier = Modifier.size(32.dp).clip(CircleShape).background(Color(0xFFE0E0E0)).clickable { stopListening(keepResult = true) },
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(Icons.Filled.Check, contentDescription = "Done", tint = Color.White, modifier = Modifier.size(16.dp))
+          }
+        }
+      } else {
+        OutlinedTextField(
+          value = viewModel.newTaskPrompt,
+          onValueChange = { viewModel.onNewTaskPromptChange(it) },
+          modifier = Modifier.fillMaxWidth(),
+          placeholder = { Text("What should ChatGiZa do?") },
+          minLines = 2,
+          maxLines = 4,
+          shape = RoundedCornerShape(16.dp)
+        )
+      }
+      Spacer(modifier = Modifier.height(8.dp))
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Box {
+          FilledIconButton(
+            onClick = { attachMenuOpen = true },
+            modifier = Modifier.size(34.dp),
+            colors = IconButtonDefaults.filledIconButtonColors(
+              containerColor = colorScheme.onBackground.copy(alpha = 0.08f),
+              contentColor = colorScheme.onBackground
+            )
+          ) {
+            Icon(Icons.Filled.Add, contentDescription = "Attach", modifier = Modifier.size(16.dp))
+          }
+          DropdownMenu(
+            expanded = attachMenuOpen,
+            onDismissRequest = { attachMenuOpen = false },
+            shape = RoundedCornerShape(32.dp),
+            containerColor = Color.White,
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A2A2A))
+          ) {
+            AttachMenuRow(
+              iconRes = R.drawable.ic_camera,
+              label = "Camera",
+              onClick = {
+                attachMenuOpen = false
+                if (hasCameraPermission) launchCamera() else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+              }
+            )
+            AttachMenuRow(
+              iconRes = R.drawable.ic_gallery,
+              label = "Gallery",
+              onClick = { attachMenuOpen = false; galleryPicker.launch("image/*") }
+            )
+            AttachMenuRow(
+              iconRes = R.drawable.ic_files,
+              label = "Files (PDF, text)",
+              onClick = { attachMenuOpen = false; taskFilePicker.launch("*/*") }
+            )
+          }
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Box(
+          modifier = Modifier
+            .size(34.dp)
+            .clip(CircleShape)
+            .background(if (isListening) Color.Black else colorScheme.onBackground.copy(alpha = 0.08f))
+            .clickable { launchSpeech() },
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mic),
+            contentDescription = "Voice input",
+            tint = if (isListening) Color.White else colorScheme.onBackground,
+            modifier = Modifier.size(16.dp)
+          )
+        }
+        if (attachBusy) {
+          Spacer(modifier = Modifier.width(10.dp))
+          CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = colorScheme.onBackground.copy(alpha = 0.5f))
+        }
+      }
+      val attachmentName = viewModel.newTaskAttachmentName
+      if (attachmentName.isNotBlank()) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(colorScheme.onBackground.copy(alpha = 0.08f))
+            .padding(horizontal = 10.dp, vertical = 8.dp)
+        ) {
+          Icon(
+            if (viewModel.newTaskAttachmentImageDataUrl.isNotBlank()) Icons.Outlined.Image else Icons.Outlined.Description,
+            contentDescription = null,
+            tint = colorScheme.onBackground,
+            modifier = Modifier.size(18.dp)
+          )
+          Spacer(modifier = Modifier.width(8.dp))
+          Text(
+            attachmentName,
+            color = colorScheme.onBackground,
+            fontSize = 13.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.widthIn(max = 200.dp)
+          )
+          Spacer(modifier = Modifier.width(8.dp))
+          Icon(
+            Icons.Outlined.Close,
+            contentDescription = "Remove attachment",
+            tint = colorScheme.onBackground.copy(alpha = 0.6f),
+            modifier = Modifier.size(16.dp).clickable { viewModel.clearNewTaskAttachment() }
+          )
+        }
+      }
+      if (attachError) {
+        Spacer(modifier = Modifier.height(6.dp))
+        Text("Couldn't attach that — try a different file", color = Color(0xFFCC3333), fontSize = 12.sp)
+      }
       Spacer(modifier = Modifier.height(12.dp))
       Row(
         modifier = Modifier

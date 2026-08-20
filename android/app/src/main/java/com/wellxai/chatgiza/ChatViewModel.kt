@@ -276,6 +276,17 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var newTaskRunAt by mutableStateOf("")
   var newTaskCategory by mutableStateOf("Chat")
   var newTaskTitle by mutableStateOf("")
+  // Attachment for the task being created (calendar photo, PDF page, or a
+  // plain-text file) -- see ApiScheduledTask's own attachment* fields for
+  // how this is persisted and later folded back into the prompt when the
+  // task fires. Only one of newTaskAttachmentText/newTaskAttachmentImageDataUrl
+  // is ever non-blank at a time.
+  var newTaskAttachmentName by mutableStateOf("")
+    private set
+  var newTaskAttachmentText by mutableStateOf("")
+    private set
+  var newTaskAttachmentImageDataUrl by mutableStateOf("")
+    private set
 
   var billingSummary by mutableStateOf<BillingSummary?>(null)
     private set
@@ -2078,6 +2089,24 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     newTaskTitle = value
   }
 
+  fun setNewTaskAttachmentImage(name: String, dataUrl: String) {
+    newTaskAttachmentName = name
+    newTaskAttachmentImageDataUrl = dataUrl
+    newTaskAttachmentText = ""
+  }
+
+  fun setNewTaskAttachmentText(name: String, text: String) {
+    newTaskAttachmentName = name
+    newTaskAttachmentText = text
+    newTaskAttachmentImageDataUrl = ""
+  }
+
+  fun clearNewTaskAttachment() {
+    newTaskAttachmentName = ""
+    newTaskAttachmentText = ""
+    newTaskAttachmentImageDataUrl = ""
+  }
+
   // addScheduledTask/scheduleReminderFromChat/deleteScheduledTask all re-fetch
   // the list from the server right before writing, instead of mutating
   // whatever `scheduledTasks` already held in memory. ScheduledTaskWorker
@@ -2099,11 +2128,22 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     // typed, instead of a placeholder like "Task" -- still real text the
     // user wrote, just not artificially split into two fields.
     val title = newTaskTitle.trim().ifBlank { prompt.take(48) }
-    val newTask = ApiScheduledTask(UUID.randomUUID().toString(), prompt, runAt, false, category = newTaskCategory, title = title)
+    val newTask = ApiScheduledTask(
+      UUID.randomUUID().toString(),
+      prompt,
+      runAt,
+      false,
+      category = newTaskCategory,
+      title = title,
+      attachmentName = newTaskAttachmentName,
+      attachmentText = newTaskAttachmentText,
+      attachmentImageDataUrl = newTaskAttachmentImageDataUrl
+    )
     newTaskPrompt = ""
     newTaskRunAt = ""
     newTaskCategory = "Chat"
     newTaskTitle = ""
+    clearNewTaskAttachment()
     viewModelScope.launch {
       val current = when (val result = ChatGizaApi.getScheduled(token)) {
         is ApiResult.Success -> result.value

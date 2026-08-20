@@ -71,17 +71,28 @@ class ScheduledTaskWorker(context: Context, params: WorkerParameters) : Coroutin
     var updatedTasks = tasks
     for (task in dueTasks) {
       val reply = StringBuilder()
+      // Same fold-in-then-send shape as a live chat attachment (see
+      // ChatViewModel.sendMessage's apiText/imagesToSend) -- the text or
+      // image captured at creation time rides along with the prompt on
+      // this one-off request, it's never shown anywhere itself.
+      val promptWithAttachment = if (task.attachmentText.isNotBlank()) {
+        "${task.prompt}\n\n[Attached file: ${task.attachmentName}]\n${task.attachmentText}"
+      } else {
+        task.prompt
+      }
+      val imageDataUrls = if (task.attachmentImageDataUrl.isNotBlank()) listOf(task.attachmentImageDataUrl) else emptyList()
       runCatching {
         ChatGizaApi.streamChat(
           token = token,
-          messages = listOf(ChatMessage("user", task.prompt)),
+          messages = listOf(ChatMessage("user", promptWithAttachment)),
           tool = null,
           conversationId = null,
           profile = profileData?.profile ?: ApiProfile(),
           memory = if (profileData?.memoryEnabled == true) profileData.memory else emptyList(),
           language = profileData?.language ?: "",
           location = "",
-          company = CompanyProfile()
+          company = CompanyProfile(),
+          imageDataUrls = imageDataUrls
         ) { chunk -> reply.append(chunk) }
       }
       val body = reply.toString().ifBlank { "Done." }
