@@ -13084,11 +13084,24 @@ private fun ProjectsScreen(viewModel: ChatViewModel) {
 // and stays gone, no scheduled comeback.
 // emoji is null when a real icon (iconRes) is used instead -- only
 // Concert alerts has one so far, pasted in rather than left as an emoji.
-private data class MockTaskCard(val emoji: String?, val iconRes: Int?, val title: String, val description: String, val cadence: String, val detail: String, val recurrenceDays: Int)
+// iconMonochrome=false is for icons like ic_sale_bag that carry their own
+// multiple real colors -- tinting those to onBackground would flatten them
+// to a single color and defeat the point, so they render with
+// Color.Unspecified (their own colors) instead.
+private data class MockTaskCard(
+  val emoji: String?,
+  val iconRes: Int?,
+  val title: String,
+  val description: String,
+  val cadence: String,
+  val detail: String,
+  val recurrenceDays: Int,
+  val iconMonochrome: Boolean = true
+)
 
 private val MOCK_TASK_CARDS = listOf(
   MockTaskCard("📖", null, "Weekend long read", "Every Saturday, find me an exceptional recent long read based on my interests", "WEEKLY", "Saturdays · Morning", recurrenceDays = 7),
-  MockTaskCard("🏷️", null, "Sale monitor", "Watch my favorite stores and let me know when there's a good sale", "ONGOING", "Continuous watch", recurrenceDays = 0),
+  MockTaskCard(null, R.drawable.ic_sale_bag, "Sale monitor", "Watch my favorite stores and let me know when there's a good sale", "ONGOING", "Continuous watch", recurrenceDays = 0, iconMonochrome = false),
   MockTaskCard(null, R.drawable.ic_music_notes, "Concert alerts", "Let me know when artists I like announce concerts near me", "ONGOING", "Continuous watch", recurrenceDays = 0),
   MockTaskCard("🎉", null, "Weekend ideas", "Every Thursday, send me ideas for things to do nearby this weekend", "WEEKLY", "Thursdays · Morning", recurrenceDays = 7)
 )
@@ -13410,7 +13423,7 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
               Icon(
                 painter = androidx.compose.ui.res.painterResource(task.iconRes),
                 contentDescription = null,
-                tint = colorScheme.onBackground,
+                tint = if (task.iconMonochrome) colorScheme.onBackground else Color.Unspecified,
                 modifier = Modifier.size(18.dp)
               )
             } else {
