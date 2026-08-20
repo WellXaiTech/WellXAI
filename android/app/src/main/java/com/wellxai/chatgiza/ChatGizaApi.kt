@@ -181,6 +181,12 @@ data class SettingsData(
 
 data class ApiProject(val id: String, val name: String, val createdAt: Long?)
 
+// attachmentImageDataUrl carries either a picked photo or a rendered PDF's
+// first page (base64 data: URL, downscaled -- see uriToPostImageDataUrl/
+// readAttachedFile in MainActivity.kt); attachmentText carries a plain-text
+// file's contents instead. Only one of the two is ever populated. Both are
+// folded into the prompt ScheduledTaskWorker sends when the task fires,
+// same as an attached file works in live chat.
 data class ApiScheduledTask(
   val id: String,
   val prompt: String,
@@ -190,7 +196,10 @@ data class ApiScheduledTask(
   val category: String = "Chat",
   val title: String = "",
   val pending: Boolean = false,
-  val recurrenceDays: Int = 0
+  val recurrenceDays: Int = 0,
+  val attachmentName: String = "",
+  val attachmentText: String = "",
+  val attachmentImageDataUrl: String = ""
 )
 
 data class ApiAd(val id: String, val headline: String, val subtitle: String, val imageUrl: String, val linkUrl: String)
@@ -1413,7 +1422,10 @@ object ChatGizaApi {
             category = t.optString("category", "Chat"),
             title = t.optString("title", ""),
             pending = t.optBoolean("pending", false),
-            recurrenceDays = t.optInt("recurrenceDays", 0)
+            recurrenceDays = t.optInt("recurrenceDays", 0),
+            attachmentName = t.optString("attachmentName", ""),
+            attachmentText = t.optString("attachmentText", ""),
+            attachmentImageDataUrl = t.optString("attachmentImageDataUrl", "")
           )
         })
       }
@@ -1437,6 +1449,9 @@ object ChatGizaApi {
             .put("title", t.title)
             .put("pending", t.pending)
             .put("recurrenceDays", t.recurrenceDays)
+            .put("attachmentName", t.attachmentName)
+            .put("attachmentText", t.attachmentText)
+            .put("attachmentImageDataUrl", t.attachmentImageDataUrl)
         )
       }
       val payload = JSONObject().put("tasks", arr).toString().toRequestBody(JSON)
