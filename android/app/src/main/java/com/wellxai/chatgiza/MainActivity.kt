@@ -13071,17 +13071,22 @@ private fun Modifier.dashedBorder(color: Color, cornerRadius: Dp, strokeWidth: D
   )
 }
 
-// Static mockup matching the reference screenshot (top bar with
-// back/title/"Chat" subtitle/filter, dashed task cards, bottom "Create a
-// task" bar) -- tapping a card sends its prompt as a real chat message
-// and, for the tasks with one, opens that task's own preference wizard.
-// It deliberately does NOT create a Scheduled-tasks entry or remove the
-// card from the list -- an earlier pass added that and it was reverted
-// per explicit correction, this is simpler on purpose.
+// Real scheduled tasks now -- backed by GET/PUT /api/scheduled
+// (viewModel.scheduledTasks/addScheduledTask/deleteScheduledTask, already
+// wired to the KV store) and actually fired by ScheduledTaskWorker
+// (WorkManager, runs every ~15 min even with the app closed: sends the
+// prompt, posts a real notification, speaks it via TTS, marks fired=true).
+// That engine already worked; this screen just never gave it real input.
+// Template cards below pre-fill the create sheet instead of firing a
+// one-off chat message -- tapping one no longer pretends to "start" a
+// recurring task that was never actually scheduled.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ScheduledScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeScheduled() }
+  var showCreateSheet by remember { mutableStateOf(false) }
+  var confirmDeleteTask by remember { mutableStateOf<ApiScheduledTask?>(null) }
+
   Scaffold(
     containerColor = Color.Transparent,
     topBar = {
@@ -13108,10 +13113,15 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
           }
         }
         IconButton(
-          onClick = {},
+          onClick = { viewModel.loadScheduled() },
           modifier = Modifier.size(44.dp).clip(CircleShape).background(colorScheme.onBackground.copy(alpha = 0.08f))
         ) {
-          FilterIconCustom(tint = colorScheme.onBackground, modifier = Modifier.size(18.dp))
+          Icon(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_refresh_thin),
+            contentDescription = "Refresh",
+            tint = colorScheme.onBackground,
+            modifier = Modifier.size(18.dp)
+          )
         }
       }
     },
@@ -13124,6 +13134,11 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
           .height(52.dp)
           .clip(RoundedCornerShape(26.dp))
           .background(colorScheme.onBackground.copy(alpha = 0.08f))
+          .clickable {
+            viewModel.onNewTaskPromptChange("")
+            viewModel.onNewTaskRunAtChange("")
+            showCreateSheet = true
+          }
           .padding(horizontal = 18.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
@@ -13133,23 +13148,63 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
           fontSize = 15.sp,
           modifier = Modifier.weight(1f)
         )
-        Icon(Icons.Filled.Mic, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.6f))
+        Icon(Icons.Filled.Add, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.6f))
       }
     }
   ) { padding ->
-    // Dismiss the keyboard the instant any task is tapped -- it must not
-    // linger open (and cover the wizard) just because the composer below
-    // happened to have focus from earlier typing.
-    val keyboardController = LocalSoftwareKeyboardController.current
-    val focusManager = LocalFocusManager.current
     LazyColumn(
       modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp),
       contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)
     ) {
+      if (viewModel.loadingScheduled && viewModel.scheduledTasks.isEmpty()) {
+        item {
+          Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = colorScheme.onBackground)
+          }
+        }
+      }
+      if (viewModel.scheduledTasks.isNotEmpty()) {
+        item {
+          Text("Your tasks", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        }
+        items(viewModel.scheduledTasks, key = { it.id }) { task ->
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .clip(RoundedCornerShape(16.dp))
+              .background(colorScheme.onBackground.copy(alpha = 0.06f))
+              .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Column(modifier = Modifier.weight(1f)) {
+              Text(task.prompt, color = colorScheme.onBackground, fontSize = 15.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+              Spacer(modifier = Modifier.height(4.dp))
+              Text(
+                if (task.fired) "Sent • ${formatScheduledRunAt(task.runAt)}" else formatScheduledRunAt(task.runAt),
+                color = colorScheme.onBackground.copy(alpha = 0.5f),
+                fontSize = 12.sp
+              )
+            }
+            IconButton(onClick = { confirmDeleteTask = task }) {
+              DeleteIcon(tint = colorScheme.onBackground.copy(alpha = 0.5f))
+            }
+          }
+        }
+      }
+
+      item {
+        Spacer(modifier = Modifier.height(if (viewModel.scheduledTasks.isNotEmpty()) 8.dp else 0.dp))
+        Text("Get started", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+      }
       items(MOCK_TASK_CARDS) { task ->
-        // The whole card is clickable, not just the small "+" -- a
-        // much easier target to hit than a 28dp icon button alone.
+        // Unchanged from before: sends the prompt as a one-off chat
+        // message right away, and opens that task's preference wizard
+        // when it has one -- this pre-existing flow is separate from
+        // real scheduling, kept as-is rather than folded into the
+        // create-task sheet below.
+        val keyboardController = LocalSoftwareKeyboardController.current
+        val focusManager = LocalFocusManager.current
         Column(
           modifier = Modifier
             .fillMaxWidth()
@@ -13183,6 +13238,120 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
             lineHeight = 20.sp
           )
         }
+      }
+    }
+  }
+
+  if (showCreateSheet) {
+    CreateScheduledTaskSheet(
+      viewModel = viewModel,
+      onDismiss = { showCreateSheet = false },
+      onCreated = { showCreateSheet = false }
+    )
+  }
+
+  val target = confirmDeleteTask
+  if (target != null) {
+    ConfirmDangerDialog(
+      title = "Delete this task?",
+      message = "${target.prompt} won't run anymore.",
+      onConfirm = {
+        viewModel.deleteScheduledTask(target.id)
+        confirmDeleteTask = null
+      },
+      onDismiss = { confirmDeleteTask = null }
+    )
+  }
+}
+
+// yyyy-MM-dd'T'HH:mm (naive local time, no seconds/timezone -- same format
+// the AI's own [[REMINDER_START]] marker and the web client use) into
+// something readable, e.g. "Mar 5, 2026 · 14:30". Falls back to the raw
+// string if it doesn't parse instead of crashing the row.
+private fun formatScheduledRunAt(runAt: String): String {
+  return runCatching {
+    val parser = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US)
+    val display = java.text.SimpleDateFormat("MMM d, yyyy · HH:mm", Locale.US)
+    display.format(parser.parse(runAt)!!)
+  }.getOrDefault(runAt)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CreateScheduledTaskSheet(viewModel: ChatViewModel, onDismiss: () -> Unit, onCreated: () -> Unit) {
+  val context = LocalContext.current
+  val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+  var pickedMillis by remember { mutableStateOf<Long?>(null) }
+  val displayFormat = remember { java.text.SimpleDateFormat("EEE, MMM d · HH:mm", Locale.US) }
+
+  fun openPicker() {
+    val cal = java.util.Calendar.getInstance()
+    android.app.DatePickerDialog(
+      context,
+      { _, year, month, day ->
+        android.app.TimePickerDialog(
+          context,
+          { _, hour, minute ->
+            cal.set(year, month, day, hour, minute, 0)
+            pickedMillis = cal.timeInMillis
+            val runAtFormat = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
+            viewModel.onNewTaskRunAtChange(runAtFormat.format(cal.time))
+          },
+          cal.get(java.util.Calendar.HOUR_OF_DAY),
+          cal.get(java.util.Calendar.MINUTE),
+          true
+        ).show()
+      },
+      cal.get(java.util.Calendar.YEAR),
+      cal.get(java.util.Calendar.MONTH),
+      cal.get(java.util.Calendar.DAY_OF_MONTH)
+    ).apply { datePicker.minDate = System.currentTimeMillis() - 1000 }.show()
+  }
+
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = colorScheme.background) {
+    Column(
+      modifier = Modifier.fillMaxWidth().imePadding().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp)
+    ) {
+      Text("New task", color = colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+      Spacer(modifier = Modifier.height(16.dp))
+      OutlinedTextField(
+        value = viewModel.newTaskPrompt,
+        onValueChange = { viewModel.onNewTaskPromptChange(it) },
+        modifier = Modifier.fillMaxWidth(),
+        placeholder = { Text("What should ChatGiZa do?") },
+        minLines = 2,
+        maxLines = 4,
+        shape = RoundedCornerShape(16.dp)
+      )
+      Spacer(modifier = Modifier.height(12.dp))
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(16.dp))
+          .background(colorScheme.onBackground.copy(alpha = 0.06f))
+          .clickable { openPicker() }
+          .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Icon(Icons.Outlined.Schedule, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+          pickedMillis?.let { displayFormat.format(java.util.Date(it)) } ?: "Pick date & time",
+          color = if (pickedMillis != null) colorScheme.onBackground else colorScheme.onBackground.copy(alpha = 0.4f),
+          fontSize = 15.sp
+        )
+      }
+      Spacer(modifier = Modifier.height(20.dp))
+      Button(
+        onClick = {
+          viewModel.addScheduledTask()
+          onCreated()
+        },
+        enabled = viewModel.newTaskPrompt.isNotBlank() && pickedMillis != null,
+        shape = RoundedCornerShape(28.dp),
+        modifier = Modifier.fillMaxWidth().height(52.dp)
+      ) {
+        Text("Schedule", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
       }
     }
   }
