@@ -268,6 +268,7 @@ import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.RecordVoiceOver
 import androidx.compose.material.icons.outlined.ReportProblem
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material.icons.outlined.ScreenShare
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
@@ -437,7 +438,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     setContent {
-      ChatGizaTheme(themeMode = viewModel.themeMode) {
+      ChatGizaTheme(themeMode = viewModel.themeMode, fontChoice = viewModel.fontChoice) {
         // Wrapped in a Box so the screenshot-triggered "Share a link to
         // chat?" prompt can float above whichever screen is showing,
         // instead of being wired into every individual screen separately.
@@ -596,6 +597,7 @@ class MainActivity : AppCompatActivity() {
             is AppScreen.AppLanguage -> AppLanguageScreen(viewModel)
             is AppScreen.Advanced -> AdvancedScreen(viewModel)
             is AppScreen.Appearance -> AppearanceScreen(viewModel)
+            is AppScreen.FontChoice -> FontChoiceScreen(viewModel)
             is AppScreen.Voice -> VoiceScreen(viewModel)
             is AppScreen.ReportProblem -> ReportProblemScreen(viewModel)
             is AppScreen.Widgets -> WidgetsScreen(viewModel)
@@ -1167,33 +1169,56 @@ private val PlusJakartaSans = FontFamily(
   Font(R.font.plus_jakarta_sans_extrabold, FontWeight.ExtraBold)
 )
 
-// Every Material3 Typography slot rebound to PlusJakartaSans -- Text()
+// Manrope (SIL Open Font License, see MANROPE_OFL.txt) -- second free
+// option in the font picker (User Center > General > Font), same static
+// per-weight approach as Plus Jakarta Sans above. A bit more neutral/less
+// rounded than Plus Jakarta Sans, for anyone who wants a plainer look.
+private val Manrope = FontFamily(
+  Font(R.font.manrope_regular, FontWeight.Normal),
+  Font(R.font.manrope_medium, FontWeight.Medium),
+  Font(R.font.manrope_semibold, FontWeight.SemiBold),
+  Font(R.font.manrope_bold, FontWeight.Bold),
+  Font(R.font.manrope_extrabold, FontWeight.ExtraBold)
+)
+
+private data class FontOption(val id: String, val label: String, val description: String, val family: FontFamily)
+
+// "system" uses FontFamily.Default (Roboto, the platform font) rather than
+// bundling it -- it's already always available, unlike the other two.
+private val FONT_OPTIONS = listOf(
+  FontOption("plus_jakarta_sans", "Plus Jakarta Sans", "Rounded, geometric — the app's default", PlusJakartaSans),
+  FontOption("manrope", "Manrope", "Modern, slightly more neutral", Manrope),
+  FontOption("system", "System Default", "Your device's own font (Roboto)", FontFamily.Default)
+)
+
+// Every Material3 Typography slot rebound to the chosen font -- Text()
 // calls that don't set their own fontFamily explicitly (the vast majority
 // in this file) inherit it from whichever of these slots LocalTextStyle
 // resolves to, so this alone changes the font app-wide without needing to
 // touch each individual Text() call.
-private val ChatGizaTypography = Typography().let { base ->
-  Typography(
-    displayLarge = base.displayLarge.copy(fontFamily = PlusJakartaSans),
-    displayMedium = base.displayMedium.copy(fontFamily = PlusJakartaSans),
-    displaySmall = base.displaySmall.copy(fontFamily = PlusJakartaSans),
-    headlineLarge = base.headlineLarge.copy(fontFamily = PlusJakartaSans),
-    headlineMedium = base.headlineMedium.copy(fontFamily = PlusJakartaSans),
-    headlineSmall = base.headlineSmall.copy(fontFamily = PlusJakartaSans),
-    titleLarge = base.titleLarge.copy(fontFamily = PlusJakartaSans),
-    titleMedium = base.titleMedium.copy(fontFamily = PlusJakartaSans),
-    titleSmall = base.titleSmall.copy(fontFamily = PlusJakartaSans),
-    bodyLarge = base.bodyLarge.copy(fontFamily = PlusJakartaSans),
-    bodyMedium = base.bodyMedium.copy(fontFamily = PlusJakartaSans),
-    bodySmall = base.bodySmall.copy(fontFamily = PlusJakartaSans),
-    labelLarge = base.labelLarge.copy(fontFamily = PlusJakartaSans),
-    labelMedium = base.labelMedium.copy(fontFamily = PlusJakartaSans),
-    labelSmall = base.labelSmall.copy(fontFamily = PlusJakartaSans)
+private fun chatGizaTypography(family: FontFamily): Typography {
+  val base = Typography()
+  return Typography(
+    displayLarge = base.displayLarge.copy(fontFamily = family),
+    displayMedium = base.displayMedium.copy(fontFamily = family),
+    displaySmall = base.displaySmall.copy(fontFamily = family),
+    headlineLarge = base.headlineLarge.copy(fontFamily = family),
+    headlineMedium = base.headlineMedium.copy(fontFamily = family),
+    headlineSmall = base.headlineSmall.copy(fontFamily = family),
+    titleLarge = base.titleLarge.copy(fontFamily = family),
+    titleMedium = base.titleMedium.copy(fontFamily = family),
+    titleSmall = base.titleSmall.copy(fontFamily = family),
+    bodyLarge = base.bodyLarge.copy(fontFamily = family),
+    bodyMedium = base.bodyMedium.copy(fontFamily = family),
+    bodySmall = base.bodySmall.copy(fontFamily = family),
+    labelLarge = base.labelLarge.copy(fontFamily = family),
+    labelMedium = base.labelMedium.copy(fontFamily = family),
+    labelSmall = base.labelSmall.copy(fontFamily = family)
   )
 }
 
 @Composable
-private fun ChatGizaTheme(themeMode: String, content: @Composable () -> Unit) {
+private fun ChatGizaTheme(themeMode: String, fontChoice: String, content: @Composable () -> Unit) {
   // Forced to the light scheme everywhere while colors are being rebuilt
   // from a single flat background -- shadows the stored setting instead of
   // touching the Appearance picker or updateThemeMode, so flipping this
@@ -1260,7 +1285,8 @@ private fun ChatGizaTheme(themeMode: String, content: @Composable () -> Unit) {
       onPrimary = Color.White
     )
   }
-  MaterialTheme(colorScheme = colors, typography = ChatGizaTypography, content = content)
+  val fontFamily = FONT_OPTIONS.find { it.id == fontChoice }?.family ?: PlusJakartaSans
+  MaterialTheme(colorScheme = colors, typography = chatGizaTypography(fontFamily), content = content)
 }
 
 // A Dialog(...) opens its own separate Android Window, so the
@@ -5647,6 +5673,13 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             Text(AppTheme.fromKey(viewModel.themeMode).label, color = Color.Black.copy(alpha = 0.4f), fontSize = 13.sp)
           }
           MyInfoRow(
+            icon = Icons.Outlined.TextFields,
+            label = "Font",
+            onClick = { viewModel.leaveAccountTabsFor { viewModel.openFontChoice() } }
+          ) {
+            Text(FONT_OPTIONS.find { it.id == viewModel.fontChoice }?.label ?: "System", color = Color.Black.copy(alpha = 0.4f), fontSize = 13.sp)
+          }
+          MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_advanced),
             label = "Advanced",
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openAdvanced() } }
@@ -8044,6 +8077,74 @@ private fun AppearanceScreen(viewModel: ChatViewModel) {
           }
         }
       }
+    }
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FontChoiceScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closeFontChoice() }
+  Scaffold(containerColor = Color.Transparent) { padding ->
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(padding)
+        .padding(horizontal = 20.dp)
+        .padding(top = 20.dp, bottom = 24.dp)
+    ) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = { viewModel.closeFontChoice() }, modifier = Modifier.size(28.dp)) {
+          Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = colorScheme.onBackground, modifier = Modifier.size(28.dp))
+        }
+        Spacer(modifier = Modifier.width(20.dp))
+        Text("Font", color = colorScheme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+      }
+      Spacer(modifier = Modifier.height(24.dp))
+      Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        FONT_OPTIONS.forEach { option ->
+          FontCard(
+            option = option,
+            selected = viewModel.fontChoice == option.id,
+            onClick = { viewModel.updateFontChoice(option.id) }
+          )
+        }
+      }
+    }
+  }
+}
+
+@Composable
+private fun FontCard(option: FontOption, selected: Boolean, onClick: () -> Unit) {
+  val checkAlpha by animateFloatAsState(
+    targetValue = if (selected) 1f else 0f,
+    animationSpec = tween(250),
+    label = "fontCheckAlpha"
+  )
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .clip(RoundedCornerShape(18.dp))
+      .background(Color.White)
+      .clickable(onClick = onClick)
+      .padding(start = 18.dp, end = 18.dp, top = 16.dp, bottom = 16.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Column(modifier = Modifier.weight(1f)) {
+      // Preview text rendered IN the option's own font -- the whole point
+      // of this card is to show what each one actually looks like, not
+      // just name it.
+      Text(option.label, color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold, fontFamily = option.family)
+      Spacer(modifier = Modifier.height(2.dp))
+      Text(option.description, color = Color(0xFFA8A8A8), fontSize = 14.sp, fontWeight = FontWeight.Normal, fontFamily = option.family)
+    }
+    if (checkAlpha > 0f) {
+      Icon(
+        Icons.Filled.Check,
+        contentDescription = "Selected",
+        tint = Color.Black.copy(alpha = checkAlpha),
+        modifier = Modifier.size(28.dp).padding(end = 8.dp)
+      )
     }
   }
 }
