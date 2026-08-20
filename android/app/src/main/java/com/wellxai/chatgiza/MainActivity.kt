@@ -12474,6 +12474,7 @@ private fun AppLanguageScreen(viewModel: ChatViewModel) {
     modifier = Modifier
       .fillMaxSize()
       .background(Color.White)
+      .statusBarsPadding()
       .padding(horizontal = 20.dp)
   ) {
     Spacer(modifier = Modifier.height(12.dp))
