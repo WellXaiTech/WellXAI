@@ -3937,7 +3937,7 @@ private fun ScreenSharingPill(enabled: Boolean, onClick: () -> Unit) {
       .size(width = 84.dp, height = 46.dp)
       .alpha(if (enabled) 1f else 0.4f)
       .clip(RoundedCornerShape(percent = 50))
-      .background(Color(0xFFFF7A00))
+      .background(Color(0xFFFF9C2D))
       .clickable(enabled = enabled, onClick = onClick),
     contentAlignment = Alignment.Center
   ) {

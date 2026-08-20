@@ -108,21 +108,10 @@ class ScreenCaptureService : Service() {
   private fun buildNotification() =
     NotificationCompat.Builder(this, CHANNEL_ID)
       .setSmallIcon(R.drawable.ic_chatgiza_logo)
-      .setContentTitle("ChatGiZa is sharing your screen")
-      .setContentText("GiZa can see what's on your screen during this Live Vision call.")
+      .setContentTitle("ChatGiZa is recording")
       .setOngoing(true)
       .setUsesChronometer(true)
       .setWhen(startedAt)
-      .addAction(
-        android.R.drawable.ic_lock_silent_mode,
-        if (muted) "Unmute" else "Mute",
-        PendingIntent.getBroadcast(
-          this,
-          0,
-          Intent(ScreenShareActionReceiver.ACTION_MUTE).setPackage(packageName),
-          PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-      )
       .addAction(
         android.R.drawable.ic_menu_close_clear_cancel,
         "Hang Up",
@@ -130,6 +119,16 @@ class ScreenCaptureService : Service() {
           this,
           1,
           Intent(ScreenShareActionReceiver.ACTION_HANGUP).setPackage(packageName),
+          PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+      )
+      .addAction(
+        android.R.drawable.ic_lock_silent_mode,
+        if (muted) "Unmute" else "Mute",
+        PendingIntent.getBroadcast(
+          this,
+          0,
+          Intent(ScreenShareActionReceiver.ACTION_MUTE).setPackage(packageName),
           PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
       )
