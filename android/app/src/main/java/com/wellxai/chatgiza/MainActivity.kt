@@ -1434,6 +1434,139 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
         .verticalScroll(rememberScrollState())
         .padding(horizontal = 20.dp, vertical = 24.dp)
     ) {
+      if (viewModel.rememberedAccountEmail != null && !viewModel.signInShowFullForm) {
+        // Returning-user shortcut -- the last account that signed in on
+        // this device, one tap to continue instead of retyping/re-picking.
+        // "Continue with this account" and "Continue with Google" both
+        // just call onSignIn (our Google flow already shows the system
+        // account picker) -- differentiating which specific account gets
+        // silently pre-selected is exactly the "log in another way" depth
+        // explicitly deferred for later.
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+          Box(
+            modifier = Modifier
+              .size(72.dp)
+              .clip(CircleShape)
+              .background(Color.Black.copy(alpha = 0.06f)),
+            contentAlignment = Alignment.Center
+          ) {
+            if (viewModel.rememberedAccountImage != null) {
+              AsyncImage(
+                model = viewModel.rememberedAccountImage,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize().clip(CircleShape),
+                contentScale = ContentScale.Crop
+              )
+            } else {
+              Text(
+                (viewModel.rememberedAccountName ?: viewModel.rememberedAccountEmail ?: "?").take(1).uppercase(),
+                color = Color.Black,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold
+              )
+            }
+          }
+          Spacer(modifier = Modifier.height(16.dp))
+          Text(
+            if (viewModel.rememberedAccountName.isNullOrBlank()) "Welcome back" else "Welcome back, ${viewModel.rememberedAccountName}",
+            color = Color.Black,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+          )
+          Spacer(modifier = Modifier.height(6.dp))
+          Text(
+            "Continue to pick up right where you left off.",
+            color = Color.Black.copy(alpha = 0.5f),
+            fontSize = 14.sp,
+            textAlign = TextAlign.Center
+          )
+          Spacer(modifier = Modifier.height(28.dp))
+
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .clip(RoundedCornerShape(50))
+              .background(Color.Black)
+              .clickable(enabled = !signingIn, onClick = onSignIn)
+              .padding(horizontal = 18.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Box(
+              modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.15f)),
+              contentAlignment = Alignment.Center
+            ) {
+              if (viewModel.rememberedAccountImage != null) {
+                AsyncImage(
+                  model = viewModel.rememberedAccountImage,
+                  contentDescription = null,
+                  modifier = Modifier.fillMaxSize().clip(CircleShape),
+                  contentScale = ContentScale.Crop
+                )
+              } else {
+                Text(
+                  (viewModel.rememberedAccountName ?: viewModel.rememberedAccountEmail ?: "?").take(1).uppercase(),
+                  color = Color.White,
+                  fontSize = 13.sp,
+                  fontWeight = FontWeight.Bold
+                )
+              }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+              Text(
+                if (signingIn) "Signing in…" else "Continue with this account",
+                color = Color.White,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold
+              )
+              if (!viewModel.rememberedAccountEmail.isNullOrBlank()) {
+                Text(
+                  viewModel.rememberedAccountEmail!!,
+                  color = Color.White.copy(alpha = 0.6f),
+                  fontSize = 12.sp
+                )
+              }
+            }
+          }
+
+          Spacer(modifier = Modifier.height(12.dp))
+
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .clip(RoundedCornerShape(50))
+              .background(Color.Black.copy(alpha = 0.05f))
+              .clickable(enabled = !signingIn, onClick = onSignIn)
+              .padding(vertical = 14.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Icon(
+              painter = androidx.compose.ui.res.painterResource(R.drawable.ic_google_logo_color),
+              contentDescription = null,
+              tint = Color.Unspecified,
+              modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Continue with Google", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+          }
+
+          Spacer(modifier = Modifier.height(16.dp))
+
+          Text(
+            "Log in another way",
+            color = Color.Black.copy(alpha = 0.5f),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.clickable { viewModel.showFullSignInForm() }
+          )
+          Spacer(modifier = Modifier.height(8.dp))
+        }
+      } else {
       // Email / Mobile pill switch
       Row(
         modifier = Modifier
@@ -1605,6 +1738,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
       }
 
       Spacer(modifier = Modifier.height(8.dp))
+      }
     }
   }
 
