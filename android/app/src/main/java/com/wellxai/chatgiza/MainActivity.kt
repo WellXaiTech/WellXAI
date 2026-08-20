@@ -2,16 +2,26 @@
 
 import android.Manifest
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
 import android.graphics.Paint
+import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.graphics.YuvImage
+import android.hardware.display.DisplayManager
+import android.hardware.display.VirtualDisplay
+import android.media.Image
+import android.media.ImageReader
 import android.media.MediaMetadataRetriever
+import android.media.projection.MediaProjection
+import android.media.projection.MediaProjectionManager
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
@@ -3258,13 +3268,63 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
   var micMuted by remember { mutableStateOf(false) }
   var toolMenuOpen by remember { mutableStateOf(false) }
   var cameraMenuOpen by remember { mutableStateOf(false) }
-  var shareScreenComingSoon by remember { mutableStateOf(false) }
   var voiceSettingsOpen by remember { mutableStateOf(false) }
   var pendingPersonalityId by remember { mutableStateOf<String?>(null) }
   var customPersonalityDialogOpen by remember { mutableStateOf(false) }
   var customPersonalityDraft by remember { mutableStateOf(viewModel.customPersonalityText) }
   var cameraProviderRef by remember { mutableStateOf<ProcessCameraProvider?>(null) }
   var boundCamera by remember { mutableStateOf<Camera?>(null) }
+
+  // Screen sharing -- mirrors the camera's on/off + frame-sending pattern,
+  // just capturing the display instead of a camera sensor. Android 14+
+  // requires a foreground service of type "mediaProjection" to already be
+  // running before getMediaProjection() is called, hence ScreenCaptureService.
+  var screenShareEnabled by remember { mutableStateOf(false) }
+  var mediaProjection by remember { mutableStateOf<MediaProjection?>(null) }
+  var virtualDisplay by remember { mutableStateOf<VirtualDisplay?>(null) }
+  var screenImageReader by remember { mutableStateOf<ImageReader?>(null) }
+  val mediaProjectionManager = remember {
+    context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+  }
+
+  fun stopScreenShare() {
+    virtualDisplay?.release()
+    virtualDisplay = null
+    screenImageReader?.close()
+    screenImageReader = null
+    mediaProjection?.stop()
+    mediaProjection = null
+    screenShareEnabled = false
+    context.stopService(Intent(context, ScreenCaptureService::class.java))
+  }
+
+  val screenCaptureLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+    val data = result.data
+    if (result.resultCode != Activity.RESULT_OK || data == null) return@rememberLauncherForActivityResult
+    ContextCompat.startForegroundService(context, Intent(context, ScreenCaptureService::class.java))
+    val projection = mediaProjectionManager.getMediaProjection(result.resultCode, data)
+    if (projection == null) return@rememberLauncherForActivityResult
+    projection.registerCallback(object : MediaProjection.Callback() {
+      // Fires when the system revokes the projection itself (screen off,
+      // user stops it from the system share-notification, etc.) -- not
+      // just when stopScreenShare() asks for it, so this has to release
+      // the VirtualDisplay/ImageReader here too rather than assume
+      // stopScreenShare() already did it. Skips mediaProjection.stop()
+      // itself since the projection is already stopping/stopped by
+      // whatever triggered this callback.
+      override fun onStop() {
+        virtualDisplay?.release()
+        virtualDisplay = null
+        screenImageReader?.close()
+        screenImageReader = null
+        mediaProjection = null
+        screenShareEnabled = false
+        context.stopService(Intent(context, ScreenCaptureService::class.java))
+      }
+    }, Handler(Looper.getMainLooper()))
+    mediaProjection = projection
+    screenShareEnabled = true
+  }
 
   val micPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
     hasMicPermission = granted
@@ -3280,6 +3340,40 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
 
   val tokenStore = remember { TokenStore(context.applicationContext) }
   val controller = remember { RealtimeVisionController(context, tokenStore, coroutineScope) }
+
+  // Sets up the VirtualDisplay/ImageReader once a MediaProjection exists,
+  // and tears it down when sharing stops -- same throttled-frame cadence
+  // (1200ms) as the camera's ImageAnalysis.Analyzer above.
+  LaunchedEffect(mediaProjection) {
+    val projection = mediaProjection ?: return@LaunchedEffect
+    val metrics = context.resources.displayMetrics
+    val width = metrics.widthPixels
+    val height = metrics.heightPixels
+    val density = metrics.densityDpi
+    val reader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
+    screenImageReader = reader
+    var lastSentAt = 0L
+    reader.setOnImageAvailableListener({ r ->
+      val image = runCatching { r.acquireLatestImage() }.getOrNull() ?: return@setOnImageAvailableListener
+      val now = System.currentTimeMillis()
+      if (now - lastSentAt >= 1200) {
+        lastSentAt = now
+        runCatching { controller.sendFrame(screenImageToJpeg(image, width, height)) }
+      }
+      image.close()
+    }, Handler(Looper.getMainLooper()))
+
+    virtualDisplay = projection.createVirtualDisplay(
+      "ChatGiZaScreenShare",
+      width,
+      height,
+      density,
+      DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+      reader.surface,
+      null,
+      null
+    )
+  }
 
   fun startLiveSession() {
     controller.start(
@@ -3299,6 +3393,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
     onDispose {
       controller.stop()
       cameraProviderRef?.unbindAll()
+      stopScreenShare()
     }
   }
 
@@ -3442,18 +3537,14 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
 
         Spacer(modifier = Modifier.height(18.dp))
 
-        if (shareScreenComingSoon) {
-          LaunchedEffect(Unit) {
-            delay(2000)
-            shareScreenComingSoon = false
-          }
+        if (screenShareEnabled) {
           Box(
             modifier = Modifier
               .clip(RoundedCornerShape(percent = 50))
               .background(Color.Black.copy(alpha = 0.15f))
               .padding(horizontal = 16.dp, vertical = 8.dp)
           ) {
-            Text("Share Screen — coming soon", color = Color.Black, fontSize = 12.sp)
+            Text("Sharing your screen…", color = Color.Black, fontSize = 12.sp)
           }
           Spacer(modifier = Modifier.height(10.dp))
         }
@@ -3492,10 +3583,14 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
                 )
                 CameraMenuRow(
                   iconRes = R.drawable.ic_screen_share,
-                  label = "Share Screen",
+                  label = if (screenShareEnabled) "Stop Sharing" else "Share Screen",
                   onClick = {
                     cameraMenuOpen = false
-                    shareScreenComingSoon = true
+                    if (screenShareEnabled) {
+                      stopScreenShare()
+                    } else {
+                      screenCaptureLauncher.launch(mediaProjectionManager.createScreenCaptureIntent())
+                    }
                   }
                 )
               }
@@ -4329,6 +4424,25 @@ private fun imageProxyToJpeg(image: ImageProxy): ByteArray {
   val yuvImage = YuvImage(nv21, ImageFormat.NV21, width, height, null)
   val out = ByteArrayOutputStream()
   yuvImage.compressToJpeg(Rect(0, 0, width, height), 70, out)
+  return out.toByteArray()
+}
+
+// Screen-share equivalent of imageProxyToJpeg above -- an ImageReader in
+// RGBA_8888 format hands back a row-padded buffer (rowStride is often
+// wider than width*4), so the bitmap is built at the padded width first
+// and then cropped down to the real screen width before compressing.
+private fun screenImageToJpeg(image: Image, width: Int, height: Int): ByteArray {
+  val plane = image.planes[0]
+  val pixelStride = plane.pixelStride
+  val rowStride = plane.rowStride
+  val rowPadding = rowStride - pixelStride * width
+  val paddedBitmap = Bitmap.createBitmap(width + rowPadding / pixelStride, height, Bitmap.Config.ARGB_8888)
+  paddedBitmap.copyPixelsFromBuffer(plane.buffer)
+  val bitmap = Bitmap.createBitmap(paddedBitmap, 0, 0, width, height)
+  paddedBitmap.recycle()
+  val out = ByteArrayOutputStream()
+  bitmap.compress(Bitmap.CompressFormat.JPEG, 70, out)
+  bitmap.recycle()
   return out.toByteArray()
 }
 
