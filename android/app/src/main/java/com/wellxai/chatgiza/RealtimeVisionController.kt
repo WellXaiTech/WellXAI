@@ -2,11 +2,13 @@ package com.wellxai.chatgiza
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioFocusRequest
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
+import android.os.Build
 import android.media.audiofx.AcousticEchoCanceler
 import android.media.audiofx.AutomaticGainControl
 import android.media.audiofx.NoiseSuppressor
@@ -49,6 +51,7 @@ class RealtimeVisionController(
   private val appContext = context.applicationContext
   private val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
   private var previousAudioMode = AudioManager.MODE_NORMAL
+  private var audioFocusRequest: AudioFocusRequest? = null
 
   var connectionState by mutableStateOf(ConnectionState.Idle)
     private set
@@ -119,6 +122,40 @@ class RealtimeVisionController(
     }
   }
 
+  // Requests exclusive audio focus so whatever music/podcast the user had
+  // playing actually pauses the moment a Live Vision call starts, instead
+  // of continuing to play underneath the conversation -- without this,
+  // nothing tells other apps to stop, they just keep going. Abandoned in
+  // stopInternal() so playback is free to resume once the call ends.
+  private fun requestAudioFocus() {
+    val attributes = AudioAttributes.Builder()
+      .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+      .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+      .build()
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
+        .setAudioAttributes(attributes)
+        .build()
+      audioFocusRequest = request
+      runCatching { audioManager.requestAudioFocus(request) }
+    } else {
+      @Suppress("DEPRECATION")
+      runCatching {
+        audioManager.requestAudioFocus(null, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
+      }
+    }
+  }
+
+  private fun abandonAudioFocus() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      audioFocusRequest?.let { runCatching { audioManager.abandonAudioFocusRequest(it) } }
+      audioFocusRequest = null
+    } else {
+      @Suppress("DEPRECATION")
+      runCatching { audioManager.abandonAudioFocus(null) }
+    }
+  }
+
   /** Time-stretches the assistant's spoken reply via the platform's own
    * resampler — applies live, no reconnect needed. */
   fun setPlaybackSpeed(speed: Float) {
@@ -172,6 +209,7 @@ class RealtimeVisionController(
     previousAudioMode = audioManager.mode
     audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
     setOutputDevice(outputDevice)
+    requestAudioFocus()
 
     connectJob = scope.launch {
       val token = tokenStore.getToken()
@@ -435,5 +473,6 @@ class RealtimeVisionController(
     audioManager.isBluetoothScoOn = false
     audioManager.isSpeakerphoneOn = false
     audioManager.mode = previousAudioMode
+    abandonAudioFocus()
   }
 }

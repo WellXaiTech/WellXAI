@@ -3299,6 +3299,8 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
     runCatching { mediaProjection?.stop() }
     mediaProjection = null
     screenShareEnabled = false
+    LiveVisionCallBridge.onHangUp = null
+    LiveVisionCallBridge.onToggleMute = null
     runCatching { context.stopService(Intent(context, ScreenCaptureService::class.java)) }
   }
 
@@ -3339,12 +3341,34 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
           screenImageReader = null
           mediaProjection = null
           screenShareEnabled = false
+          LiveVisionCallBridge.onHangUp = null
+          LiveVisionCallBridge.onToggleMute = null
           runCatching { context.stopService(Intent(context, ScreenCaptureService::class.java)) }
         }
       }, Handler(Looper.getMainLooper()))
       mediaProjection = projection
       screenShareEnabled = true
+      // Lets the ongoing-share notification's Hang Up/Mute buttons reach
+      // back into this exact call -- see LiveVisionCallBridge's own doc
+      // comment for why this is a plain callback bridge, not a broadcast
+      // carrying state.
+      LiveVisionCallBridge.onHangUp = {
+        stopScreenShare()
+        controller.stop()
+        viewModel.closeLiveVision()
+      }
+      LiveVisionCallBridge.onToggleMute = {
+        micMuted = !micMuted
+        controller.setMicMuted(micMuted)
+      }
     }.onFailure { controller.reportCameraError(it.message ?: "Screen sharing failed to start") }
+  }
+
+  // Keeps the notification's "Mute"/"Unmute" label matching reality
+  // whenever mute state changes (from the in-app pill or the notification
+  // itself), while a share is actually active.
+  LaunchedEffect(micMuted, screenShareEnabled) {
+    if (screenShareEnabled) ScreenCaptureService.instance?.setMuted(micMuted)
   }
 
   // Sets up the VirtualDisplay/ImageReader once a MediaProjection exists,
@@ -3562,8 +3586,12 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
           Box {
-            VoiceControlPill(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_video), contentDescription = "Camera", active = cameraEnabled, enabled = !isConnecting) {
-              cameraMenuOpen = true
+            if (screenShareEnabled) {
+              ScreenSharingPill(enabled = !isConnecting) { cameraMenuOpen = true }
+            } else {
+              VoiceControlPill(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_video), contentDescription = "Camera", active = cameraEnabled, enabled = !isConnecting) {
+                cameraMenuOpen = true
+              }
             }
             DropdownMenu(
               expanded = cameraMenuOpen,
@@ -3894,6 +3922,31 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
         }
       )
     }
+  }
+}
+
+// A distinct filled/colored pill (not just a dimmer icon like the other
+// toggles) for when screen sharing is actively on -- matches how other
+// apps (e.g. Grok) swap the camera icon for a highlighted share icon the
+// moment sharing starts, so it's obvious at a glance without opening the
+// menu. Same tap target as the plain camera pill it replaces.
+@Composable
+private fun ScreenSharingPill(enabled: Boolean, onClick: () -> Unit) {
+  Box(
+    modifier = Modifier
+      .size(width = 84.dp, height = 46.dp)
+      .alpha(if (enabled) 1f else 0.4f)
+      .clip(RoundedCornerShape(percent = 50))
+      .background(Color(0xFFFF7A00))
+      .clickable(enabled = enabled, onClick = onClick),
+    contentAlignment = Alignment.Center
+  ) {
+    Icon(
+      painter = androidx.compose.ui.res.painterResource(R.drawable.ic_screen_share),
+      contentDescription = "Sharing screen",
+      tint = Color.White,
+      modifier = Modifier.size(20.dp)
+    )
   }
 }
 
