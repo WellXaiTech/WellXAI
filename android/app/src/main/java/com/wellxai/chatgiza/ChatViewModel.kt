@@ -434,6 +434,17 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun showFullSignInForm() {
     signInShowFullForm = true
+    // Carries the remembered email over as a head start, matching the
+    // reference's pre-filled field for a returning account -- only when
+    // the identifier field is still blank, so it never clobbers something
+    // the user already started typing.
+    if (signInIdentifierInput.isBlank() && signInTab == "email") {
+      rememberedAccountEmail?.let { signInIdentifierInput = it }
+    }
+  }
+
+  fun hideFullSignInForm() {
+    signInShowFullForm = false
   }
 
   init {
