@@ -418,6 +418,24 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var passkeyError by mutableStateOf<String?>(null)
     private set
 
+  // "Welcome back" sign-in screen -- the last account that successfully
+  // signed in on this device, shown as a one-tap option instead of making
+  // a returning user retype/re-pick every time. null means nobody has ever
+  // signed in on this device (or they explicitly chose "Log in another
+  // way" and asked to forget it), so the plain form shows instead.
+  var rememberedAccountName by mutableStateOf<String?>(null)
+    private set
+  var rememberedAccountEmail by mutableStateOf<String?>(null)
+    private set
+  var rememberedAccountImage by mutableStateOf<String?>(null)
+    private set
+  var signInShowFullForm by mutableStateOf(false)
+    private set
+
+  fun showFullSignInForm() {
+    signInShowFullForm = true
+  }
+
   init {
     if (tokenStore.getToken() != null) {
       userId = tokenStore.getUserId()
@@ -437,6 +455,9 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
       loadScheduled()
       loadSubaccounts()
     } else {
+      rememberedAccountName = tokenStore.getRememberedAccountName()
+      rememberedAccountEmail = tokenStore.getRememberedAccountEmail()
+      rememberedAccountImage = tokenStore.getRememberedAccountImage()
       screen = AppScreen.SignedOut
     }
   }
@@ -2341,10 +2362,12 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   private fun applySignedInResult(result: AuthResult) {
     tokenStore.setToken(result.token)
     tokenStore.setUser(result.user.id, result.user.name, result.user.email, result.user.image)
+    tokenStore.rememberAccount(result.user.name, result.user.email, result.user.image)
     userId = result.user.id
     userName = result.user.name
     userEmail = result.user.email
     userImage = result.user.image
+    signInShowFullForm = false
     screen = AppScreen.Chat
     loadHistory()
     loadProfile()

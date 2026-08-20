@@ -63,6 +63,29 @@ class TokenStore(context: Context) {
       .apply()
   }
 
+  // Separate from the KEY_NAME/EMAIL/IMAGE above on purpose: those get
+  // wiped by clear() on sign-out, but the "Welcome back" sign-in screen
+  // needs this to survive sign-out (and the app being reopened after being
+  // fully closed) so a returning user sees their last account instead of
+  // the plain sign-in form every time.
+  fun getRememberedAccountName(): String? = prefs.getString(KEY_REMEMBERED_NAME, null)
+  fun getRememberedAccountEmail(): String? = prefs.getString(KEY_REMEMBERED_EMAIL, null)
+  fun getRememberedAccountImage(): String? = prefs.getString(KEY_REMEMBERED_IMAGE, null)
+  fun rememberAccount(name: String?, email: String?, image: String?) {
+    prefs.edit()
+      .putString(KEY_REMEMBERED_NAME, name)
+      .putString(KEY_REMEMBERED_EMAIL, email)
+      .putString(KEY_REMEMBERED_IMAGE, image)
+      .apply()
+  }
+  fun forgetRememberedAccount() {
+    prefs.edit()
+      .remove(KEY_REMEMBERED_NAME)
+      .remove(KEY_REMEMBERED_EMAIL)
+      .remove(KEY_REMEMBERED_IMAGE)
+      .apply()
+  }
+
   // Individual setters for updating just one field after the initial
   // sign-in (e.g. renaming the account, changing the avatar) -- without
   // these the local cache stays stale and getUserName()/getUserImage()
@@ -293,6 +316,9 @@ class TokenStore(context: Context) {
     private const val KEY_NAME = "user_name"
     private const val KEY_EMAIL = "user_email"
     private const val KEY_IMAGE = "user_image"
+    private const val KEY_REMEMBERED_NAME = "remembered_account_name"
+    private const val KEY_REMEMBERED_EMAIL = "remembered_account_email"
+    private const val KEY_REMEMBERED_IMAGE = "remembered_account_image"
     private const val KEY_PHONE = "user_phone"
     private const val KEY_HAPTICS_ENABLED = "haptics_enabled"
     private const val KEY_EXTRA_DARK_MODE = "extra_dark_mode"
