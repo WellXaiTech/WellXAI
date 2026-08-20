@@ -13082,13 +13082,15 @@ private fun ProjectsScreen(viewModel: ChatViewModel) {
 // ChatViewModel.startTaskExample for the full pending -> done -> reappears
 // lifecycle this drives. 0 means it completes on tap (or wizard finish)
 // and stays gone, no scheduled comeback.
-private data class MockTaskCard(val emoji: String, val title: String, val description: String, val cadence: String, val detail: String, val recurrenceDays: Int)
+// emoji is null when a real icon (iconRes) is used instead -- only
+// Concert alerts has one so far, pasted in rather than left as an emoji.
+private data class MockTaskCard(val emoji: String?, val iconRes: Int?, val title: String, val description: String, val cadence: String, val detail: String, val recurrenceDays: Int)
 
 private val MOCK_TASK_CARDS = listOf(
-  MockTaskCard("📖", "Weekend long read", "Every Saturday, find me an exceptional recent long read based on my interests", "WEEKLY", "Saturdays · Morning", recurrenceDays = 7),
-  MockTaskCard("🏷️", "Sale monitor", "Watch my favorite stores and let me know when there's a good sale", "ONGOING", "Continuous watch", recurrenceDays = 0),
-  MockTaskCard("🎵", "Concert alerts", "Let me know when artists I like announce concerts near me", "ONGOING", "Continuous watch", recurrenceDays = 0),
-  MockTaskCard("🎉", "Weekend ideas", "Every Thursday, send me ideas for things to do nearby this weekend", "WEEKLY", "Thursdays · Morning", recurrenceDays = 7)
+  MockTaskCard("📖", null, "Weekend long read", "Every Saturday, find me an exceptional recent long read based on my interests", "WEEKLY", "Saturdays · Morning", recurrenceDays = 7),
+  MockTaskCard("🏷️", null, "Sale monitor", "Watch my favorite stores and let me know when there's a good sale", "ONGOING", "Continuous watch", recurrenceDays = 0),
+  MockTaskCard(null, R.drawable.ic_music_notes, "Concert alerts", "Let me know when artists I like announce concerts near me", "ONGOING", "Continuous watch", recurrenceDays = 0),
+  MockTaskCard("🎉", null, "Weekend ideas", "Every Thursday, send me ideas for things to do nearby this weekend", "WEEKLY", "Thursdays · Morning", recurrenceDays = 7)
 )
 
 private fun Modifier.dashedBorder(color: Color, cornerRadius: Dp, strokeWidth: Dp = 1.dp): Modifier = this.drawBehind {
@@ -13402,7 +13404,16 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
           )
           Spacer(modifier = Modifier.height(4.dp))
           Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(task.emoji, fontSize = 17.sp)
+            if (task.iconRes != null) {
+              Icon(
+                painter = androidx.compose.ui.res.painterResource(task.iconRes),
+                contentDescription = null,
+                tint = colorScheme.onBackground,
+                modifier = Modifier.size(18.dp)
+              )
+            } else {
+              Text(task.emoji.orEmpty(), fontSize = 17.sp)
+            }
             Spacer(modifier = Modifier.width(8.dp))
             Text(
               task.title,
