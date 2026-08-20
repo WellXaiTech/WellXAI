@@ -275,6 +275,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var newTaskPrompt by mutableStateOf("")
   var newTaskRunAt by mutableStateOf("")
   var newTaskCategory by mutableStateOf("Chat")
+  var newTaskTitle by mutableStateOf("")
 
   var billingSummary by mutableStateOf<BillingSummary?>(null)
     private set
@@ -1991,6 +1992,10 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     newTaskCategory = value
   }
 
+  fun onNewTaskTitleChange(value: String) {
+    newTaskTitle = value
+  }
+
   // addScheduledTask/scheduleReminderFromChat/deleteScheduledTask all re-fetch
   // the list from the server right before writing, instead of mutating
   // whatever `scheduledTasks` already held in memory. ScheduledTaskWorker
@@ -2008,10 +2013,15 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     val runAt = newTaskRunAt.trim().replaceFirst(" ", "T")
     if (prompt.isEmpty() || runAt.isEmpty()) return
     val token = tokenStore.getToken() ?: return
-    val newTask = ApiScheduledTask(UUID.randomUUID().toString(), prompt, runAt, false, category = newTaskCategory)
+    // Falls back to the start of the prompt itself when no title was
+    // typed, instead of a placeholder like "Task" -- still real text the
+    // user wrote, just not artificially split into two fields.
+    val title = newTaskTitle.trim().ifBlank { prompt.take(48) }
+    val newTask = ApiScheduledTask(UUID.randomUUID().toString(), prompt, runAt, false, category = newTaskCategory, title = title)
     newTaskPrompt = ""
     newTaskRunAt = ""
     newTaskCategory = "Chat"
+    newTaskTitle = ""
     viewModelScope.launch {
       val current = when (val result = ChatGizaApi.getScheduled(token)) {
         is ApiResult.Success -> result.value

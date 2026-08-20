@@ -13072,13 +13072,17 @@ private fun ProjectsScreen(viewModel: ChatViewModel) {
   }
 }
 
-private data class MockTaskCard(val emoji: String, val title: String, val description: String)
+// cadence/detail just describe, in the reference's own label style, what
+// each description already says in words ("Every Saturday" -> WEEKLY /
+// Saturdays) -- not a claim that tapping one creates a real recurring job,
+// see the comment on ScheduledScreen for what tapping these actually does.
+private data class MockTaskCard(val emoji: String, val title: String, val description: String, val cadence: String, val detail: String)
 
 private val MOCK_TASK_CARDS = listOf(
-  MockTaskCard("📖", "Weekend long read", "Every Saturday, find me an exceptional recent long read based on my interests"),
-  MockTaskCard("🏷️", "Sale monitor", "Watch my favorite stores and let me know when there's a good sale"),
-  MockTaskCard("🎵", "Concert alerts", "Let me know when artists I like announce concerts near me"),
-  MockTaskCard("🎉", "Weekend ideas", "Every Thursday, send me ideas for things to do nearby this weekend")
+  MockTaskCard("📖", "Weekend long read", "Every Saturday, find me an exceptional recent long read based on my interests", "WEEKLY", "Saturdays · Morning"),
+  MockTaskCard("🏷️", "Sale monitor", "Watch my favorite stores and let me know when there's a good sale", "ONGOING", "Continuous watch"),
+  MockTaskCard("🎵", "Concert alerts", "Let me know when artists I like announce concerts near me", "ONGOING", "Continuous watch"),
+  MockTaskCard("🎉", "Weekend ideas", "Every Thursday, send me ideas for things to do nearby this weekend", "WEEKLY", "Thursdays · Morning")
 )
 
 private fun Modifier.dashedBorder(color: Color, cornerRadius: Dp, strokeWidth: Dp = 1.dp): Modifier = this.drawBehind {
@@ -13256,38 +13260,64 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
           }
         }
         items(filteredTasks, key = { it.id }) { task ->
-          Row(
+          Column(
             modifier = Modifier
               .fillMaxWidth()
-              .clip(RoundedCornerShape(16.dp))
+              .clip(RoundedCornerShape(20.dp))
               .background(colorScheme.onBackground.copy(alpha = 0.06f))
-              .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+              .padding(16.dp)
           ) {
-            Column(modifier = Modifier.weight(1f)) {
-              Text(task.prompt, color = colorScheme.onBackground, fontSize = 15.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
-              Spacer(modifier = Modifier.height(4.dp))
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
               Text(
                 when {
-                  task.fired -> "Sent • ${formatScheduledRunAt(task.runAt)}"
-                  task.paused -> "Paused • ${formatScheduledRunAt(task.runAt)}"
-                  else -> formatScheduledRunAt(task.runAt)
+                  task.fired -> "COMPLETED"
+                  task.paused -> "PAUSED"
+                  else -> "SCHEDULED"
                 },
-                color = colorScheme.onBackground.copy(alpha = 0.5f),
-                fontSize = 12.sp
+                color = if (!task.fired && !task.paused) Color(0xFF4C8DFF) else colorScheme.onBackground.copy(alpha = 0.5f),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.5.sp,
+                modifier = Modifier.weight(1f)
               )
-            }
-            if (!task.fired) {
-              IconButton(onClick = { viewModel.toggleTaskPaused(task.id) }) {
-                Icon(
-                  if (task.paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-                  contentDescription = if (task.paused) "Resume" else "Pause",
-                  tint = colorScheme.onBackground.copy(alpha = 0.5f)
-                )
+              IconButton(onClick = { confirmDeleteTask = task }, modifier = Modifier.size(28.dp)) {
+                DeleteIcon(tint = colorScheme.onBackground.copy(alpha = 0.4f))
               }
             }
-            IconButton(onClick = { confirmDeleteTask = task }) {
-              DeleteIcon(tint = colorScheme.onBackground.copy(alpha = 0.5f))
+            Text(
+              task.title.ifBlank { task.prompt },
+              color = colorScheme.onBackground,
+              fontSize = 17.sp,
+              fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+              task.prompt,
+              color = colorScheme.onBackground.copy(alpha = 0.6f),
+              fontSize = 14.sp,
+              lineHeight = 19.sp,
+              maxLines = 3,
+              overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(color = colorScheme.onBackground.copy(alpha = 0.08f))
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+              Text(
+                "${timeOfDayLabel(task.runAt)} • ${formatScheduledRunAt(task.runAt)}",
+                color = colorScheme.onBackground.copy(alpha = 0.5f),
+                fontSize = 12.sp,
+                modifier = Modifier.weight(1f)
+              )
+              if (!task.fired) {
+                Text(
+                  if (task.paused) "Resume" else "Pause",
+                  color = colorScheme.onBackground,
+                  fontSize = 14.sp,
+                  fontWeight = FontWeight.Bold,
+                  modifier = Modifier.clickable { viewModel.toggleTaskPaused(task.id) }
+                )
+              }
             }
           }
         }
@@ -13318,14 +13348,22 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
             }
             .padding(16.dp)
         ) {
+          Text(
+            task.cadence,
+            color = Color(0xFF4C8DFF),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.5.sp
+          )
+          Spacer(modifier = Modifier.height(4.dp))
           Row(verticalAlignment = Alignment.CenterVertically) {
             Text(task.emoji, fontSize = 17.sp)
             Spacer(modifier = Modifier.width(8.dp))
             Text(
               task.title,
               color = colorScheme.onBackground,
-              fontSize = 16.sp,
-              fontWeight = FontWeight.SemiBold,
+              fontSize = 17.sp,
+              fontWeight = FontWeight.Bold,
               modifier = Modifier.weight(1f)
             )
             Icon(Icons.Filled.Add, contentDescription = "Use this task", tint = colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
@@ -13335,8 +13373,14 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
             task.description,
             color = colorScheme.onBackground.copy(alpha = 0.6f),
             fontSize = 14.sp,
-            lineHeight = 20.sp
+            lineHeight = 20.sp,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
           )
+          Spacer(modifier = Modifier.height(12.dp))
+          HorizontalDivider(color = colorScheme.onBackground.copy(alpha = 0.08f))
+          Spacer(modifier = Modifier.height(10.dp))
+          Text(task.detail, color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 12.sp, letterSpacing = 0.3.sp)
         }
       }
     }
@@ -13374,6 +13418,23 @@ private fun formatScheduledRunAt(runAt: String): String {
     val display = java.text.SimpleDateFormat("MMM d, yyyy · HH:mm", Locale.US)
     display.format(parser.parse(runAt)!!)
   }.getOrDefault(runAt)
+}
+
+// Derived straight from the task's own hour, not a separate stored field --
+// "Morning"/"Afternoon"/"Evening"/"Night" the same way a person would
+// describe that time, matching the reference's bottom-row meta text.
+private fun timeOfDayLabel(runAt: String): String {
+  return runCatching {
+    val parser = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US)
+    val cal = java.util.Calendar.getInstance()
+    cal.time = parser.parse(runAt)!!
+    when (cal.get(java.util.Calendar.HOUR_OF_DAY)) {
+      in 5..11 -> "Morning"
+      in 12..16 -> "Afternoon"
+      in 17..20 -> "Evening"
+      else -> "Night"
+    }
+  }.getOrDefault("")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -13414,6 +13475,15 @@ private fun CreateScheduledTaskSheet(viewModel: ChatViewModel, onDismiss: () -> 
     ) {
       Text("New task", color = colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(16.dp))
+      OutlinedTextField(
+        value = viewModel.newTaskTitle,
+        onValueChange = { if (it.length <= 60) viewModel.onNewTaskTitleChange(it) },
+        modifier = Modifier.fillMaxWidth(),
+        placeholder = { Text("Title (optional)") },
+        singleLine = true,
+        shape = RoundedCornerShape(16.dp)
+      )
+      Spacer(modifier = Modifier.height(10.dp))
       OutlinedTextField(
         value = viewModel.newTaskPrompt,
         onValueChange = { viewModel.onNewTaskPromptChange(it) },
