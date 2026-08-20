@@ -2908,10 +2908,11 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black),
             contentAlignment = Alignment.Center
           ) {
+            // Was tint = Color.Black on a Color.Black circle -- invisible.
             Icon(
               painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mic),
               contentDescription = "Listening",
-              tint = Color.Black,
+              tint = Color.White,
               modifier = Modifier.size(18.dp)
             )
           }
@@ -4393,7 +4394,10 @@ private fun ChatGizaArrangedCard(onClick: () -> Unit) {
       modifier = Modifier.size(26.dp).clip(RoundedCornerShape(9.dp)).background(Color.Black),
       contentAlignment = Alignment.Center
     ) {
-      ArrangedIconCustom(tint = Color.Black, modifier = Modifier.size(15.dp))
+      // Was tint = Color.Black on a Color.Black box -- invisible, a
+      // black icon drawn on a black background. White is what actually
+      // shows up against the dark square.
+      ArrangedIconCustom(tint = Color.White, modifier = Modifier.size(15.dp))
     }
     Spacer(modifier = Modifier.width(10.dp))
     Text("Arranged", color = colorScheme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.Bold)
