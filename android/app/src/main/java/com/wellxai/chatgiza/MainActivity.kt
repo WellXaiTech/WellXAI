@@ -352,7 +352,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -1149,15 +1148,15 @@ private fun WizardSkipRow(label: String, onSkip: () -> Unit) {
 // a free geometric/rounded sans, the closest good-quality open alternative
 // to commercial rounded fonts like Circular or Google Sans that this app's
 // UI text was compared against. It ships as a single variable-weight file
-// (res/font/plus_jakarta_sans.ttf), so each named weight below points at
-// the same file with a different FontVariation weight axis value rather
-// than separate per-weight files.
+// (res/font/plus_jakarta_sans.ttf); build #964 tried registering it once
+// per weight via FontVariation (each entry pointing at the same file with
+// a different weight-axis value) and that broke the release build, so this
+// is deliberately just the one plain entry at the font's default instance.
+// Bold/ExtraBold text requests still render (Android synthesizes a bolded
+// version when the family has no dedicated bold face), just without a true
+// separately-drawn bold cut.
 private val PlusJakartaSans = FontFamily(
-  Font(R.font.plus_jakarta_sans, FontWeight.Normal, variationSettings = FontVariation.Settings(FontVariation.weight(400))),
-  Font(R.font.plus_jakarta_sans, FontWeight.Medium, variationSettings = FontVariation.Settings(FontVariation.weight(500))),
-  Font(R.font.plus_jakarta_sans, FontWeight.SemiBold, variationSettings = FontVariation.Settings(FontVariation.weight(600))),
-  Font(R.font.plus_jakarta_sans, FontWeight.Bold, variationSettings = FontVariation.Settings(FontVariation.weight(700))),
-  Font(R.font.plus_jakarta_sans, FontWeight.ExtraBold, variationSettings = FontVariation.Settings(FontVariation.weight(800)))
+  Font(R.font.plus_jakarta_sans)
 )
 
 // Every Material3 Typography slot rebound to PlusJakartaSans -- Text()
