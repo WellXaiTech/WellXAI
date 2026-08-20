@@ -995,6 +995,27 @@ private fun BoxScope.PreferenceWizardOverlay(viewModel: ChatViewModel) {
       keyboardController?.hide()
     }
   }
+  // Was just a white card floating with nothing behind it -- whatever was
+  // on the Chat screen underneath (including any error banner) stayed
+  // fully sharp and readable, which is what made this read as messy/
+  // unfinished rather than a real dialog. A dimming scrim (tap outside to
+  // dismiss, same as every other bottom-sheet-style overlay in the app)
+  // is what actually fixes that.
+  AnimatedVisibility(
+    visible = step >= 0 && wizard != null,
+    enter = fadeIn(),
+    exit = fadeOut(),
+    modifier = Modifier.fillMaxSize()
+  ) {
+    Box(
+      modifier = Modifier
+        .fillMaxSize()
+        .background(Color.Black.copy(alpha = 0.5f))
+        .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
+          viewModel.dismissPreferenceWizard()
+        }
+    )
+  }
   AnimatedVisibility(
     visible = step >= 0 && wizard != null,
     enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
@@ -13137,9 +13158,14 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
             modifier = Modifier.align(Alignment.TopCenter)
           ) {
             listOf("Chat", "Work").forEach { option ->
+              val selected = categoryFilter == option
               DropdownMenuItem(
                 text = { Text(option, fontWeight = FontWeight.Bold) },
-                trailingIcon = { if (categoryFilter == option) Icon(Icons.Filled.Check, contentDescription = null) },
+                trailingIcon = { if (selected) Icon(Icons.Filled.Check, contentDescription = null) },
+                modifier = Modifier
+                  .padding(horizontal = 8.dp, vertical = 2.dp)
+                  .clip(RoundedCornerShape(50))
+                  .background(if (selected) colorScheme.onBackground.copy(alpha = 0.08f) else Color.Transparent),
                 onClick = {
                   categoryFilter = option
                   categoryMenuOpen = false
@@ -13157,9 +13183,14 @@ private fun ScheduledScreen(viewModel: ChatViewModel) {
           }
           DropdownMenu(expanded = filterMenuOpen, onDismissRequest = { filterMenuOpen = false }) {
             listOf("Active", "Paused", "Completed").forEach { option ->
+              val selected = taskFilter == option
               DropdownMenuItem(
                 text = { Text(option, fontWeight = FontWeight.Bold) },
-                trailingIcon = { if (taskFilter == option) Icon(Icons.Filled.Check, contentDescription = null) },
+                trailingIcon = { if (selected) Icon(Icons.Filled.Check, contentDescription = null) },
+                modifier = Modifier
+                  .padding(horizontal = 8.dp, vertical = 2.dp)
+                  .clip(RoundedCornerShape(50))
+                  .background(if (selected) colorScheme.onBackground.copy(alpha = 0.08f) else Color.Transparent),
                 onClick = {
                   taskFilter = option
                   filterMenuOpen = false
