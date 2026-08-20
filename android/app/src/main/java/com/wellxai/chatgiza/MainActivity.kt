@@ -12522,7 +12522,7 @@ private fun AppLanguageScreen(viewModel: ChatViewModel) {
 
     if (query.isBlank()) {
       Text("Suggested", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-      LanguageRow("System Default", selected = isAutoDetect) { applyLocale(null) }
+      LanguageRow("System", selected = isAutoDetect) { applyLocale(null) }
       suggested.forEach { e ->
         LanguageRow(e.nativeName, selected = !isAutoDetect && currentLabel.equals(e.englishName, ignoreCase = true)) {
           applyLocale(e)
