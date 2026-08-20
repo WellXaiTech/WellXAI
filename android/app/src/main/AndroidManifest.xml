@@ -46,6 +46,13 @@
 
         </activity>
 
+        <!-- Lets Credential Manager (passkeys) reliably validate the RP ID;
+             see the matching comment on the asset_statements string
+             resource this points at. -->
+        <meta-data
+            android:name="asset_statements"
+            android:resource="@string/asset_statements" />
+
         <!-- Foreground service required on Android 14+ before
              MediaProjectionManager#getMediaProjection can be called;
              the actual capture (VirtualDisplay/ImageReader) is still

@@ -4,4 +4,10 @@
     <string name="title_activity_main">ChatGiZa</string>
     <string name="package_name">com.wellxai.chatgiza</string>
     <string name="custom_url_scheme">com.wellxai.chatgiza</string>
+    <!-- Required for Credential Manager (passkeys) to reliably validate the
+         RP ID; without this, Digital Asset Links can fail validation
+         ("[50152] RP ID cannot be validated") even when assetlinks.json is
+         hosted correctly, since Credential Manager needs the app to
+         explicitly declare where to find it, not just discover it. -->
+    <string name="asset_statements" translatable="false">[{\"include\": \"https://www.chatgiza.com/.well-known/assetlinks.json\"}]</string>
 </resources>
