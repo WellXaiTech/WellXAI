@@ -3130,7 +3130,15 @@ private fun QuickActionChip(icon: @Composable () -> Unit, label: String, onClick
   Row(
     modifier = Modifier
       .height(52.dp)
-      .clip(RoundedCornerShape(26.dp))
+      // Fixed + equal width across every chip in the row (was auto-sized
+      // to each label, so "GiZa Extra" ended up noticeably narrower than
+      // "Customize GiZa") -- wide enough to fit the longest label
+      // ("Create an image") without clipping. Corner radius down from
+      // 26.dp (half the height, a full stadium pill) to 16.dp, matching
+      // the reference's more moderate rounded-rect chips instead of fully
+      // circular ends.
+      .width(215.dp)
+      .clip(RoundedCornerShape(16.dp))
       .background(colorScheme.onBackground.copy(alpha = 0.08f))
       .clickable(onClick = onClick)
       .padding(horizontal = 20.dp),
