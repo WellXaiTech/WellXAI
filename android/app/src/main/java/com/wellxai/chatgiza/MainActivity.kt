@@ -4492,6 +4492,12 @@ private fun liveVibrator(context: android.content.Context): Vibrator {
 // A single short pulse + a short upbeat two-tone chime the instant the
 // session actually goes live -- deliberately distinct from
 // [playLiveStopCue] so start and end feel different, not just present.
+// Uses STREAM_VOICE_CALL, not STREAM_NOTIFICATION: by this point
+// RealtimeVisionController.start() has already switched the device into
+// MODE_IN_COMMUNICATION, and a notification-stream tone is frequently
+// inaudible in that mode (silent notification volume, or the stream just
+// not being the one actually routed to the active output) -- confirmed
+// on-device: no sound played at all until this changed.
 private fun playLiveStartCue(context: android.content.Context, scope: CoroutineScope) {
   runCatching {
     val vibrator = liveVibrator(context)
@@ -4503,7 +4509,7 @@ private fun playLiveStartCue(context: android.content.Context, scope: CoroutineS
   }
   scope.launch {
     runCatching {
-      val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 85)
+      val tone = ToneGenerator(AudioManager.STREAM_VOICE_CALL, 100)
       tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 150)
       delay(250)
       tone.release()
@@ -4525,7 +4531,7 @@ private fun playLiveStopCue(context: android.content.Context, scope: CoroutineSc
   }
   scope.launch {
     runCatching {
-      val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 85)
+      val tone = ToneGenerator(AudioManager.STREAM_VOICE_CALL, 100)
       tone.startTone(ToneGenerator.TONE_PROP_NACK, 180)
       delay(280)
       tone.release()
