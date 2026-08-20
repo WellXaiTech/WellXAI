@@ -5893,12 +5893,12 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
         Image(
           painter = androidx.compose.ui.res.painterResource(R.drawable.ic_chatgiza_logo),
           contentDescription = null,
-          modifier = Modifier.size(88.dp)
+          modifier = Modifier.size(64.dp)
         )
-        Spacer(modifier = Modifier.height(12.dp))
-        Text("ChatGiZa", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(4.dp))
-        Text("Version ${BuildConfig.VERSION_NAME}", color = Color.Black.copy(alpha = 0.5f), fontSize = 14.sp)
+        Spacer(modifier = Modifier.height(10.dp))
+        Text("ChatGiZa", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(modifier = Modifier.height(3.dp))
+        Text("Version ${BuildConfig.VERSION_NAME}", color = Color.Black.copy(alpha = 0.5f), fontSize = 12.sp)
       }
 
       Spacer(modifier = Modifier.height(24.dp))
@@ -5910,7 +5910,7 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
       LaunchedEffect(Unit) { viewModel.checkForUpdate() }
       val latestVersion = viewModel.latestVersionInfo
       val updateAvailable = latestVersion != null && latestVersion.runNumber > BuildConfig.VERSION_CODE
-      AboutUsRow(icon = Icons.Filled.Refresh, label = if (updateAvailable) "Update Available" else "Check for Updates") {
+      AboutUsRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_refresh_thin), label = if (updateAvailable) "Update Available" else "Check for Updates") {
         if (updateAvailable) {
           context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(latestVersion!!.downloadUrl)))
         } else {
@@ -5925,7 +5925,7 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(18.dp))
-          .background(Color.Black.copy(alpha = 0.06f))
+          .background(Color(0xFFF4F4F4))
           .padding(horizontal = 14.dp)
       ) {
         AboutUsRow(icon = Icons.AutoMirrored.Outlined.Article, label = "Terms of Use") {
@@ -5979,7 +5979,7 @@ private fun AboutUsRowShell(label: String, onClick: () -> Unit, icon: @Composabl
   ) {
     icon()
     Spacer(modifier = Modifier.width(16.dp))
-    Text(label, color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+    Text(label, color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Normal, modifier = Modifier.weight(1f))
     Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
   }
 }
