@@ -1594,56 +1594,75 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
 
       Spacer(modifier = Modifier.height(28.dp))
 
+      if (viewModel.signInTab == "mobile") {
+        // Two stacked full-width labeled fields (Country/Region, then Phone
+        // number), matching the reference -- not the old compact side-by-
+        // side flag+code pill next to a cramped number field.
+        Text(
+          "Country/Region",
+          color = Color.Black.copy(alpha = 0.5f),
+          fontSize = 13.sp,
+          fontWeight = FontWeight.Medium
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color.Black.copy(alpha = 0.05f))
+            .clickable { viewModel.openSignInCountryPicker() }
+            .padding(horizontal = 16.dp, vertical = 15.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Text(viewModel.signInCountry.flag, fontSize = 16.sp)
+          Spacer(modifier = Modifier.width(8.dp))
+          Text(
+            "${viewModel.signInCountry.name} (${viewModel.signInCountry.dialCode})",
+            color = Color.Black,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f)
+          )
+          Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "Choose country", tint = Color.Black.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+          "Phone number",
+          color = Color.Black.copy(alpha = 0.5f),
+          fontSize = 13.sp,
+          fontWeight = FontWeight.Medium
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color.Black.copy(alpha = 0.05f))
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Box(modifier = Modifier.weight(1f).padding(vertical = 11.dp)) {
+            BasicTextField(
+              value = viewModel.signInIdentifierInput,
+              onValueChange = { new -> if (new.length <= 20) viewModel.onSignInIdentifierChange(new) },
+              singleLine = true,
+              textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp),
+              cursorBrush = SolidColor(Color.Black),
+              keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone),
+              modifier = Modifier.fillMaxWidth()
+            )
+          }
+        }
+      } else {
       Text(
-        if (viewModel.signInTab == "mobile") "Mobile" else "Email",
+        "Email",
         color = Color.Black.copy(alpha = 0.5f),
         fontSize = 13.sp,
         fontWeight = FontWeight.Medium
       )
       Spacer(modifier = Modifier.height(6.dp))
-
-      if (viewModel.signInTab == "mobile") {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-          Row(
-            modifier = Modifier
-              .clip(RoundedCornerShape(14.dp))
-              .background(Color.Black.copy(alpha = 0.05f))
-              .clickable { viewModel.openSignInCountryPicker() }
-              .padding(horizontal = 12.dp, vertical = 15.dp),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Text(viewModel.signInCountry.flag, fontSize = 16.sp)
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(viewModel.signInCountry.dialCode, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-            Spacer(modifier = Modifier.width(4.dp))
-            Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "Choose country", tint = Color.Black.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
-          }
-          Spacer(modifier = Modifier.width(8.dp))
-          Row(
-            modifier = Modifier
-              .weight(1f)
-              .clip(RoundedCornerShape(14.dp))
-              .background(Color.Black.copy(alpha = 0.05f))
-              .padding(horizontal = 16.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Box(modifier = Modifier.weight(1f).padding(vertical = 11.dp)) {
-              if (viewModel.signInIdentifierInput.isEmpty()) {
-                Text("Mobile number", color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
-              }
-              BasicTextField(
-                value = viewModel.signInIdentifierInput,
-                onValueChange = { new -> if (new.length <= 20) viewModel.onSignInIdentifierChange(new) },
-                singleLine = true,
-                textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp),
-                cursorBrush = SolidColor(Color.Black),
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone),
-                modifier = Modifier.fillMaxWidth()
-              )
-            }
-          }
-        }
-      } else {
         Row(
           modifier = Modifier
             .fillMaxWidth()
@@ -1660,9 +1679,6 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
           )
           Spacer(modifier = Modifier.width(12.dp))
           Box(modifier = Modifier.weight(1f).padding(vertical = 11.dp)) {
-            if (viewModel.signInIdentifierInput.isEmpty()) {
-              Text("Email", color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
-            }
             BasicTextField(
               value = viewModel.signInIdentifierInput,
               onValueChange = { new -> viewModel.onSignInIdentifierChange(new) },
