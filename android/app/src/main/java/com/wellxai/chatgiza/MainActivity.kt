@@ -3320,12 +3320,20 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
   val controller = remember { RealtimeVisionController(context, tokenStore, coroutineScope) }
 
   val screenCaptureLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+    val data = result.data
+    if (result.resultCode != Activity.RESULT_OK || data == null) return@rememberLauncherForActivityResult
+    // Flips the pill to the sharing icon the instant control returns from
+    // the system's own screen-capture consent dialog, instead of waiting
+    // on startForegroundService/getMediaProjection/registerCallback below
+    // to all finish first -- rolled back via stopScreenShare() in
+    // onFailure if any of that actually fails, so the pill never gets
+    // stuck showing "sharing" when nothing is really being captured.
+    screenShareEnabled = true
     runCatching {
-      val data = result.data
-      if (result.resultCode != Activity.RESULT_OK || data == null) return@runCatching
-      val manager = mediaProjectionManager ?: return@runCatching
+      val manager = mediaProjectionManager ?: error("Screen sharing isn't available on this device")
       ContextCompat.startForegroundService(context, Intent(context, ScreenCaptureService::class.java))
-      val projection = manager.getMediaProjection(result.resultCode, data) ?: return@runCatching
+      val projection = manager.getMediaProjection(result.resultCode, data)
+        ?: error("Screen sharing isn't available on this device")
       projection.registerCallback(object : MediaProjection.Callback() {
         // Fires when the system revokes the projection itself (screen off,
         // user stops it from the system share-notification, etc.) -- not
@@ -3347,7 +3355,6 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
         }
       }, Handler(Looper.getMainLooper()))
       mediaProjection = projection
-      screenShareEnabled = true
       // Lets the ongoing-share notification's Hang Up/Mute buttons reach
       // back into this exact call -- see LiveVisionCallBridge's own doc
       // comment for why this is a plain callback bridge, not a broadcast
@@ -3361,7 +3368,10 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
         micMuted = !micMuted
         controller.setMicMuted(micMuted)
       }
-    }.onFailure { controller.reportCameraError(it.message ?: "Screen sharing failed to start") }
+    }.onFailure {
+      stopScreenShare()
+      controller.reportCameraError(it.message ?: "Screen sharing failed to start")
+    }
   }
 
   // Keeps the notification's "Mute"/"Unmute" label matching reality
@@ -3571,18 +3581,6 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
         }
 
         Spacer(modifier = Modifier.height(18.dp))
-
-        if (screenShareEnabled) {
-          Box(
-            modifier = Modifier
-              .clip(RoundedCornerShape(percent = 50))
-              .background(Color.Black.copy(alpha = 0.15f))
-              .padding(horizontal = 16.dp, vertical = 8.dp)
-          ) {
-            Text("Sharing your screen…", color = Color.Black, fontSize = 12.sp)
-          }
-          Spacer(modifier = Modifier.height(10.dp))
-        }
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
           Box {
