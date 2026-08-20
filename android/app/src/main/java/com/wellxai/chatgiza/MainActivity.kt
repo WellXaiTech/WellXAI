@@ -1439,6 +1439,23 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
         .verticalScroll(rememberScrollState())
         .padding(horizontal = 20.dp, vertical = 24.dp)
     ) {
+      // viewModel.errorMessage is set correctly on every Google/Passkey
+      // sign-in failure (see onSignInFailed/onGoogleIdToken in
+      // ChatViewModel.kt, called from startGoogleSignIn's catch blocks in
+      // this file) -- but until now nothing on this screen ever rendered
+      // it, so the button just reverted from "Signing in…" back to its
+      // normal label with zero explanation for what went wrong. Shown above
+      // both the "Welcome back" and full-form branches below so it's
+      // visible no matter which one is active when a sign-in attempt fails.
+      if (viewModel.errorMessage != null) {
+        Text(
+          viewModel.errorMessage ?: "",
+          color = Color(0xFFE14050),
+          fontSize = 13.sp,
+          textAlign = TextAlign.Center,
+          modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+        )
+      }
       if (viewModel.rememberedAccountEmail != null && !viewModel.signInShowFullForm) {
         // Returning-user shortcut -- the last account that signed in on
         // this device, one tap to continue instead of retyping/re-picking.
@@ -3873,10 +3890,23 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
       // Transient network errors (e.g. a dropped WebSocket surfacing as
       // "Broken pipe") used to print straight through here -- a raw
       // socket exception message isn't something a user should ever see,
-      // so the status now always reads "Go ahead" outside of the
-      // AI-speaking state, regardless of what controller.errorMessage says.
+      // so the status never shows controller.errorMessage's raw text.
+      //
+      // connectionState alone can't tell "genuinely live" apart from "just
+      // failed/dropped back to Idle" -- both used to render the exact same
+      // "Go ahead" status, so a lost connection looked identical to a
+      // healthy one and the user could keep talking to nothing with no
+      // indication anything was wrong. hasStartedConnecting distinguishes
+      // real disconnects (Idle reached *after* Connecting/Listening) from
+      // the harmless pre-start Idle frame before startLiveSession() fires.
+      var hasStartedConnecting by remember { mutableStateOf(false) }
+      var connectionLost by remember { mutableStateOf(false) }
       val isConnecting = controller.connectionState == RealtimeVisionController.ConnectionState.Connecting
-      val statusText = if (controller.isAiSpeaking) "ChatGiZa is speaking…" else "Go ahead"
+      val statusText = when {
+        connectionLost -> "Connection lost — tap to retry"
+        controller.isAiSpeaking -> "ChatGiZa is speaking…"
+        else -> "Go ahead"
+      }
 
       // One cue (vibration + chime) the instant the session finishes
       // connecting and the mic actually opens -- not a repeating buzz
@@ -3885,19 +3915,30 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
       // Mute) for this voice session, matching how the equivalent Share
       // Screen notification already looks.
       LaunchedEffect(controller.connectionState) {
-        if (controller.connectionState == RealtimeVisionController.ConnectionState.Listening) {
-          if (viewModel.hapticsEnabled) playLiveStartCue(context, coroutineScope)
-          LiveVisionCallBridge.onHangUp = {
-            if (viewModel.hapticsEnabled) playLiveStopCue(context, coroutineScope)
-            stopScreenShare()
-            controller.stop()
-            viewModel.closeLiveVision()
+        when (controller.connectionState) {
+          RealtimeVisionController.ConnectionState.Connecting -> {
+            hasStartedConnecting = true
+            connectionLost = false
           }
-          LiveVisionCallBridge.onToggleMute = {
-            micMuted = !micMuted
-            controller.setMicMuted(micMuted)
+          RealtimeVisionController.ConnectionState.Listening -> {
+            hasStartedConnecting = true
+            connectionLost = false
+            if (viewModel.hapticsEnabled) playLiveStartCue(context, coroutineScope)
+            LiveVisionCallBridge.onHangUp = {
+              if (viewModel.hapticsEnabled) playLiveStopCue(context, coroutineScope)
+              stopScreenShare()
+              controller.stop()
+              viewModel.closeLiveVision()
+            }
+            LiveVisionCallBridge.onToggleMute = {
+              micMuted = !micMuted
+              controller.setMicMuted(micMuted)
+            }
+            runCatching { ContextCompat.startForegroundService(context, Intent(context, LiveCallService::class.java)) }
           }
-          runCatching { ContextCompat.startForegroundService(context, Intent(context, LiveCallService::class.java)) }
+          RealtimeVisionController.ConnectionState.Idle -> {
+            if (hasStartedConnecting) connectionLost = true
+          }
         }
       }
 
@@ -3934,7 +3975,16 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               .align(Alignment.Center)
               .height(36.dp)
               .clip(RoundedCornerShape(percent = 50))
-              .background(Color.Black.copy(alpha = 0.12f))
+              .background(if (connectionLost) Color(0xFFE53935).copy(alpha = 0.15f) else Color.Black.copy(alpha = 0.12f))
+              .then(
+                if (connectionLost) {
+                  Modifier.clickable {
+                    connectionLost = false
+                    hasStartedConnecting = false
+                    startLiveSession()
+                  }
+                } else Modifier
+              )
               .padding(horizontal = 14.dp)
           ) {
             if (isConnecting) {
@@ -3946,6 +3996,15 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               )
               Spacer(modifier = Modifier.size(8.dp))
               Text("Connecting…", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            } else if (connectionLost) {
+              Icon(
+                imageVector = Icons.Filled.Refresh,
+                contentDescription = null,
+                tint = Color(0xFFB71C1C),
+                modifier = Modifier.size(20.dp)
+              )
+              Spacer(modifier = Modifier.size(6.dp))
+              Text(statusText, color = Color(0xFFB71C1C), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             } else {
               Icon(
                 painter = androidx.compose.ui.res.painterResource(R.drawable.ic_talking),
