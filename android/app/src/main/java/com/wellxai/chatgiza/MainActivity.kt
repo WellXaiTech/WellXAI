@@ -8595,7 +8595,7 @@ private fun DeactivateAccountIllustration() {
       modifier = Modifier
         .size(22.dp)
         .align(Alignment.BottomEnd)
-        .offset(x = (-8).dp, y = (-10).dp)
+        .offset(x = (-16).dp, y = (-18).dp)
     )
   }
 }
@@ -8640,13 +8640,15 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
     Column(
       modifier = Modifier
         .fillMaxWidth()
-        // A fixed 85% of screen height instead of sizing to content --
-        // content-driven sizing meant collapsing Subaccount visibly shrank
-        // the whole sheet (its top edge, and the scrim above it, slid
-        // down). A constant fraction never changes regardless of what's
-        // toggled inside it, and reaches close to the top of the screen
-        // like the reference instead of stopping partway down.
-        .fillMaxHeight(0.85f)
+        // Full screen height instead of sizing to content -- content-driven
+        // sizing meant collapsing Subaccount visibly shrank the whole sheet
+        // (its top edge, and the scrim above it, slid down). A constant
+        // fraction never changes regardless of what's toggled inside it.
+        // 1f (not 0.85f) so it reaches the very top of the screen like the
+        // reference, instead of leaving the screen behind it (and its dark
+        // scrim) visible in a gap above the sheet.
+        .fillMaxHeight(1f)
+        .statusBarsPadding()
         .padding(horizontal = 20.dp)
         .padding(top = 20.dp, bottom = 28.dp)
     ) {
