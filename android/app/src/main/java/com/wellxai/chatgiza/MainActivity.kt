@@ -2,7 +2,6 @@
 
 import android.Manifest
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -3283,47 +3282,24 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
   var mediaProjection by remember { mutableStateOf<MediaProjection?>(null) }
   var virtualDisplay by remember { mutableStateOf<VirtualDisplay?>(null) }
   var screenImageReader by remember { mutableStateOf<ImageReader?>(null) }
+  // Typed getSystemService (nullable) instead of the string-key + `as` cast
+  // this used to be -- the old form threw a hard TypeCastException on every
+  // single Live Vision open if that lookup ever came back null for any
+  // reason, crashing the whole screen ("keeps stopping") before the user
+  // ever touched Share Screen. This just disables the feature instead.
   val mediaProjectionManager = remember {
-    context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+    runCatching { context.getSystemService(MediaProjectionManager::class.java) }.getOrNull()
   }
 
   fun stopScreenShare() {
-    virtualDisplay?.release()
+    runCatching { virtualDisplay?.release() }
     virtualDisplay = null
-    screenImageReader?.close()
+    runCatching { screenImageReader?.close() }
     screenImageReader = null
-    mediaProjection?.stop()
+    runCatching { mediaProjection?.stop() }
     mediaProjection = null
     screenShareEnabled = false
-    context.stopService(Intent(context, ScreenCaptureService::class.java))
-  }
-
-  val screenCaptureLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-    val data = result.data
-    if (result.resultCode != Activity.RESULT_OK || data == null) return@rememberLauncherForActivityResult
-    ContextCompat.startForegroundService(context, Intent(context, ScreenCaptureService::class.java))
-    val projection = mediaProjectionManager.getMediaProjection(result.resultCode, data)
-    if (projection == null) return@rememberLauncherForActivityResult
-    projection.registerCallback(object : MediaProjection.Callback() {
-      // Fires when the system revokes the projection itself (screen off,
-      // user stops it from the system share-notification, etc.) -- not
-      // just when stopScreenShare() asks for it, so this has to release
-      // the VirtualDisplay/ImageReader here too rather than assume
-      // stopScreenShare() already did it. Skips mediaProjection.stop()
-      // itself since the projection is already stopping/stopped by
-      // whatever triggered this callback.
-      override fun onStop() {
-        virtualDisplay?.release()
-        virtualDisplay = null
-        screenImageReader?.close()
-        screenImageReader = null
-        mediaProjection = null
-        screenShareEnabled = false
-        context.stopService(Intent(context, ScreenCaptureService::class.java))
-      }
-    }, Handler(Looper.getMainLooper()))
-    mediaProjection = projection
-    screenShareEnabled = true
+    runCatching { context.stopService(Intent(context, ScreenCaptureService::class.java)) }
   }
 
   val micPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -3341,38 +3317,73 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
   val tokenStore = remember { TokenStore(context.applicationContext) }
   val controller = remember { RealtimeVisionController(context, tokenStore, coroutineScope) }
 
+  val screenCaptureLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+    runCatching {
+      val data = result.data
+      if (result.resultCode != Activity.RESULT_OK || data == null) return@runCatching
+      val manager = mediaProjectionManager ?: return@runCatching
+      ContextCompat.startForegroundService(context, Intent(context, ScreenCaptureService::class.java))
+      val projection = manager.getMediaProjection(result.resultCode, data) ?: return@runCatching
+      projection.registerCallback(object : MediaProjection.Callback() {
+        // Fires when the system revokes the projection itself (screen off,
+        // user stops it from the system share-notification, etc.) -- not
+        // just when stopScreenShare() asks for it, so this has to release
+        // the VirtualDisplay/ImageReader here too rather than assume
+        // stopScreenShare() already did it. Skips mediaProjection.stop()
+        // itself since the projection is already stopping/stopped by
+        // whatever triggered this callback.
+        override fun onStop() {
+          runCatching { virtualDisplay?.release() }
+          virtualDisplay = null
+          runCatching { screenImageReader?.close() }
+          screenImageReader = null
+          mediaProjection = null
+          screenShareEnabled = false
+          runCatching { context.stopService(Intent(context, ScreenCaptureService::class.java)) }
+        }
+      }, Handler(Looper.getMainLooper()))
+      mediaProjection = projection
+      screenShareEnabled = true
+    }.onFailure { controller.reportCameraError(it.message ?: "Screen sharing failed to start") }
+  }
+
   // Sets up the VirtualDisplay/ImageReader once a MediaProjection exists,
   // and tears it down when sharing stops -- same throttled-frame cadence
   // (1200ms) as the camera's ImageAnalysis.Analyzer above.
   LaunchedEffect(mediaProjection) {
     val projection = mediaProjection ?: return@LaunchedEffect
-    val metrics = context.resources.displayMetrics
-    val width = metrics.widthPixels
-    val height = metrics.heightPixels
-    val density = metrics.densityDpi
-    val reader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
-    screenImageReader = reader
-    var lastSentAt = 0L
-    reader.setOnImageAvailableListener({ r ->
-      val image = runCatching { r.acquireLatestImage() }.getOrNull() ?: return@setOnImageAvailableListener
-      val now = System.currentTimeMillis()
-      if (now - lastSentAt >= 1200) {
-        lastSentAt = now
-        runCatching { controller.sendFrame(screenImageToJpeg(image, width, height)) }
-      }
-      image.close()
-    }, Handler(Looper.getMainLooper()))
+    runCatching {
+      val metrics = context.resources.displayMetrics
+      val width = metrics.widthPixels
+      val height = metrics.heightPixels
+      val density = metrics.densityDpi
+      val reader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
+      screenImageReader = reader
+      var lastSentAt = 0L
+      reader.setOnImageAvailableListener({ r ->
+        val image = runCatching { r.acquireLatestImage() }.getOrNull() ?: return@setOnImageAvailableListener
+        val now = System.currentTimeMillis()
+        if (now - lastSentAt >= 1200) {
+          lastSentAt = now
+          runCatching { controller.sendFrame(screenImageToJpeg(image, width, height)) }
+        }
+        image.close()
+      }, Handler(Looper.getMainLooper()))
 
-    virtualDisplay = projection.createVirtualDisplay(
-      "ChatGiZaScreenShare",
-      width,
-      height,
-      density,
-      DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-      reader.surface,
-      null,
-      null
-    )
+      virtualDisplay = projection.createVirtualDisplay(
+        "ChatGiZaScreenShare",
+        width,
+        height,
+        density,
+        DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+        reader.surface,
+        null,
+        null
+      )
+    }.onFailure {
+      controller.reportCameraError(it.message ?: "Screen sharing failed to start")
+      stopScreenShare()
+    }
   }
 
   fun startLiveSession() {
@@ -3589,7 +3600,13 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
                     if (screenShareEnabled) {
                       stopScreenShare()
                     } else {
-                      screenCaptureLauncher.launch(mediaProjectionManager.createScreenCaptureIntent())
+                      val manager = mediaProjectionManager
+                      if (manager != null) {
+                        runCatching { screenCaptureLauncher.launch(manager.createScreenCaptureIntent()) }
+                          .onFailure { controller.reportCameraError(it.message ?: "Screen sharing isn't available on this device") }
+                      } else {
+                        controller.reportCameraError("Screen sharing isn't available on this device")
+                      }
                     }
                   }
                 )

@@ -24,23 +24,29 @@ class ScreenCaptureService : Service() {
 
   override fun onCreate() {
     super.onCreate()
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-      manager.createNotificationChannel(
-        NotificationChannel(CHANNEL_ID, "Screen sharing", NotificationManager.IMPORTANCE_LOW)
-      )
-    }
-    val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-      .setSmallIcon(R.drawable.ic_chatgiza_logo)
-      .setContentTitle("ChatGiZa is sharing your screen")
-      .setContentText("GiZa can see what's on your screen during this Live Vision call.")
-      .setOngoing(true)
-      .build()
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-      startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
-    } else {
-      startForeground(NOTIFICATION_ID, notification)
-    }
+    // A failure anywhere here (e.g. the OS refusing a background
+    // foreground-service start) used to crash the whole app process --
+    // caught and the service just stops itself instead, and Share Screen
+    // reports a plain error via the same channel as camera errors.
+    runCatching {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.createNotificationChannel(
+          NotificationChannel(CHANNEL_ID, "Screen sharing", NotificationManager.IMPORTANCE_LOW)
+        )
+      }
+      val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+        .setSmallIcon(R.drawable.ic_chatgiza_logo)
+        .setContentTitle("ChatGiZa is sharing your screen")
+        .setContentText("GiZa can see what's on your screen during this Live Vision call.")
+        .setOngoing(true)
+        .build()
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
+      } else {
+        startForeground(NOTIFICATION_ID, notification)
+      }
+    }.onFailure { stopSelf() }
   }
 
   companion object {
