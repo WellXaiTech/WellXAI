@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.json.JSONArray
 import org.json.JSONObject
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
@@ -66,6 +67,7 @@ sealed class AppScreen {
   object SignedOut : AppScreen()
   object Chat : AppScreen()
   object History : AppScreen()
+  object PrivateChat : AppScreen()
   object Account : AppScreen()
   object Customize : AppScreen()
   object EditProfile : AppScreen()
@@ -261,6 +263,19 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var settingsData by mutableStateOf(SettingsData())
     private set
   var savingSettings by mutableStateOf(false)
+    private set
+
+  // Private Chat -- a genuinely separate thread, not just a filtered view
+  // of regular history. Never touches ChatGizaApi.saveHistory (the normal
+  // sync-to-account path); persisted only via TokenStore's own
+  // EncryptedSharedPreferences (AES-256, device-local), so it never leaves
+  // the device and never shows up in the synced conversation list on any
+  // other device. No profile/memory personalization is sent with these
+  // requests either, for the same reason.
+  var privateMessages by mutableStateOf<List<UiMessage>>(emptyList())
+    private set
+  var privateInput by mutableStateOf("")
+  var privateSending by mutableStateOf(false)
     private set
 
   var projects by mutableStateOf<List<ApiProject>>(emptyList())
@@ -3635,6 +3650,74 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     }
   }
 
+  fun openPrivateChat() {
+    if (privateMessages.isEmpty()) {
+      privateMessages = tokenStore.getPrivateChatJson()?.let { decodePrivateMessages(it) } ?: emptyList()
+    }
+    screen = AppScreen.PrivateChat
+  }
+
+  fun closePrivateChat() {
+    screen = AppScreen.Account
+  }
+
+  fun onPrivateInputChange(value: String) {
+    privateInput = value
+  }
+
+  /** Deliberately separate from sendMessage(): no conversationId, no
+   * ChatGizaApi.saveHistory call (the normal cloud-sync path), no
+   * profile/memory personalization sent to the model. Persisted only to
+   * TokenStore's own EncryptedSharedPreferences -- see the field comment
+   * on privateMessages for why. */
+  fun sendPrivateMessage() {
+    val text = privateInput.trim()
+    val token = tokenStore.getToken()
+    if (text.isEmpty() || privateSending || token == null) return
+    val now = System.currentTimeMillis()
+    val userMsg = UiMessage(UUID.randomUUID().toString(), "user", text, now)
+    val assistantId = UUID.randomUUID().toString()
+    privateMessages = privateMessages + userMsg + UiMessage(assistantId, "assistant", "", now)
+    privateInput = ""
+    privateSending = true
+
+    viewModelScope.launch {
+      val historyBase = privateMessages.dropLast(1)
+      val history = historyBase.map { ChatMessage(it.role, it.content) }
+      val result = ChatGizaApi.streamChat(
+        token = token,
+        messages = history,
+        tool = null,
+        conversationId = null,
+        profile = ApiProfile(),
+        memory = emptyList(),
+        language = profileData.language,
+        location = "",
+        company = CompanyProfile(),
+        localDateTime = currentLocalDateTimeString()
+      ) { chunk ->
+        privateMessages = privateMessages.map { m ->
+          if (m.id == assistantId) m.copy(content = m.content + chunk) else m
+        }
+      }
+      privateSending = false
+      if (result is ApiResult.Failure) {
+        errorMessage = result.message
+        privateMessages = privateMessages.map { m ->
+          if (m.id == assistantId && m.content.isEmpty()) m.copy(content = "(failed to respond)") else m
+        }
+      }
+      tokenStore.setPrivateChatJson(encodePrivateMessages(privateMessages))
+    }
+  }
+
+  /** Wipes the on-device private thread entirely -- there is no server
+   * copy to also delete, since one was never created. */
+  fun clearPrivateChat() {
+    privateMessages = emptyList()
+    tokenStore.setPrivateChatJson(null)
+  }
+
   /** Re-runs the request that produced [assistantId]'s reply, replacing its
    * content with a fresh response. Anything after it in the conversation
    * (there shouldn't normally be anything, but just in case) is dropped. */
@@ -3725,6 +3808,32 @@ private fun ApiConversation.lastActivity(): Long = messages.maxOfOrNull { it.cre
  * time references ("today at 6pm", Swahili clock hours) correctly. */
 private fun currentLocalDateTimeString(): String =
   SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US).format(Date())
+
+// Private Chat's own tiny serialization -- deliberately not reusing
+// ApiMessage/the regular history JSON shape, since this list never goes
+// near ChatGizaApi at all; it only ever round-trips through
+// TokenStore's encrypted local storage.
+private fun encodePrivateMessages(list: List<UiMessage>): String {
+  val arr = JSONArray()
+  for (m in list) {
+    arr.put(
+      JSONObject()
+        .put("id", m.id)
+        .put("role", m.role)
+        .put("content", m.content)
+        .put("createdAt", m.createdAt ?: System.currentTimeMillis())
+    )
+  }
+  return arr.toString()
+}
+
+private fun decodePrivateMessages(json: String): List<UiMessage> = runCatching {
+  val arr = JSONArray(json)
+  (0 until arr.length()).map { i ->
+    val o = arr.getJSONObject(i)
+    UiMessage(o.getString("id"), o.getString("role"), o.optString("content", ""), o.optLong("createdAt"))
+  }
+}.getOrDefault(emptyList())
 
 private data class ChatReminderRequest(val prompt: String, val runAt: String)
 
