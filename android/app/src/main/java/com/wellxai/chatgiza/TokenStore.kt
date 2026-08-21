@@ -49,6 +49,18 @@ class TokenStore(context: Context) {
     prefs.edit().putString(KEY_TOKEN, token).apply()
   }
 
+  // Whether this device already cleared its second-factor challenge --
+  // sent back on every mobileAuth/authWithPassword call so it isn't
+  // challenged again (see resolveMobileSignIn server-side). Unlike the
+  // "remembered account" fields below, this MUST be wiped by clear() on
+  // sign-out: "trusted until sign-out" only holds if signing out actually
+  // forgets it.
+  fun getDeviceTrustToken(): String? = prefs.getString(KEY_DEVICE_TRUST_TOKEN, null)
+
+  fun setDeviceTrustToken(token: String?) {
+    prefs.edit().putString(KEY_DEVICE_TRUST_TOKEN, token).apply()
+  }
+
   fun getUserId(): String? = prefs.getString(KEY_ID, null)
   fun getUserName(): String? = prefs.getString(KEY_NAME, null)
   fun getUserEmail(): String? = prefs.getString(KEY_EMAIL, null)
@@ -312,6 +324,7 @@ class TokenStore(context: Context) {
   companion object {
     private const val PREFS_NAME = "chatgiza_secure_prefs"
     private const val KEY_TOKEN = "mobile_token"
+    private const val KEY_DEVICE_TRUST_TOKEN = "device_trust_token"
     private const val KEY_ID = "user_id"
     private const val KEY_NAME = "user_name"
     private const val KEY_EMAIL = "user_email"
