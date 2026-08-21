@@ -146,6 +146,14 @@ class TokenStore(context: Context) {
     prefs.edit().putString(KEY_PASTE_AS_FILE_MODE, value).apply()
   }
 
+  // Private Chat's own thread (see ChatViewModel's privateMessages) --
+  // stored as a raw JSON string here, same encrypted store as the auth
+  // token itself, and never sent to ChatGizaApi.saveHistory.
+  fun getPrivateChatJson(): String? = prefs.getString(KEY_PRIVATE_CHAT, null)
+  fun setPrivateChatJson(value: String?) {
+    prefs.edit().putString(KEY_PRIVATE_CHAT, value).apply()
+  }
+
   // A locally-picked preset avatar (see AVATAR_PRESETS in MainActivity.kt)
   // that overrides the Google-account photo everywhere the app shows an
   // avatar -- device-local only, no backend field for this exists yet.
@@ -338,6 +346,7 @@ class TokenStore(context: Context) {
     private const val KEY_HAPTICS_ON_PRESS = "haptics_on_press"
     private const val KEY_HAPTICS_ON_RESPONSE = "haptics_on_response"
     private const val KEY_PASTE_AS_FILE_MODE = "paste_as_file_mode"
+    private const val KEY_PRIVATE_CHAT = "private_chat_json"
     private const val KEY_AVATAR_PRESET_ID = "avatar_preset_id"
     private const val KEY_AVATAR_NAME = "avatar_name"
     private const val KEY_ACTIVE_SUBACCOUNT_ID = "active_subaccount_id"

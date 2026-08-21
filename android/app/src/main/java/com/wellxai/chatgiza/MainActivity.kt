@@ -563,6 +563,7 @@ class MainActivity : AppCompatActivity() {
                 is AppScreen.Projects -> ProjectsScreen(viewModel)
                 is AppScreen.Scheduled -> ScheduledScreen(viewModel)
                 is AppScreen.LiveVision -> LiveVisionScreen(viewModel)
+                is AppScreen.PrivateChat -> PrivateChatScreen(viewModel)
                 else -> ChatScreenUi(viewModel)
               }
             }
@@ -608,6 +609,7 @@ class MainActivity : AppCompatActivity() {
             )
             is AppScreen.Chat -> ChatScreenUi(viewModel)
             is AppScreen.History -> HistoryScreen(viewModel)
+            is AppScreen.PrivateChat -> PrivateChatScreen(viewModel)
             is AppScreen.Account -> AccountScreen(viewModel)
             is AppScreen.Customize -> CustomizeScreen(viewModel)
             is AppScreen.EditProfile -> EditProfileScreen(viewModel)
@@ -5412,7 +5414,13 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
                 modifier = Modifier
                   .clip(RoundedCornerShape(16.dp))
                   .background(if (selected) colorScheme.onBackground.copy(alpha = 0.12f) else Color.Transparent)
-                  .clickable { selectedHistoryTab = tab }
+                  .clickable {
+                    // "Private" is a real, separate full-screen space now
+                    // (see PrivateChatScreen) rather than an inline filter
+                    // of this same list, so it navigates away instead of
+                    // just flipping selectedHistoryTab.
+                    if (tab == "Private") viewModel.openPrivateChat() else selectedHistoryTab = tab
+                  }
                   .padding(horizontal = 12.dp, vertical = 6.dp)
               )
             }
@@ -5420,11 +5428,11 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
 
           Spacer(modifier = Modifier.height(10.dp))
 
-          if (selectedHistoryTab != "History") {
-            Box(modifier = Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
-              Text("Coming soon", color = colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 16.sp)
-            }
-          } else if (viewModel.loadingHistory) {
+          // "Private" navigates to its own screen now instead of setting
+          // selectedHistoryTab (see the tab row above), so this list is
+          // always the real History content -- no more "Coming soon" branch
+          // for it to fall into.
+          if (viewModel.loadingHistory) {
             Box(modifier = Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
               CircularProgressIndicator(color = colorScheme.onBackground)
             }
@@ -5556,6 +5564,145 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
     )
   }
 
+}
+
+// A real, separate thread -- not a filtered view of regular History. Its own
+// dark background deliberately breaks from the rest of this (pinned-light)
+// app, reading as a distinct "different mode" the way the reference for this
+// screen did, and messages here never touch ChatGizaApi.saveHistory or the
+// synced conversation list; see ChatViewModel's privateMessages/
+// sendPrivateMessage for the actual on-device-only persistence.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PrivateChatScreen(viewModel: ChatViewModel) {
+  BackHandler { viewModel.closePrivateChat() }
+  var confirmClear by remember { mutableStateOf(false) }
+  val listState = rememberLazyListState()
+  LaunchedEffect(viewModel.privateMessages.size) {
+    if (viewModel.privateMessages.isNotEmpty()) {
+      listState.animateScrollToItem(viewModel.privateMessages.lastIndex)
+    }
+  }
+
+  Scaffold(
+    containerColor = Color.Black,
+    topBar = {
+      Row(
+        modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        IconButton(
+          onClick = { viewModel.closePrivateChat() },
+          modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f))
+        ) {
+          Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        Text("Private", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.weight(1f))
+        if (viewModel.privateMessages.isNotEmpty()) {
+          IconButton(
+            onClick = { confirmClear = true },
+            modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f))
+          ) {
+            DeleteIcon(tint = Color.White)
+          }
+        } else {
+          Spacer(modifier = Modifier.size(44.dp))
+        }
+      }
+    }
+  ) { padding ->
+    Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+      if (viewModel.privateMessages.isEmpty()) {
+        Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+          Text(
+            "A separate space for anything you'd rather not have in your regular history.\nNothing here is saved to your account — it stays only on this device.",
+            color = Color.White.copy(alpha = 0.5f),
+            fontSize = 14.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 40.dp)
+          )
+        }
+      } else {
+        LazyColumn(
+          state = listState,
+          modifier = Modifier.weight(1f).fillMaxWidth(),
+          contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+          verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+          items(viewModel.privateMessages, key = { it.id }) { msg ->
+            if (msg.role == "user") {
+              Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Box(
+                  modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color.White.copy(alpha = 0.12f))
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                ) {
+                  Text(msg.content, color = Color.White, fontSize = 15.sp)
+                }
+              }
+            } else {
+              Box(modifier = Modifier.fillMaxWidth()) {
+                MarkdownText(text = msg.content.ifEmpty { "…" }, baseColor = Color.White, fontSize = 15.sp)
+              }
+            }
+          }
+        }
+      }
+
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .navigationBarsPadding()
+          .imePadding()
+          .padding(12.dp)
+          .clip(RoundedCornerShape(26.dp))
+          .background(Color.White.copy(alpha = 0.1f))
+          .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        TextField(
+          value = viewModel.privateInput,
+          onValueChange = { viewModel.onPrivateInputChange(it) },
+          modifier = Modifier.weight(1f),
+          placeholder = { Text("Message privately", color = Color.White.copy(alpha = 0.4f)) },
+          colors = TextFieldDefaults.colors(
+            focusedTextColor = Color.White,
+            unfocusedTextColor = Color.White,
+            cursorColor = Color.White,
+            unfocusedContainerColor = Color.Transparent,
+            focusedContainerColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+            focusedIndicatorColor = Color.Transparent
+          )
+        )
+        Box(
+          modifier = Modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .background(if (viewModel.privateSending) Color.White.copy(alpha = 0.3f) else Color.White)
+            .clickable(enabled = !viewModel.privateSending) { viewModel.sendPrivateMessage() },
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(Icons.Filled.ArrowUpward, contentDescription = "Send", tint = Color.Black, modifier = Modifier.size(18.dp))
+        }
+      }
+    }
+  }
+
+  if (confirmClear) {
+    ConfirmDangerDialog(
+      title = "Clear this chat?",
+      message = "Everything in Private will be deleted from this device. This can't be undone.",
+      onConfirm = {
+        viewModel.clearPrivateChat()
+        confirmClear = false
+      },
+      onDismiss = { confirmClear = false }
+    )
+  }
 }
 
 // --- ChatGiZa Media --------------------------------------------------------
