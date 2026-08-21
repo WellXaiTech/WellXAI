@@ -5575,7 +5575,6 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
 private fun PrivateChatScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closePrivateChat() }
   val context = LocalContext.current
-  var confirmClear by remember { mutableStateOf(false) }
   val listState = rememberLazyListState()
   LaunchedEffect(viewModel.privateMessages.size) {
     if (viewModel.privateMessages.isNotEmpty()) {
@@ -5662,16 +5661,6 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
           Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
         }
         Spacer(modifier = Modifier.weight(1f))
-        if (viewModel.privateMessages.isNotEmpty()) {
-          IconButton(
-            onClick = { confirmClear = true },
-            modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f))
-          ) {
-            DeleteIcon(tint = Color.White)
-          }
-        } else {
-          Spacer(modifier = Modifier.size(44.dp))
-        }
       }
     }
   ) { padding ->
@@ -5714,31 +5703,32 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
         }
       }
 
-      // Shrunk from the original 36dp buttons / 8dp vertical padding -- a
-      // smaller pill, mic button for voice typing, and a blue circular send
-      // button using the same waveform glyph as the main composer's Speak
-      // button, per feedback on this screen.
+      // BasicTextField instead of Material3's TextField -- the latter
+      // carries a built-in minimum content height taller than this pill
+      // wants, which is why the box still looked tall even after shrinking
+      // the surrounding padding. BasicTextField has no such minimum, so the
+      // pill's real height now.
       Row(
         modifier = Modifier
           .fillMaxWidth()
           .navigationBarsPadding()
           .imePadding()
-          .padding(12.dp)
+          .padding(10.dp)
           .clip(RoundedCornerShape(22.dp))
           .background(Color.White.copy(alpha = 0.1f))
-          .padding(horizontal = 14.dp, vertical = 4.dp),
+          .padding(horizontal = 14.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
         if (isListening) {
           Box(
-            modifier = Modifier.size(32.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.15f)),
+            modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center
           ) {
             Icon(
               painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mic),
               contentDescription = "Listening",
               tint = Color.White,
-              modifier = Modifier.size(16.dp)
+              modifier = Modifier.size(20.dp)
             )
           }
           Spacer(modifier = Modifier.width(10.dp))
@@ -5753,46 +5743,42 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
           Spacer(modifier = Modifier.width(6.dp))
           Box(
             modifier = Modifier
-              .size(32.dp)
+              .size(40.dp)
               .clip(CircleShape)
               .background(Color.White.copy(alpha = 0.1f))
               .clickable { stopListening(keepResult = false) },
             contentAlignment = Alignment.Center
           ) {
-            Icon(Icons.Outlined.Close, contentDescription = "Cancel", tint = Color.White, modifier = Modifier.size(16.dp))
+            Icon(Icons.Outlined.Close, contentDescription = "Cancel", tint = Color.White, modifier = Modifier.size(20.dp))
           }
           Spacer(modifier = Modifier.width(6.dp))
           Box(
             modifier = Modifier
-              .size(32.dp)
+              .size(40.dp)
               .clip(CircleShape)
               .background(Color.White)
               .clickable { stopListening(keepResult = true) },
             contentAlignment = Alignment.Center
           ) {
-            Icon(Icons.Filled.Check, contentDescription = "Done", tint = Color.Black, modifier = Modifier.size(16.dp))
+            Icon(Icons.Filled.Check, contentDescription = "Done", tint = Color.Black, modifier = Modifier.size(20.dp))
           }
         } else {
-          TextField(
-            value = viewModel.privateInput,
-            onValueChange = { viewModel.onPrivateInputChange(it) },
-            modifier = Modifier.weight(1f),
-            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, color = Color.White),
-            placeholder = { Text("Message privately", color = Color.White.copy(alpha = 0.4f), fontSize = 14.sp) },
-            colors = TextFieldDefaults.colors(
-              focusedTextColor = Color.White,
-              unfocusedTextColor = Color.White,
-              cursorColor = Color.White,
-              unfocusedContainerColor = Color.Transparent,
-              focusedContainerColor = Color.Transparent,
-              unfocusedIndicatorColor = Color.Transparent,
-              focusedIndicatorColor = Color.Transparent
+          Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+            if (viewModel.privateInput.isEmpty()) {
+              Text("Message privately", color = Color.White, fontSize = 14.sp)
+            }
+            BasicTextField(
+              value = viewModel.privateInput,
+              onValueChange = { viewModel.onPrivateInputChange(it) },
+              modifier = Modifier.fillMaxWidth(),
+              textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, color = Color.White),
+              cursorBrush = SolidColor(Color.White)
             )
-          )
-          Spacer(modifier = Modifier.width(4.dp))
+          }
+          Spacer(modifier = Modifier.width(6.dp))
           Box(
             modifier = Modifier
-              .size(32.dp)
+              .size(40.dp)
               .clip(CircleShape)
               .background(Color.White.copy(alpha = 0.15f))
               .clickable { launchSpeech() },
@@ -5802,13 +5788,13 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
               painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mic),
               contentDescription = "Voice input",
               tint = Color.White,
-              modifier = Modifier.size(16.dp)
+              modifier = Modifier.size(20.dp)
             )
           }
           Spacer(modifier = Modifier.width(6.dp))
           Box(
             modifier = Modifier
-              .size(32.dp)
+              .size(40.dp)
               .clip(CircleShape)
               .background(if (viewModel.privateSending) Color(0xFF0A84FF).copy(alpha = 0.4f) else Color(0xFF0A84FF))
               .clickable(enabled = !viewModel.privateSending) { viewModel.sendPrivateMessage() },
@@ -5818,24 +5804,12 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
               painter = androidx.compose.ui.res.painterResource(R.drawable.ic_waveform_speak),
               contentDescription = "Send",
               tint = Color.White,
-              modifier = Modifier.size(16.dp)
+              modifier = Modifier.size(22.dp)
             )
           }
         }
       }
     }
-  }
-
-  if (confirmClear) {
-    ConfirmDangerDialog(
-      title = "Clear this chat?",
-      message = "Everything in Private will be deleted from this device. This can't be undone.",
-      onConfirm = {
-        viewModel.clearPrivateChat()
-        confirmClear = false
-      },
-      onDismiss = { confirmClear = false }
-    )
   }
 }
 
