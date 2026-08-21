@@ -15923,14 +15923,33 @@ private fun MessageActionBar(
       ActionBarItem(androidx.compose.ui.res.painterResource(R.drawable.ic_regenerate), "Regenerate", size = 18.dp, onClick = onRegenerate)
       Box {
         ActionBarItem(Icons.Outlined.MoreHoriz, "More") { moreOpen = true }
-        DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }) {
+        DropdownMenu(
+          expanded = moreOpen,
+          onDismissRequest = { moreOpen = false },
+          modifier = Modifier.width(230.dp),
+          // Right-anchored to the "..." button instead of the default
+          // top-start (which, this close to the screen's right edge, was
+          // getting shoved back toward center by Compose's own off-screen
+          // avoidance) -- per feedback, it should open from where the
+          // button actually is.
+          offset = DpOffset(x = (230 - 40).dp, y = 0.dp),
+          shape = RoundedCornerShape(20.dp)
+        ) {
           DropdownMenuItem(
             text = { Text("Translate on-device") },
+            leadingIcon = { Icon(Icons.Outlined.Language, contentDescription = null, modifier = Modifier.size(22.dp)) },
             onClick = { moreOpen = false; onTranslate() }
           )
           if (cleanContent.length >= MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH) {
             DropdownMenuItem(
               text = { Text(if (pushState == "pushed") "Sent to Extra Media" else "Send to Extra Media") },
+              leadingIcon = {
+                Icon(
+                  painter = androidx.compose.ui.res.painterResource(R.drawable.ic_share),
+                  contentDescription = null,
+                  modifier = Modifier.size(22.dp)
+                )
+              },
               onClick = {
                 moreOpen = false
                 if (chatGizaMediaConnected) {
@@ -15947,6 +15966,7 @@ private fun MessageActionBar(
           }
           DropdownMenuItem(
             text = { Text("Export as PDF") },
+            leadingIcon = { Icon(Icons.Outlined.Description, contentDescription = null, modifier = Modifier.size(22.dp)) },
             onClick = {
               moreOpen = false
               runCatching {
@@ -15963,6 +15983,7 @@ private fun MessageActionBar(
           )
           DropdownMenuItem(
             text = { Text("Delete", color = Color.Black) },
+            leadingIcon = { DeleteIcon(tint = Color.Black, modifier = Modifier.size(22.dp)) },
             onClick = { moreOpen = false; onDelete() }
           )
         }
