@@ -3264,9 +3264,11 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
     // navigationBarsPadding()/imePadding(), so extra padding here just
     // left a gap between the card and the keyboard/nav bar with the
     // message list visible (and readable) through it.
-    modifier = Modifier
-      .fillMaxWidth()
-      .border(1.dp, colorScheme.onBackground.copy(alpha = 0.08f), RoundedCornerShape(24.dp)),
+    // No border, no shadow -- per feedback comparing against a reference
+    // screenshot with no visible line at the composer's edge at all. The
+    // box is told apart from the page purely by being its own tap target/
+    // rounded shape, not by any visible outline.
+    modifier = Modifier.fillMaxWidth(),
     shape = RoundedCornerShape(24.dp),
     colors = CardDefaults.cardColors(containerColor = composerBackground),
     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
