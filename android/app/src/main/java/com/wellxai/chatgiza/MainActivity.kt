@@ -5784,19 +5784,18 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
       } else {
         LazyColumn(
           state = listState,
-          // fill = false is the actual fix: weight(1f) alone still forces
-          // this to CONSUME all leftover vertical space even when the
-          // content is shorter than that, which is what was pushing a
-          // short conversation's messages down against the composer and
-          // leaving a bare gap up at the header instead (previously
-          // "fixed" by bottom-anchoring the items, which just moved the
-          // same gap from the bottom to the top). fill = false lets this
-          // wrap its actual content height instead -- short conversations
-          // sit right under the header with the composer directly beneath
-          // them, no gap on EITHER side; weight(1f) is still there as the
-          // upper bound so a long conversation still scrolls properly
-          // instead of pushing the composer off-screen.
-          modifier = Modifier.weight(1f, fill = false).fillMaxWidth(),
+          // fill = false (tried in the previous change) was worse, not
+          // better: it let the composer float wherever the last message
+          // happened to end, stranded in the middle of the screen with a
+          // dead black gap below it instead of sitting at the bottom where
+          // a composer belongs. Plain weight(1f) (fill = true, the
+          // default) is back -- the composer must always be pinned to the
+          // bottom of the screen, full stop; a gap between a short
+          // conversation's last message and the composer above a
+          // bottom-pinned composer is completely normal (every chat app
+          // looks like this with only a couple of messages), and is NOT
+          // the same bug as the composer itself being in the wrong place.
+          modifier = Modifier.weight(1f).fillMaxWidth(),
           contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 12.dp),
           verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
