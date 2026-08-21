@@ -5685,6 +5685,16 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
 
   Scaffold(
     containerColor = Color.Black,
+    // Scaffold's own default contentWindowInsets already reserves status-
+    // bar-height space at the top of the body slot -- on top of the
+    // statusBarsPadding() the topBar Row below already applies itself,
+    // that's the status bar's height added TWICE, which is exactly the
+    // extra black gap between the back button and the first message.
+    // Zeroing this out here (same fix already used on the main Chat
+    // screen's own Scaffold) leaves the manual statusBarsPadding()/
+    // navigationBarsPadding()/imePadding() calls already in this screen as
+    // the only source of truth for its insets.
+    contentWindowInsets = WindowInsets(0, 0, 0, 0),
     topBar = {
       Row(
         modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
