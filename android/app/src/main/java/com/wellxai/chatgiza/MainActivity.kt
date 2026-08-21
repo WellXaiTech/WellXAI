@@ -5730,32 +5730,35 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
       viewModel.privateHistoryOpen -> Box(modifier = Modifier.fillMaxSize().padding(top = 84.dp)) {
         PrivateHistoryList(viewModel)
       }
-      else -> Column(modifier = Modifier.fillMaxSize()) {
-        if (viewModel.privateMessages.isEmpty()) {
-          Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Text(
-              "A separate space for anything you'd rather not have in your regular history.\nNothing here is saved to your account — it stays only on this device.",
-              color = Color.White.copy(alpha = 0.5f),
-              fontSize = 14.sp,
-              textAlign = TextAlign.Center,
-              modifier = Modifier.padding(horizontal = 40.dp)
-            )
-          }
-        } else {
-          LazyColumn(
-            state = listState,
-            // Composer must always be pinned to the bottom of the screen
-            // (weight(1f), fill = true, the default) -- a gap between a
-            // short conversation's last message and the composer is
-            // completely normal chat-app behavior, not a bug.
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            // Top padding roughly clears the floating header at rest (84dp
-            // -- covers the status bar plus the button row on most
-            // devices); scrolling can still carry content further up
-            // behind the header, which is the whole point of floating it.
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 84.dp, bottom = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-          ) {
+      // No Column/weight() wrapper anymore -- the composer used to be a
+      // sibling of this list inside a weighted Column, which is exactly
+      // what forced a gap to exist SOMEWHERE (top or bottom depending on
+      // which anchoring was tried) whenever a short conversation didn't
+      // fill that reserved space. The composer is now a floating overlay
+      // too (further down, alongside the header), so this list just fills
+      // the whole screen like the header's content already does, with
+      // bottom contentPadding standing in for where the composer usually
+      // sits rather than an empty Column slot forcing a real gap to exist.
+      else -> if (viewModel.privateMessages.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+          Text(
+            "A separate space for anything you'd rather not have in your regular history.\nNothing here is saved to your account — it stays only on this device.",
+            color = Color.White.copy(alpha = 0.5f),
+            fontSize = 14.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 40.dp)
+          )
+        }
+      } else {
+        LazyColumn(
+          state = listState,
+          modifier = Modifier.fillMaxSize(),
+          // Top clears the floating header at rest (84dp); bottom clears
+          // the floating composer at rest (90dp) -- scrolling can still
+          // carry content further behind either one, same as the header.
+          contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 84.dp, bottom = 90.dp),
+          verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
           items(viewModel.privateMessages, key = { it.id }) { msg ->
             if (msg.role == "user") {
               Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -5776,14 +5779,93 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
           }
         }
       }
+    }
 
-      // BasicTextField instead of Material3's TextField -- the latter
-      // carries a built-in minimum content height taller than this pill
-      // wants, which is why the box still looked tall even after shrinking
-      // the surrounding padding. BasicTextField has no such minimum, so the
-      // pill's real height now.
+    // Gradient scrim -- opaque black at the very top fading to fully
+    // transparent, sitting between the scrolling content and the floating
+    // header below. This is what actually produces the "text fades out as
+    // it reaches the header" look from the reference screenshot: the text
+    // itself doesn't change, it's just covered by an increasingly opaque
+    // black overlay the closer it gets to the top.
+    if (viewModel.privateChatUnlocked && !viewModel.privateHistoryOpen) {
+      Box(
+        modifier = Modifier
+          .align(Alignment.TopCenter)
+          .fillMaxWidth()
+          .height(110.dp)
+          .background(Brush.verticalGradient(listOf(Color.Black, Color.Black.copy(alpha = 0f))))
+      )
+    }
+
+    // Floating header -- drawn last (on top of the content and the scrim
+    // above), and reserves no layout space of its own, which is what lets
+    // the message list scroll all the way up behind it instead of always
+    // stopping short of it.
+    Row(
+      modifier = Modifier
+        .align(Alignment.TopCenter)
+        .fillMaxWidth()
+        .statusBarsPadding()
+        .padding(horizontal = 12.dp, vertical = 3.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      IconButton(
+        onClick = { viewModel.closePrivateChat() },
+        modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f))
+      ) {
+        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+      }
+      Spacer(modifier = Modifier.weight(1f))
+      // Only once unlocked -- these aren't reachable from the PIN screen
+      // itself, same as the rest of the thread underneath it.
+      if (viewModel.privateChatUnlocked) {
+        IconButton(
+          onClick = { viewModel.openPrivateHistory() },
+          modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f))
+        ) {
+          // Icons.Outlined.History doesn't actually exist in this
+          // project's icon set (build failure: "Unresolved reference
+          // 'History'") -- Schedule is already used elsewhere in this
+          // same file and known to resolve.
+          Icon(Icons.Outlined.Schedule, contentDescription = "Private history", tint = Color.White, modifier = Modifier.size(22.dp))
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        IconButton(
+          onClick = { viewModel.startNewPrivateChat() },
+          modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f))
+        ) {
+          // ic_new_chat_bubble (the same icon the main Ask/Chat screen
+          // uses) turned out too easy to mistake for just another circle
+          // next to the clock icon, twice, even after switching to it
+          // specifically for consistency -- AddBox (a square with a plus)
+          // is unambiguous at this size even alone, trading strict
+          // consistency with the main screen for actually being legible.
+          Icon(Icons.Outlined.AddBox, contentDescription = "New private chat", tint = Color.White, modifier = Modifier.size(22.dp))
+        }
+      } else {
+        Spacer(modifier = Modifier.size(44.dp))
+      }
+    }
+
+    // Bottom scrim + floating composer, symmetric to the header above --
+    // same reasoning: a Row sitting inside the Column as a sibling of the
+    // message list reserved its own fixed slot, which is what kept
+    // producing a gap somewhere no matter which direction the list's
+    // content was anchored. Floating it here instead means it always sits
+    // at the screen's true bottom edge (Box alignment, not content-
+    // relative position), with the message list free to fill the rest of
+    // the screen behind it exactly like it does behind the header.
+    if (viewModel.privateChatUnlocked && !viewModel.privateHistoryOpen) {
+      Box(
+        modifier = Modifier
+          .align(Alignment.BottomCenter)
+          .fillMaxWidth()
+          .height(110.dp)
+          .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0f), Color.Black)))
+      )
       Row(
         modifier = Modifier
+          .align(Alignment.BottomCenter)
           .fillMaxWidth()
           .navigationBarsPadding()
           .imePadding()
@@ -5901,74 +5983,6 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
             }
           }
         }
-      }
-    }
-    }
-
-    // Gradient scrim -- opaque black at the very top fading to fully
-    // transparent, sitting between the scrolling content and the floating
-    // header below. This is what actually produces the "text fades out as
-    // it reaches the header" look from the reference screenshot: the text
-    // itself doesn't change, it's just covered by an increasingly opaque
-    // black overlay the closer it gets to the top.
-    if (viewModel.privateChatUnlocked && !viewModel.privateHistoryOpen) {
-      Box(
-        modifier = Modifier
-          .align(Alignment.TopCenter)
-          .fillMaxWidth()
-          .height(110.dp)
-          .background(Brush.verticalGradient(listOf(Color.Black, Color.Black.copy(alpha = 0f))))
-      )
-    }
-
-    // Floating header -- drawn last (on top of the content and the scrim
-    // above), and reserves no layout space of its own, which is what lets
-    // the message list scroll all the way up behind it instead of always
-    // stopping short of it.
-    Row(
-      modifier = Modifier
-        .align(Alignment.TopCenter)
-        .fillMaxWidth()
-        .statusBarsPadding()
-        .padding(horizontal = 12.dp, vertical = 3.dp),
-      verticalAlignment = Alignment.CenterVertically
-    ) {
-      IconButton(
-        onClick = { viewModel.closePrivateChat() },
-        modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f))
-      ) {
-        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
-      }
-      Spacer(modifier = Modifier.weight(1f))
-      // Only once unlocked -- these aren't reachable from the PIN screen
-      // itself, same as the rest of the thread underneath it.
-      if (viewModel.privateChatUnlocked) {
-        IconButton(
-          onClick = { viewModel.openPrivateHistory() },
-          modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f))
-        ) {
-          // Icons.Outlined.History doesn't actually exist in this
-          // project's icon set (build failure: "Unresolved reference
-          // 'History'") -- Schedule is already used elsewhere in this
-          // same file and known to resolve.
-          Icon(Icons.Outlined.Schedule, contentDescription = "Private history", tint = Color.White, modifier = Modifier.size(22.dp))
-        }
-        Spacer(modifier = Modifier.width(8.dp))
-        IconButton(
-          onClick = { viewModel.startNewPrivateChat() },
-          modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f))
-        ) {
-          // The exact same New Chat icon the main Ask/Chat screen uses,
-          // not a generic plus (which reads as "attach" there instead).
-          Icon(
-            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_new_chat_bubble),
-            contentDescription = "New private chat",
-            tint = Color.White,
-            modifier = Modifier.size(20.dp)
-          )
-        }
-      } else {
-        Spacer(modifier = Modifier.size(44.dp))
       }
     }
   }
