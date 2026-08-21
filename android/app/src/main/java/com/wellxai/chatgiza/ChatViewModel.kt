@@ -2610,6 +2610,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     // to be stored -- once a *different* account has since signed in.
     activeChatJob?.cancel()
     activeChatJob = null
+    activeChatCall?.cancel()
+    activeChatCall = null
     sending = false
     tokenStore.clear()
     conversations = emptyList()
@@ -2647,6 +2649,12 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   // instead of letting it finish and write into whatever account is
   // signed in by the time it completes.
   private var activeChatJob: Job? = null
+  // The live okhttp3.Call behind activeChatJob -- Job.cancel() alone
+  // doesn't interrupt the blocking read loop inside ChatGizaApi.streamChat
+  // (see its onCallCreated param doc), so stopSendingMessage() needs this
+  // to actually unblock it rather than just detaching from the result.
+  private var activeChatCall: Call? = null
+  private var sendStoppedByUser = false
 
   private fun sortConversations(list: List<ApiConversation>): List<ApiConversation> =
     list.sortedWith(compareByDescending<ApiConversation> { it.pinned }.thenByDescending { it.lastActivity() })
@@ -3590,6 +3598,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     clearAttachedImage()
     clearAttachedFile()
     sending = true
+    sendStoppedByUser = false
     errorMessage = null
 
     val conversationId = activeConversationId ?: UUID.randomUUID().toString()
@@ -3619,19 +3628,25 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         historyIndex = buildHistoryIndex(conversationId),
         referencedPair = referencedPair,
         localDateTime = currentLocalDateTimeString(),
-        digitalTwin = digitalTwin
+        digitalTwin = digitalTwin,
+        onCallCreated = { call -> activeChatCall = call }
       ) { chunk ->
         messages = messages.map { m ->
           if (m.id == assistantId) m.copy(content = m.content + chunk) else m
         }
       }
       sending = false
-      if (result is ApiResult.Failure) {
+      activeChatCall = null
+      // A user-initiated Stop also surfaces as an ApiResult.Failure (the
+      // cancelled OkHttp Call throws mid-read) -- skip the error banner and
+      // the "(failed to respond)" fallback for that case, since whatever
+      // streamed in before Stop was pressed is the intended final answer.
+      if (result is ApiResult.Failure && !sendStoppedByUser) {
         errorMessage = result.message
         messages = messages.map { m ->
           if (m.id == assistantId && m.content.isEmpty()) m.copy(content = "(failed to respond)") else m
         }
-      } else {
+      } else if (result !is ApiResult.Failure) {
         val finalContent = messages.find { it.id == assistantId }?.content.orEmpty()
         val (cleaned, reminder) = extractReminderRequest(finalContent)
         if (reminder != null) {
@@ -3640,6 +3655,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         }
         maybeCheckForMemorySuggestions()
       }
+      sendStoppedByUser = false
 
       val titleFallback = text.take(60).ifEmpty { fileToSend?.name ?: "Photo" }
       val title = if (isNewConversation) titleFallback else conversations.find { it.id == conversationId }?.title ?: titleFallback
@@ -3657,6 +3673,15 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
       val saveResult = ChatGizaApi.saveHistory(token, conversations, deletedIds, activeSubaccountId)
       if (saveResult is ApiResult.Failure) errorMessage = saveResult.message
     }
+  }
+
+  /** Interrupts the in-flight send/reply, keeping whatever was streamed so
+   * far as the assistant message's final content -- same shape as
+   * stopPrivateMessage(), just for the main composer's Stop button. */
+  fun stopSendingMessage() {
+    if (!sending) return
+    sendStoppedByUser = true
+    activeChatCall?.cancel()
   }
 
   fun openPrivateChat() {
