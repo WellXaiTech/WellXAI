@@ -3226,10 +3226,13 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
       }
     }
   }
-  // White, matching the page background, instead of a gray tint -- the
-  // card is told apart from the background by the soft drop shadow
-  // (elevation below) rather than by a color difference, per feedback:
-  // same white as everywhere else, but still visibly its own box.
+  // White, matching the page background exactly -- told apart from it by
+  // a thin border only, not by elevation. A non-zero Card elevation asks
+  // Material3's Surface to blend a tonal (surfaceTint) overlay into
+  // whatever containerColor is passed, even an explicit opaque one, which
+  // was quietly turning this back into a visible gray instead of the flat
+  // one-color-only look asked for. Elevation is 0 below for exactly that
+  // reason -- the border is the only thing drawing the edge now.
   val composerBackground = colorScheme.background
   Box(
     // A plain (unrounded) backing rectangle, sitting directly behind the
@@ -3254,13 +3257,12 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
     // navigationBarsPadding()/imePadding(), so extra padding here just
     // left a gap between the card and the keyboard/nav bar with the
     // message list visible (and readable) through it.
-    modifier = Modifier.fillMaxWidth(),
+    modifier = Modifier
+      .fillMaxWidth()
+      .border(1.dp, colorScheme.onBackground.copy(alpha = 0.08f), RoundedCornerShape(24.dp)),
     shape = RoundedCornerShape(24.dp),
     colors = CardDefaults.cardColors(containerColor = composerBackground),
-    // Same color as the background it floats over, so a soft shadow is
-    // the only thing separating the two -- a low elevation for a subtle
-    // edge instead of a hard outline/border.
-    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
   ) {
     Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)) {
       // Unified attachment preview -- was three different ad hoc treatments
