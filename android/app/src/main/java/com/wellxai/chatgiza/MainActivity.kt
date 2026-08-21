@@ -5574,12 +5574,78 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
 @Composable
 private fun PrivateChatScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closePrivateChat() }
+  val context = LocalContext.current
   var confirmClear by remember { mutableStateOf(false) }
   val listState = rememberLazyListState()
   LaunchedEffect(viewModel.privateMessages.size) {
     if (viewModel.privateMessages.isNotEmpty()) {
       listState.animateScrollToItem(viewModel.privateMessages.lastIndex)
     }
+  }
+
+  // Same in-app voice typing as the main Chat composer (SpeechRecognizer,
+  // not the full-screen ACTION_RECOGNIZE_SPEECH dialog) -- live partial
+  // transcript fills the private input as the user talks, kept fully
+  // on-device same as everything else in this screen.
+  var isListening by remember { mutableStateOf(false) }
+  var listeningPreview by remember { mutableStateOf("") }
+  val inputBeforeListening = remember { mutableStateOf("") }
+  var hasMicPermission by remember {
+    mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
+  }
+  val speechRecognizer = remember {
+    if (SpeechRecognizer.isRecognitionAvailable(context)) SpeechRecognizer.createSpeechRecognizer(context) else null
+  }
+  DisposableEffect(speechRecognizer) {
+    onDispose { speechRecognizer?.destroy() }
+  }
+  fun applyTranscript(text: String) {
+    if (text.isNotBlank()) {
+      val base = inputBeforeListening.value
+      viewModel.onPrivateInputChange(if (base.isBlank()) text else "$base $text")
+    }
+  }
+  fun stopListening(keepResult: Boolean) {
+    isListening = false
+    listeningPreview = ""
+    runCatching { if (keepResult) speechRecognizer?.stopListening() else speechRecognizer?.cancel() }
+  }
+  fun startListening() {
+    val recognizer = speechRecognizer ?: return
+    inputBeforeListening.value = viewModel.privateInput
+    listeningPreview = ""
+    recognizer.setRecognitionListener(object : RecognitionListener {
+      override fun onReadyForSpeech(params: Bundle?) {}
+      override fun onBeginningOfSpeech() {}
+      override fun onRmsChanged(rmsdB: Float) {}
+      override fun onBufferReceived(buffer: ByteArray?) {}
+      override fun onEndOfSpeech() {}
+      override fun onError(error: Int) { isListening = false; listeningPreview = "" }
+      override fun onPartialResults(partialResults: Bundle?) {
+        val text = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
+        if (text != null) listeningPreview = text
+      }
+      override fun onResults(results: Bundle?) {
+        val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
+        if (text != null) applyTranscript(text)
+        isListening = false
+        listeningPreview = ""
+      }
+      override fun onEvent(eventType: Int, params: Bundle?) {}
+    })
+    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+      putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+      putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+    }
+    isListening = true
+    runCatching { recognizer.startListening(intent) }.onFailure { isListening = false }
+  }
+  val micPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+    hasMicPermission = granted
+    if (granted) startListening()
+  }
+  fun launchSpeech() {
+    if (hasMicPermission) startListening() else micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
   }
 
   Scaffold(
@@ -5595,8 +5661,6 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
         ) {
           Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
         }
-        Spacer(modifier = Modifier.weight(1f))
-        Text("Private", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.weight(1f))
         if (viewModel.privateMessages.isNotEmpty()) {
           IconButton(
@@ -5650,41 +5714,113 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
         }
       }
 
+      // Shrunk from the original 36dp buttons / 8dp vertical padding -- a
+      // smaller pill, mic button for voice typing, and a blue circular send
+      // button using the same waveform glyph as the main composer's Speak
+      // button, per feedback on this screen.
       Row(
         modifier = Modifier
           .fillMaxWidth()
           .navigationBarsPadding()
           .imePadding()
           .padding(12.dp)
-          .clip(RoundedCornerShape(26.dp))
+          .clip(RoundedCornerShape(22.dp))
           .background(Color.White.copy(alpha = 0.1f))
-          .padding(horizontal = 16.dp, vertical = 8.dp),
+          .padding(horizontal = 14.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        TextField(
-          value = viewModel.privateInput,
-          onValueChange = { viewModel.onPrivateInputChange(it) },
-          modifier = Modifier.weight(1f),
-          placeholder = { Text("Message privately", color = Color.White.copy(alpha = 0.4f)) },
-          colors = TextFieldDefaults.colors(
-            focusedTextColor = Color.White,
-            unfocusedTextColor = Color.White,
-            cursorColor = Color.White,
-            unfocusedContainerColor = Color.Transparent,
-            focusedContainerColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent,
-            focusedIndicatorColor = Color.Transparent
+        if (isListening) {
+          Box(
+            modifier = Modifier.size(32.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(
+              painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mic),
+              contentDescription = "Listening",
+              tint = Color.White,
+              modifier = Modifier.size(16.dp)
+            )
+          }
+          Spacer(modifier = Modifier.width(10.dp))
+          Text(
+            text = listeningPreview.ifBlank { "Listening…" },
+            color = Color.White.copy(alpha = if (listeningPreview.isBlank()) 0.5f else 1f),
+            fontSize = 14.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
           )
-        )
-        Box(
-          modifier = Modifier
-            .size(36.dp)
-            .clip(CircleShape)
-            .background(if (viewModel.privateSending) Color.White.copy(alpha = 0.3f) else Color.White)
-            .clickable(enabled = !viewModel.privateSending) { viewModel.sendPrivateMessage() },
-          contentAlignment = Alignment.Center
-        ) {
-          Icon(Icons.Filled.ArrowUpward, contentDescription = "Send", tint = Color.Black, modifier = Modifier.size(18.dp))
+          Spacer(modifier = Modifier.width(6.dp))
+          Box(
+            modifier = Modifier
+              .size(32.dp)
+              .clip(CircleShape)
+              .background(Color.White.copy(alpha = 0.1f))
+              .clickable { stopListening(keepResult = false) },
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(Icons.Outlined.Close, contentDescription = "Cancel", tint = Color.White, modifier = Modifier.size(16.dp))
+          }
+          Spacer(modifier = Modifier.width(6.dp))
+          Box(
+            modifier = Modifier
+              .size(32.dp)
+              .clip(CircleShape)
+              .background(Color.White)
+              .clickable { stopListening(keepResult = true) },
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(Icons.Filled.Check, contentDescription = "Done", tint = Color.Black, modifier = Modifier.size(16.dp))
+          }
+        } else {
+          TextField(
+            value = viewModel.privateInput,
+            onValueChange = { viewModel.onPrivateInputChange(it) },
+            modifier = Modifier.weight(1f),
+            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, color = Color.White),
+            placeholder = { Text("Message privately", color = Color.White.copy(alpha = 0.4f), fontSize = 14.sp) },
+            colors = TextFieldDefaults.colors(
+              focusedTextColor = Color.White,
+              unfocusedTextColor = Color.White,
+              cursorColor = Color.White,
+              unfocusedContainerColor = Color.Transparent,
+              focusedContainerColor = Color.Transparent,
+              unfocusedIndicatorColor = Color.Transparent,
+              focusedIndicatorColor = Color.Transparent
+            )
+          )
+          Spacer(modifier = Modifier.width(4.dp))
+          Box(
+            modifier = Modifier
+              .size(32.dp)
+              .clip(CircleShape)
+              .background(Color.White.copy(alpha = 0.15f))
+              .clickable { launchSpeech() },
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(
+              painter = androidx.compose.ui.res.painterResource(R.drawable.ic_mic),
+              contentDescription = "Voice input",
+              tint = Color.White,
+              modifier = Modifier.size(16.dp)
+            )
+          }
+          Spacer(modifier = Modifier.width(6.dp))
+          Box(
+            modifier = Modifier
+              .size(32.dp)
+              .clip(CircleShape)
+              .background(if (viewModel.privateSending) Color(0xFF0A84FF).copy(alpha = 0.4f) else Color(0xFF0A84FF))
+              .clickable(enabled = !viewModel.privateSending) { viewModel.sendPrivateMessage() },
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(
+              painter = androidx.compose.ui.res.painterResource(R.drawable.ic_waveform_speak),
+              contentDescription = "Send",
+              tint = Color.White,
+              modifier = Modifier.size(16.dp)
+            )
+          }
         }
       }
     }
