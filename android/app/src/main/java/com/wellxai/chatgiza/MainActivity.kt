@@ -3553,17 +3553,35 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
         Spacer(modifier = Modifier.width(8.dp))
 
         val hasSendableContent = viewModel.input.isNotBlank() || viewModel.attachedImageUri != null || viewModel.attachedFile != null
-        if (hasSendableContent) {
+        // sending is checked first, before hasSendableContent -- input (and
+        // any attachment) is cleared the instant sendMessage() fires, so
+        // hasSendableContent alone would flip straight back to the Speak
+        // pill for the whole reply instead of showing a Stop state.
+        if (viewModel.sending) {
+          // STOP BUTTON -- same shape/role as Private Chat's own Stop,
+          // black glyph on the same light circle the Send button uses,
+          // keeping whatever the reply has streamed in so far.
+          Box(
+            modifier = Modifier
+              .size(36.dp)
+              .clip(CircleShape)
+              .background(Color(0xFFE0E0E0))
+              .clickable { viewModel.stopSendingMessage() },
+            contentAlignment = Alignment.Center
+          ) {
+            Box(modifier = Modifier.size(12.dp).clip(RoundedCornerShape(3.dp)).background(Color.Black))
+          }
+        } else if (hasSendableContent) {
           // SEND BUTTON
           Box(
             modifier = Modifier
               .size(36.dp)
               .clip(CircleShape)
-              .background(if (viewModel.sending) Color(0xFF555555) else Color(0xFFE0E0E0))
-              .clickable(enabled = !viewModel.sending) { tapHaptic(); viewModel.sendMessage() },
+              .background(Color(0xFFE0E0E0))
+              .clickable { tapHaptic(); viewModel.sendMessage() },
             contentAlignment = Alignment.Center
           ) {
-            Icon(Icons.Filled.ArrowUpward, contentDescription = "Send", tint = Color.White, modifier = Modifier.size(18.dp))
+            Icon(Icons.Filled.ArrowUpward, contentDescription = "Send", tint = Color.Black, modifier = Modifier.size(18.dp))
           }
         } else {
           // SPEAK BUTTON (waveform icon + label) -- icon and text sized up
