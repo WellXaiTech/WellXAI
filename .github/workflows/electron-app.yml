@@ -1,0 +1,57 @@
+name: Build ChatGiZa Desktop App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "electron-app/**"
+      - ".github/workflows/electron-app.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: electron-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        shell: bash
+        run: npm ci
+
+      - name: Build the Windows installer
+        shell: bash
+        run: npm run dist
+
+      - name: Upload installer as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chatgiza-desktop-installer
+          path: electron-app/release/*.exe
+
+      # Workflow artifacts require a GitHub login to download. A Release
+      # attaches the same installer to a public, direct download URL instead —
+      # this repo is public, so the link works for anyone without signing in.
+      - name: Publish installer to a GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-build-${{ github.run_number }}
+          name: "ChatGiZa Desktop build #${{ github.run_number }}"
+          body: |
+            Windows installer built from commit ${{ github.sha }}.
+            A chrome-free window onto chatgiza.com — not code-signed, so
+            Windows SmartScreen may warn on first run ("More info" > "Run
+            anyway").
+          files: electron-app/release/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

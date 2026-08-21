@@ -1,0 +1,44 @@
+{
+  "name": "chatgiza-desktop",
+  "productName": "ChatGiZa",
+  "version": "0.1.0",
+  "description": "ChatGiZa desktop app -- a chrome-free window onto chatgiza.com.",
+  "private": true,
+  "main": "dist/main.js",
+  "author": "WellXaiTech",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc -p .",
+    "dev": "npm run build && electron .",
+    "dist": "npm run build && electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "typescript": "^5.4.0"
+  },
+  "build": {
+    "appId": "com.wellxaitech.chatgiza.desktop",
+    "productName": "ChatGiZa",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "allowScripts": {
+    "electron@33.4.11": true
+  }
+}
