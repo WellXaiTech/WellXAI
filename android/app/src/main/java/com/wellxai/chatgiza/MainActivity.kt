@@ -3273,10 +3273,16 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
     // background fill, but now with an actual soft shadow so the box
     // reads as its own distinct shape again, matching the reference.
     modifier = Modifier
-      // 3dp rendered as a noticeably crisp outline rather than a soft
-      // shadow (per feedback comparing against the reference, which barely
-      // shows any edge at all) -- down to 1dp for a much fainter cue.
-      .shadow(elevation = 1.dp, shape = RoundedCornerShape(24.dp), clip = false, ambientColor = Color.Black.copy(alpha = 0.15f), spotColor = Color.Black.copy(alpha = 0.15f))
+      // Both previous attempts missed in opposite directions: 3dp with
+      // default shadow color read as a crisp outline, then 1dp with a
+      // manually-dimmed 15%-alpha color went too far the other way and
+      // became imperceptible. This drops the custom color override
+      // entirely and uses the same elevation + default-color combination
+      // already proven to render a normal, visible soft shadow elsewhere
+      // in this app (the history row's own lift-on-press effect, a few
+      // hundred lines below this) -- 4dp, Compose's own default shadow
+      // color, no artificial dimming.
+      .shadow(elevation = 4.dp, shape = RoundedCornerShape(24.dp), clip = false)
       .fillMaxWidth(),
     shape = RoundedCornerShape(24.dp),
     colors = CardDefaults.cardColors(containerColor = composerBackground),
