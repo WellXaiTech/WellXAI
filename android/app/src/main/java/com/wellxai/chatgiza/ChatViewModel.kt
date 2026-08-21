@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import okhttp3.Call
 import org.json.JSONArray
 import org.json.JSONObject
 import java.security.MessageDigest
@@ -276,6 +277,11 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var privateInput by mutableStateOf("")
   var privateSending by mutableStateOf(false)
     private set
+  // Live handle on the in-flight request so stopPrivateMessage() can
+  // actually interrupt it (see the onCallCreated comment on
+  // ChatGizaApi.streamChat for why a plain Job.cancel() isn't enough).
+  private var privateStreamCall: Call? = null
+  private var privateStreamStoppedByUser = false
 
   // Private Chat's own PIN gate -- required on every single entry, not just
   // once per app session (see openPrivateChat). Separate from the whole-app
@@ -3768,6 +3774,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     privateMessages = privateMessages + userMsg + UiMessage(assistantId, "assistant", "", now)
     privateInput = ""
     privateSending = true
+    privateStreamStoppedByUser = false
 
     viewModelScope.launch {
       val historyBase = privateMessages.dropLast(1)
@@ -3782,21 +3789,37 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         language = profileData.language,
         location = "",
         company = CompanyProfile(),
-        localDateTime = currentLocalDateTimeString()
+        localDateTime = currentLocalDateTimeString(),
+        onCallCreated = { call -> privateStreamCall = call }
       ) { chunk ->
         privateMessages = privateMessages.map { m ->
           if (m.id == assistantId) m.copy(content = m.content + chunk) else m
         }
       }
       privateSending = false
-      if (result is ApiResult.Failure) {
+      privateStreamCall = null
+      // A user-initiated Stop also surfaces as an ApiResult.Failure (the
+      // cancelled OkHttp Call throws mid-read) -- skip the error banner and
+      // the "(failed to respond)" fallback for that case specifically, since
+      // whatever was streamed before Stop was pressed is the intended final
+      // answer, not a broken one.
+      if (result is ApiResult.Failure && !privateStreamStoppedByUser) {
         errorMessage = result.message
         privateMessages = privateMessages.map { m ->
           if (m.id == assistantId && m.content.isEmpty()) m.copy(content = "(failed to respond)") else m
         }
       }
+      privateStreamStoppedByUser = false
       tokenStore.setPrivateChatJson(encodePrivateMessages(privateMessages))
     }
+  }
+
+  /** Interrupts the in-flight private-chat request, keeping whatever was
+   * streamed so far as the assistant message's final content. */
+  fun stopPrivateMessage() {
+    if (!privateSending) return
+    privateStreamStoppedByUser = true
+    privateStreamCall?.cancel()
   }
 
   /** Wipes the on-device private thread entirely -- there is no server

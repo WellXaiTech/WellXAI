@@ -2,6 +2,7 @@ package com.wellxai.chatgiza
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.Call
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -452,6 +453,15 @@ object ChatGizaApi {
     // both quietly improve personalization in every mode and be used
     // literally when tool == "digital_twin".
     digitalTwin: String? = null,
+    // Handed the live okhttp3.Call the instant it's created, before
+    // .execute() blocks -- lets a caller stash it and call .cancel() on it
+    // from elsewhere (a Stop button) to actually interrupt the in-flight
+    // read loop below. Plain coroutine Job cancellation alone doesn't do
+    // this: the blocking reader.read() call has no cancellation checkpoint
+    // of its own, so it would just keep blocking until the stream ends on
+    // its own. Cancelling the underlying OkHttp Call instead makes that
+    // blocked read throw immediately.
+    onCallCreated: ((Call) -> Unit)? = null,
     onChunk: (String) -> Unit
   ): ApiResult<Unit> =
     withContext(Dispatchers.IO) {
@@ -522,7 +532,9 @@ object ChatGizaApi {
           .post(payload)
           .build()
 
-        client.newCall(request).execute().use { response ->
+        val call = client.newCall(request)
+        onCallCreated?.invoke(call)
+        call.execute().use { response ->
           if (!response.isSuccessful) {
             val text = response.body?.string().orEmpty()
             return@withContext ApiResult.Failure(errorMessage(text, response.code))
