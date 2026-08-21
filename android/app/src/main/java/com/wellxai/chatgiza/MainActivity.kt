@@ -3281,9 +3281,14 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
       // already proven to render a normal, visible soft shadow elsewhere
       // in this app (the history row's own lift-on-press effect, a few
       // hundred lines below this) -- 4dp, Compose's own default shadow
-      // color, no artificial dimming.
-      .shadow(elevation = 4.dp, shape = RoundedCornerShape(24.dp), clip = false)
-      .fillMaxWidth(),
+      // color, no artificial dimming. fillMaxWidth() now comes BEFORE
+      // shadow() -- shadow needs the element's final size to draw against;
+      // with shadow first in the chain it was drawing based on whatever
+      // this Card measured to before fillMaxWidth ever expanded it, which
+      // is the actual reason nothing was rendering at any elevation tried
+      // so far, not the elevation/color values themselves.
+      .fillMaxWidth()
+      .shadow(elevation = 4.dp, shape = RoundedCornerShape(24.dp), clip = false),
     shape = RoundedCornerShape(24.dp),
     colors = CardDefaults.cardColors(containerColor = composerBackground),
     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
