@@ -3273,7 +3273,10 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
     // background fill, but now with an actual soft shadow so the box
     // reads as its own distinct shape again, matching the reference.
     modifier = Modifier
-      .shadow(elevation = 3.dp, shape = RoundedCornerShape(24.dp), clip = false)
+      // 3dp rendered as a noticeably crisp outline rather than a soft
+      // shadow (per feedback comparing against the reference, which barely
+      // shows any edge at all) -- down to 1dp for a much fainter cue.
+      .shadow(elevation = 1.dp, shape = RoundedCornerShape(24.dp), clip = false, ambientColor = Color.Black.copy(alpha = 0.15f), spotColor = Color.Black.copy(alpha = 0.15f))
       .fillMaxWidth(),
     shape = RoundedCornerShape(24.dp),
     colors = CardDefaults.cardColors(containerColor = composerBackground),
