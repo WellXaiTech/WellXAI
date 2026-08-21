@@ -289,6 +289,27 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   private var privateStreamCall: Call? = null
   private var privateStreamStoppedByUser = false
 
+  // A picked photo waiting to go out with the next private message -- the
+  // data URL is what actually reaches the model (imageDataUrls, same as
+  // the main composer); the Uri is only kept for the composer's own
+  // thumbnail preview. Not persisted into privateConversations/on-device
+  // storage once sent -- only the "📷 Photo" text marker survives in the
+  // saved thread, same tradeoff regular history makes for images.
+  var attachedPrivateImageUri by mutableStateOf<Uri?>(null)
+    private set
+  var attachedPrivateImageDataUrl by mutableStateOf<String?>(null)
+    private set
+
+  fun setAttachedPrivateImage(uri: Uri, dataUrl: String) {
+    attachedPrivateImageUri = uri
+    attachedPrivateImageDataUrl = dataUrl
+  }
+
+  fun clearAttachedPrivateImage() {
+    attachedPrivateImageUri = null
+    attachedPrivateImageDataUrl = null
+  }
+
   // Every past private thread, same on-device-only storage as the active
   // one above -- null activePrivateConversationId means privateMessages is
   // a fresh, not-yet-saved thread (or the very first message hasn't been
@@ -3845,14 +3866,20 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   fun sendPrivateMessage() {
     val text = privateInput.trim()
     val token = tokenStore.getToken()
-    if (text.isEmpty() || privateSending || token == null) return
+    val imageToSend = attachedPrivateImageDataUrl
+    if ((text.isEmpty() && imageToSend == null) || privateSending || token == null) return
     val now = System.currentTimeMillis()
-    val userMsg = UiMessage(UUID.randomUUID().toString(), "user", text, now)
+    // Not persisted as an actual image (see attachedPrivateImageUri's own
+    // comment) -- this marker is what a re-opened thread shows in its
+    // place, same as a regular chat's file-attachment chip text.
+    val displayText = if (imageToSend != null) "$text\n\n📷 Photo".trim() else text
+    val userMsg = UiMessage(UUID.randomUUID().toString(), "user", displayText, now)
     val assistantId = UUID.randomUUID().toString()
     privateMessages = privateMessages + userMsg + UiMessage(assistantId, "assistant", "", now)
     val conversationId = activePrivateConversationId ?: UUID.randomUUID().toString()
     activePrivateConversationId = conversationId
     privateInput = ""
+    clearAttachedPrivateImage()
     privateSending = true
     privateStreamStoppedByUser = false
 
@@ -3869,6 +3896,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         language = profileData.language,
         location = "",
         company = CompanyProfile(),
+        imageDataUrls = listOfNotNull(imageToSend),
         localDateTime = currentLocalDateTimeString(),
         onCallCreated = { call -> privateStreamCall = call }
       ) { chunk ->
@@ -3911,6 +3939,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     privateMessages = emptyList()
     activePrivateConversationId = null
     privateInput = ""
+    clearAttachedPrivateImage()
     privateHistoryOpen = false
   }
 
@@ -3926,6 +3955,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     val conversation = privateConversations.find { it.id == id } ?: return
     privateMessages = conversation.messages
     activePrivateConversationId = conversation.id
+    clearAttachedPrivateImage()
     privateHistoryOpen = false
   }
 

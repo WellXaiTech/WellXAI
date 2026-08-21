@@ -5625,6 +5625,44 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
     if (viewModel.privateHistoryOpen) viewModel.closePrivateHistory() else viewModel.closePrivateChat()
   }
   val context = LocalContext.current
+  // Photo attachment -- reuses uriToPostImageDataUrl (the same URI->data-
+  // URL helper the main composer and Extra Media's post composer already
+  // rely on) rather than a third copy of that decode/downscale logic.
+  val privateComposerScope = rememberCoroutineScope()
+  var attachPrivateMenuOpen by remember { mutableStateOf(false) }
+  var attachPrivateError by remember { mutableStateOf(false) }
+  fun attachPrivatePickedImage(uri: Uri) {
+    attachPrivateError = false
+    privateComposerScope.launch {
+      val dataUrl = withContext(Dispatchers.IO) { uriToPostImageDataUrl(context, uri) }
+      if (dataUrl != null) {
+        viewModel.setAttachedPrivateImage(uri, dataUrl)
+      } else {
+        attachPrivateError = true
+      }
+    }
+  }
+  val privateGalleryPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    if (uri != null) attachPrivatePickedImage(uri)
+  }
+  var pendingPrivateCameraUri by remember { mutableStateOf<Uri?>(null) }
+  val privateCameraCapture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+    val uri = pendingPrivateCameraUri
+    if (success && uri != null) attachPrivatePickedImage(uri)
+  }
+  var hasPrivateCameraPermission by remember {
+    mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
+  }
+  fun launchPrivateCamera() {
+    val photoFile = File(context.cacheDir, "private_composer_camera_${System.currentTimeMillis()}.jpg")
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
+    pendingPrivateCameraUri = uri
+    privateCameraCapture.launch(uri)
+  }
+  val privateCameraPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+    hasPrivateCameraPermission = granted
+    if (granted) launchPrivateCamera()
+  }
   // The app is set to light system-bar icons app-wide (see onCreate's
   // enableEdgeToEdge comment) because every other screen has a white
   // background. This is the one screen with a black background, so those
@@ -5863,13 +5901,58 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
           .height(110.dp)
           .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0f), Color.Black)))
       )
-      Row(
+      Column(
         modifier = Modifier
           .align(Alignment.BottomCenter)
           .fillMaxWidth()
           .navigationBarsPadding()
           .imePadding()
           .padding(10.dp)
+      ) {
+        // Attachment preview -- a small thumbnail + remove button above the
+        // pill, matching the main composer's own attachment preview shape,
+        // shown whenever a photo is picked but not sent yet.
+        val attachedUri = viewModel.attachedPrivateImageUri
+        if (attachedUri != null) {
+          Row(
+            modifier = Modifier
+              .padding(bottom = 8.dp)
+              .clip(RoundedCornerShape(16.dp))
+              .background(Color.White.copy(alpha = 0.1f))
+              .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            AsyncImage(
+              model = attachedUri,
+              contentDescription = "Attached photo",
+              contentScale = ContentScale.Crop,
+              modifier = Modifier.size(44.dp).clip(RoundedCornerShape(10.dp))
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text("Photo · ready to send", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp, modifier = Modifier.weight(1f))
+            Box(
+              modifier = Modifier
+                .size(26.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.15f))
+                .clickable { viewModel.clearAttachedPrivateImage() },
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(Icons.Outlined.Close, contentDescription = "Remove attachment", tint = Color.White, modifier = Modifier.size(14.dp))
+            }
+          }
+        }
+        if (attachPrivateError) {
+          Text(
+            "Couldn't attach that — try a different photo",
+            color = Color.White.copy(alpha = 0.6f),
+            fontSize = 12.sp,
+            modifier = Modifier.padding(bottom = 6.dp)
+          )
+        }
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
           .clip(RoundedCornerShape(22.dp))
           .background(Color.White.copy(alpha = 0.1f))
           .padding(horizontal = 14.dp, vertical = 6.dp),
@@ -5919,6 +6002,41 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
             Icon(Icons.Filled.Check, contentDescription = "Done", tint = Color.Black, modifier = Modifier.size(20.dp))
           }
         } else {
+          Box {
+            IconButton(
+              onClick = { attachPrivateMenuOpen = true },
+              modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.15f))
+            ) {
+              Icon(Icons.Filled.Add, contentDescription = "Attach photo", tint = Color.White, modifier = Modifier.size(20.dp))
+            }
+            DropdownMenu(
+              expanded = attachPrivateMenuOpen,
+              onDismissRequest = { attachPrivateMenuOpen = false },
+              shape = RoundedCornerShape(16.dp)
+            ) {
+              DropdownMenuItem(
+                text = { Text("Photo Library") },
+                leadingIcon = { Icon(Icons.Outlined.Image, contentDescription = null) },
+                onClick = {
+                  attachPrivateMenuOpen = false
+                  privateGalleryPicker.launch("image/*")
+                }
+              )
+              DropdownMenuItem(
+                text = { Text("Camera") },
+                // Icons.Outlined.PhotoCamera isn't verified to exist in this
+                // project's icon set (the History icon wasn't, despite
+                // looking equally standard) -- ic_camera is the same proven
+                // drawable the main composer's own Camera row already uses.
+                leadingIcon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_camera), contentDescription = null) },
+                onClick = {
+                  attachPrivateMenuOpen = false
+                  if (hasPrivateCameraPermission) launchPrivateCamera() else privateCameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                }
+              )
+            }
+          }
+          Spacer(modifier = Modifier.width(6.dp))
           Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
             if (viewModel.privateInput.isEmpty()) {
               Text("Message privately", color = Color.White, fontSize = 14.sp)
@@ -5952,6 +6070,7 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
           // yet) -> up-arrow (there's text to send) -> white square (a
           // reply is streaming in, tap to stop and keep whatever's there
           // so far) -- same shape as ChatGPT's own composer button.
+          val privateHasSendableContent = viewModel.privateInput.isNotBlank() || viewModel.attachedPrivateImageUri != null
           Box(
             modifier = Modifier
               .size(40.dp)
@@ -5960,7 +6079,7 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
               .clickable {
                 when {
                   viewModel.privateSending -> viewModel.stopPrivateMessage()
-                  viewModel.privateInput.isNotBlank() -> viewModel.sendPrivateMessage()
+                  privateHasSendableContent -> viewModel.sendPrivateMessage()
                 }
               },
             contentAlignment = Alignment.Center
@@ -5969,7 +6088,7 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
               viewModel.privateSending -> {
                 Box(modifier = Modifier.size(14.dp).clip(RoundedCornerShape(4.dp)).background(Color.White))
               }
-              viewModel.privateInput.isNotBlank() -> {
+              privateHasSendableContent -> {
                 Icon(Icons.Filled.ArrowUpward, contentDescription = "Send", tint = Color.White, modifier = Modifier.size(22.dp))
               }
               else -> {
@@ -5983,6 +6102,7 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
             }
           }
         }
+      }
       }
     }
   }
