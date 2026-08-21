@@ -5386,12 +5386,13 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             .background(Color.White)
             .padding(vertical = 10.dp)
         ) {
-          // Tab row — only "History" has a real dataset behind it; the
-          // other three are visual-only until there's an actual GiZa/
-          // Private/V2 concept to filter into. Wrapped in its own pill
-          // background (instead of sitting bare on the card) so it reads
-          // as one dedicated control, with a second highlight pill behind
-          // whichever tab is selected.
+          // Tab row — only "History" has a real dataset behind it; "Private"
+          // is visual-only until there's an actual Private concept to
+          // filter into (see "Coming soon" below). GiZa/V2 were dropped
+          // per feedback. Wrapped in its own pill background (instead of
+          // sitting bare on the card) so it reads as one dedicated
+          // control, with a second highlight pill behind whichever tab is
+          // selected.
           Row(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier
@@ -5401,7 +5402,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
               .horizontalScroll(rememberScrollState())
               .padding(6.dp)
           ) {
-            listOf("History", "GiZa", "Private", "V2").forEach { tab ->
+            listOf("History", "Private").forEach { tab ->
               val selected = selectedHistoryTab == tab
               Text(
                 tab,
