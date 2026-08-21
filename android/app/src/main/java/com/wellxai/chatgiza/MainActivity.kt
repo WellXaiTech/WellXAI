@@ -1292,6 +1292,13 @@ private fun chatGizaTypography(family: FontFamily): Typography {
   )
 }
 
+// The app's one main background color -- #FCFCFC everywhere instead of
+// pure white, per feedback. Single source of truth so every screen that
+// still hardcodes a background color (rather than reading it off
+// colorScheme.background) stays in sync with the theme below instead of
+// drifting back to plain white piecemeal.
+val APP_BACKGROUND = Color(0xFFFCFCFC)
+
 @Composable
 private fun ChatGizaTheme(themeMode: String, fontChoice: String, content: @Composable () -> Unit) {
   // Forced to the light scheme everywhere while colors are being rebuilt
@@ -1342,7 +1349,7 @@ private fun ChatGizaTheme(themeMode: String, fontChoice: String, content: @Compo
       onPrimary = Color.Black
     )
   } else {
-    val appBackground = Color(0xFFF2F2F2)
+    val appBackground = APP_BACKGROUND
     lightColorScheme(
       background = appBackground,
       surface = appBackground,
@@ -2609,7 +2616,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
       )
     },
-    containerColor = Color.White,
+    containerColor = APP_BACKGROUND,
     contentWindowInsets = WindowInsets(0, 0, 0, 0)
   ) { padding ->
     // A transparent top bar used to let scrolled-up message text show
@@ -2947,7 +2954,7 @@ private fun ChatConversationMenuSheet(
     onDismissRequest = onDismiss,
     modifier = Modifier.width(240.dp),
     shape = RoundedCornerShape(24.dp),
-    containerColor = Color.White,
+    containerColor = APP_BACKGROUND,
     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A2A2A))
   ) {
     Text(
@@ -3453,7 +3460,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             expanded = attachMenuOpen,
             onDismissRequest = { attachMenuOpen = false },
             shape = RoundedCornerShape(32.dp),
-            containerColor = Color.White,
+            containerColor = APP_BACKGROUND,
             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A2A2A))
           ) {
             AttachMenuRow(
@@ -3884,7 +3891,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
     }
   }
 
-  Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
+  Box(modifier = Modifier.fillMaxSize().background(APP_BACKGROUND)) {
     if (cameraEnabled && hasCameraPermission) {
       // Keyed on useFrontCamera so flipping the camera fully disposes and
       // recreates this AndroidView — factory() below already unbinds the
@@ -4102,7 +4109,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               expanded = cameraMenuOpen,
               onDismissRequest = { cameraMenuOpen = false },
               shape = RoundedCornerShape(16.dp),
-              containerColor = Color.White,
+              containerColor = APP_BACKGROUND,
               border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A2A2A))
             ) {
               Column(
@@ -4725,7 +4732,7 @@ private fun LiveVoiceSettingsSheet(
       Triple("earpiece", "Earpiece", Icons.Outlined.Hearing)
     )
   }
-  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color.White) {
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = APP_BACKGROUND) {
     if (showVoiceLibrary) {
       Column(
         modifier = Modifier
@@ -5987,7 +5994,7 @@ private fun PrivateChatLockScreen(viewModel: ChatViewModel) {
     Button(
       onClick = { if (!hasPin) viewModel.submitPrivateChatSetupStep() else viewModel.submitPrivateChatUnlock() },
       shape = RoundedCornerShape(24.dp),
-      colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+      colors = ButtonDefaults.buttonColors(containerColor = APP_BACKGROUND),
       modifier = Modifier.fillMaxWidth().height(50.dp)
     ) {
       Text(
@@ -6272,7 +6279,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
   Box(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.White)
+      .background(APP_BACKGROUND)
       .statusBarsPadding()
   ) {
   Column(
@@ -6529,7 +6536,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
   Box(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.White)
+      .background(APP_BACKGROUND)
   ) {
     // HorizontalPager instead of a hand-rolled offset -- the two earlier
     // manual Animatable attempts could only ever move the CURRENT tab's
@@ -7285,7 +7292,7 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
     Column(
       modifier = Modifier
         .fillMaxSize()
-        .background(Color.White)
+        .background(APP_BACKGROUND)
         .statusBarsPadding()
         .padding(horizontal = 16.dp)
     ) {
@@ -7820,7 +7827,7 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
     Column(
       modifier = Modifier
         .fillMaxSize()
-        .background(Color.White)
+        .background(APP_BACKGROUND)
         .statusBarsPadding()
         .padding(horizontal = 16.dp)
     ) {
@@ -7999,7 +8006,7 @@ private fun MediaExpandGlyph(modifier: Modifier = Modifier, tint: Color = Color.
 @Composable
 internal fun MediaCommentComposerSheet(authorName: String, onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
   var text by remember { mutableStateOf("") }
-  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color.White) {
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = APP_BACKGROUND) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
@@ -8145,7 +8152,7 @@ private fun ConnectFeatureRowShell(title: String, body: String, icon: @Composabl
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () -> Unit) {
-  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color.White) {
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = APP_BACKGROUND) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
@@ -8395,7 +8402,7 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
   Box(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.White)
+      .background(APP_BACKGROUND)
       .statusBarsPadding()
   ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -9026,7 +9033,7 @@ private fun BirthYearCard(icon: ImageVector, value: String, onValueChange: (Stri
   Card(
     modifier = Modifier.fillMaxWidth(),
     shape = RoundedCornerShape(22.dp),
-    colors = CardDefaults.cardColors(containerColor = Color.White)
+    colors = CardDefaults.cardColors(containerColor = APP_BACKGROUND)
   ) {
     Row(
       modifier = Modifier.padding(20.dp),
@@ -9057,7 +9064,7 @@ private fun EmailCard(icon: ImageVector, title: String, subtitle: String) {
   Card(
     modifier = Modifier.fillMaxWidth(),
     shape = RoundedCornerShape(22.dp),
-    colors = CardDefaults.cardColors(containerColor = Color.White)
+    colors = CardDefaults.cardColors(containerColor = APP_BACKGROUND)
   ) {
     Row(
       modifier = Modifier.padding(20.dp),
@@ -9078,7 +9085,7 @@ private fun XAccountCard(icon: ImageVector, title: String, onClick: () -> Unit) 
   Card(
     modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
     shape = RoundedCornerShape(22.dp),
-    colors = CardDefaults.cardColors(containerColor = Color.White)
+    colors = CardDefaults.cardColors(containerColor = APP_BACKGROUND)
   ) {
     Row(
       modifier = Modifier.padding(20.dp),
@@ -9100,7 +9107,7 @@ private fun EditProfileScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.White)
+      .background(APP_BACKGROUND)
       .verticalScroll(rememberScrollState())
       .padding(horizontal = 20.dp)
   ) {
@@ -9197,7 +9204,7 @@ private fun EditProfileScreen(viewModel: ChatViewModel) {
     Card(
       modifier = Modifier.fillMaxWidth().clickable(onClick = { viewModel.signOut() }),
       shape = RoundedCornerShape(22.dp),
-      colors = CardDefaults.cardColors(containerColor = Color.White)
+      colors = CardDefaults.cardColors(containerColor = APP_BACKGROUND)
     ) {
       Row(
         modifier = Modifier.padding(20.dp),
@@ -9983,7 +9990,7 @@ private fun AccountSettingsScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.White)
+      .background(APP_BACKGROUND)
       .statusBarsPadding()
       .padding(horizontal = 16.dp)
   ) {
@@ -10129,7 +10136,7 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
   // down at the bottom is even visible.
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Color.White, dragHandle = null, scrimColor = Color.Black.copy(alpha = 0.75f)) {
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = APP_BACKGROUND, dragHandle = null, scrimColor = Color.Black.copy(alpha = 0.75f)) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
@@ -10439,7 +10446,7 @@ private fun DeleteAccountIllustration() {
 private fun DeleteAccountDialog(viewModel: ChatViewModel, onDismiss: () -> Unit) {
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Color.White, dragHandle = null, scrimColor = Color.Black.copy(alpha = 0.75f)) {
+  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = APP_BACKGROUND, dragHandle = null, scrimColor = Color.Black.copy(alpha = 0.75f)) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
@@ -10582,7 +10589,7 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.White)
+      .background(APP_BACKGROUND)
       .statusBarsPadding()
       .padding(horizontal = 16.dp)
       .verticalScroll(rememberScrollState())
@@ -10725,7 +10732,7 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
 
   val moreTarget = moreSheetTarget
   if (moreTarget != null) {
-    ModalBottomSheet(onDismissRequest = { moreSheetTarget = null }, containerColor = Color.White) {
+    ModalBottomSheet(onDismissRequest = { moreSheetTarget = null }, containerColor = APP_BACKGROUND) {
       Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
           Text("More", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
@@ -10815,7 +10822,7 @@ private fun SubaccountSettingsScreen(viewModel: ChatViewModel) {
     return
   }
 
-  Column(modifier = Modifier.fillMaxSize().background(Color.White).statusBarsPadding()) {
+  Column(modifier = Modifier.fillMaxSize().background(APP_BACKGROUND).statusBarsPadding()) {
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
       Text(
         sub.name,
@@ -11151,7 +11158,7 @@ private fun WidgetsScreen(viewModel: ChatViewModel) {
   var addedMessage by remember { mutableStateOf(false) }
 
   Scaffold(
-    containerColor = Color.White,
+    containerColor = APP_BACKGROUND,
     topBar = {
       TopAppBar(
         title = { Text("Widget") },
@@ -11160,7 +11167,7 @@ private fun WidgetsScreen(viewModel: ChatViewModel) {
             Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
           }
         },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = APP_BACKGROUND)
       )
     }
   ) { padding ->
@@ -11171,7 +11178,7 @@ private fun WidgetsScreen(viewModel: ChatViewModel) {
     ) {
       Card(
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = APP_BACKGROUND)
       ) {
         WidgetMockPreview(
           modifier = Modifier
@@ -11196,7 +11203,7 @@ private fun WidgetsScreen(viewModel: ChatViewModel) {
           .fillMaxWidth()
           .clickable { showBottomSheet = true },
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = APP_BACKGROUND)
       ) {
         Row(
           modifier = Modifier.padding(20.dp),
@@ -11222,7 +11229,7 @@ private fun WidgetsScreen(viewModel: ChatViewModel) {
   if (showBottomSheet) {
     ModalBottomSheet(
       onDismissRequest = { showBottomSheet = false },
-      containerColor = Color.White
+      containerColor = APP_BACKGROUND
     ) {
       Text(
         "Add to Desktop",
@@ -11304,7 +11311,7 @@ private fun OpenSourceLicensesScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeOpenSourceLicenses() }
   val context = LocalContext.current
   Scaffold(
-    containerColor = Color.White,
+    containerColor = APP_BACKGROUND,
     topBar = {
       TopAppBar(
         title = { Text("Open Source Licenses") },
@@ -11313,7 +11320,7 @@ private fun OpenSourceLicensesScreen(viewModel: ChatViewModel) {
             Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
           }
         },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = APP_BACKGROUND)
       )
     }
   ) { padding ->
@@ -11336,7 +11343,7 @@ private fun OpenSourceLicensesScreen(viewModel: ChatViewModel) {
             .fillMaxWidth()
             .clickable { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(entry.licenseUrl))) },
           shape = RoundedCornerShape(16.dp),
-          colors = CardDefaults.cardColors(containerColor = Color.White)
+          colors = CardDefaults.cardColors(containerColor = APP_BACKGROUND)
         ) {
           Column(modifier = Modifier.padding(16.dp)) {
             Text(entry.name, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
@@ -11404,7 +11411,7 @@ private fun ShareTargetPickerScreen(viewModel: ChatViewModel) {
   }
 
   Scaffold(
-    containerColor = Color.White,
+    containerColor = APP_BACKGROUND,
     topBar = {
       TopAppBar(
         title = { Text("Open in which conversation?") },
@@ -11413,7 +11420,7 @@ private fun ShareTargetPickerScreen(viewModel: ChatViewModel) {
             Icon(Icons.Outlined.Close, contentDescription = "Cancel", tint = Color.Black)
           }
         },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = APP_BACKGROUND)
       )
     }
   ) { padding ->
@@ -11427,7 +11434,7 @@ private fun ShareTargetPickerScreen(viewModel: ChatViewModel) {
           Card(
             modifier = Modifier.fillMaxWidth().clickable { openInto(null) },
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            colors = CardDefaults.cardColors(containerColor = APP_BACKGROUND)
           ) {
             Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
               Icon(Icons.Filled.Add, contentDescription = null, tint = Color.Black, modifier = Modifier.size(20.dp))
@@ -11440,7 +11447,7 @@ private fun ShareTargetPickerScreen(viewModel: ChatViewModel) {
           Card(
             modifier = Modifier.fillMaxWidth().clickable { openInto(convo.id) },
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            colors = CardDefaults.cardColors(containerColor = APP_BACKGROUND)
           ) {
             Text(
               convo.title.ifBlank { "Untitled" },
@@ -11470,7 +11477,7 @@ private fun HapticCard(icon: ImageVector, title: String, checked: Boolean, onChe
   Card(
     modifier = Modifier.fillMaxWidth(),
     shape = RoundedCornerShape(22.dp),
-    colors = CardDefaults.cardColors(containerColor = Color.White)
+    colors = CardDefaults.cardColors(containerColor = APP_BACKGROUND)
   ) {
     Row(
       modifier = Modifier.padding(20.dp),
@@ -11490,7 +11497,7 @@ private fun ToggleCard(title: String, checked: Boolean, enabled: Boolean, onChec
   Card(
     modifier = Modifier.fillMaxWidth(),
     shape = RoundedCornerShape(18.dp),
-    colors = CardDefaults.cardColors(containerColor = Color.White)
+    colors = CardDefaults.cardColors(containerColor = APP_BACKGROUND)
   ) {
     Row(
       modifier = Modifier.padding(20.dp),
@@ -11516,7 +11523,7 @@ private fun HapticsScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.White)
+      .background(APP_BACKGROUND)
       .padding(20.dp)
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -11580,7 +11587,7 @@ private fun KidsModeScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.White)
+      .background(APP_BACKGROUND)
       .padding(20.dp)
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -11610,7 +11617,7 @@ private fun SharedConversationsScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.White)
+      .background(APP_BACKGROUND)
       .padding(20.dp)
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -11711,7 +11718,7 @@ private fun CollabChatScreen(viewModel: ChatViewModel) {
     if (count > 0) listState.animateScrollToItem(count - 1)
   }
 
-  Column(modifier = Modifier.fillMaxSize().background(Color.White).statusBarsPadding()) {
+  Column(modifier = Modifier.fillMaxSize().background(APP_BACKGROUND).statusBarsPadding()) {
     Row(
       modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
       verticalAlignment = Alignment.CenterVertically
@@ -11858,7 +11865,7 @@ private fun CommunityScreen(viewModel: ChatViewModel) {
     if (count > 0) listState.animateScrollToItem(count - 1)
   }
 
-  Column(modifier = Modifier.fillMaxSize().background(Color.White).statusBarsPadding()) {
+  Column(modifier = Modifier.fillMaxSize().background(APP_BACKGROUND).statusBarsPadding()) {
     Row(
       modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
       verticalAlignment = Alignment.CenterVertically
@@ -11959,7 +11966,7 @@ private fun TrustedDevicesScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeTrustedDevices() }
   var confirmRevoke by remember { mutableStateOf<DeviceSession?>(null) }
 
-  Column(modifier = Modifier.fillMaxSize().background(Color.White).statusBarsPadding()) {
+  Column(modifier = Modifier.fillMaxSize().background(APP_BACKGROUND).statusBarsPadding()) {
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
       Text(
         "Trusted Devices",
@@ -12118,7 +12125,7 @@ private fun StorageManagementScreen(viewModel: ChatViewModel) {
   val otherUsedBytes = (totalDeviceBytes - freeDeviceBytes - appBytes).coerceAtLeast(0L)
   val percentOfDevice = if (totalDeviceBytes > 0) (appBytes.toDouble() / totalDeviceBytes.toDouble() * 100) else 0.0
 
-  Column(modifier = Modifier.fillMaxSize().background(Color.White).statusBarsPadding()) {
+  Column(modifier = Modifier.fillMaxSize().background(APP_BACKGROUND).statusBarsPadding()) {
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
       Text(
         "Storage management",
@@ -12249,7 +12256,7 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.White)
+      .background(APP_BACKGROUND)
       .statusBarsPadding()
       // Tapping the field itself opens the keyboard as usual; tapping
       // anywhere else on the screen dismisses it, same as a chat box --
@@ -12391,7 +12398,7 @@ private fun MobileNumberScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.White)
+      .background(APP_BACKGROUND)
       .statusBarsPadding()
       .pointerInput(Unit) {
         detectTapGestures(onTap = { focusManager.clearFocus() })
@@ -12527,7 +12534,7 @@ private fun CountryPickerSheet(onDismiss: () -> Unit, onSelect: (CountryDialCode
     if (query.isBlank()) COUNTRY_DIAL_CODES
     else COUNTRY_DIAL_CODES.filter { it.name.contains(query, ignoreCase = true) || it.dialCode.contains(query) }
   }
-  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color.White) {
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = APP_BACKGROUND) {
     Column(modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp).padding(horizontal = 16.dp)) {
       Text("Choose a country", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(12.dp))
@@ -12587,7 +12594,7 @@ private fun ChangeEmailScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.White)
+      .background(APP_BACKGROUND)
       .statusBarsPadding()
       .pointerInput(Unit) {
         detectTapGestures(onTap = { focusManager.clearFocus() })
@@ -12713,7 +12720,7 @@ private fun NicknameScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.White)
+      .background(APP_BACKGROUND)
       .statusBarsPadding()
       .pointerInput(Unit) {
         detectTapGestures(onTap = { focusManager.clearFocus() })
@@ -12825,7 +12832,7 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.White)
+      .background(APP_BACKGROUND)
       .statusBarsPadding()
       .pointerInput(Unit) {
         detectTapGestures(onTap = { focusManager.clearFocus() })
@@ -13278,7 +13285,7 @@ private fun AppLockSetupScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.White)
+      .background(APP_BACKGROUND)
       .statusBarsPadding()
   ) {
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
@@ -13391,7 +13398,7 @@ private fun AppLockGateScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.White)
+      .background(APP_BACKGROUND)
       .statusBarsPadding()
       .padding(32.dp),
     verticalArrangement = Arrangement.Center,
@@ -13435,7 +13442,7 @@ private fun PasskeysManageScreen(viewModel: ChatViewModel, onAddPasskey: () -> U
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.White)
+      .background(APP_BACKGROUND)
       .statusBarsPadding()
   ) {
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
@@ -13733,7 +13740,7 @@ private fun NsfwPreferencesScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.White)
+      .background(APP_BACKGROUND)
       .padding(20.dp)
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -13864,7 +13871,7 @@ private fun ConnectorsScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.White)
+      .background(APP_BACKGROUND)
       .padding(20.dp)
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -14027,7 +14034,7 @@ private fun AppLanguageScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.White)
+      .background(APP_BACKGROUND)
       .statusBarsPadding()
       .padding(horizontal = 20.dp)
   ) {
@@ -14139,7 +14146,7 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.White)
+      .background(APP_BACKGROUND)
       .statusBarsPadding()
       .padding(20.dp)
   ) {
@@ -14180,7 +14187,7 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
     Dialog(onDismissRequest = { showDialog = false }) {
       Card(
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = APP_BACKGROUND)
       ) {
         Column(modifier = Modifier.padding(24.dp)) {
           Text("Paste as File", color = Color.Black, fontSize = 24.sp, fontWeight = FontWeight.Bold)
@@ -15225,7 +15232,7 @@ private fun CreateScheduledTaskSheet(viewModel: ChatViewModel, onDismiss: () -> 
                 expanded = attachMenuOpen,
                 onDismissRequest = { attachMenuOpen = false },
                 shape = RoundedCornerShape(32.dp),
-                containerColor = Color.White,
+                containerColor = APP_BACKGROUND,
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A2A2A))
               ) {
                 AttachMenuRow(
@@ -16064,7 +16071,7 @@ private fun ExtraOptionRowShell(title: String, subtitle: String, onClick: () -> 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ExtraOptionsSheet(onDismiss: () -> Unit, onPost: () -> Unit, onCaption: () -> Unit) {
-  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color.White) {
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = APP_BACKGROUND) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
@@ -16138,7 +16145,7 @@ private fun ExtraPostPreviewSheet(
   // rather than guessing one behavior for everyone. "post" here means
   // History/the main feed, matching the backend's `destination` column.
   var destination by remember { mutableStateOf("post") }
-  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color.White) {
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = APP_BACKGROUND) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
@@ -16245,7 +16252,7 @@ private fun ExtraPostPreviewSheet(
 @Composable
 private fun CaptionComposerSheet(onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
   var text by remember { mutableStateOf("") }
-  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color.White) {
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = APP_BACKGROUND) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
