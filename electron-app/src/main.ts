@@ -32,7 +32,16 @@ function createWindow() {
     // the page content itself now fills the window all the way to the top.
     frame: false,
     titleBarStyle: "hidden",
-    titleBarOverlay: true,
+    // titleBarOverlay: true used Windows' own default overlay color (a
+    // light gray), which read as a separate box sitting apart from the
+    // app's own white background instead of blending in -- explicit colors
+    // here match it to the page so the overlay strip stops looking like
+    // its own distinct element.
+    titleBarOverlay: {
+      color: "#ffffff",
+      symbolColor: "#000000",
+      height: 32,
+    },
     autoHideMenuBar: true,
     // A transparent 1x1 icon, not the real logo -- the real icon.png is
     // still what electron-builder embeds in the .exe/Start Menu shortcut
