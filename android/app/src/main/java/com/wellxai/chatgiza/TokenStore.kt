@@ -154,6 +154,18 @@ class TokenStore(context: Context) {
     prefs.edit().putString(KEY_PRIVATE_CHAT, value).apply()
   }
 
+  // Private Chat's own PIN gate -- separate from the whole-app App Lock
+  // above; this one only guards this one screen, and is required every
+  // single time it's opened (not just after backgrounding the app). Same
+  // reasoning on only storing the hash: this whole prefs file is already
+  // Keystore-backed encrypted at rest. Not preserved by clear() below, same
+  // as the private thread itself -- signing out wipes both together since
+  // there's no server copy of either to fall back on.
+  fun getPrivateChatPinHash(): String? = prefs.getString(KEY_PRIVATE_CHAT_PIN_HASH, null)
+  fun setPrivateChatPinHash(value: String?) {
+    prefs.edit().putString(KEY_PRIVATE_CHAT_PIN_HASH, value).apply()
+  }
+
   // A locally-picked preset avatar (see AVATAR_PRESETS in MainActivity.kt)
   // that overrides the Google-account photo everywhere the app shows an
   // avatar -- device-local only, no backend field for this exists yet.
@@ -368,5 +380,6 @@ class TokenStore(context: Context) {
     private const val KEY_BLUR_MATURE_CONTENT_ENABLED = "blur_mature_content_enabled"
     private const val KEY_APP_LOCK_ENABLED = "app_lock_enabled"
     private const val KEY_APP_LOCK_PIN_HASH = "app_lock_pin_hash"
+    private const val KEY_PRIVATE_CHAT_PIN_HASH = "private_chat_pin_hash"
   }
 }

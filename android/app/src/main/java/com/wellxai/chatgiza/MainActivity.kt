@@ -5664,6 +5664,12 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
       }
     }
   ) { padding ->
+    if (!viewModel.privateChatUnlocked) {
+      Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+        PrivateChatLockScreen(viewModel)
+      }
+      return@Scaffold
+    }
     Column(modifier = Modifier.fillMaxSize().padding(padding)) {
       if (viewModel.privateMessages.isEmpty()) {
         Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -5809,6 +5815,134 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
           }
         }
       }
+    }
+  }
+}
+
+// Shown in place of the thread whenever privateChatUnlocked is false --
+// either first-time PIN creation (no hash stored yet) or the unlock prompt
+// (a hash already exists). Both share this one screen/dark styling; which
+// mode is active is driven entirely by whether viewModel.privateChatPinHash
+// is null, same split App Lock's own setup screen uses.
+@Composable
+private fun PrivateChatLockScreen(viewModel: ChatViewModel) {
+  var confirmReset by remember { mutableStateOf(false) }
+  val hasPin = viewModel.privateChatPinHash != null
+  Column(
+    modifier = Modifier.fillMaxSize().padding(horizontal = 28.dp),
+    verticalArrangement = Arrangement.Center,
+    horizontalAlignment = Alignment.CenterHorizontally
+  ) {
+    Icon(
+      painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded),
+      contentDescription = null,
+      tint = Color.White,
+      modifier = Modifier.size(36.dp)
+    )
+    Spacer(modifier = Modifier.height(16.dp))
+    Text(
+      if (!hasPin) "Set a PIN for Private" else "Enter Your Private PIN",
+      color = Color.White,
+      fontSize = 20.sp,
+      fontWeight = FontWeight.Bold,
+      textAlign = TextAlign.Center
+    )
+    Spacer(modifier = Modifier.height(6.dp))
+    Text(
+      if (!hasPin) {
+        if (viewModel.privateChatSetupStep == "enter") "Choose a 4-6 digit PIN. This screen won't open without it." else "Enter the same PIN again to confirm"
+      } else {
+        "This PIN stays on this device only -- it isn't part of your account password."
+      },
+      color = Color.White.copy(alpha = 0.5f),
+      fontSize = 13.sp,
+      textAlign = TextAlign.Center
+    )
+    Spacer(modifier = Modifier.height(28.dp))
+    if (!hasPin) {
+      PrivateChatCodeField(value = viewModel.privateChatPinInput, onValueChange = viewModel::onPrivateChatPinChange)
+    } else {
+      PrivateChatCodeField(value = viewModel.privateChatGateInput, onValueChange = viewModel::onPrivateChatGateInputChange)
+    }
+    if (viewModel.privateChatError != null) {
+      Spacer(modifier = Modifier.height(10.dp))
+      Text(viewModel.privateChatError!!, color = Color(0xFFFF6B6B), fontSize = 13.sp)
+    }
+    Spacer(modifier = Modifier.height(20.dp))
+    Button(
+      onClick = { if (!hasPin) viewModel.submitPrivateChatSetupStep() else viewModel.submitPrivateChatUnlock() },
+      shape = RoundedCornerShape(24.dp),
+      colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+      modifier = Modifier.fillMaxWidth().height(50.dp)
+    ) {
+      Text(
+        if (!hasPin) (if (viewModel.privateChatSetupStep == "enter") "Continue" else "Confirm") else "Unlock",
+        color = Color.Black,
+        fontSize = 16.sp,
+        fontWeight = FontWeight.SemiBold
+      )
+    }
+    if (hasPin) {
+      Spacer(modifier = Modifier.height(16.dp))
+      Text(
+        "Forgot PIN?",
+        color = Color.White.copy(alpha = 0.5f),
+        fontSize = 13.sp,
+        textDecoration = TextDecoration.Underline,
+        modifier = Modifier.clickable { confirmReset = true }
+      )
+    }
+  }
+  if (confirmReset) {
+    ConfirmDangerDialog(
+      title = "Forgot your PIN?",
+      message = "There's no way to recover it. Resetting will also permanently delete everything currently in Private, since it can't be unlocked without it.",
+      onConfirm = {
+        viewModel.resetPrivateChatPin()
+        confirmReset = false
+      },
+      onDismiss = { confirmReset = false }
+    )
+  }
+}
+
+// Dark-themed twin of the light CodeField further down this file -- that
+// one is hardcoded to a light background for its other call sites (App
+// Lock, password change), which would clash with Private's black screen.
+@Composable
+private fun PrivateChatCodeField(value: String, onValueChange: (String) -> Unit) {
+  var focused by remember { mutableStateOf(false) }
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .clip(RoundedCornerShape(14.dp))
+      .background(Color.White.copy(alpha = 0.08f))
+      .border(1.dp, if (focused) Color.White else Color.Transparent, RoundedCornerShape(14.dp))
+      .padding(horizontal = 16.dp, vertical = 4.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Icon(
+      painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_rounded),
+      contentDescription = null,
+      tint = Color.White.copy(alpha = 0.4f),
+      modifier = Modifier.size(20.dp)
+    )
+    Spacer(modifier = Modifier.width(12.dp))
+    Box(modifier = Modifier.weight(1f).padding(vertical = 11.dp)) {
+      if (value.isEmpty()) {
+        Text("Enter PIN", color = Color.White.copy(alpha = 0.35f), fontSize = 16.sp)
+      }
+      BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 16.sp, letterSpacing = 4.sp),
+        cursorBrush = SolidColor(Color.White),
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+        modifier = Modifier
+          .fillMaxWidth()
+          .onFocusChanged { state -> focused = state.isFocused }
+      )
     }
   }
 }
