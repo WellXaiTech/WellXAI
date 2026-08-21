@@ -5722,7 +5722,11 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
             onClick = { viewModel.openPrivateHistory() },
             modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f))
           ) {
-            Icon(Icons.Outlined.History, contentDescription = "Private history", tint = Color.White, modifier = Modifier.size(22.dp))
+            // Icons.Outlined.History doesn't actually exist in this
+            // project's icon set (build failure: "Unresolved reference
+            // 'History'") -- Schedule is already used elsewhere in this
+            // same file and known to resolve.
+            Icon(Icons.Outlined.Schedule, contentDescription = "Private history", tint = Color.White, modifier = Modifier.size(22.dp))
           }
           Spacer(modifier = Modifier.width(8.dp))
           IconButton(
