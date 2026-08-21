@@ -3658,7 +3658,11 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun closePrivateChat() {
-    screen = AppScreen.Account
+    // "Private" is only ever opened from inside the History screen (its
+    // own tab row), not Account directly -- was returning to Account
+    // instead, which skipped past History and landed somewhere the user
+    // never actually navigated from.
+    screen = AppScreen.History
   }
 
   fun onPrivateInputChange(value: String) {
