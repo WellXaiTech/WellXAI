@@ -5592,7 +5592,9 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PrivateChatScreen(viewModel: ChatViewModel) {
-  BackHandler { viewModel.closePrivateChat() }
+  BackHandler {
+    if (viewModel.privateHistoryOpen) viewModel.closePrivateHistory() else viewModel.closePrivateChat()
+  }
   val context = LocalContext.current
   // The app is set to light system-bar icons app-wide (see onCreate's
   // enableEdgeToEdge comment) because every other screen has a white
@@ -5709,12 +5711,42 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
           Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
         }
         Spacer(modifier = Modifier.weight(1f))
+        // Only once unlocked -- these aren't reachable from the PIN
+        // screen itself, same as the rest of the thread underneath it.
+        if (viewModel.privateChatUnlocked) {
+          IconButton(
+            onClick = { viewModel.openPrivateHistory() },
+            modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f))
+          ) {
+            Icon(Icons.Outlined.History, contentDescription = "Private history", tint = Color.White, modifier = Modifier.size(22.dp))
+          }
+          Spacer(modifier = Modifier.width(8.dp))
+          IconButton(
+            onClick = { viewModel.startNewPrivateChat() },
+            modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f))
+          ) {
+            Icon(
+              painter = androidx.compose.ui.res.painterResource(R.drawable.ic_new_chat_bubble),
+              contentDescription = "New private chat",
+              tint = Color.White,
+              modifier = Modifier.size(20.dp)
+            )
+          }
+        } else {
+          Spacer(modifier = Modifier.size(44.dp))
+        }
       }
     }
   ) { padding ->
     if (!viewModel.privateChatUnlocked) {
       Box(modifier = Modifier.fillMaxSize().padding(padding)) {
         PrivateChatLockScreen(viewModel)
+      }
+      return@Scaffold
+    }
+    if (viewModel.privateHistoryOpen) {
+      Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+        PrivateHistoryList(viewModel)
       }
       return@Scaffold
     }
@@ -6011,6 +6043,74 @@ private fun PrivateChatCodeField(value: String, onValueChange: (String) -> Unit)
           .onFocusChanged { state -> focused = state.isFocused }
       )
     }
+  }
+}
+
+// Shown in place of the thread when privateHistoryOpen is true -- every past
+// private thread (see ChatViewModel.privateConversations), newest first.
+// Tapping one loads it into the active thread; New Chat in the header is
+// what starts a fresh one instead of ever landing here automatically.
+@Composable
+private fun PrivateHistoryList(viewModel: ChatViewModel) {
+  var pendingDeleteId by remember { mutableStateOf<String?>(null) }
+  val conversations = viewModel.privateConversations.sortedByDescending { it.lastActivity }
+  if (conversations.isEmpty()) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+      Text(
+        "No past private chats yet.",
+        color = Color.White.copy(alpha = 0.5f),
+        fontSize = 14.sp,
+        modifier = Modifier.padding(horizontal = 40.dp)
+      )
+    }
+  } else {
+    LazyColumn(
+      modifier = Modifier.fillMaxSize(),
+      contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+      verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+      items(conversations, key = { it.id }) { conversation ->
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .clickable { viewModel.selectPrivateConversation(conversation.id) }
+            .padding(horizontal = 8.dp, vertical = 14.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Column(modifier = Modifier.weight(1f)) {
+            Text(
+              conversation.title,
+              color = Color.White,
+              fontSize = 15.sp,
+              fontWeight = FontWeight.Medium,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+              formatMediaPostTimeAgo(conversation.lastActivity),
+              color = Color.White.copy(alpha = 0.4f),
+              fontSize = 12.sp
+            )
+          }
+          IconButton(onClick = { pendingDeleteId = conversation.id }, modifier = Modifier.size(36.dp)) {
+            DeleteIcon(tint = Color.White.copy(alpha = 0.5f))
+          }
+        }
+      }
+    }
+  }
+  if (pendingDeleteId != null) {
+    ConfirmDangerDialog(
+      title = "Delete this chat?",
+      message = "This private chat will be deleted from this device. This can't be undone.",
+      onConfirm = {
+        viewModel.deletePrivateConversation(pendingDeleteId!!)
+        pendingDeleteId = null
+      },
+      onDismiss = { pendingDeleteId = null }
+    )
   }
 }
 

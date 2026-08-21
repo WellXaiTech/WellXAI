@@ -27,6 +27,12 @@ import java.util.UUID
 // display id from the message's own [id] for those.
 data class UiMessage(val id: String, val role: String, val content: String, val createdAt: Long? = null, val pairId: String = "")
 
+// A single past Private Chat thread -- title is just the first user
+// message's own opening words (there's no model call spent generating one,
+// unlike regular history), matching how little ceremony the rest of
+// Private already has.
+data class PrivateConversation(val id: String, val title: String, val messages: List<UiMessage>, val lastActivity: Long)
+
 fun newPairId(): String = "Q-" + UUID.randomUUID().toString().replace("-", "").take(6).uppercase()
 
 // Renders a single emoji (including multi-codepoint ZWJ sequences like
@@ -282,6 +288,18 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   // ChatGizaApi.streamChat for why a plain Job.cancel() isn't enough).
   private var privateStreamCall: Call? = null
   private var privateStreamStoppedByUser = false
+
+  // Every past private thread, same on-device-only storage as the active
+  // one above -- null activePrivateConversationId means privateMessages is
+  // a fresh, not-yet-saved thread (or the very first message hasn't been
+  // sent yet), matching activeConversationId's own null-means-new meaning
+  // for the regular synced history.
+  var privateConversations by mutableStateOf<List<PrivateConversation>>(emptyList())
+    private set
+  var activePrivateConversationId by mutableStateOf<String?>(null)
+    private set
+  var privateHistoryOpen by mutableStateOf(false)
+    private set
 
   // Private Chat's own PIN gate -- required on every single entry, not just
   // once per app session (see openPrivateChat). Separate from the whole-app
@@ -3685,8 +3703,39 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   }
 
   fun openPrivateChat() {
-    if (privateMessages.isEmpty()) {
-      privateMessages = tokenStore.getPrivateChatJson()?.let { decodePrivateMessages(it) } ?: emptyList()
+    if (privateConversations.isEmpty()) {
+      val stored = tokenStore.getPrivateConversationsJson()
+      privateConversations = if (stored != null) {
+        decodePrivateConversations(stored)
+      } else {
+        // One-time migration: this device may still have a thread saved
+        // under the old single-thread key from before Private had real
+        // multi-conversation history. Fold it in once instead of it just
+        // silently vanishing.
+        val legacy = tokenStore.getPrivateChatJson()?.let { decodePrivateMessages(it) }.orEmpty()
+        if (legacy.isNotEmpty()) {
+          val migrated = PrivateConversation(
+            id = UUID.randomUUID().toString(),
+            title = privateConversationTitle(legacy),
+            messages = legacy,
+            lastActivity = legacy.lastOrNull()?.createdAt ?: System.currentTimeMillis()
+          )
+          tokenStore.setPrivateConversationsJson(encodePrivateConversations(listOf(migrated)))
+          tokenStore.setPrivateChatJson(null)
+          listOf(migrated)
+        } else {
+          emptyList()
+        }
+      }
+    }
+    // Resumes the most recently active thread by default, same as regular
+    // History landing on wherever you left off -- New Chat (below) is what
+    // deliberately starts a fresh one instead.
+    if (privateMessages.isEmpty() && activePrivateConversationId == null) {
+      privateConversations.maxByOrNull { it.lastActivity }?.let {
+        privateMessages = it.messages
+        activePrivateConversationId = it.id
+      }
     }
     // Always re-lock on entry -- privateChatUnlocked only ever flips true
     // from a correct PIN entered *this* visit, never carried over from a
@@ -3771,8 +3820,12 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   fun resetPrivateChatPin() {
     tokenStore.setPrivateChatPinHash(null)
     tokenStore.setPrivateChatJson(null)
+    tokenStore.setPrivateConversationsJson(null)
     privateChatPinHash = null
     privateMessages = emptyList()
+    privateConversations = emptyList()
+    activePrivateConversationId = null
+    privateHistoryOpen = false
     privateChatSetupStep = "enter"
     privateChatPinInput = ""
     privateChatFirstEnteredPin = null
@@ -3797,6 +3850,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     val userMsg = UiMessage(UUID.randomUUID().toString(), "user", text, now)
     val assistantId = UUID.randomUUID().toString()
     privateMessages = privateMessages + userMsg + UiMessage(assistantId, "assistant", "", now)
+    val conversationId = activePrivateConversationId ?: UUID.randomUUID().toString()
+    activePrivateConversationId = conversationId
     privateInput = ""
     privateSending = true
     privateStreamStoppedByUser = false
@@ -3835,7 +3890,9 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         }
       }
       privateStreamStoppedByUser = false
-      tokenStore.setPrivateChatJson(encodePrivateMessages(privateMessages))
+      val updated = PrivateConversation(conversationId, privateConversationTitle(privateMessages), privateMessages, System.currentTimeMillis())
+      privateConversations = listOf(updated) + privateConversations.filterNot { it.id == conversationId }
+      tokenStore.setPrivateConversationsJson(encodePrivateConversations(privateConversations))
     }
   }
 
@@ -3847,11 +3904,38 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     privateStreamCall?.cancel()
   }
 
-  /** Wipes the on-device private thread entirely -- there is no server
-   * copy to also delete, since one was never created. */
-  fun clearPrivateChat() {
+  /** Starts a fresh, unsaved thread -- the current one (if it has any
+   * messages) is already persisted into privateConversations by
+   * sendPrivateMessage() as it went, so nothing here is lost. */
+  fun startNewPrivateChat() {
     privateMessages = emptyList()
-    tokenStore.setPrivateChatJson(null)
+    activePrivateConversationId = null
+    privateInput = ""
+    privateHistoryOpen = false
+  }
+
+  fun openPrivateHistory() {
+    privateHistoryOpen = true
+  }
+
+  fun closePrivateHistory() {
+    privateHistoryOpen = false
+  }
+
+  fun selectPrivateConversation(id: String) {
+    val conversation = privateConversations.find { it.id == id } ?: return
+    privateMessages = conversation.messages
+    activePrivateConversationId = conversation.id
+    privateHistoryOpen = false
+  }
+
+  fun deletePrivateConversation(id: String) {
+    privateConversations = privateConversations.filterNot { it.id == id }
+    tokenStore.setPrivateConversationsJson(encodePrivateConversations(privateConversations))
+    if (activePrivateConversationId == id) {
+      privateMessages = emptyList()
+      activePrivateConversationId = null
+    }
   }
 
   /** Re-runs the request that produced [assistantId]'s reply, replacing its
@@ -3968,6 +4052,41 @@ private fun decodePrivateMessages(json: String): List<UiMessage> = runCatching {
   (0 until arr.length()).map { i ->
     val o = arr.getJSONObject(i)
     UiMessage(o.getString("id"), o.getString("role"), o.optString("content", ""), o.optLong("createdAt"))
+  }
+}.getOrDefault(emptyList())
+
+// No model call spent naming a private thread (unlike regular history's
+// server-derived titles) -- just the opening words of its first user
+// message, same low-ceremony spirit as the rest of Private.
+private fun privateConversationTitle(messages: List<UiMessage>): String {
+  val firstUser = messages.firstOrNull { it.role == "user" }?.content?.trim().orEmpty()
+  return firstUser.take(40).ifBlank { "Private chat" }
+}
+
+private fun encodePrivateConversations(list: List<PrivateConversation>): String {
+  val arr = JSONArray()
+  for (c in list) {
+    arr.put(
+      JSONObject()
+        .put("id", c.id)
+        .put("title", c.title)
+        .put("lastActivity", c.lastActivity)
+        .put("messages", JSONArray(encodePrivateMessages(c.messages)))
+    )
+  }
+  return arr.toString()
+}
+
+private fun decodePrivateConversations(json: String): List<PrivateConversation> = runCatching {
+  val arr = JSONArray(json)
+  (0 until arr.length()).map { i ->
+    val o = arr.getJSONObject(i)
+    PrivateConversation(
+      id = o.getString("id"),
+      title = o.optString("title", "Private chat"),
+      messages = decodePrivateMessages(o.optJSONArray("messages")?.toString() ?: "[]"),
+      lastActivity = o.optLong("lastActivity")
+    )
   }
 }.getOrDefault(emptyList())
 
