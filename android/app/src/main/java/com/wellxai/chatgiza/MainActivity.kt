@@ -3264,31 +3264,21 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
     // navigationBarsPadding()/imePadding(), so extra padding here just
     // left a gap between the card and the keyboard/nav bar with the
     // message list visible (and readable) through it.
-    // No border (a flat outline read as a harsh visible line last time)
-    // and no Card elevation (that's what was quietly tinting the fill
-    // gray again, since Material3's Surface blends a tonal color into
-    // containerColor whenever Card elevation is above 0, regardless of
-    // what color was passed in). Modifier.shadow is a plain drop-shadow
-    // draw effect with no such color side effect -- same same-color-as-
-    // background fill, but now with an actual soft shadow so the box
-    // reads as its own distinct shape again, matching the reference.
+    // Modifier.shadow was tried at three different elevation/color
+    // combinations (3dp default, 1dp dimmed, 4dp default with the
+    // fillMaxWidth-before-shadow ordering fix) and NONE of them ever
+    // rendered visibly, including the one that should have been a normal,
+    // clearly-visible Material shadow. That's not a tuning problem --
+    // RenderNode-based shadows are known to silently not render in some
+    // environments (older emulators, software-rendered/hardware-
+    // acceleration-off devices) regardless of elevation. A border is a
+    // plain canvas stroke draw with no such dependency, and it DID
+    // visibly render the one time it was tried (just too strong, at 8%
+    // alpha, reading as a harsh line) -- back to a border, softened to
+    // 5%, since it's the one approach actually proven to show up here.
     modifier = Modifier
-      // Both previous attempts missed in opposite directions: 3dp with
-      // default shadow color read as a crisp outline, then 1dp with a
-      // manually-dimmed 15%-alpha color went too far the other way and
-      // became imperceptible. This drops the custom color override
-      // entirely and uses the same elevation + default-color combination
-      // already proven to render a normal, visible soft shadow elsewhere
-      // in this app (the history row's own lift-on-press effect, a few
-      // hundred lines below this) -- 4dp, Compose's own default shadow
-      // color, no artificial dimming. fillMaxWidth() now comes BEFORE
-      // shadow() -- shadow needs the element's final size to draw against;
-      // with shadow first in the chain it was drawing based on whatever
-      // this Card measured to before fillMaxWidth ever expanded it, which
-      // is the actual reason nothing was rendering at any elevation tried
-      // so far, not the elevation/color values themselves.
       .fillMaxWidth()
-      .shadow(elevation = 4.dp, shape = RoundedCornerShape(24.dp), clip = false),
+      .border(1.dp, Color.Black.copy(alpha = 0.05f), RoundedCornerShape(24.dp)),
     shape = RoundedCornerShape(24.dp),
     colors = CardDefaults.cardColors(containerColor = composerBackground),
     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
