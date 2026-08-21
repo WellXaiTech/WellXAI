@@ -5575,6 +5575,25 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
 private fun PrivateChatScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closePrivateChat() }
   val context = LocalContext.current
+  // The app is set to light system-bar icons app-wide (see onCreate's
+  // enableEdgeToEdge comment) because every other screen has a white
+  // background. This is the one screen with a black background, so those
+  // same dark icons render invisible against it -- reads as the status bar
+  // (clock/signal/battery) having vanished entirely. Switch to light
+  // (white) icons only while this screen is up, and always restore dark
+  // icons on the way out regardless of which of the several ways there are
+  // to leave (back button, closePrivateChat, process death).
+  val view = LocalView.current
+  DisposableEffect(Unit) {
+    val window = (context as? Activity)?.window
+    val controller = window?.let { WindowCompat.getInsetsController(it, view) }
+    controller?.isAppearanceLightStatusBars = false
+    controller?.isAppearanceLightNavigationBars = false
+    onDispose {
+      controller?.isAppearanceLightStatusBars = true
+      controller?.isAppearanceLightNavigationBars = true
+    }
+  }
   val listState = rememberLazyListState()
   LaunchedEffect(viewModel.privateMessages.size) {
     if (viewModel.privateMessages.isNotEmpty()) {
