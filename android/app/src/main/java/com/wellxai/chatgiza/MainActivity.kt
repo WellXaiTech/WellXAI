@@ -5700,8 +5700,12 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
     // the only source of truth for its insets.
     contentWindowInsets = WindowInsets(0, 0, 0, 0),
     topBar = {
+      // Vertical padding trimmed from 8dp to 3dp -- combined with the
+      // message list's own top contentPadding below, 8dp+8dp was still
+      // reading as a real gap between this row and the first message even
+      // after the earlier double-status-bar-inset fix.
       Row(
-        modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
         IconButton(
@@ -5765,8 +5769,16 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
         LazyColumn(
           state = listState,
           modifier = Modifier.weight(1f).fillMaxWidth(),
-          contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-          verticalArrangement = Arrangement.spacedBy(14.dp)
+          // Top trimmed to 2dp (was 12dp, on top of the header's own
+          // padding) -- see the topBar comment above for the other half of
+          // this. Bottom kept at 12dp for breathing room over the composer.
+          contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 12.dp),
+          // Anchors a short conversation to the BOTTOM of the available
+          // space (against the composer) instead of the top -- items were
+          // stacking from the top by default, leaving an empty gap between
+          // the last message and the composer whenever there wasn't enough
+          // content to fill the screen.
+          verticalArrangement = Arrangement.spacedBy(14.dp, alignment = Alignment.Bottom)
         ) {
           items(viewModel.privateMessages, key = { it.id }) { msg ->
             if (msg.role == "user") {
