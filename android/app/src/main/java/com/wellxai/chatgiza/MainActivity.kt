@@ -5798,20 +5798,39 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
             )
           }
           Spacer(modifier = Modifier.width(6.dp))
+          // Three states in this one spot: waveform (idle, nothing typed
+          // yet) -> up-arrow (there's text to send) -> white square (a
+          // reply is streaming in, tap to stop and keep whatever's there
+          // so far) -- same shape as ChatGPT's own composer button.
           Box(
             modifier = Modifier
               .size(40.dp)
               .clip(CircleShape)
-              .background(if (viewModel.privateSending) Color(0xFF0A84FF).copy(alpha = 0.4f) else Color(0xFF0A84FF))
-              .clickable(enabled = !viewModel.privateSending) { viewModel.sendPrivateMessage() },
+              .background(Color(0xFF0A84FF))
+              .clickable {
+                when {
+                  viewModel.privateSending -> viewModel.stopPrivateMessage()
+                  viewModel.privateInput.isNotBlank() -> viewModel.sendPrivateMessage()
+                }
+              },
             contentAlignment = Alignment.Center
           ) {
-            Icon(
-              painter = androidx.compose.ui.res.painterResource(R.drawable.ic_waveform_speak),
-              contentDescription = "Send",
-              tint = Color.White,
-              modifier = Modifier.size(22.dp)
-            )
+            when {
+              viewModel.privateSending -> {
+                Box(modifier = Modifier.size(14.dp).clip(RoundedCornerShape(4.dp)).background(Color.White))
+              }
+              viewModel.privateInput.isNotBlank() -> {
+                Icon(Icons.Filled.ArrowUpward, contentDescription = "Send", tint = Color.White, modifier = Modifier.size(22.dp))
+              }
+              else -> {
+                Icon(
+                  painter = androidx.compose.ui.res.painterResource(R.drawable.ic_waveform_speak),
+                  contentDescription = "Send",
+                  tint = Color.White,
+                  modifier = Modifier.size(22.dp)
+                )
+              }
+            }
           }
         }
       }
