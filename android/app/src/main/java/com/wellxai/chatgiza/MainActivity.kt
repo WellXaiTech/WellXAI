@@ -3226,7 +3226,11 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
       }
     }
   }
-  val composerBackground = colorScheme.onBackground.copy(alpha = 0.06f).compositeOver(colorScheme.background)
+  // White, matching the page background, instead of a gray tint -- the
+  // card is told apart from the background by the soft drop shadow
+  // (elevation below) rather than by a color difference, per feedback:
+  // same white as everywhere else, but still visibly its own box.
+  val composerBackground = colorScheme.background
   Box(
     // A plain (unrounded) backing rectangle, sitting directly behind the
     // rounded Card below. A rounded Card only paints its own rounded-rect
@@ -3236,14 +3240,10 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
     // message list) the last message's text showed straight through
     // those corner slivers.
     //
-    // This backing rectangle is painted the screen's own solid black --
-    // NOT the card's own lighter tint. Using the card's own color here
-    // erased the rounded corners entirely (a flat-colored square behind
-    // a same-colored rounded shape reads as just a square, since there's
-    // no contrast at the curve). Black matches the true app background
-    // outside the card, so the notch just reads as background peeking
-    // around a rounded corner -- correct either way, and it still blocks
-    // the message list from showing through.
+    // This backing rectangle is painted the screen's own solid white --
+    // matches the true app background outside the card, so the notch
+    // just reads as background peeking around a rounded corner, and it
+    // still blocks the message list from showing through.
     modifier = Modifier
       .fillMaxWidth()
       .padding(start = 6.dp, end = 6.dp, top = 10.dp)
@@ -3256,12 +3256,11 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
     // message list visible (and readable) through it.
     modifier = Modifier.fillMaxWidth(),
     shape = RoundedCornerShape(24.dp),
-    // Flattened to an opaque color instead of a low-alpha tint -- now
-    // that the composer floats over the scrolling message list, a
-    // translucent background let that content stay fully legible right
-    // through it. compositeOver bakes in the exact same tint the low
-    // alpha used to produce over a plain background, just opaque now.
-    colors = CardDefaults.cardColors(containerColor = composerBackground)
+    colors = CardDefaults.cardColors(containerColor = composerBackground),
+    // Same color as the background it floats over, so a soft shadow is
+    // the only thing separating the two -- a low elevation for a subtle
+    // edge instead of a hard outline/border.
+    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
   ) {
     Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)) {
       // Unified attachment preview -- was three different ad hoc treatments
