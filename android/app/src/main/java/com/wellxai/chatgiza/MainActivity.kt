@@ -497,7 +497,7 @@ class MainActivity : AppCompatActivity() {
           // Keeping the drawer mounted continuously across all of these
           // avoids that race entirely instead of just narrowing it.
           val screensInsideHistoryDrawer = screen is AppScreen.Chat || screen is AppScreen.Media ||
-            screen is AppScreen.History || screen is AppScreen.Account || screen is AppScreen.Settings ||
+            screen is AppScreen.History || screen is AppScreen.Settings ||
             screen is AppScreen.Projects || screen is AppScreen.Scheduled || screen is AppScreen.LiveVision
           if (screensInsideHistoryDrawer) {
             // Lets History be reached by swiping in from the left edge of Chat/
@@ -558,7 +558,6 @@ class MainActivity : AppCompatActivity() {
             ) {
               when (screen) {
                 is AppScreen.Media -> com.wellxai.chatgiza.ui.media.ChatGiZaMediaScreen(viewModel)
-                is AppScreen.Account -> AccountScreen(viewModel)
                 is AppScreen.Settings -> SettingsScreen(viewModel)
                 is AppScreen.Projects -> ProjectsScreen(viewModel)
                 is AppScreen.Scheduled -> ScheduledScreen(viewModel)
@@ -610,7 +609,6 @@ class MainActivity : AppCompatActivity() {
             is AppScreen.Chat -> ChatScreenUi(viewModel)
             is AppScreen.History -> HistoryScreen(viewModel)
             is AppScreen.PrivateChat -> PrivateChatScreen(viewModel)
-            is AppScreen.Account -> AccountScreen(viewModel)
             is AppScreen.Customize -> CustomizeScreen(viewModel)
             is AppScreen.EditProfile -> EditProfileScreen(viewModel)
             is AppScreen.AppLanguage -> AppLanguageScreen(viewModel)
@@ -13808,90 +13806,6 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
             Text("Always Paste as Text", color = Color.Black, fontSize = 19.sp)
           }
         }
-      }
-    }
-  }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AccountScreen(viewModel: ChatViewModel) {
-  BackHandler { viewModel.closeAccount() }
-  Scaffold(
-    containerColor = Color.Transparent
-  ) { padding ->
-    Column(
-      modifier = Modifier
-        .fillMaxSize()
-        .padding(padding)
-        .verticalScroll(rememberScrollState())
-        .padding(horizontal = 12.dp, vertical = 8.dp)
-    ) {
-      // This screen is retired -- every row it used to have (Edit Profile,
-      // Customize GiZa, Connectors, Voice, Advertise/Collaborative Chat/
-      // Data Dashboard, Data Controls, Open Source Licenses/Terms/Privacy,
-      // Sign out, and everything moved before that) now lives in the
-      // Account tabs dialog instead (Kids Mode and NSFW Preferences were
-      // dropped outright, not moved). Nothing navigates to openAccount()
-      // anymore -- the gear icon and the "Customize GiZa" quick action
-      // both go elsewhere now -- so this is unreachable; kept only so
-      // AppScreen.Account/openAccount/closeAccount don't need to be torn
-      // out of the sealed class and back-stack logic elsewhere.
-      Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Text("Settings", color = colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-      }
-      Spacer(modifier = Modifier.height(40.dp))
-      SettingsVersionFooter(viewModel)
-      Spacer(modifier = Modifier.height(24.dp))
-    }
-  }
-}
-
-// Sideloaded (not Play Store), so there's no store page nudging people
-// onto new builds -- this silently checks the same public GitHub Release
-// the CI pipeline publishes, and only shows the "Update" link when it's
-// actually ahead of this install's own versionCode.
-@Composable
-private fun SettingsVersionFooter(viewModel: ChatViewModel) {
-  val context = LocalContext.current
-  LaunchedEffect(Unit) { viewModel.checkForUpdate() }
-  val latest = viewModel.latestVersionInfo
-  val updateAvailable = latest != null && latest.runNumber > BuildConfig.VERSION_CODE
-  Column(
-    modifier = Modifier.fillMaxWidth(),
-    horizontalAlignment = Alignment.CenterHorizontally
-  ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-      Icon(
-        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_chatgiza_logo),
-        contentDescription = null,
-        tint = Color.Unspecified,
-        modifier = Modifier.size(18.dp)
-      )
-      Spacer(modifier = Modifier.width(8.dp))
-      Text(
-        "v${BuildConfig.VERSION_NAME}",
-        color = colorScheme.onBackground.copy(alpha = 0.4f),
-        fontSize = 13.sp,
-        fontFamily = FontFamily.Monospace
-      )
-    }
-    if (updateAvailable) {
-      Spacer(modifier = Modifier.height(6.dp))
-      Row {
-        Text("New Version is Available: ", color = colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 13.sp)
-        Text(
-          "Update",
-          color = colorScheme.onBackground.copy(alpha = 0.85f),
-          fontSize = 13.sp,
-          textDecoration = TextDecoration.Underline,
-          modifier = Modifier.clickable {
-            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(latest!!.downloadUrl)))
-          }
-        )
       }
     }
   }

@@ -68,7 +68,6 @@ sealed class AppScreen {
   object Chat : AppScreen()
   object History : AppScreen()
   object PrivateChat : AppScreen()
-  object Account : AppScreen()
   object Customize : AppScreen()
   object EditProfile : AppScreen()
   object AppLanguage : AppScreen()
@@ -515,20 +514,6 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
         is ApiResult.Failure -> {} // Account screen just shows blank fields; not worth surfacing.
       }
     }
-  }
-
-  // Remembers wherever Account was opened from (Chat, the Profile Hub,
-  // etc.) instead of hardcoding Chat, so closing it returns to the
-  // actual screen the user came from rather than always landing on Chat.
-  private var accountReturnScreen: AppScreen = AppScreen.Chat
-
-  fun openAccount() {
-    accountReturnScreen = screen
-    screen = AppScreen.ProfileHub
-  }
-
-  fun closeAccount() {
-    screen = accountReturnScreen
   }
 
   // Reachable both directly from Chat's "Customize GiZa" quick action and
