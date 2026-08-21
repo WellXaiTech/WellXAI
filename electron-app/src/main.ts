@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { app, BrowserWindow, shell } from "electron";
 import * as path from "path";
 
 const APP_URL = "https://www.chatgiza.com/chatgiza";
@@ -18,43 +18,21 @@ function isAllowedInAppHost(hostname: string): boolean {
 
 let mainWindow: BrowserWindow | null = null;
 
-// The page (via preload.ts's bridge) calls this whenever a dark modal --
-// currently just Settings -- opens or closes over the page, so the native
-// title-bar-overlay strip (drawn by Windows, not by the page's own CSS)
-// can switch to match instead of staying a fixed white that clashes with
-// a darkened backdrop underneath it.
-ipcMain.on("set-titlebar-dark", (_event, isDark: boolean) => {
-  mainWindow?.setTitleBarOverlay({
-    color: isDark ? "#000000" : "#ffffff",
-    symbolColor: isDark ? "#ffffff" : "#000000",
-    height: 32,
-  });
-});
-
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 720,
     minHeight: 480,
-    // Was frame: true -- that's the solid black OS title bar sitting above
-    // the app content. Hidden here instead, with the native minimize/
-    // maximize/close buttons kept as a small overlay (titleBarOverlay)
-    // rather than gone entirely, so the window is still resizable/
-    // closable without the app's own page needing to draw replacements --
-    // the page content itself now fills the window all the way to the top.
-    frame: false,
-    titleBarStyle: "hidden",
-    // titleBarOverlay: true used Windows' own default overlay color (a
-    // light gray), which read as a separate box sitting apart from the
-    // app's own white background instead of blending in -- explicit colors
-    // here match it to the page so the overlay strip stops looking like
-    // its own distinct element.
-    titleBarOverlay: {
-      color: "#ffffff",
-      symbolColor: "#000000",
-      height: 32,
-    },
+    // frame: false + titleBarOverlay looked better (no black bar) but
+    // turned out to genuinely break the window on this setup -- minimize/
+    // close stopped responding at all, confirmed after two attempts at
+    // tuning it (a static color, then a dynamic one via IPC). A window
+    // that can't be closed is a real, blocking bug, not a cosmetic
+    // trade-off worth keeping -- back to a normal, guaranteed-working
+    // native frame until a fully custom (page-drawn) title bar can
+    // replace it properly instead of relying on titleBarOverlay.
+    frame: true,
     autoHideMenuBar: true,
     // A transparent 1x1 icon, not the real logo -- the real icon.png is
     // still what electron-builder embeds in the .exe/Start Menu shortcut
