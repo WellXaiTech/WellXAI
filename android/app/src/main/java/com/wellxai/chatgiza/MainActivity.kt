@@ -5740,12 +5740,11 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
             onClick = { viewModel.startNewPrivateChat() },
             modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f))
           ) {
-            Icon(
-              painter = androidx.compose.ui.res.painterResource(R.drawable.ic_new_chat_bubble),
-              contentDescription = "New private chat",
-              tint = Color.White,
-              modifier = Modifier.size(20.dp)
-            )
+            // Was ic_new_chat_bubble (the same subtle outline used for the
+            // main app's own New Chat button) -- too easy to mistake for
+            // just another bubble/circle next to the clock icon at this
+            // size. A plain plus reads unambiguously as "start new" here.
+            Icon(Icons.Filled.Add, contentDescription = "New private chat", tint = Color.White, modifier = Modifier.size(22.dp))
           }
         } else {
           Spacer(modifier = Modifier.size(44.dp))
@@ -5779,17 +5778,21 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
       } else {
         LazyColumn(
           state = listState,
-          modifier = Modifier.weight(1f).fillMaxWidth(),
-          // Top trimmed to 2dp (was 12dp, on top of the header's own
-          // padding) -- see the topBar comment above for the other half of
-          // this. Bottom kept at 12dp for breathing room over the composer.
+          // fill = false is the actual fix: weight(1f) alone still forces
+          // this to CONSUME all leftover vertical space even when the
+          // content is shorter than that, which is what was pushing a
+          // short conversation's messages down against the composer and
+          // leaving a bare gap up at the header instead (previously
+          // "fixed" by bottom-anchoring the items, which just moved the
+          // same gap from the bottom to the top). fill = false lets this
+          // wrap its actual content height instead -- short conversations
+          // sit right under the header with the composer directly beneath
+          // them, no gap on EITHER side; weight(1f) is still there as the
+          // upper bound so a long conversation still scrolls properly
+          // instead of pushing the composer off-screen.
+          modifier = Modifier.weight(1f, fill = false).fillMaxWidth(),
           contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 12.dp),
-          // Anchors a short conversation to the BOTTOM of the available
-          // space (against the composer) instead of the top -- items were
-          // stacking from the top by default, leaving an empty gap between
-          // the last message and the composer whenever there wasn't enough
-          // content to fill the screen.
-          verticalArrangement = Arrangement.spacedBy(14.dp, alignment = Alignment.Bottom)
+          verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
           items(viewModel.privateMessages, key = { it.id }) { msg ->
             if (msg.role == "user") {
