@@ -643,6 +643,7 @@ class MainActivity : AppCompatActivity() {
             is AppScreen.Nickname -> NicknameScreen(viewModel)
             is AppScreen.TwoFactorSetup -> TwoFactorSetupScreen(viewModel)
             is AppScreen.TotpLoginVerify -> TotpLoginVerifyScreen(viewModel)
+            is AppScreen.PasskeyLoginConfirm -> PasskeyLoginConfirmScreen(viewModel, onConfirm = ::confirmPasskeyLogin)
             is AppScreen.AppLockSetup -> AppLockSetupScreen(viewModel)
             is AppScreen.PasskeysManage -> PasskeysManageScreen(viewModel, onAddPasskey = ::startPasskeyRegistration)
             is AppScreen.SubaccountSettings -> SubaccountSettingsScreen(viewModel)
@@ -780,6 +781,46 @@ class MainActivity : AppCompatActivity() {
         viewModel.onSignInFailed(e.message ?: "Sign-in was cancelled")
       } catch (e: Exception) {
         viewModel.onSignInFailed(e.message ?: "Sign-in failed")
+      }
+    }
+  }
+
+  // Reached when mobileAuth()/authWithPassword() report passkeyRequired --
+  // this account has no TOTP but does have a registered passkey, so it's
+  // the required second factor instead of a mandatory emailed code. A
+  // passkey-only request (no Google option, unlike startGoogleSignIn's
+  // combined one above) since the point here is confirming a specific
+  // already-known identity, not picking one. Reuses the exact same
+  // discoverable-credential passkey-verify flow startGoogleSignIn already
+  // has -- it identifies the account from the credential itself, so
+  // whichever account's passkey gets used is who actually signs in.
+  private fun confirmPasskeyLogin() {
+    viewModel.onSignInStart()
+    lifecycleScope.launch {
+      val passkeyOptions = ChatGizaApi.passkeyLoginOptions()
+      if (passkeyOptions !is ApiResult.Success) {
+        viewModel.onSignInFailed("Couldn't start passkey sign-in -- try again")
+        return@launch
+      }
+      val request = GetCredentialRequest.Builder()
+        .addCredentialOption(GetPublicKeyCredentialOption(requestJson = passkeyOptions.value.optionsJson))
+        .build()
+      try {
+        val credentialManager = CredentialManager.create(this@MainActivity)
+        val response = credentialManager.getCredential(this@MainActivity, request)
+        val credential = response.credential
+        if (credential !is PublicKeyCredential) {
+          viewModel.onSignInFailed("Couldn't complete passkey sign-in")
+          return@launch
+        }
+        when (val verifyResult = ChatGizaApi.passkeyLoginVerify(passkeyOptions.value.requestId, credential.authenticationResponseJson, Build.MODEL ?: "")) {
+          is ApiResult.Success -> viewModel.onPasskeySignedIn(verifyResult.value)
+          is ApiResult.Failure -> viewModel.onSignInFailed(verifyResult.message)
+        }
+      } catch (e: GetCredentialException) {
+        viewModel.onSignInFailed(e.message ?: "Passkey sign-in was cancelled")
+      } catch (e: Exception) {
+        viewModel.onSignInFailed(e.message ?: "Passkey sign-in failed")
       }
     }
   }
@@ -12570,10 +12611,19 @@ private fun TotpLoginVerifyScreen(viewModel: ChatViewModel) {
     verticalArrangement = Arrangement.Center,
     horizontalAlignment = Alignment.CenterHorizontally
   ) {
-    Text("Enter your 2FA code", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+    Text(
+      if (viewModel.loginVerifyKind == "email") "Check your email" else "Enter your 2FA code",
+      fontSize = 24.sp,
+      fontWeight = FontWeight.ExtraBold,
+      color = Color.Black
+    )
     Spacer(modifier = Modifier.height(10.dp))
     Text(
-      "Open your authenticator app and enter the current 6-digit code for ChatGiZa",
+      if (viewModel.loginVerifyKind == "email") {
+        "We sent a 6-digit code to your email to confirm it's you on this device"
+      } else {
+        "Open your authenticator app and enter the current 6-digit code for ChatGiZa"
+      },
       fontSize = 14.sp,
       color = Color.Black.copy(alpha = 0.6f),
       textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -12599,6 +12649,47 @@ private fun TotpLoginVerifyScreen(viewModel: ChatViewModel) {
     }
     Spacer(modifier = Modifier.height(12.dp))
     TextButton(onClick = { viewModel.cancelLoginTotp() }) {
+      Text("Cancel", color = Color.Black.copy(alpha = 0.6f))
+    }
+  }
+}
+
+// Reached when mobileAuth()/authWithPassword() report passkeyRequired --
+// this account's second factor is a registered passkey rather than TOTP or
+// an emailed code, so this screen's only job is to launch that ceremony
+// (see confirmPasskeyLogin in MainActivity) and let the user retry or bail
+// out if it's cancelled/fails. Auto-triggers once on entry, same as a
+// system permission prompt would, rather than making the user tap a button
+// first for what's otherwise a one-step confirmation.
+@Composable
+private fun PasskeyLoginConfirmScreen(viewModel: ChatViewModel, onConfirm: () -> Unit) {
+  BackHandler { viewModel.cancelPasskeyLoginConfirm() }
+  LaunchedEffect(Unit) { onConfirm() }
+  Column(
+    modifier = Modifier.fillMaxSize().padding(32.dp),
+    verticalArrangement = Arrangement.Center,
+    horizontalAlignment = Alignment.CenterHorizontally
+  ) {
+    Text("Confirm it's you", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+    Spacer(modifier = Modifier.height(10.dp))
+    Text(
+      "Use your passkey to finish signing in on this device",
+      fontSize = 14.sp,
+      color = Color.Black.copy(alpha = 0.6f),
+      textAlign = androidx.compose.ui.text.style.TextAlign.Center
+    )
+    Spacer(modifier = Modifier.height(28.dp))
+    CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(28.dp), strokeWidth = 2.dp)
+    if (viewModel.errorMessage != null) {
+      Spacer(modifier = Modifier.height(20.dp))
+      Text(viewModel.errorMessage ?: "", color = Color(0xFFE14050), fontSize = 13.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+      Spacer(modifier = Modifier.height(16.dp))
+      Button(onClick = onConfirm, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) {
+        Text("Try again")
+      }
+    }
+    Spacer(modifier = Modifier.height(12.dp))
+    TextButton(onClick = { viewModel.cancelPasskeyLoginConfirm() }) {
       Text("Cancel", color = Color.Black.copy(alpha = 0.6f))
     }
   }

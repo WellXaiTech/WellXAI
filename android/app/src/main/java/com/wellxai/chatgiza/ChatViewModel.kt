@@ -107,6 +107,7 @@ sealed class AppScreen {
   object Nickname : AppScreen()
   object TwoFactorSetup : AppScreen()
   object TotpLoginVerify : AppScreen()
+  object PasskeyLoginConfirm : AppScreen()
   object AppLockSetup : AppScreen()
   object PasskeysManage : AppScreen()
 }
@@ -370,10 +371,18 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var totpBusy by mutableStateOf(false)
     private set
 
-  // Set when mobileAuth() reports totpRequired instead of signing straight
-  // in -- carries the short-lived id the backend staged the verified Google
-  // identity under, so submitLoginTotpCode() knows what it's confirming.
+  // Set when mobileAuth()/authWithPassword() report totpRequired or
+  // emailCodeRequired instead of signing straight in -- carries the
+  // short-lived id the backend staged the verified identity under, so
+  // submitLoginTotpCode() knows what it's confirming. loginVerifyKind picks
+  // which of the two this screen instance is (same fields/UI either way,
+  // just different copy and which ChatGizaApi verify call gets made) --
+  // every account now needs one of these two, or a passkey confirmation
+  // (see AppScreen.PasskeyLoginConfirm), on every sign-in unless this
+  // device already presented a still-valid deviceTrustToken.
   var pendingLoginTotpId by mutableStateOf<String?>(null)
+    private set
+  var loginVerifyKind by mutableStateOf("totp")
     private set
   var loginTotpCodeInput by mutableStateOf("")
     private set
@@ -2381,26 +2390,40 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
   fun onGoogleIdToken(idToken: String) {
     viewModelScope.launch {
-      when (val result = ChatGizaApi.mobileAuth(idToken)) {
-        is ApiResult.Success -> {
-          when (val outcome = result.value) {
-            is MobileAuthOutcome.SignedIn -> {
-              signingIn = false
-              applySignedInResult(outcome.result)
-            }
-            is MobileAuthOutcome.TotpRequired -> {
-              signingIn = false
-              pendingLoginTotpId = outcome.pendingId
-              loginTotpCodeInput = ""
-              loginTotpError = null
-              screen = AppScreen.TotpLoginVerify
-            }
-          }
-        }
+      when (val result = ChatGizaApi.mobileAuth(idToken, tokenStore.getDeviceTrustToken())) {
+        is ApiResult.Success -> handleMobileAuthOutcome(result.value)
         is ApiResult.Failure -> {
           signingIn = false
           errorMessage = result.message
         }
+      }
+    }
+  }
+
+  // Shared by onGoogleIdToken and submitPasswordSignIn -- both call
+  // mobileAuth/authWithPassword and get back the exact same four-way
+  // outcome, so both dispatch it identically.
+  private fun handleMobileAuthOutcome(outcome: MobileAuthOutcome) {
+    signingIn = false
+    signInBusy = false
+    when (outcome) {
+      is MobileAuthOutcome.SignedIn -> applySignedInResult(outcome.result)
+      is MobileAuthOutcome.TotpRequired -> {
+        pendingLoginTotpId = outcome.pendingId
+        loginVerifyKind = "totp"
+        loginTotpCodeInput = ""
+        loginTotpError = null
+        screen = AppScreen.TotpLoginVerify
+      }
+      is MobileAuthOutcome.EmailCodeRequired -> {
+        pendingLoginTotpId = outcome.pendingId
+        loginVerifyKind = "email"
+        loginTotpCodeInput = ""
+        loginTotpError = null
+        screen = AppScreen.TotpLoginVerify
+      }
+      is MobileAuthOutcome.PasskeyRequired -> {
+        screen = AppScreen.PasskeyLoginConfirm
       }
     }
   }
@@ -2411,6 +2434,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     tokenStore.setToken(result.token)
     tokenStore.setUser(result.user.id, result.user.name, result.user.email, result.user.image)
     tokenStore.rememberAccount(result.user.name, result.user.email, result.user.image)
+    tokenStore.setDeviceTrustToken(result.deviceTrustToken)
     userId = result.user.id
     userName = result.user.name
     userEmail = result.user.email
@@ -2434,13 +2458,18 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   fun submitLoginTotpCode() {
     val pendingId = pendingLoginTotpId ?: return
     if (loginTotpCodeInput.length != 6) {
-      loginTotpError = "Enter the 6-digit code from your authenticator app"
+      loginTotpError = if (loginVerifyKind == "email") "Enter the 6-digit code from your email" else "Enter the 6-digit code from your authenticator app"
       return
     }
     loginTotpBusy = true
     loginTotpError = null
     viewModelScope.launch {
-      when (val result = ChatGizaApi.verifyLoginTotp(pendingId, loginTotpCodeInput)) {
+      val result = if (loginVerifyKind == "email") {
+        ChatGizaApi.verifyLoginEmailCode(pendingId, loginTotpCodeInput)
+      } else {
+        ChatGizaApi.verifyLoginTotp(pendingId, loginTotpCodeInput)
+      }
+      when (result) {
         is ApiResult.Success -> {
           loginTotpBusy = false
           pendingLoginTotpId = null
@@ -2461,6 +2490,14 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     pendingLoginTotpId = null
     loginTotpCodeInput = ""
     loginTotpError = null
+    screen = AppScreen.SignedOut
+  }
+
+  // Backs out of the passkey-confirm screen the same way cancelLoginTotp
+  // does for the code screens -- lets the user retry sign-in from scratch
+  // instead of getting stuck if they can't complete the passkey ceremony
+  // right now (wrong device, biometric unavailable, etc.).
+  fun cancelPasskeyLoginConfirm() {
     screen = AppScreen.SignedOut
   }
 
@@ -2531,22 +2568,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     signInBusy = true
     signInError = null
     viewModelScope.launch {
-      when (val result = ChatGizaApi.authWithPassword(identifier, signInTab, signInPasswordInput)) {
-        is ApiResult.Success -> {
-          when (val outcome = result.value) {
-            is MobileAuthOutcome.SignedIn -> {
-              signInBusy = false
-              applySignedInResult(outcome.result)
-            }
-            is MobileAuthOutcome.TotpRequired -> {
-              signInBusy = false
-              pendingLoginTotpId = outcome.pendingId
-              loginTotpCodeInput = ""
-              loginTotpError = null
-              screen = AppScreen.TotpLoginVerify
-            }
-          }
-        }
+      when (val result = ChatGizaApi.authWithPassword(identifier, signInTab, signInPasswordInput, tokenStore.getDeviceTrustToken())) {
+        is ApiResult.Success -> handleMobileAuthOutcome(result.value)
         is ApiResult.Failure -> {
           signInBusy = false
           signInError = result.message

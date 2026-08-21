@@ -15,15 +15,27 @@ data class ChatMessage(val role: String, val content: String)
 
 data class MobileUser(val id: String, val name: String?, val email: String?, val image: String?)
 
-data class AuthResult(val token: String, val user: MobileUser)
+// deviceTrustToken is re-minted on every successful sign-in (whether it just
+// cleared a real second-factor challenge or skipped one by presenting an
+// already-valid token) -- stored via TokenStore.setDeviceTrustToken and
+// echoed back on the next mobileAuth/authWithPassword call so this device
+// isn't challenged again until an explicit sign-out clears it.
+data class AuthResult(val token: String, val user: MobileUser, val deviceTrustToken: String?)
 
-// mobileAuth returns one of these instead of AuthResult directly -- when the
-// account has Authenticator App 2FA on, Google sign-in alone only produces a
-// pendingId; the real AuthResult only comes back once verifyLoginTotp
-// confirms a code against it.
+// mobileAuth/authWithPassword return one of these instead of AuthResult
+// directly -- every account now needs a second factor on every sign-in
+// (unless this device already presented a valid deviceTrustToken): TOTP if
+// the account has it enabled, otherwise a passkey confirmation if one is
+// registered, otherwise a mandatory emailed code. The real AuthResult only
+// comes back once whichever of those three actually clears.
 sealed class MobileAuthOutcome {
   data class SignedIn(val result: AuthResult) : MobileAuthOutcome()
   data class TotpRequired(val pendingId: String) : MobileAuthOutcome()
+  // No pendingId -- Android's passkey login is discoverable-credential based
+  // (see startGoogleSignIn/confirmPasskeyLogin) and identifies the account
+  // from the credential itself, so there's nothing to resume against.
+  object PasskeyRequired : MobileAuthOutcome()
+  data class EmailCodeRequired(val pendingId: String) : MobileAuthOutcome()
 }
 
 data class TotpSetup(val secret: String, val otpauthUri: String)
@@ -263,36 +275,47 @@ object ChatGizaApi {
     .writeTimeout(20, TimeUnit.SECONDS)
     .build()
 
-  suspend fun mobileAuth(idToken: String): ApiResult<MobileAuthOutcome> = withContext(Dispatchers.IO) {
+  // Parses whichever of the four shapes /api/mobile/auth(-password) can
+  // return -- a real device (deviceTrustToken already valid) gets signedIn
+  // straight away; a fresh one gets whichever rung of the ladder applies.
+  private fun parseMobileAuthOutcome(json: JSONObject): MobileAuthOutcome {
+    if (json.optBoolean("totpRequired", false)) return MobileAuthOutcome.TotpRequired(json.getString("pendingId"))
+    if (json.optBoolean("passkeyRequired", false)) return MobileAuthOutcome.PasskeyRequired
+    if (json.optBoolean("emailCodeRequired", false)) return MobileAuthOutcome.EmailCodeRequired(json.getString("pendingId"))
+    val userJson = json.getJSONObject("user")
+    return MobileAuthOutcome.SignedIn(
+      AuthResult(
+        token = json.getString("token"),
+        deviceTrustToken = json.optString("deviceTrustToken", null),
+        user = MobileUser(
+          id = userJson.getString("id"),
+          name = userJson.optString("name", null),
+          email = userJson.optString("email", null),
+          image = userJson.optString("image", null)
+        )
+      )
+    )
+  }
+
+  suspend fun mobileAuth(idToken: String, deviceTrustToken: String?): ApiResult<MobileAuthOutcome> = withContext(Dispatchers.IO) {
     try {
       // Device model (e.g. "TECNO CK6") is what the Trusted Devices list
       // shows for this sign-in -- sent once here, at token-mint time, not
-      // on every request.
-      val body = JSONObject().put("idToken", idToken).put("deviceModel", android.os.Build.MODEL ?: "").toString().toRequestBody(JSON)
+      // on every request. deviceTrustToken (from TokenStore, null the first
+      // time this device ever signs in) lets an already-verified device skip
+      // straight past the second-factor ladder below.
+      val body = JSONObject()
+        .put("idToken", idToken)
+        .put("deviceModel", android.os.Build.MODEL ?: "")
+        .apply { if (deviceTrustToken != null) put("deviceTrustToken", deviceTrustToken) }
+        .toString().toRequestBody(JSON)
       val request = Request.Builder().url("$BASE_URL/api/mobile/auth").post(body).build()
       client.newCall(request).execute().use { response ->
         val text = response.body?.string().orEmpty()
         if (!response.isSuccessful) {
           return@withContext ApiResult.Failure(errorMessage(text, response.code))
         }
-        val json = JSONObject(text)
-        if (json.optBoolean("totpRequired", false)) {
-          return@withContext ApiResult.Success(MobileAuthOutcome.TotpRequired(json.getString("pendingId")))
-        }
-        val userJson = json.getJSONObject("user")
-        ApiResult.Success(
-          MobileAuthOutcome.SignedIn(
-            AuthResult(
-              token = json.getString("token"),
-              user = MobileUser(
-                id = userJson.getString("id"),
-                name = userJson.optString("name", null),
-                email = userJson.optString("email", null),
-                image = userJson.optString("image", null)
-              )
-            )
-          )
-        )
+        ApiResult.Success(parseMobileAuthOutcome(JSONObject(text)))
       }
     } catch (e: Exception) {
       ApiResult.Failure(e.message ?: "Network error")
@@ -301,15 +324,16 @@ object ChatGizaApi {
 
   // Sign-in via the in-app password instead of Google -- identifier is
   // either the account's email or its saved contact phone number,
-  // depending on which tab was selected. Same TotpRequired/SignedIn shape
-  // as mobileAuth, so callers handle both the exact same way.
-  suspend fun authWithPassword(identifier: String, method: String, password: String): ApiResult<MobileAuthOutcome> = withContext(Dispatchers.IO) {
+  // depending on which tab was selected. Same outcome shape as mobileAuth,
+  // so callers handle both the exact same way.
+  suspend fun authWithPassword(identifier: String, method: String, password: String, deviceTrustToken: String?): ApiResult<MobileAuthOutcome> = withContext(Dispatchers.IO) {
     try {
       val body = JSONObject()
         .put("identifier", identifier)
         .put("method", method)
         .put("password", password)
         .put("deviceModel", android.os.Build.MODEL ?: "")
+        .apply { if (deviceTrustToken != null) put("deviceTrustToken", deviceTrustToken) }
         .toString().toRequestBody(JSON)
       val request = Request.Builder().url("$BASE_URL/api/mobile/auth-password").post(body).build()
       client.newCall(request).execute().use { response ->
@@ -317,33 +341,16 @@ object ChatGizaApi {
         if (!response.isSuccessful) {
           return@withContext ApiResult.Failure(errorMessage(text, response.code))
         }
-        val json = JSONObject(text)
-        if (json.optBoolean("totpRequired", false)) {
-          return@withContext ApiResult.Success(MobileAuthOutcome.TotpRequired(json.getString("pendingId")))
-        }
-        val userJson = json.getJSONObject("user")
-        ApiResult.Success(
-          MobileAuthOutcome.SignedIn(
-            AuthResult(
-              token = json.getString("token"),
-              user = MobileUser(
-                id = userJson.getString("id"),
-                name = userJson.optString("name", null),
-                email = userJson.optString("email", null),
-                image = userJson.optString("image", null)
-              )
-            )
-          )
-        )
+        ApiResult.Success(parseMobileAuthOutcome(JSONObject(text)))
       }
     } catch (e: Exception) {
       ApiResult.Failure(e.message ?: "Network error")
     }
   }
 
-  // Step 2 of a 2FA-gated sign-in -- verifies the authenticator code against
-  // the identity mobileAuth staged under pendingId, then returns the same
-  // AuthResult mobileAuth would have if 2FA weren't on.
+  // Step 2 of a TOTP-gated sign-in -- verifies the authenticator code against
+  // the identity staged under pendingId, then returns the same AuthResult an
+  // unchallenged sign-in would.
   suspend fun verifyLoginTotp(pendingId: String, code: String): ApiResult<AuthResult> = withContext(Dispatchers.IO) {
     try {
       val body = JSONObject().put("pendingId", pendingId).put("code", code).toString().toRequestBody(JSON)
@@ -358,6 +365,39 @@ object ChatGizaApi {
         ApiResult.Success(
           AuthResult(
             token = json.getString("token"),
+            deviceTrustToken = json.optString("deviceTrustToken", null),
+            user = MobileUser(
+              id = userJson.getString("id"),
+              name = userJson.optString("name", null),
+              email = userJson.optString("email", null),
+              image = userJson.optString("image", null)
+            )
+          )
+        )
+      }
+    } catch (e: Exception) {
+      ApiResult.Failure(e.message ?: "Network error")
+    }
+  }
+
+  // Step 2 of the mandatory-email-code fallback (accounts with no TOTP and
+  // no passkey) -- same URL/shape as verifyLoginTotp, the server tells the
+  // two apart by which `kind` the pendingId was staged under.
+  suspend fun verifyLoginEmailCode(pendingId: String, code: String): ApiResult<AuthResult> = withContext(Dispatchers.IO) {
+    try {
+      val body = JSONObject().put("pendingId", pendingId).put("code", code).toString().toRequestBody(JSON)
+      val request = Request.Builder().url("$BASE_URL/api/mobile/auth").put(body).build()
+      client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
+        if (!response.isSuccessful) {
+          return@withContext ApiResult.Failure(errorMessage(text, response.code))
+        }
+        val json = JSONObject(text)
+        val userJson = json.getJSONObject("user")
+        ApiResult.Success(
+          AuthResult(
+            token = json.getString("token"),
+            deviceTrustToken = json.optString("deviceTrustToken", null),
             user = MobileUser(
               id = userJson.getString("id"),
               name = userJson.optString("name", null),
@@ -973,6 +1013,7 @@ object ChatGizaApi {
         ApiResult.Success(
           AuthResult(
             token = json.getString("token"),
+            deviceTrustToken = json.optString("deviceTrustToken", null),
             user = MobileUser(
               id = userJson.getString("id"),
               name = userJson.optString("name", null),
