@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from "electron";
+import { app, BrowserWindow, ipcMain, shell } from "electron";
 import * as path from "path";
 
 const APP_URL = "https://www.chatgiza.com/chatgiza";
@@ -17,6 +17,19 @@ function isAllowedInAppHost(hostname: string): boolean {
 }
 
 let mainWindow: BrowserWindow | null = null;
+
+// The page (via preload.ts's bridge) calls this whenever a dark modal --
+// currently just Settings -- opens or closes over the page, so the native
+// title-bar-overlay strip (drawn by Windows, not by the page's own CSS)
+// can switch to match instead of staying a fixed white that clashes with
+// a darkened backdrop underneath it.
+ipcMain.on("set-titlebar-dark", (_event, isDark: boolean) => {
+  mainWindow?.setTitleBarOverlay({
+    color: isDark ? "#000000" : "#ffffff",
+    symbolColor: isDark ? "#ffffff" : "#000000",
+    height: 32,
+  });
+});
 
 function createWindow() {
   mainWindow = new BrowserWindow({
