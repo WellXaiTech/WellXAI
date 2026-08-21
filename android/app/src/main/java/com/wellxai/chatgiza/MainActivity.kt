@@ -3264,11 +3264,17 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
     // navigationBarsPadding()/imePadding(), so extra padding here just
     // left a gap between the card and the keyboard/nav bar with the
     // message list visible (and readable) through it.
-    // No border, no shadow -- per feedback comparing against a reference
-    // screenshot with no visible line at the composer's edge at all. The
-    // box is told apart from the page purely by being its own tap target/
-    // rounded shape, not by any visible outline.
-    modifier = Modifier.fillMaxWidth(),
+    // No border (a flat outline read as a harsh visible line last time)
+    // and no Card elevation (that's what was quietly tinting the fill
+    // gray again, since Material3's Surface blends a tonal color into
+    // containerColor whenever Card elevation is above 0, regardless of
+    // what color was passed in). Modifier.shadow is a plain drop-shadow
+    // draw effect with no such color side effect -- same same-color-as-
+    // background fill, but now with an actual soft shadow so the box
+    // reads as its own distinct shape again, matching the reference.
+    modifier = Modifier
+      .shadow(elevation = 3.dp, shape = RoundedCornerShape(24.dp), clip = false)
+      .fillMaxWidth(),
     shape = RoundedCornerShape(24.dp),
     colors = CardDefaults.cardColors(containerColor = composerBackground),
     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
