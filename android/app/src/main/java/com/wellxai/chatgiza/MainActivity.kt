@@ -5742,11 +5742,15 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
             onClick = { viewModel.startNewPrivateChat() },
             modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f))
           ) {
-            // Was ic_new_chat_bubble (the same subtle outline used for the
-            // main app's own New Chat button) -- too easy to mistake for
-            // just another bubble/circle next to the clock icon at this
-            // size. A plain plus reads unambiguously as "start new" here.
-            Icon(Icons.Filled.Add, contentDescription = "New private chat", tint = Color.White, modifier = Modifier.size(22.dp))
+            // Back to ic_new_chat_bubble per feedback -- should be the exact
+            // same New Chat icon the main Ask/Chat screen uses, not a
+            // generic plus (which reads as "attach" there, not "new chat").
+            Icon(
+              painter = androidx.compose.ui.res.painterResource(R.drawable.ic_new_chat_bubble),
+              contentDescription = "New private chat",
+              tint = Color.White,
+              modifier = Modifier.size(20.dp)
+            )
           }
         } else {
           Spacer(modifier = Modifier.size(44.dp))
