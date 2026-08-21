@@ -24,15 +24,18 @@ function createWindow() {
     height: 800,
     minWidth: 720,
     minHeight: 480,
-    // frame: false + titleBarOverlay looked better (no black bar) but
-    // turned out to genuinely break the window on this setup -- minimize/
-    // close stopped responding at all, confirmed after two attempts at
-    // tuning it (a static color, then a dynamic one via IPC). A window
-    // that can't be closed is a real, blocking bug, not a cosmetic
-    // trade-off worth keeping -- back to a normal, guaranteed-working
-    // native frame until a fully custom (page-drawn) title bar can
-    // replace it properly instead of relying on titleBarOverlay.
-    frame: true,
+    // frame: false with a static titleBarOverlay (this exact config) was
+    // never reported as broken on its own -- the button-unresponsiveness
+    // only showed up after adding a DYNAMIC titleBarOverlay update (re-
+    // calling setTitleBarOverlay() at runtime whenever Settings opened),
+    // which has now been removed again. Back to just this static version.
+    frame: false,
+    titleBarStyle: "hidden",
+    titleBarOverlay: {
+      color: "#ffffff",
+      symbolColor: "#000000",
+      height: 32,
+    },
     autoHideMenuBar: true,
     // A transparent 1x1 icon, not the real logo -- the real icon.png is
     // still what electron-builder embeds in the .exe/Start Menu shortcut
