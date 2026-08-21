@@ -277,6 +277,24 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
   var privateSending by mutableStateOf(false)
     private set
 
+  // Private Chat's own PIN gate -- required on every single entry, not just
+  // once per app session (see openPrivateChat). Separate from the whole-app
+  // App Lock: that one guards the app at large and is a device fact, this
+  // one guards just this thread and is wiped along with it on sign-out.
+  var privateChatPinHash by mutableStateOf(tokenStore.getPrivateChatPinHash())
+    private set
+  var privateChatUnlocked by mutableStateOf(false)
+    private set
+  var privateChatSetupStep by mutableStateOf("enter")
+    private set
+  var privateChatPinInput by mutableStateOf("")
+    private set
+  private var privateChatFirstEnteredPin: String? = null
+  var privateChatGateInput by mutableStateOf("")
+    private set
+  var privateChatError by mutableStateOf<String?>(null)
+    private set
+
   var projects by mutableStateOf<List<ApiProject>>(emptyList())
     private set
   var loadingProjects by mutableStateOf(false)
@@ -3639,6 +3657,16 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     if (privateMessages.isEmpty()) {
       privateMessages = tokenStore.getPrivateChatJson()?.let { decodePrivateMessages(it) } ?: emptyList()
     }
+    // Always re-lock on entry -- privateChatUnlocked only ever flips true
+    // from a correct PIN entered *this* visit, never carried over from a
+    // previous one.
+    privateChatPinHash = tokenStore.getPrivateChatPinHash()
+    privateChatUnlocked = false
+    privateChatSetupStep = "enter"
+    privateChatPinInput = ""
+    privateChatFirstEnteredPin = null
+    privateChatGateInput = ""
+    privateChatError = null
     screen = AppScreen.PrivateChat
   }
 
@@ -3648,6 +3676,77 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     // instead, which skipped past History and landed somewhere the user
     // never actually navigated from.
     screen = AppScreen.History
+  }
+
+  fun onPrivateChatPinChange(value: String) {
+    if (value.length <= 6 && value.all { it.isDigit() }) {
+      privateChatPinInput = value
+      privateChatError = null
+    }
+  }
+
+  fun onPrivateChatGateInputChange(value: String) {
+    if (value.length <= 6 && value.all { it.isDigit() }) {
+      privateChatGateInput = value
+      privateChatError = null
+    }
+  }
+
+  /** First-time PIN creation -- two steps (enter, then confirm) same shape
+   * as App Lock's own setup, just scoped to this one screen's own hash. */
+  fun submitPrivateChatSetupStep() {
+    if (privateChatPinInput.length < 4) {
+      privateChatError = "Enter at least 4 digits"
+      return
+    }
+    when (privateChatSetupStep) {
+      "enter" -> {
+        privateChatFirstEnteredPin = privateChatPinInput
+        privateChatPinInput = ""
+        privateChatSetupStep = "confirm"
+      }
+      else -> {
+        if (privateChatPinInput != privateChatFirstEnteredPin) {
+          privateChatError = "PINs didn't match -- try again"
+          privateChatPinInput = ""
+          privateChatFirstEnteredPin = null
+          privateChatSetupStep = "enter"
+          return
+        }
+        tokenStore.setPrivateChatPinHash(sha256Hex(privateChatPinInput))
+        privateChatPinHash = tokenStore.getPrivateChatPinHash()
+        privateChatPinInput = ""
+        privateChatFirstEnteredPin = null
+        privateChatUnlocked = true
+      }
+    }
+  }
+
+  fun submitPrivateChatUnlock() {
+    val storedHash = privateChatPinHash
+    if (storedHash != null && sha256Hex(privateChatGateInput) == storedHash) {
+      privateChatUnlocked = true
+      privateChatGateInput = ""
+      privateChatError = null
+    } else {
+      privateChatError = "That PIN is incorrect"
+      privateChatGateInput = ""
+    }
+  }
+
+  /** No recovery path for a forgotten PIN -- the thread it guards has no
+   * server copy either, so "forgot the PIN" and "forgot the thread existed"
+   * end up the same: wipe both and let the user set a fresh PIN. */
+  fun resetPrivateChatPin() {
+    tokenStore.setPrivateChatPinHash(null)
+    tokenStore.setPrivateChatJson(null)
+    privateChatPinHash = null
+    privateMessages = emptyList()
+    privateChatSetupStep = "enter"
+    privateChatPinInput = ""
+    privateChatFirstEnteredPin = null
+    privateChatGateInput = ""
+    privateChatError = null
   }
 
   fun onPrivateInputChange(value: String) {
