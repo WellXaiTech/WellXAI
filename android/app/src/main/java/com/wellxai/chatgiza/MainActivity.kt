@@ -4498,7 +4498,11 @@ private fun VoiceControlPillShell(contentDescription: String, active: Boolean, e
       .alpha(if (enabled) 1f else 0.4f)
       .clip(RoundedCornerShape(percent = 50))
       .background(Color.White)
-      .border(width = 1.dp, color = Color.Black.copy(alpha = 0.1f), shape = RoundedCornerShape(percent = 50))
+      // Was 10% -- barely visible on its own, and now that the page
+      // background moved from #F2F2F2 to #FCFCFC (much closer to this
+      // pill's own white fill), the contrast that alpha relied on almost
+      // entirely disappeared. Bumped to restore a clearly visible edge.
+      .border(width = 1.dp, color = Color.Black.copy(alpha = 0.18f), shape = RoundedCornerShape(percent = 50))
       .clickable(enabled = enabled, onClick = onClick),
     contentAlignment = Alignment.Center
   ) {
