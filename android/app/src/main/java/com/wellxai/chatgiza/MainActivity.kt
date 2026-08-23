@@ -8406,20 +8406,30 @@ internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () ->
       Spacer(modifier = Modifier.height(6.dp))
       Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.Black.copy(alpha = 0.08f)))
       ConnectFeatureRow(
-        icon = Icons.Filled.Send,
+        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connect_post),
         title = "Post",
         body = "Tuma barua, makala, au maandishi marefu moja kwa moja kwenye Extra Media -- ukitaka tu."
       )
       ConnectFeatureRow(
-        icon = Icons.Outlined.Description,
+        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connect_caption),
         title = "Caption",
         body = "Ongeza maneno yako mwenyewe chini ya post kabla ya kutuma."
       )
-      ConnectFeatureRow(
-        icon = Icons.Outlined.Lock,
+      // Its own full-color icon (not the shared tint = Black used by the
+      // two rows above) -- ConnectFeatureRowShell called directly instead
+      // of the ImageVector/Painter wrappers so tint can be Unspecified and
+      // the drawable's own colors show through untouched.
+      ConnectFeatureRowShell(
         title = "Hii ni hiari",
         body = "Maongezi ya kawaida (kama \"Habari\" au \"Mambo vipi\") hayapewi chaguo hili -- hakuna kinachotumwa bila wewe kubonyeza."
-      )
+      ) {
+        Icon(
+          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connect_optional),
+          contentDescription = null,
+          tint = Color.Unspecified,
+          modifier = Modifier.size(18.dp)
+        )
+      }
       Spacer(modifier = Modifier.height(20.dp))
       if (viewModel.chatGizaMediaConnected) {
         Row(verticalAlignment = Alignment.CenterVertically) {
