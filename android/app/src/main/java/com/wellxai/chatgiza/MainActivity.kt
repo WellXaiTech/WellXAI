@@ -215,6 +215,8 @@ import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SettingsBrightness
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
@@ -8262,32 +8264,68 @@ internal fun MediaCommentComposerSheet(authorName: String, onDismiss: () -> Unit
 // MediaPlayer frequently refuses phone-recorded MP4s whose moov atom sits
 // at the end of the file with "Can't play this video", which ExoPlayer's
 // own MP4 extractor handles fine via range-request seeking.
+// Was ExoPlayer's default useController = true -- a full transport bar
+// (skip/rewind-5/pause/forward-15/skip, scrubber, timestamp, settings
+// gear) cluttering every video in the feed. Reddit-style instead: tap
+// the video to play/pause, a single small mute toggle in the corner,
+// nothing else on top of the video.
 @Composable
 internal fun MediaPostVideoPlayer(url: String, modifier: Modifier = Modifier) {
   val context = LocalContext.current
   val player = remember(url) {
     ExoPlayer.Builder(context).build().apply {
       setMediaItem(MediaItem.fromUri(url))
+      volume = 0f
       prepare()
+      playWhenReady = true
     }
   }
+  var muted by remember(url) { mutableStateOf(true) }
+  var playing by remember(url) { mutableStateOf(true) }
   DisposableEffect(player) {
     onDispose { player.release() }
   }
-  AndroidView(
-    modifier = modifier.background(Color.White),
-    factory = { ctx ->
-      PlayerView(ctx).apply {
-        this.player = player
-        useController = true
-        // Default RESIZE_MODE_FIT letterboxes with hard black bars whenever
-        // the video's own aspect ratio doesn't match the post card's --
-        // ZOOM crops to fill instead, matching how post images already
-        // behave with ContentScale.Crop.
-        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+  Box(modifier = modifier) {
+    AndroidView(
+      modifier = Modifier
+        .fillMaxSize()
+        .background(Color.White)
+        .clickable {
+          playing = !playing
+          player.playWhenReady = playing
+        },
+      factory = { ctx ->
+        PlayerView(ctx).apply {
+          this.player = player
+          useController = false
+          // Default RESIZE_MODE_FIT letterboxes with hard black bars
+          // whenever the video's own aspect ratio doesn't match the post
+          // card's -- ZOOM crops to fill instead, matching how post images
+          // already behave with ContentScale.Crop.
+          resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+        }
       }
+    )
+    IconButton(
+      onClick = {
+        muted = !muted
+        player.volume = if (muted) 0f else 1f
+      },
+      modifier = Modifier
+        .align(Alignment.BottomEnd)
+        .padding(10.dp)
+        .size(32.dp)
+        .clip(CircleShape)
+        .background(Color.Black.copy(alpha = 0.45f))
+    ) {
+      Icon(
+        if (muted) Icons.Filled.VolumeOff else Icons.Filled.VolumeUp,
+        contentDescription = if (muted) "Unmute" else "Mute",
+        tint = Color.White,
+        modifier = Modifier.size(18.dp)
+      )
     }
-  )
+  }
 }
 
 // "+" in ChatGiZa Media now opens this instead of a Post/Article/Video
