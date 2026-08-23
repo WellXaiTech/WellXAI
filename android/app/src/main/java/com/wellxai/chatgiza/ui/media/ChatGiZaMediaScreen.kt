@@ -277,12 +277,12 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
       exit = slideOutVertically(targetOffsetY = { -it }),
       modifier = Modifier.align(Alignment.TopCenter)
     ) {
-      ChatGiZaHeader(
+      ChatGiZaComposerBar(
         topInset = topInset,
         isDark = isDark,
-        onMenuClick = { showConnectSheet = true },
-        onSearchClick = { searchOpen = !searchOpen },
-        onNotificationsClick = { showNotifications = true }
+        userName = viewModel.userName,
+        userImage = viewModel.userImage,
+        onComposerClick = { showPostComposer = true }
       )
     }
 
@@ -335,6 +335,7 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
         val uid = viewModel.userId
         if (uid != null) viewingProfile = ProfileTarget(uid, viewModel.userName ?: "You", viewModel.userImage)
       },
+      onMenuClick = { showConnectSheet = true },
       modifier = Modifier.align(Alignment.BottomCenter)
     )
 
@@ -440,13 +441,18 @@ private fun MediaInitialAvatar(name: String, size: androidx.compose.ui.unit.Dp, 
 // CHATGIZA HEADER
 // =============================================================
 
+// Was a hamburger + "Find anything" search pill + bell -- replaced with
+// the Facebook-style "What's on your mind?" composer row (the menu action
+// moved down to the bottom nav, see MediaBottomNavigation; search/
+// notifications had no other entry point named for them, so they're gone
+// for now rather than left half-wired to nothing).
 @Composable
-private fun ChatGiZaHeader(
+private fun ChatGiZaComposerBar(
   topInset: androidx.compose.ui.unit.Dp,
   isDark: Boolean,
-  onMenuClick: () -> Unit,
-  onSearchClick: () -> Unit,
-  onNotificationsClick: () -> Unit
+  userName: String?,
+  userImage: String?,
+  onComposerClick: () -> Unit
 ) {
   val bg = if (isDark) Color.Black else Color.White
   val fg = if (isDark) Color.White else Color.Black
@@ -459,10 +465,21 @@ private fun ChatGiZaHeader(
       .padding(horizontal = 12.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    IconButton(onClick = onMenuClick) {
-      Icon(Icons.Filled.Menu, contentDescription = "Menu", tint = fg)
+    if (userImage != null) {
+      AsyncImage(
+        model = userImage,
+        contentDescription = "Profile",
+        modifier = Modifier.size(38.dp).clip(CircleShape).clickable(onClick = onComposerClick),
+        contentScale = ContentScale.Crop
+      )
+    } else {
+      MediaInitialAvatar(
+        name = userName ?: "You",
+        size = 38.dp,
+        modifier = Modifier.clickable(onClick = onComposerClick)
+      )
     }
-    Spacer(modifier = Modifier.width(4.dp))
+    Spacer(modifier = Modifier.width(10.dp))
     Row(
       verticalAlignment = Alignment.CenterVertically,
       modifier = Modifier
@@ -471,21 +488,14 @@ private fun ChatGiZaHeader(
         .clip(RoundedCornerShape(23.dp))
         .background(if (isDark) Color(0xFF1F1F1F) else Color(0xFFF0F0F0))
         .border(width = 1.5.dp, color = if (isDark) Color(0xFF3A3A3A) else Color(0xFFD6D6D6), shape = RoundedCornerShape(23.dp))
-        .clickable(onClick = onSearchClick)
+        .clickable(onClick = onComposerClick)
         .padding(horizontal = 14.dp)
     ) {
-      Icon(Icons.Filled.Search, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(18.dp))
-      Spacer(modifier = Modifier.width(8.dp))
-      Text("Find anything", color = Color.Gray, fontSize = 14.sp)
+      Text("What's on your mind?", color = Color.Gray, fontSize = 14.sp)
     }
     Spacer(modifier = Modifier.width(4.dp))
-    IconButton(onClick = onNotificationsClick) {
-      Icon(
-        androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_bell),
-        contentDescription = null,
-        tint = fg,
-        modifier = Modifier.size(22.dp)
-      )
+    IconButton(onClick = onComposerClick) {
+      Icon(Icons.Filled.PhotoLibrary, contentDescription = "Add photo", tint = fg, modifier = Modifier.size(22.dp))
     }
   }
 }
@@ -929,6 +939,7 @@ private fun MediaBottomNavigation(
   isDark: Boolean,
   onCreateClick: () -> Unit,
   onProfileClick: () -> Unit,
+  onMenuClick: () -> Unit,
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
@@ -998,19 +1009,16 @@ private fun MediaBottomNavigation(
       Text("For You", color = muted, fontSize = 10.sp)
     }
 
-    // No messaging backend exists yet, so this is a clearly labeled
-    // placeholder rather than a dead icon, same as Jobs above.
-    IconButton(
-      onClick = { Toast.makeText(context, "Messages — coming soon", Toast.LENGTH_SHORT).show() }
-    ) {
+    // Was "Messages" (no backend, coming-soon placeholder) -- now opens
+    // the Connect-With-ChatGiZa sheet, moved down here from the old top
+    // header's hamburger icon (see ChatGiZaComposerBar, which replaced
+    // that whole header with the "What's on your mind?" composer row).
+    IconButton(onClick = onMenuClick) {
       Icon(
-        androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_messages_bubble),
-        contentDescription = "Messages",
+        Icons.Filled.Menu,
+        contentDescription = "Menu",
         tint = muted,
-        // Not square (the source glyph is taller than wide) -- an explicit
-        // width/height keeps that ratio instead of a uniform size()
-        // shrinking it down to fit a square box.
-        modifier = Modifier.size(width = 20.8.dp, height = 26.dp)
+        modifier = Modifier.size(24.dp)
       )
     }
 
