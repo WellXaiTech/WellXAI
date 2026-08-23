@@ -655,11 +655,20 @@ private fun MediaPost(
     val mediaBg = if (isDark) Color(0xFF141414) else Color(0xFFF2F2F2)
 
     if (post.imageUrls.isNotEmpty()) {
+      // Was a hard-locked aspectRatio(1f) -- every image, whatever its own
+      // shape, got center-cropped into a square, which mangled tall
+      // portrait photos badly enough to read as "rejected". Instagram/
+      // X-style instead: the box takes on the real image's own ratio,
+      // clamped to a sane range (0.8 = a bit taller than square, the
+      // portrait cap most feeds use; 1.91 = the wide/landscape cap) so an
+      // extreme panorama or an extreme full-length portrait still gets a
+      // reasonable card instead of an unusably thin sliver or a wall.
+      var imageAspect by remember(post.id) { mutableStateOf(1f) }
       Box(
         modifier = Modifier
           .fillMaxWidth()
           .padding(horizontal = 14.dp)
-          .aspectRatio(1f)
+          .aspectRatio(imageAspect.coerceIn(0.8f, 1.91f))
           .clip(mediaShape)
           .background(mediaBg)
           .border(1.dp, mediaBorder, mediaShape)
@@ -669,7 +678,13 @@ private fun MediaPost(
             model = post.imageUrls[page],
             contentDescription = "Post image",
             modifier = Modifier.fillMaxSize().clickable { onOpenFullscreen(page) },
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
+            onSuccess = { state ->
+              val d = state.result.drawable
+              if (page == 0 && d.intrinsicWidth > 0 && d.intrinsicHeight > 0) {
+                imageAspect = d.intrinsicWidth.toFloat() / d.intrinsicHeight.toFloat()
+              }
+            }
           )
         }
       }
