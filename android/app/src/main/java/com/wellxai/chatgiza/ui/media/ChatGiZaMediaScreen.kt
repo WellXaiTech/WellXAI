@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
@@ -516,6 +517,11 @@ private fun MediaPost(
   val isLongText = post.text.length > MEDIA_POST_TEXT_PREVIEW_LENGTH
   val bg = if (isDark) Color.Black else Color.White
   val fg = if (isDark) Color.White else Color.Black
+  // Local-only "not interested" dismiss (the X next to "..." in the
+  // reference layout) -- no backend concept of a hidden post exists yet,
+  // so this just drops the card from view for the rest of this session.
+  var dismissed by remember(post.id) { mutableStateOf(false) }
+  if (dismissed) return
 
   Column(modifier = Modifier.fillMaxWidth().background(bg)) {
 
@@ -549,7 +555,14 @@ private fun MediaPost(
 
       Column(modifier = Modifier.weight(1f).clickable(onClick = onOpenProfile)) {
         Text(text = post.authorName, color = fg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text(text = formatMediaPostTimeAgo(post.createdAt), fontSize = 12.sp, color = Color.Gray)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Text(text = formatMediaPostTimeAgo(post.createdAt), fontSize = 12.sp, color = Color.Gray)
+          Spacer(modifier = Modifier.width(4.dp))
+          // Every post here is public (no private/friends-only concept
+          // exists yet) -- the globe just marks that, matching the
+          // reference layout's "5h · <globe>" line under the name.
+          Icon(Icons.Outlined.Public, contentDescription = "Public", tint = Color.Gray, modifier = Modifier.size(12.dp))
+        }
       }
 
       if (!isOwnPost) {
@@ -596,6 +609,13 @@ private fun MediaPost(
             )
           }
         }
+      }
+
+      IconButton(
+        onClick = { dismissed = true },
+        modifier = Modifier.size(36.dp)
+      ) {
+        Icon(Icons.Outlined.Close, contentDescription = "Dismiss", tint = fg)
       }
     }
 
