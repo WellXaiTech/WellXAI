@@ -2535,13 +2535,10 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
       CenterAlignedTopAppBar(
         modifier = Modifier.statusBarsPadding(),
         windowInsets = WindowInsets(0, 0, 0, 0),
-        title = {
-          // Blank home state has no tabs to switch between yet -- they
-          // only make sense once an actual conversation is underway.
-          if (viewModel.messages.isNotEmpty()) {
-            AskImagineTabs(current = "Ask", onAsk = {}, onImagine = { viewModel.openChatGizaMedia() })
-          }
-        },
+        // Ask/Extra tabs removed from here -- Extra (ChatGiZa Media) now
+        // has its own entry in the Events carousel instead (see
+        // CHATGIZA_ANNOUNCEMENTS' isFeatureLink item / ChatGizaEventsCard).
+        title = {},
         navigationIcon = {
           IconButton(onClick = { viewModel.openHistory() }) {
             TwoLineMenuIcon(tint = colorScheme.onBackground)
@@ -5136,7 +5133,12 @@ private data class ChatGizaAnnouncement(
   val headline: String,
   val subtitle: String,
   val isAd: Boolean = false,
-  val linkUrl: String? = null
+  val linkUrl: String? = null,
+  // Was the standalone "Extra" tab next to "Ask" in the chat top bar --
+  // folded into this rotation instead of its own always-visible control.
+  // Handled separately from linkUrl since it opens an in-app screen
+  // (viewModel.openChatGizaMedia()), not a browser Intent.
+  val isFeatureLink: Boolean = false
 )
 
 private val CHATGIZA_ANNOUNCEMENTS = listOf(
@@ -5163,6 +5165,11 @@ private val CHATGIZA_ANNOUNCEMENTS = listOf(
   ChatGizaAnnouncement(
     "Experience GiZa Live Vision",
     "Start your first face-to-face AI conversation today."
+  ),
+  ChatGizaAnnouncement(
+    "Explore ChatGiZa Media",
+    "Discover posts, images, and more from the community.",
+    isFeatureLink = true
   )
 )
 
@@ -5203,7 +5210,9 @@ private fun ChatGizaEventsCard(viewModel: ChatViewModel) {
         modifier = Modifier
           .heightIn(min = 36.dp)
           .let {
-            if (item.isAd && item.linkUrl != null) {
+            if (item.isFeatureLink) {
+              it.clickable { viewModel.openChatGizaMedia() }
+            } else if (item.isAd && item.linkUrl != null) {
               it.clickable {
                 runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(item.linkUrl))) }
               }
