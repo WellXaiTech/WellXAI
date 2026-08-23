@@ -495,7 +495,12 @@ private fun ChatGiZaComposerBar(
     }
     Spacer(modifier = Modifier.width(4.dp))
     IconButton(onClick = onComposerClick) {
-      Icon(Icons.Filled.PhotoLibrary, contentDescription = "Add photo", tint = fg, modifier = Modifier.size(22.dp))
+      Icon(
+        androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_add_person),
+        contentDescription = "Add photo",
+        tint = fg,
+        modifier = Modifier.size(22.dp)
+      )
     }
   }
 }
