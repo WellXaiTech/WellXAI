@@ -54,6 +54,7 @@ import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.automirrored.outlined.ListAlt
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
@@ -925,10 +926,13 @@ private fun MediaBottomNavigation(
       )
     }
 
-    // Replaces the old notifications shortcut here -- notifications are
-    // still reachable via the bell in ChatGiZaHeader up top. No jobs
-    // backend exists yet, so this is a clearly labeled placeholder
-    // rather than a dead icon.
+    // Was "Jobs" (no backend, coming-soon placeholder) -- replaced with
+    // "For You", same coming-soon-placeholder treatment since there's no
+    // personalized feed backend yet either. Icon is a play triangle inside
+    // a filled rounded square (matching Lucide's "square-play" glyph,
+    // which Material's icon set has no direct equivalent for) rather than
+    // a plain outline icon, per explicit request for it to carry its own
+    // background instead of just tinted line art like its neighbors.
     Column(
       horizontalAlignment = Alignment.CenterHorizontally,
       // Only slot in this row with a label under the icon -- without this
@@ -938,17 +942,25 @@ private fun MediaBottomNavigation(
       modifier = Modifier
         .padding(top = 15.dp)
         .clickable {
-          Toast.makeText(context, "Jobs — coming soon", Toast.LENGTH_SHORT).show()
+          Toast.makeText(context, "For You — coming soon", Toast.LENGTH_SHORT).show()
         }
     ) {
-      Icon(
-        androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_jobs),
-        contentDescription = "Jobs",
-        tint = muted,
-        modifier = Modifier.size(22.dp)
-      )
+      Box(
+        modifier = Modifier
+          .size(22.dp)
+          .clip(RoundedCornerShape(6.dp))
+          .background(muted),
+        contentAlignment = Alignment.Center
+      ) {
+        Icon(
+          Icons.Filled.PlayArrow,
+          contentDescription = "For You",
+          tint = bg,
+          modifier = Modifier.size(16.dp)
+        )
+      }
       Spacer(modifier = Modifier.height(2.dp))
-      Text("Jobs", color = muted, fontSize = 10.sp)
+      Text("For You", color = muted, fontSize = 10.sp)
     }
 
     // No messaging backend exists yet, so this is a clearly labeled
