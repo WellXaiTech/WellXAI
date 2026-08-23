@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRealtimeVision } from "@/lib/realtimeVision";
 import { PREMIUM_VOICE_NAMES, type PremiumVoiceName } from "@/lib/voice";
+import VoiceOrb from "@/components/VoiceOrb";
 
 const CloseIcon = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -107,11 +108,8 @@ export default function LiveVisionPanel({ onClose }: { onClose: () => void }) {
         )}
         <canvas ref={canvasRef} className="hidden" />
 
-        <div
-          className={`flex h-32 w-32 items-center justify-center rounded-full border-2 transition-colors ${
-            rt.isAiSpeaking ? "border-foreground animate-pulse" : "border-border"
-          }`}
-        >
+        <div className="flex flex-col items-center gap-3">
+          <VoiceOrb className="h-32 w-32" active={rt.isAiSpeaking} />
           <span className="text-sm text-muted">
             {rt.connectionState === "idle" && "Not connected"}
             {rt.connectionState === "connecting" && "Connecting…"}
