@@ -689,6 +689,16 @@ private fun MediaPost(
             contentDescription = "Post image",
             modifier = Modifier.fillMaxSize().clickable { onOpenFullscreen(page) },
             contentScale = ContentScale.Crop,
+            // Crop's default alignment is Center, which trims a tall
+            // portrait photo equally from top and bottom -- for a person
+            // photographed head-to-toe that crops the head/face away
+            // whenever the card is shorter than the real photo, losing
+            // the part of the image that actually matters. Top-aligned
+            // instead: any trimming needed to fit the clamped card comes
+            // off the bottom, and the top of the image always stays
+            // fully visible. The full, uncropped photo is still one tap
+            // away in MediaPostFullscreenViewer either way.
+            alignment = Alignment.TopCenter,
             onSuccess = { state ->
               val d = state.result.drawable
               if (page == 0 && d.intrinsicWidth > 0 && d.intrinsicHeight > 0) {
