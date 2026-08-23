@@ -2409,11 +2409,17 @@ object ChatGizaApi {
       .put("messages", messagesArr)
   }
 
+  // Shared across every API call in this file -- the server's own {"error":
+  // "..."} message is used when present; this fallback only shows when the
+  // response body isn't JSON at all (a raw error page, an empty body, a
+  // proxy/edge failure) or has no "error" field. Was "Request failed
+  // ($code)" -- a bare HTTP status number reads as a cryptic, technical
+  // message to someone using the app, not something they can act on.
   private fun errorMessage(body: String, code: Int): String {
     return try {
-      JSONObject(body).optString("error", "Request failed ($code)")
+      JSONObject(body).optString("error", "Something went wrong. Please try again.")
     } catch (e: Exception) {
-      "Request failed ($code)"
+      "Something went wrong. Please try again."
     }
   }
 
