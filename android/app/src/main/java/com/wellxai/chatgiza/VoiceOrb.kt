@@ -26,25 +26,13 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 
-// Fixed palette for the glossy black glass sphere design (see pattern()
-// below): near-black glass base, a narrow magenta reflection at the top,
-// and violet/cyan accents woven into the rim's chromatic zones. Named
-// constants instead of inline literals since both OrinVoiceBadge and
-// VoiceLibraryHeroOrb pass the same fixed set -- this is a specific,
-// designed-to-spec look, not tied to whichever voice is selected.
-private val ORB_BASE_BLACK = Color(0xFF07070F)
-private val ORB_TOP_MAGENTA = Color(0xFFFF3FD4)
-private val ORB_ACCENT_VIOLET = Color(0xFF7A5CFF)
-private val ORB_ACCENT_CYAN = Color(0xFF36E0FF)
-
-// A single self-contained shader instead of a two-pass bake+sample design
-// -- the sphere's surface pattern is recomputed inline every frame rather
-// than baked to a texture and sampled through a uniform shader child,
-// removing that binding as a possible failure point. At icon size
-// (~15-20dp) recomputing it per frame costs nothing perceptible. Renders a
-// polished black glass sphere with a magenta top reflection and small
-// chromatic rim highlights (see pattern()), plus the existing rotation,
-// fresnel/limb lighting, and audio-reactive aurora/pulsar in main().
+// A single self-contained shader instead of the original two-pass
+// bake+sample design -- the "static" galaxy noise is recomputed inline
+// every frame rather than baked to a texture and sampled through a
+// uniform shader child, removing that binding as a possible failure
+// point. At icon size (~15-20dp) recomputing it per frame costs nothing
+// perceptible. Same visual identity (dust band, stars, pulsar, aurora,
+// meteor, lit glass sphere) as the pasted reference, just single-pass.
 private const val VOICE_ORB_SKSL = """
 uniform vec2 uRes;
 uniform half3 uAnchor;
@@ -58,60 +46,50 @@ uniform float uSpin;
 
 float h1(float x) { return fract(sin(x * 127.1) * 43758.5453); }
 
-// Glossy black glass sphere with a narrow magenta reflection at the top
-// and small chromatic reflections around the rim (purple/blue/cyan upper
-// left, magenta/red/violet upper right, green/cyan/blue right edge,
-// blue/purple/magenta lower right, cyan/blue/violet lower left) -- direct
-// port of the reference Three.js shader's zone logic onto this composable's
-// existing screen-space sphere normal (n) and rotation pipeline. Returned
-// alpha is how strongly a zone's color should show over the (separately
-// computed, near-black) void base in main() below -- near 0 almost
-// everywhere, so the sphere reads as ~90% deep black with the colored
-// zones only where each gate term is actually lit up, matching the "mostly
-// black, colorful only through localized glass reflections" brief.
 half4 pattern(vec3 n, float t) {
-  float ny = n.y;
-  float ang = atan(n.z, n.x);
-  float side = clamp(1.0 - n.z, 0.0, 1.0);
-
-  float topZone = smoothstep(-0.1, 0.9, ny);
-  float topFade = pow(topZone, 1.5);
-  half3 topCol = uC0 * topFade * 0.85;
-
-  float ulG = smoothstep(0.35, 1.0, ny) * exp(-abs(ang - 3.0) * 1.8);
-  half3 ulA = mix(half3(0.55, 0.25, 1.0), half3(0.15, 0.30, 1.0), smoothstep(-3.6, -3.0, ang));
-  half3 ulB = mix(half3(0.15, 0.30, 1.0), half3(0.0, 0.75, 1.0), smoothstep(-3.0, -2.3, ang));
-  half3 ul = ulG * mix(ulA, ulB, side);
-
-  float urG = smoothstep(0.35, 1.0, ny) * exp(-abs(ang + 2.1) * 1.8);
-  half3 urA = mix(half3(1.0, 0.25, 0.83), half3(1.0, 0.15, 0.15), smoothstep(-2.6, -1.9, ang));
-  half3 urB = mix(half3(1.0, 0.15, 0.15), half3(0.62, 0.2, 1.0), smoothstep(-1.9, -1.2, ang));
-  half3 ur = urG * mix(urA, urB, side);
-
-  float rtG = exp(-abs(ang - 0.0) * 1.1);
-  half3 rt = rtG * mix(half3(0.1, 1.0, 0.35), half3(0.0, 0.8, 1.0), smoothstep(-0.5, 0.5, ang));
-
-  float lbG = (1.0 - smoothstep(-0.1, 0.7, ny)) * exp(-abs(ang - 1.0) * 1.1);
-  half3 lbA = mix(half3(0.15, 0.4, 1.0), half3(0.55, 0.25, 1.0), smoothstep(0.4, 1.2, ang));
-  half3 lb = lbG * mix(lbA, half3(1.0, 0.25, 0.83), smoothstep(1.2, 2.0, ang));
-
-  float llG = (1.0 - smoothstep(-0.1, 0.6, ny)) * exp(-abs(ang - 2.4) * 1.6);
-  half3 llA = mix(half3(0.0, 0.8, 1.0), half3(0.15, 0.3, 1.0), smoothstep(2.0, 2.6, ang));
-  half3 ll = llG * mix(llA, half3(0.6, 0.25, 1.0), smoothstep(2.6, 3.2, ang));
-
-  float gHash = h1(floor(n.x * 30.0 + n.y * 41.0) + t * 0.5);
-  float sp = smoothstep(0.975, 1.0, gHash) * side * 0.5;
-  half3 spCol = half3(h1(n.x * 91.0 + 3.0), h1(n.y * 57.0 + 7.0), h1((n.x + n.y) * 33.0 + 11.0));
-
-  half3 col = uAnchor * 0.5;
-  col += topCol;
-  col += ul * 0.55 + ur * 0.55;
-  col += rt * 0.30;
-  col += (lb + ll) * 0.40;
-  col += spCol * sp;
-
-  float w = clamp(topFade * 0.9 + ulG * 0.5 + urG * 0.5 + rtG * 0.35 + lbG * 0.45 + llG * 0.45 + sp, 0.0, 1.0);
-  return half4(min(col, half3(1.0)), w);
+  float lon = atan(n.z, n.x);
+  float lat = asin(clamp(n.y, -1.0, 1.0));
+  float v1 = fract(uPhase * 7.13);
+  float v2 = fract(uPhase * 3.71);
+  float v3 = fract(uPhase * 5.37);
+  float gb = lat + (0.15 + 0.4 * v1) * sin(lon * (1.0 + floor(v2 * 2.0)) + 1.3)
+           + 0.12 * sin(lon * 3.0 + t * 0.1);
+  float band = exp(-gb * gb * 6.0);
+  float n1 = sin(lon * 2.0 + sin(lat * 3.0 + t * 0.25) * 1.6 + t * 0.15);
+  float n2 = sin(lon * 5.0 - sin(lat * 4.0 - t * 0.2) * 1.2 - t * 0.22 + 2.4);
+  float neb = pow(0.5 + 0.5 * n1, 2.0) * (0.45 + 0.55 * pow(0.5 + 0.5 * n2, 2.0));
+  float lane = pow(0.5 + 0.5 * sin(lon * 4.0 + lat * 7.0 + sin(lon * 2.0) * 2.0), 3.0);
+  float galaxy = clamp(band * neb * (1.0 - lane * (0.55 + 0.35 * v2)), 0.0, 1.0);
+  half3 hue = mix(mix(uC0, uC1, v1), mix(uC1, uC2, v3), 0.5 + 0.5 * sin(lon + lat * 2.0 - t * 0.2));
+  half3 dust = mix(half3(0.72, 0.78, 0.92), hue, 0.5 + 0.4 * v1);
+  half3 col = dust * galaxy * 0.9;
+  half3 voidGlow = mix(half3(0.04, 0.03, 0.1), mix(uC0, mix(uC1, uC2, v3), v1) * 0.24, 0.75);
+  col += voidGlow * (0.5 + 0.22 * sin(t * 0.4 + lon)) * (0.4 + 0.6 * band);
+  col += half3(1.0, 0.88, 0.68) * pow(band, 4.0) * pow(neb, 2.0) * 0.4;
+  float w = clamp(galaxy * 0.7 + pow(band, 4.0) * 0.25, 0.0, 1.0);
+  for (int s = 0; s < 2; s++) {
+    float K = s == 0 ? 7.0 : 14.0;
+    vec2 g = vec2(lon, lat) * K;
+    vec2 cell = floor(g);
+    vec2 f = fract(g);
+    float hx = h1(cell.x * 13.7 + cell.y * 7.3 + float(s) * 91.0);
+    float hy = h1(cell.x * 5.1 + cell.y * 17.9 + float(s) * 37.0);
+    vec2 sp = vec2(0.15 + 0.7 * hx, 0.15 + 0.7 * hy);
+    float d = length((f - sp) * vec2(cos(lat), 1.0));
+    float keep = step(0.5, h1(hx * 89.0 + hy * 31.0) + band * 0.25);
+    float star = exp(-d * d * (s == 0 ? 280.0 : 700.0)) * keep;
+    half3 tint = mix(half3(1.0), hx < 0.5 ? half3(0.85, 0.9, 1.0) : mix(half3(1.0), uC1, 0.3), 0.6);
+    col += tint * star * (s == 0 ? 1.6 : 0.8);
+    w = max(w, star);
+  }
+  float pa = v1 * 6.28318;
+  vec3 P = normalize(vec3(sin(pa) * 0.9, 1.4 * (v2 - 0.5), cos(pa) * 0.9));
+  float pd = max(dot(n, P), 0.0);
+  float beat = pow(0.5 + 0.5 * sin(t * (1.2 + v3 + 1.5 * uAudio) + v3 * 6.28), 8.0);
+  beat = min(1.0, beat + 0.6 * uAudio);
+  col += half3(0.9, 0.95, 1.0) * (pow(pd, 900.0) * (0.6 + 1.2 * beat) + pow(pd, 110.0) * 0.5 * beat);
+  w = max(w, pow(pd, 900.0));
+  return half4(min(col, half3(1.0)), min(w, 1.0));
 }
 
 half4 sphereAt(vec3 n, float spin, float t) {
@@ -174,21 +152,19 @@ half4 main(float2 fragCoord) {
  * orb on API 33+, the plain cloud glyph everywhere else. Shader
  * compilation and per-frame uniform setting are both guarded so a bad
  * shader shows the fallback glyph instead of crashing the settings
- * sheet. audioLevel (0..1) brightens the rim/aurora while live -- also
- * used at icon size for the Live Vision status pill's speaking indicator. */
+ * sheet. */
 @Composable
-fun OrinVoiceBadge(modifier: Modifier = Modifier, tint: Color, audioLevel: Float = 0f) {
+fun OrinVoiceBadge(modifier: Modifier = Modifier, tint: Color) {
   var failed by remember { mutableStateOf(false) }
 
   if (!failed && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
     VoiceOrb(
       modifier = modifier,
       seedPhase = 0.42f,
-      anchor = ORB_BASE_BLACK,
-      colorA = ORB_TOP_MAGENTA,
-      colorB = ORB_ACCENT_VIOLET,
-      colorC = ORB_ACCENT_CYAN,
-      audioLevel = audioLevel,
+      anchor = Color.White,
+      colorA = Color.White,
+      colorB = Color.White,
+      colorC = Color.White,
       onError = { failed = true }
     )
   } else {
@@ -202,7 +178,10 @@ fun OrinVoiceBadge(modifier: Modifier = Modifier, tint: Color, audioLevel: Float
 }
 
 /** Same orb as [OrinVoiceBadge], sized up as the hero avatar on Settings >
- * Voice. Fixed palette, not tied to whichever voice is selected. */
+ * Voice, but with a richer 3-hue palette (amber, blue, pink instead of
+ * all-blue/purple) -- per explicit correction that Orin's own palette read
+ * as too monochrome once blown up to 110dp against the reference. Fixed,
+ * not tied to whichever voice is selected. */
 @Composable
 fun VoiceLibraryHeroOrb(modifier: Modifier = Modifier, tint: Color) {
   var failed by remember { mutableStateOf(false) }
@@ -211,10 +190,10 @@ fun VoiceLibraryHeroOrb(modifier: Modifier = Modifier, tint: Color) {
     VoiceOrb(
       modifier = modifier,
       seedPhase = 0.42f,
-      anchor = ORB_BASE_BLACK,
-      colorA = ORB_TOP_MAGENTA,
-      colorB = ORB_ACCENT_VIOLET,
-      colorC = ORB_ACCENT_CYAN,
+      anchor = Color.White,
+      colorA = Color.White,
+      colorB = Color.White,
+      colorC = Color.White,
       onError = { failed = true }
     )
   } else {

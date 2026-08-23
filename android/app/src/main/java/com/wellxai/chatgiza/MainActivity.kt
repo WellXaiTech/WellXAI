@@ -4085,13 +4085,11 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               Spacer(modifier = Modifier.size(6.dp))
               Text(statusText, color = Color(0xFFB71C1C), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             } else {
-              // Was a static ic_talking glyph -- swapped for the same
-              // animated orb used on Settings > Voice Library, so "ChatGiZa
-              // is speaking…" has a live visual to match, not just text.
-              OrinVoiceBadge(
-                modifier = Modifier.size(20.dp),
+              Icon(
+                painter = androidx.compose.ui.res.painterResource(R.drawable.ic_talking),
+                contentDescription = null,
                 tint = Color.Black,
-                audioLevel = if (controller.isAiSpeaking) 0.6f else 0f
+                modifier = Modifier.size(20.dp)
               )
               Spacer(modifier = Modifier.size(6.dp))
               Text(statusText, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
