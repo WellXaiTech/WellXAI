@@ -1,16 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useSession, signIn } from "next-auth/react";
-import { chatgizaSignOut } from "@/lib/signOutHelper";
-import VoiceOrb from "@/components/VoiceOrb";
+import { useEffect, useState } from "react";
+import { useSession, signIn, signOut } from "next-auth/react";
 import type { Theme } from "@/lib/theme";
 import type { Contrast } from "@/lib/contrast";
 import type { ChatFontSize } from "@/lib/fontSize";
 import type { AssistantColor } from "@/lib/assistantColor";
 import type { ChatFont } from "@/lib/chatFont";
 import type { ReduceMotion } from "@/lib/reduceMotion";
-import { COUNTRIES } from "@/lib/countries";
+import { COUNTRIES, COUNTRY_CODES } from "@/lib/countries";
 import { checkBirthDate, getMaxBirthDate } from "@/lib/ageGate";
 import {
   getStoredVoiceURI,
@@ -23,6 +21,7 @@ import {
   setPremiumVoiceEnabled,
   getStoredPremiumVoiceName,
   setStoredPremiumVoiceName,
+  PREMIUM_VOICE_NAMES,
   type VoiceSpeed,
   type PremiumVoiceName,
 } from "@/lib/voice";
@@ -81,19 +80,26 @@ type StorageItem = {
 
 type DeviceSession = { id: string; device: string; os: string; signedInAt: number; ip?: string; location?: string };
 
-const TABS_GROUP_1 = ["Overview", "General", "Preference", "Security"] as const;
-const TABS_GROUP_2 = ["Account", "Dashboard", "Storage Management", "Subaccount"] as const;
+type BillingSummary = {
+  subscription: { tier: string | null; planName: string; currentPeriodEnd: number | null; cancelAtPeriodEnd: boolean } | null;
+  invoices: { id: string; date: number; amount: number; currency: string; status: string; hostedUrl: string | null }[];
+  paymentMethods: { id: string; brand: string; last4: string; isDefault: boolean }[];
+  billingInfo: { email: string | null; name: string | null; address: { city: string | null; country: string | null; line1: string | null; state: string | null; postal_code: string | null } | null } | null;
+};
+
+const TABS_GROUP_1 = ["General", "Data controls", "Security"] as const;
+const TABS_GROUP_2 = ["Account", "Memory", "Dashboard", "Storage", "Billing"] as const;
 export type Tab = (typeof TABS_GROUP_1)[number] | (typeof TABS_GROUP_2)[number];
 
 const TAB_DESCRIPTIONS: Record<Tab, string> = {
-  Overview: "Your profile at a glance",
   General: "Appearance, language, and behavior",
-  Preference: "Voice, connectors, automations, and data",
+  "Data controls": "Manage your data and privacy",
   Security: "Password, sessions, and login",
   Account: "Profile and personal info",
+  Memory: "What ChatGiZa remembers about you",
   Dashboard: "Your usage stats and data, in one place",
-  "Storage Management": "Files, images, memory, and space used",
-  Subaccount: "Extra accounts that live under yours",
+  Storage: "Files, images, and space used",
+  Billing: "Plan, invoices, and payment methods",
 };
 
 const DataControlsIcon = (
@@ -116,9 +122,23 @@ const AccountIcon = (
   </svg>
 );
 
+const MemoryIcon = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="8" />
+    <path d="M12 8v4l3 2" />
+  </svg>
+);
+
 const StorageIcon = (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
+  </svg>
+);
+
+const BillingIcon = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="2" y="5" width="20" height="14" rx="2" />
+    <line x1="2" y1="10" x2="22" y2="10" />
   </svg>
 );
 
@@ -152,30 +172,15 @@ const GearIcon = (
   </svg>
 );
 
-const OverviewIcon = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M8.557 2.75H4.682A1.93 1.93 0 0 0 2.75 4.682v3.875a1.94 1.94 0 0 0 1.932 1.942h3.875a1.94 1.94 0 0 0 1.942-1.942V4.682A1.94 1.94 0 0 0 8.557 2.75m10.761 0h-3.875a1.94 1.94 0 0 0-1.942 1.932v3.875a1.943 1.943 0 0 0 1.942 1.942h3.875a1.94 1.94 0 0 0 1.932-1.942V4.682a1.93 1.93 0 0 0-1.932-1.932M8.557 13.5H4.682a1.943 1.943 0 0 0-1.932 1.943v3.875a1.93 1.93 0 0 0 1.932 1.932h3.875a1.94 1.94 0 0 0 1.942-1.932v-3.875a1.94 1.94 0 0 0-1.942-1.942m8.818-.001a3.875 3.875 0 1 0 0 7.75a3.875 3.875 0 0 0 0-7.75" />
-  </svg>
-);
-
-const SubaccountIcon = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="9" cy="7" r="3.5" />
-    <path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" />
-    <circle cx="18" cy="7" r="2.5" strokeDasharray="3 2" />
-    <path d="M22 15.5a4.7 4.7 0 0 0-3.5-1.5" strokeDasharray="3 2" />
-  </svg>
-);
-
 const TAB_ICONS: Record<Tab, React.ReactNode> = {
-  Overview: OverviewIcon,
   General: GearIcon,
-  Preference: DataControlsIcon,
+  "Data controls": DataControlsIcon,
   Security: SecurityLockIcon,
   Account: AccountIcon,
+  Memory: MemoryIcon,
   Dashboard: DashboardIcon,
-  "Storage Management": StorageIcon,
-  Subaccount: SubaccountIcon,
+  Storage: StorageIcon,
+  Billing: BillingIcon,
 };
 
 const SystemIcon = (
@@ -266,8 +271,10 @@ function SettingsSelect<T extends string>({
 }
 
 const TrashIcon = (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-    <path d="m19.5 5.5l-.62 10.025c-.158 2.561-.237 3.842-.88 4.763a4 4 0 0 1-1.2 1.128c-.957.584-2.24.584-4.806.584c-2.57 0-3.855 0-4.814-.585a4 4 0 0 1-1.2-1.13c-.642-.922-.72-2.205-.874-4.77L4.5 5.5M3 5.5h18m-4.944 0l-.683-1.408c-.453-.936-.68-1.403-1.071-1.695a2 2 0 0 0-.275-.172C13.594 2 13.074 2 12.035 2c-1.066 0-1.599 0-2.04.234a2 2 0 0 0-.278.18c-.395.303-.616.788-1.058 1.757L8.053 5.5m1.447 11v-6m5 6v-6" />
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M3 6h18" />
+    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
   </svg>
 );
 
@@ -287,87 +294,6 @@ const CloseIcon = (
 const ChevronRightIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M9 18l6-6-6-6" />
-  </svg>
-);
-
-const CheckIcon = (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 6 9 17l-5-5" />
-  </svg>
-);
-
-// Same voice picker as the app's own "Voice Library" screen (see
-// VOICE_OPTIONS in MainActivity.kt) -- friendly name + one-line
-// description per card, id is the actual OpenAI Realtime voice name.
-const VOICE_OPTIONS = [
-  { id: "cedar" as const, name: "Orin", description: "Wise Male" },
-  { id: "alloy" as const, name: "Lyra", description: "Calm Female" },
-  { id: "ballad" as const, name: "Kael", description: "Bold Male" },
-  { id: "coral" as const, name: "Elia", description: "Warm Female" },
-  { id: "sage" as const, name: "Leo", description: "Smart Male" },
-  { id: "marin" as const, name: "GiZa", description: "Playful" },
-];
-
-const FontIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M4 6h16M4 12h10M4 18h13" />
-  </svg>
-);
-
-const LanguageIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="12" cy="12" r="9" />
-    <path d="M3 12h18M12 3c2.5 2.7 3.8 6 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-6-3.8-9s1.3-6.3 3.8-9Z" />
-  </svg>
-);
-
-const CommunityIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="9" cy="8" r="3" />
-    <path d="M2 20c0-3.3 3.1-5 7-5s7 1.7 7 5" />
-    <circle cx="17" cy="7" r="2.3" />
-    <path d="M22 20c0-2.7-2-4.2-4.5-4.6" />
-  </svg>
-);
-
-const VoiceIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <rect x="9" y="2" width="6" height="12" rx="3" />
-    <path d="M5 11a7 7 0 0 0 14 0M12 18v4M9 22h6" />
-  </svg>
-);
-
-const ConnectorsIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M9 2v4M15 2v4M9 18v4M15 18v4" />
-    <rect x="6" y="6" width="12" height="12" rx="3" />
-  </svg>
-);
-
-const AutomationsIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="12" cy="13" r="8" />
-    <path d="M12 9v4l3 2M9 2h6" />
-  </svg>
-);
-
-const LibraryIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <rect x="3" y="3" width="14" height="14" rx="2" />
-    <path d="M7 21h14a2 2 0 0 0 2-2V7" />
-  </svg>
-);
-
-const ProjectsIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
-  </svg>
-);
-
-const EmailIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <rect x="2" y="5" width="20" height="14" rx="2" />
-    <path d="m3 6 9 7 9-7" />
   </svg>
 );
 
@@ -429,109 +355,16 @@ function Row({
   );
 }
 
-type CommunityMsg = { id: string; authorId: string; authorName: string; content: string; createdAt: number };
-
-// One global room every ChatGiZa user lands in via "Join Our Community" --
-// same feature and same /api/community endpoint as the Android app's
-// Community screen, just a minimal web equivalent (poll + post) since
-// there was no web frontend for it yet.
-function CommunityModal({ onClose }: { onClose: () => void }) {
-  const [messages, setMessages] = useState<CommunityMsg[]>([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(true);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const res = await fetch("/api/community");
-        const data = await res.json();
-        if (!cancelled && Array.isArray(data.messages)) setMessages(data.messages);
-      } catch {
-        // ignore -- next poll will retry
-      }
-      if (!cancelled) setLoading(false);
-    }
-    load();
-    const interval = setInterval(load, 4000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, []);
-
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [messages]);
-
-  async function send(e: React.FormEvent) {
-    e.preventDefault();
-    const text = input.trim();
-    if (!text) return;
-    setInput("");
-    try {
-      const res = await fetch("/api/community", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: text }),
-      });
-      const data = await res.json();
-      if (Array.isArray(data.messages)) setMessages(data.messages);
-    } catch {
-      // ignore -- the input already cleared, next poll reconciles
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4">
-      <div className="flex h-[70vh] w-full max-w-md flex-col rounded-2xl border border-border bg-surface shadow-xl">
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <h3 className="text-sm font-semibold">Join Our Community</h3>
-          <button onClick={onClose} aria-label="Close" className="text-muted hover:text-foreground">
-            {ChevronLeftIcon}
-          </button>
-        </div>
-        <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-          {loading ? (
-            <p className="text-center text-xs text-muted">Loading…</p>
-          ) : messages.length === 0 ? (
-            <p className="text-center text-xs text-muted">No messages yet — say hello!</p>
-          ) : (
-            messages.map((m) => (
-              <div key={m.id}>
-                <p className="text-xs font-semibold text-muted">{m.authorName}</p>
-                <p className="whitespace-pre-wrap text-sm">{m.content}</p>
-              </div>
-            ))
-          )}
-        </div>
-        <form onSubmit={send} className="flex gap-2 border-t border-border p-3">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Say something…"
-            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
-          />
-          <button
-            type="submit"
-            disabled={!input.trim()}
-            className="btn-primary rounded-lg px-3 py-2 text-xs font-medium disabled:opacity-40"
-          >
-            Send
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 function ComingSoonNote({ text }: { text?: string }) {
   return (
     <p className="mt-1 text-xs text-muted">
       {text ?? "This isn't built yet — coming soon."}
     </p>
   );
+}
+
+function formatDate(ts: number) {
+  return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
 function formatDateTime(ts: number) {
@@ -570,11 +403,8 @@ export default function SettingsPanel({
   feedbackEmailsOptIn,
   onToggleFeedbackEmailsOptIn,
   onOpenSupport,
-  onOpenPlugins,
-  onOpenScheduled,
-  onOpenLibrary,
-  onOpenProjects,
   onDeleteAccount,
+  onOpenUpgradePlan,
   profile,
   onProfileChange,
   memoryEnabled,
@@ -627,11 +457,8 @@ export default function SettingsPanel({
   feedbackEmailsOptIn: boolean;
   onToggleFeedbackEmailsOptIn: () => void;
   onOpenSupport: () => void;
-  onOpenPlugins: () => void;
-  onOpenScheduled: () => void;
-  onOpenLibrary: () => void;
-  onOpenProjects: () => void;
   onDeleteAccount: () => void;
+  onOpenUpgradePlan?: () => void;
   profile: Profile;
   onProfileChange: (p: Profile) => void;
   memoryEnabled: boolean;
@@ -679,97 +506,10 @@ export default function SettingsPanel({
   const [confirmClear, setConfirmClear] = useState(false);
   const [confirmArchiveAll, setConfirmArchiveAll] = useState(false);
   const [confirmDeleteAccount, setConfirmDeleteAccount] = useState(false);
+  const [confirmCancelPlan, setConfirmCancelPlan] = useState(false);
   const [confirmLogoutAll, setConfirmLogoutAll] = useState(false);
   const [dataView, setDataView] = useState<"root" | "shared" | "archived">("root");
-  const [voiceOpen, setVoiceOpen] = useState(false);
-  const [subaccounts, setSubaccounts] = useState<{ id: string; name: string; avatar_preset_id: string | null; created_at: string }[]>([]);
-  const [subaccountsLoaded, setSubaccountsLoaded] = useState(false);
-  const [subaccountsLoading, setSubaccountsLoading] = useState(false);
-  const [subaccountError, setSubaccountError] = useState<string | null>(null);
-  const [newSubaccountName, setNewSubaccountName] = useState("");
-  const [creatingSubaccount, setCreatingSubaccount] = useState(false);
-  const [renamingSubaccountId, setRenamingSubaccountId] = useState<string | null>(null);
-  const [renameSubaccountValue, setRenameSubaccountValue] = useState("");
-  const [confirmDeleteSubaccountId, setConfirmDeleteSubaccountId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (tab !== "Subaccount" || subaccountsLoaded) return;
-    setSubaccountsLoading(true);
-    fetch("/api/subaccounts")
-      .then((r) => r.json())
-      .then((d) => setSubaccounts(Array.isArray(d.subaccounts) ? d.subaccounts : []))
-      .catch(() => setSubaccountError("Failed to load subaccounts."))
-      .finally(() => {
-        setSubaccountsLoading(false);
-        setSubaccountsLoaded(true);
-      });
-  }, [tab, subaccountsLoaded]);
-
-  async function createSubaccount(e: React.FormEvent) {
-    e.preventDefault();
-    const name = newSubaccountName.trim();
-    if (!name || creatingSubaccount) return;
-    setCreatingSubaccount(true);
-    setSubaccountError(null);
-    try {
-      const res = await fetch("/api/subaccounts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setSubaccountError(data.error ?? "Failed to create subaccount.");
-        return;
-      }
-      setSubaccounts((prev) => [...prev, { id: data.id, name: data.name, avatar_preset_id: data.avatarPresetId ?? null, created_at: new Date().toISOString() }]);
-      setNewSubaccountName("");
-    } catch {
-      setSubaccountError("Failed to create subaccount.");
-    } finally {
-      setCreatingSubaccount(false);
-    }
-  }
-
-  async function renameSubaccount(id: string) {
-    const name = renameSubaccountValue.trim();
-    if (!name) return;
-    try {
-      const res = await fetch(`/api/subaccounts/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setSubaccountError(data.error ?? "Failed to rename subaccount.");
-        return;
-      }
-      setSubaccounts((prev) => prev.map((s) => (s.id === id ? { ...s, name } : s)));
-      setRenamingSubaccountId(null);
-    } catch {
-      setSubaccountError("Failed to rename subaccount.");
-    }
-  }
-
-  async function deleteSubaccount(id: string) {
-    try {
-      const res = await fetch(`/api/subaccounts/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setSubaccountError(data.error ?? "Failed to delete subaccount.");
-        return;
-      }
-      setSubaccounts((prev) => prev.filter((s) => s.id !== id));
-      setConfirmDeleteSubaccountId(null);
-    } catch {
-      setSubaccountError("Failed to delete subaccount.");
-    }
-  }
   const [storageView, setStorageView] = useState<"root" | "files" | "images">("root");
-  const [colorThemeOpen, setColorThemeOpen] = useState(false);
-  const [chatFontOpen, setChatFontOpen] = useState(false);
-  const [communityOpen, setCommunityOpen] = useState(false);
   const [tabSearch, setTabSearch] = useState("");
   const tabQuery = tabSearch.trim().toLowerCase();
   const visibleTabsGroup1 = TABS_GROUP_1.filter((t) => t.toLowerCase().includes(tabQuery));
@@ -788,6 +528,75 @@ export default function SettingsPanel({
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [sessionsError, setSessionsError] = useState<string | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);
+
+  const [billing, setBilling] = useState<BillingSummary | null>(null);
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [billingError, setBillingError] = useState<string | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [billingView, setBillingView] = useState<"root" | "edit">("root");
+  const [editEmail, setEditEmail] = useState("");
+  const [editName, setEditName] = useState("");
+  const [editCountry, setEditCountry] = useState("");
+  const [editLine1, setEditLine1] = useState("");
+  const [editLine2, setEditLine2] = useState("");
+  const [editPostalCode, setEditPostalCode] = useState("");
+  const [editCity, setEditCity] = useState("");
+  const [editAddTaxId, setEditAddTaxId] = useState(false);
+  const [editTaxIdType, setEditTaxIdType] = useState("eu_vat");
+  const [editTaxIdValue, setEditTaxIdValue] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  function openEditBillingInfo() {
+    setEditEmail(billing?.billingInfo?.email ?? session?.user?.email ?? "");
+    setEditName(billing?.billingInfo?.name ?? session?.user?.name ?? "");
+    const countryCode = billing?.billingInfo?.address?.country ?? "";
+    setEditCountry(COUNTRIES.find((c) => COUNTRY_CODES[c] === countryCode) ?? "");
+    setEditLine1(billing?.billingInfo?.address?.line1 ?? "");
+    setEditLine2("");
+    setEditPostalCode(billing?.billingInfo?.address?.postal_code ?? "");
+    setEditCity(billing?.billingInfo?.address?.city ?? "");
+    setEditAddTaxId(false);
+    setEditTaxIdValue("");
+    setEditError(null);
+    setBillingView("edit");
+  }
+
+  async function saveBillingInfo(e: React.FormEvent) {
+    e.preventDefault();
+    setEditSaving(true);
+    setEditError(null);
+    try {
+      const res = await fetch("/api/billing/update-info", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: editEmail,
+          name: editName,
+          country: COUNTRY_CODES[editCountry] ?? "",
+          addressLine1: editLine1,
+          addressLine2: editLine2,
+          postalCode: editPostalCode,
+          city: editCity,
+          taxIdType: editAddTaxId ? editTaxIdType : undefined,
+          taxIdValue: editAddTaxId ? editTaxIdValue : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Couldn't save billing information");
+      if (data.taxIdError) {
+        setEditError(`Billing address saved, but the tax ID couldn't be added: ${data.taxIdError}`);
+      } else {
+        setBilling(null);
+        setBillingView("root");
+      }
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : "Couldn't save billing information");
+    } finally {
+      setEditSaving(false);
+    }
+  }
 
   useEffect(() => {
     setVoiceURI(getStoredVoiceURI());
@@ -818,6 +627,17 @@ export default function SettingsPanel({
       .finally(() => setSessionsLoading(false));
   }, [tab, session?.user, sessions]);
 
+  useEffect(() => {
+    if (tab !== "Billing" || !session?.user || billing !== null) return;
+    setBillingLoading(true);
+    setBillingError(null);
+    fetch("/api/billing/summary")
+      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+      .then((data: BillingSummary) => setBilling(data))
+      .catch(() => setBillingError("Couldn't load your billing details."))
+      .finally(() => setBillingLoading(false));
+  }, [tab, session?.user, billing]);
+
   async function revokeSession(id: string) {
     setRevokingId(id);
     try {
@@ -836,9 +656,34 @@ export default function SettingsPanel({
 
   async function logoutAllSessions() {
     await fetch("/api/sessions/revoke-all", { method: "POST" }).catch(() => {});
-    chatgizaSignOut();
+    signOut({ callbackUrl: "/login" });
   }
 
+  async function openBillingPortal() {
+    setPortalLoading(true);
+    try {
+      const res = await fetch("/api/billing/portal", { method: "POST" });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } catch {
+      setBillingError("Couldn't open the billing portal.");
+    } finally {
+      setPortalLoading(false);
+    }
+  }
+
+  async function cancelPlan() {
+    setCancelLoading(true);
+    try {
+      const res = await fetch("/api/billing/cancel", { method: "POST" });
+      if (res.ok) {
+        setBilling((prev) => (prev?.subscription ? { ...prev, subscription: { ...prev.subscription, cancelAtPeriodEnd: true } } : prev));
+      }
+    } finally {
+      setCancelLoading(false);
+      setConfirmCancelPlan(false);
+    }
+  }
 
   const voiceLanguages = Array.from(new Set(voices.map((v) => v.lang))).sort();
   const filteredVoices = voiceLang ? voices.filter((v) => v.lang === voiceLang) : voices;
@@ -936,7 +781,7 @@ export default function SettingsPanel({
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-0 sm:p-10" onClick={onClose}>
       <div
-        className="card flex h-full max-h-full w-full max-w-6xl overflow-hidden rounded-none sm:h-auto sm:rounded-2xl"
+        className="card flex h-full max-h-full w-full max-w-3xl overflow-hidden rounded-none sm:h-auto sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div
@@ -957,7 +802,7 @@ export default function SettingsPanel({
 
           {session?.user && (
             <button
-              onClick={() => selectTab("Account")}
+              onClick={onOpenUpgradePlan ?? (() => selectTab("Account"))}
               className="mb-4 flex w-full items-center gap-4 rounded-2xl bg-surface-2 p-4 text-left sm:hidden"
             >
               {session.user.image ? (
@@ -970,7 +815,7 @@ export default function SettingsPanel({
               )}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-lg font-semibold">{session.user.name}</p>
-                <p className="truncate text-sm text-muted">View profile</p>
+                <p className="truncate text-sm text-muted">Upgrade your plan</p>
               </div>
             </button>
           )}
@@ -1046,7 +891,7 @@ export default function SettingsPanel({
 
           {session?.user && (
             <button
-              onClick={() => chatgizaSignOut()}
+              onClick={() => signOut({ callbackUrl: "/login" })}
               className="mt-4 w-full rounded-2xl bg-surface-2 px-3 py-3 text-center text-base font-medium text-red-500 transition-colors hover:bg-surface sm:hidden"
             >
               Sign out
@@ -1066,334 +911,257 @@ export default function SettingsPanel({
             {ChevronLeftIcon} Settings
           </button>
 
-          {tab === "Overview" && (
-            <div>
-              <h2 className="mb-4 text-base font-semibold">Overview</h2>
-
-              {status === "loading" ? (
-                <p className="text-xs text-muted">Loading…</p>
-              ) : session?.user ? (
-                <div className="flex items-center gap-3 rounded-xl border border-border p-3">
-                  {session.user.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={session.user.image} alt="" className="h-14 w-14 shrink-0 rounded-full" />
-                  ) : (
-                    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-border text-lg">
-                      {session.user.name?.[0] ?? "?"}
-                    </span>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-base font-semibold">{session.user.name}</p>
-                    <p className="truncate text-sm text-muted">{session.user.email}</p>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-xs text-muted">Sign in to see your profile.</p>
-              )}
-            </div>
-          )}
-
           {tab === "General" && (
             <div>
               <h2 className="mb-4 text-base font-semibold">General</h2>
 
-              {/* Same list-of-rows arrangement as the ChatGiZa app's own
-                  Settings menu (icon, label, trailing value/chevron),
-                  in the same order: Language, Color Theme, Storage
-                  management, Join Our Community. */}
-              <button
-                type="button"
-                className="flex w-full items-center justify-between gap-3 border-b border-border py-3.5 text-left"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-muted">{LanguageIcon}</span>
-                  <span className="text-sm font-medium">Language</span>
-                </div>
-                <span className="text-sm text-muted">English</span>
-              </button>
-
-              <div className="border-b border-border">
-                <button
-                  type="button"
-                  onClick={() => setColorThemeOpen((v) => !v)}
-                  className="flex w-full items-center justify-between gap-3 py-3.5 text-left"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-muted">{SunIcon}</span>
-                    <span className="text-sm font-medium">Color Theme</span>
-                  </div>
-                  <span className="flex items-center gap-2 text-sm text-muted">
-                    {theme === "system" ? "System" : theme === "light" ? "Light" : "Dark"}
-                    {ChevronRightIcon}
-                  </span>
-                </button>
-                {colorThemeOpen && (
-                  <div className="pb-4">
-                    <SegmentedControl
-                      value={theme}
-                      onChange={onThemeChange}
-                      options={[
-                        { value: "system" as Theme, icon: SystemIcon, ariaLabel: "System" },
-                        { value: "light" as Theme, icon: SunIcon, ariaLabel: "Light" },
-                        { value: "dark" as Theme, icon: MoonIcon, ariaLabel: "Dark" },
-                      ]}
-                    />
-                  </div>
-                )}
+              <div className="flex items-center justify-between gap-4 py-3 border-b border-border">
+                <h3 className="text-sm font-semibold">Appearance</h3>
+                <SegmentedControl
+                  value={theme}
+                  onChange={onThemeChange}
+                  options={[
+                    { value: "system" as Theme, icon: SystemIcon, ariaLabel: "System" },
+                    { value: "light" as Theme, icon: SunIcon, ariaLabel: "Light" },
+                    { value: "dark" as Theme, icon: MoonIcon, ariaLabel: "Dark" },
+                  ]}
+                />
               </div>
 
-              <div className="border-b border-border">
-                <button
-                  type="button"
-                  onClick={() => setChatFontOpen((v) => !v)}
-                  className="flex w-full items-center justify-between gap-3 py-3.5 text-left"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-muted">{FontIcon}</span>
-                    <span className="text-sm font-medium">Font</span>
-                  </div>
-                  <span className="flex items-center gap-2 text-sm text-muted">
-                    {chatFont === "manrope" ? "Manrope" : chatFont === "system" ? "System" : "Plus Jakarta Sans"}
-                    {ChevronRightIcon}
-                  </span>
-                </button>
-                {chatFontOpen && (
-                  // Each option's own name is rendered IN that font (a real
-                  // preview, not just a label) -- SegmentedControl's `icon`
-                  // slot takes any node, not just an actual icon, which is
-                  // what makes this possible without a separate component.
-                  <div className="pb-4">
-                    <SegmentedControl
-                      value={chatFont}
-                      onChange={onChatFontChange}
-                      options={[
-                        {
-                          value: "plus_jakarta_sans" as ChatFont,
-                          icon: <span style={{ fontFamily: "var(--font-plus-jakarta-sans)" }}>Plus Jakarta Sans</span>,
-                          ariaLabel: "Plus Jakarta Sans",
-                        },
-                        {
-                          value: "manrope" as ChatFont,
-                          icon: <span style={{ fontFamily: "var(--font-manrope)" }}>Manrope</span>,
-                          ariaLabel: "Manrope",
-                        },
-                        {
-                          value: "system" as ChatFont,
-                          icon: <span style={{ fontFamily: "system-ui, sans-serif" }}>System</span>,
-                          ariaLabel: "System Default",
-                        },
-                      ]}
-                    />
-                  </div>
-                )}
+              <div className="flex items-center justify-between gap-4 border-b border-border py-3">
+                <div>
+                  <h3 className="text-sm font-semibold">Contrast</h3>
+                  <p className="text-xs text-muted">How strongly borders and secondary text stand out.</p>
+                </div>
+                <div className="w-40 shrink-0">
+                  <SettingsSelect
+                    value={contrast}
+                    onChange={onContrastChange}
+                    options={[
+                      { value: "system" as Contrast, label: "System" },
+                      { value: "medium" as Contrast, label: "Medium" },
+                      { value: "increased" as Contrast, label: "Increased" },
+                    ]}
+                  />
+                </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setTab("Storage Management")}
-                className="flex w-full items-center justify-between gap-3 border-b border-border py-3.5 text-left transition-colors hover:bg-surface-2"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-muted">{StorageIcon}</span>
-                  <span className="text-sm font-medium">Storage management</span>
+              <div className="flex items-center justify-between gap-4 border-b border-border py-3">
+                <div>
+                  <h3 className="text-sm font-semibold">Text size</h3>
+                  <p className="text-xs text-muted">Adjust how big chat messages appear.</p>
                 </div>
-                <span className="text-muted">{ChevronRightIcon}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setCommunityOpen(true)}
-                className="flex w-full items-center justify-between gap-3 py-3.5 text-left transition-colors hover:bg-surface-2"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-muted">{CommunityIcon}</span>
-                  <span className="text-sm font-medium">Join Our Community</span>
+                <div className="w-40 shrink-0">
+                  <SettingsSelect
+                    value={fontSize}
+                    onChange={onFontSizeChange}
+                    options={[
+                      { value: "small" as ChatFontSize, label: "Small" },
+                      { value: "medium" as ChatFontSize, label: "Default" },
+                      { value: "large" as ChatFontSize, label: "Large" },
+                      { value: "xlarge" as ChatFontSize, label: "Extra large" },
+                    ]}
+                  />
                 </div>
-                <span className="text-muted">{ChevronRightIcon}</span>
-              </button>
+              </div>
 
-              {communityOpen && <CommunityModal onClose={() => setCommunityOpen(false)} />}
+              <div className="flex items-center justify-between gap-4 border-b border-border py-3">
+                <div>
+                  <h3 className="text-sm font-semibold">Reply text color</h3>
+                  <p className="text-xs text-muted">&quot;Warm&quot; only changes anything in Dark mode.</p>
+                </div>
+                <div className="w-40 shrink-0">
+                  <SettingsSelect
+                    value={assistantColor}
+                    onChange={onAssistantColorChange}
+                    options={[
+                      { value: "default" as AssistantColor, label: "Default" },
+                      { value: "warm" as AssistantColor, label: "Warm" },
+                    ]}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 border-b border-border py-3">
+                <h3 className="text-sm font-semibold">Chat font</h3>
+                <div className="w-48 shrink-0">
+                  <SettingsSelect
+                    value={chatFont}
+                    onChange={onChatFontChange}
+                    options={[
+                      { value: "plus_jakarta_sans" as ChatFont, label: "Plus Jakarta Sans" },
+                      { value: "manrope" as ChatFont, label: "Manrope" },
+                      { value: "system" as ChatFont, label: "System Default" },
+                    ]}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 py-3">
+                <div>
+                  <h3 className="text-sm font-semibold">Motion</h3>
+                  <p className="text-xs text-muted">
+                    Reduce animation in streaming responses and other interface elements.
+                  </p>
+                </div>
+                <SegmentedControl
+                  value={reduceMotion}
+                  onChange={onReduceMotionChange}
+                  options={[
+                    { value: "system" as ReduceMotion, label: "System" },
+                    { value: "reduced" as ReduceMotion, label: "Reduced" },
+                  ]}
+                />
+              </div>
+
+              <div className="my-6 border-t border-border" />
+              <h2 className="mb-1 text-base font-semibold">All Notifications</h2>
+              <p className="mb-3 text-xs text-muted">
+                ChatGiZa will notify you of critical security alerts that need your attention, regardless of this
+                setting.
+              </p>
+              <div className="flex items-center justify-between gap-4 border-b border-border py-3">
+                <p className="text-sm font-medium">Allow notifications</p>
+                <Toggle checked={allNotificationsEnabled} onChange={onToggleAllNotifications} />
+              </div>
+
+              {allNotificationsEnabled && (
+                <>
+                  <h3 className="mb-1 mt-4 text-sm font-semibold">In-app notifications</h3>
+                  <div className="flex items-center justify-between gap-4 border-b border-border py-3">
+                    <div>
+                      <p className="text-sm font-medium">Activity &amp; Tasks</p>
+                      <p className="text-xs text-muted">Get notified when ChatGiZa finishes a response.</p>
+                    </div>
+                    <Toggle
+                      checked={notifyOnComplete}
+                      onChange={() => {
+                        if (
+                          !notifyOnComplete &&
+                          typeof Notification !== "undefined" &&
+                          Notification.permission === "default"
+                        ) {
+                          Notification.requestPermission();
+                        }
+                        onToggleNotifyOnComplete();
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-4 py-3">
+                    <p className="text-sm font-medium">Image generation</p>
+                    <Toggle
+                      checked={notifyImageGen}
+                      onChange={() => {
+                        if (
+                          !notifyImageGen &&
+                          typeof Notification !== "undefined" &&
+                          Notification.permission === "default"
+                        ) {
+                          Notification.requestPermission();
+                        }
+                        onToggleNotifyImageGen();
+                      }}
+                    />
+                  </div>
+                </>
+              )}
             </div>
           )}
 
-          {tab === "Preference" && dataView === "root" && (
+          {tab === "Memory" && (
             <div>
-              <h2 className="mb-4 text-base font-semibold">Preference</h2>
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold">Memory</h3>
+                  <p className="text-xs text-muted">Facts ChatGiZa remembers about you across chats.</p>
+                </div>
+                <Toggle checked={memoryEnabled} onChange={onToggleMemoryEnabled} />
+              </div>
 
-              {/* Same order as the ChatGiZa app's Preference screen. */}
-              <div className="border-b border-border">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!newFact.trim()) return;
+                  onAddMemory(newFact.trim());
+                  setNewFact("");
+                }}
+                className="mb-3 flex gap-2"
+              >
+                <input
+                  value={newFact}
+                  onChange={(e) => setNewFact(e.target.value)}
+                  placeholder="Add something to remember…"
+                  className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+                />
                 <button
-                  type="button"
-                  onClick={() => setVoiceOpen((v) => !v)}
-                  className="flex w-full items-center justify-between gap-3 py-3.5 text-left"
+                  type="submit"
+                  disabled={!newFact.trim()}
+                  className="btn-primary rounded-lg px-3 py-2 text-xs font-medium disabled:opacity-40"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-muted">{VoiceIcon}</span>
-                    <span className="text-sm font-medium">Voice</span>
-                  </div>
-                  <span className="text-muted">{ChevronRightIcon}</span>
+                  Add
                 </button>
-                {voiceOpen && (
-                  <div className="pb-4">
-                    <div className="flex items-center justify-between gap-4 py-2">
-                      <h3 className="text-sm font-semibold">Voice language</h3>
-                      <div className="w-40 shrink-0">
-                        <SettingsSelect
-                          value={voiceLang}
-                          onChange={(lang) => {
-                            setVoiceLang(lang);
-                            setStoredVoiceLang(lang);
-                          }}
-                          options={[
-                            { value: "", label: "Auto Detect" },
-                            ...voiceLanguages.map((lang) => ({ value: lang, label: lang })),
-                          ]}
-                        />
-                      </div>
-                    </div>
+              </form>
 
-                    <div className="flex items-center justify-between gap-4 border-t border-border py-3">
-                      <div>
-                        <h3 className="text-sm font-semibold">Premium Voice</h3>
-                        <p className="text-xs text-muted">Real AI-generated speech instead of your browser&apos;s built-in voice.</p>
-                      </div>
-                      <Toggle
-                        checked={premiumVoice}
-                        onChange={() => {
-                          const next = !premiumVoice;
-                          setPremiumVoice(next);
-                          setPremiumVoiceEnabled(next);
-                        }}
-                      />
-                    </div>
+              {memory.length === 0 ? (
+                <p className="py-6 text-center text-xs text-muted">Nothing saved yet.</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {memory.map((fact, i) => (
+                    <li
+                      key={i}
+                      className="flex items-start justify-between gap-2 rounded-lg border border-border p-2.5 text-sm"
+                    >
+                      <span className="flex-1">{fact}</span>
+                      <button
+                        onClick={() => onRemoveMemory(i)}
+                        aria-label="Remove"
+                        className="shrink-0 text-muted hover:text-foreground"
+                      >
+                        {TrashIcon}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
 
-                    {premiumVoice && (
-                      <div className="border-t border-border py-3">
-                        <h3 className="mb-2 text-sm font-semibold">Premium voice</h3>
-                        <div className="mb-4 flex justify-center">
-                          <VoiceOrb className="h-40 w-40" />
-                        </div>
-                        <div className="space-y-1.5">
-                          {VOICE_OPTIONS.map((option) => (
-                            <button
-                              key={option.id}
-                              type="button"
-                              onClick={() => {
-                                setPremiumVoiceName(option.id);
-                                setStoredPremiumVoiceName(option.id);
-                              }}
-                              className="flex w-full items-center justify-between gap-3 rounded-xl bg-surface-2 px-4 py-3 text-left transition-colors hover:bg-surface"
-                            >
-                              <div>
-                                <p className="text-sm font-semibold">{option.name}</p>
-                                <p className="text-xs text-muted">{option.description}</p>
-                              </div>
-                              {premiumVoiceName === option.id && <span className="shrink-0 text-foreground">{CheckIcon}</span>}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between gap-4 border-t border-border py-3">
-                      <h3 className="text-sm font-semibold">Voice</h3>
-                      <div className="w-52 shrink-0">
-                        {filteredVoices.length === 0 ? (
-                          <p className="text-right text-xs text-muted">No voices found</p>
-                        ) : (
-                          <SettingsSelect
-                            value={voiceURI}
-                            onChange={(uri) => {
-                              setVoiceURI(uri);
-                              setStoredVoiceURI(uri);
-                            }}
-                            options={[
-                              { value: "", label: "Browser default" },
-                              ...filteredVoices.map((v) => ({ value: v.voiceURI, label: v.name })),
-                            ]}
-                          />
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-4 border-t border-border py-3">
-                      <h3 className="text-sm font-semibold">Speed</h3>
-                      <div className="w-40 shrink-0">
-                        <SettingsSelect
-                          value={voiceSpeed}
-                          onChange={(speed) => {
-                            setVoiceSpeed(speed);
-                            setStoredVoiceSpeed(speed);
-                          }}
-                          options={[
-                            { value: "slow" as VoiceSpeed, label: "Slow" },
-                            { value: "normal" as VoiceSpeed, label: "Normal" },
-                            { value: "fast" as VoiceSpeed, label: "Fast" },
-                          ]}
-                        />
-                      </div>
-                    </div>
+              <div className="mt-6 border-t border-border pt-5">
+                <div className="mb-2 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold">Digital Twin</h3>
+                    <p className="text-xs text-muted">
+                      A synthesized profile of your voice, interests, and values — used by &quot;Digital Twin&quot; mode to
+                      answer as you.
+                    </p>
                   </div>
-                )}
+                </div>
+                <textarea
+                  value={digitalTwin}
+                  onChange={(e) => onChangeDigitalTwin(e.target.value)}
+                  placeholder="Nothing generated yet — tap Regenerate to build one from your chat history, or write your own."
+                  rows={5}
+                  className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+                />
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-xs text-muted">
+                    {digitalTwinUpdatedAt > 0
+                      ? `Last updated ${new Date(digitalTwinUpdatedAt).toLocaleDateString()}`
+                      : "Never generated"}
+                  </span>
+                  <button
+                    onClick={onRegenerateDigitalTwin}
+                    disabled={digitalTwinRegenerating}
+                    className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-surface-2 disabled:opacity-40"
+                  >
+                    {digitalTwinRegenerating ? "Generating…" : "Regenerate from my chats"}
+                  </button>
+                </div>
               </div>
+            </div>
+          )}
 
-              <button
-                type="button"
-                onClick={onOpenPlugins}
-                className="flex w-full items-center justify-between gap-3 border-b border-border py-3.5 text-left transition-colors hover:bg-surface-2"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-muted">{ConnectorsIcon}</span>
-                  <span className="text-sm font-medium">Connectors</span>
-                </div>
-                <span className="text-muted">{ChevronRightIcon}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={onOpenScheduled}
-                className="flex w-full items-center justify-between gap-3 border-b border-border py-3.5 text-left transition-colors hover:bg-surface-2"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-muted">{AutomationsIcon}</span>
-                  <span className="text-sm font-medium">Automations</span>
-                </div>
-                <span className="text-muted">{ChevronRightIcon}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={onOpenProjects}
-                className="flex w-full items-center justify-between gap-3 border-b border-border py-3.5 text-left transition-colors hover:bg-surface-2"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-muted">{ProjectsIcon}</span>
-                  <span className="text-sm font-medium">Projects</span>
-                </div>
-                <span className="text-muted">{ChevronRightIcon}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={onOpenLibrary}
-                className="flex w-full items-center justify-between gap-3 border-b border-border py-3.5 text-left transition-colors hover:bg-surface-2"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-muted">{LibraryIcon}</span>
-                  <span className="text-sm font-medium">Library</span>
-                </div>
-                <span className="text-muted">{ChevronRightIcon}</span>
-              </button>
-
-              <div className="border-b border-border py-3.5">
-                <div className="flex items-center gap-3">
-                  <span className="text-muted">{EmailIcon}</span>
-                  <span className="text-sm font-medium">Email subscriptions</span>
-                </div>
-                <ComingSoonNote text="Email subscription preferences aren't available yet." />
-              </div>
-
-              <h3 className="mb-3 mt-6 text-sm font-semibold">Data controls</h3>
+          {tab === "Data controls" && dataView === "root" && (
+            <div>
+              <h3 className="mb-3 text-sm font-semibold">Data controls</h3>
 
               <Row
                 title="Save chat history"
@@ -1565,7 +1333,7 @@ export default function SettingsPanel({
             </div>
           )}
 
-          {tab === "Preference" && dataView === "shared" && (
+          {tab === "Data controls" && dataView === "shared" && (
             <div>
               <button
                 onClick={() => setDataView("root")}
@@ -1611,7 +1379,7 @@ export default function SettingsPanel({
             </div>
           )}
 
-          {tab === "Preference" && dataView === "archived" && (
+          {tab === "Data controls" && dataView === "archived" && (
             <div>
               <button
                 onClick={() => setDataView("root")}
@@ -1779,7 +1547,7 @@ export default function SettingsPanel({
                     <p className="truncate text-xs text-muted">{session.user.email}</p>
                   </div>
                   <button
-                    onClick={() => chatgizaSignOut()}
+                    onClick={() => signOut({ callbackUrl: "/login" })}
                     className="shrink-0 rounded-full border border-border px-3 py-1.5 text-xs hover:bg-surface-2 transition-colors"
                   >
                     Sign out
@@ -1884,7 +1652,99 @@ export default function SettingsPanel({
               />
 
               <div className="my-6 border-t border-border" />
-              {/* Voice moved to the Preference tab -- see its "Voice" row. */}
+              <h2 className="mb-4 text-base font-semibold">Voice</h2>
+
+              <div className="flex items-center justify-between gap-4 py-2">
+                <h3 className="text-sm font-semibold">Voice language</h3>
+                <div className="w-40 shrink-0">
+                  <SettingsSelect
+                    value={voiceLang}
+                    onChange={(lang) => {
+                      setVoiceLang(lang);
+                      setStoredVoiceLang(lang);
+                    }}
+                    options={[
+                      { value: "", label: "Auto Detect" },
+                      ...voiceLanguages.map((lang) => ({ value: lang, label: lang })),
+                    ]}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 border-t border-border py-3">
+                <div>
+                  <h3 className="text-sm font-semibold">Premium Voice</h3>
+                  <p className="text-xs text-muted">Real AI-generated speech instead of your browser&apos;s built-in voice.</p>
+                </div>
+                <Toggle
+                  checked={premiumVoice}
+                  onChange={() => {
+                    const next = !premiumVoice;
+                    setPremiumVoice(next);
+                    setPremiumVoiceEnabled(next);
+                  }}
+                />
+              </div>
+
+              {premiumVoice && (
+                <div className="flex items-center justify-between gap-4 border-t border-border py-3">
+                  <h3 className="text-sm font-semibold">Premium voice</h3>
+                  <div className="w-40 shrink-0">
+                    <SettingsSelect
+                      value={premiumVoiceName}
+                      onChange={(name) => {
+                        setPremiumVoiceName(name);
+                        setStoredPremiumVoiceName(name);
+                      }}
+                      options={PREMIUM_VOICE_NAMES.map((name) => ({
+                        value: name,
+                        label: name.charAt(0).toUpperCase() + name.slice(1),
+                      }))}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between gap-4 border-t border-border py-3">
+                <h3 className="text-sm font-semibold">Voice</h3>
+                <div className="w-52 shrink-0">
+                  {filteredVoices.length === 0 ? (
+                    <p className="text-right text-xs text-muted">No voices found</p>
+                  ) : (
+                    <SettingsSelect
+                      value={voiceURI}
+                      onChange={(uri) => {
+                        setVoiceURI(uri);
+                        setStoredVoiceURI(uri);
+                      }}
+                      options={[
+                        { value: "", label: "Browser default" },
+                        ...filteredVoices.map((v) => ({ value: v.voiceURI, label: v.name })),
+                      ]}
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 border-t border-border py-3">
+                <h3 className="text-sm font-semibold">Speed</h3>
+                <div className="w-40 shrink-0">
+                  <SettingsSelect
+                    value={voiceSpeed}
+                    onChange={(speed) => {
+                      setVoiceSpeed(speed);
+                      setStoredVoiceSpeed(speed);
+                    }}
+                    options={[
+                      { value: "slow" as VoiceSpeed, label: "Slow" },
+                      { value: "normal" as VoiceSpeed, label: "Normal" },
+                      { value: "fast" as VoiceSpeed, label: "Fast" },
+                    ]}
+                  />
+                </div>
+              </div>
+
+              <div className="my-6 border-t border-border" />
               <h2 className="mb-1 text-base font-semibold">GiZa Builder Profile</h2>
               <p className="mb-2 text-xs text-muted">
                 Personalize your builder profile to connect with users of your GiZas. These settings apply to
@@ -1977,7 +1837,7 @@ export default function SettingsPanel({
                 <span className="text-muted">{ChevronRightIcon}</span>
               </button>
               <button
-                onClick={() => setTab("Preference")}
+                onClick={() => setTab("Data controls")}
                 className="flex w-full items-center justify-between gap-3 rounded-lg border border-border p-3 text-left text-sm transition-colors hover:bg-surface-2"
               >
                 <span>Data controls & delete account</span>
@@ -1986,9 +1846,8 @@ export default function SettingsPanel({
             </div>
           )}
 
-          {tab === "Storage Management" && storageView === "root" && (
+          {tab === "Storage" && storageView === "root" && (
             <div>
-              <h2 className="mb-4 text-base font-semibold">Storage Management</h2>
               <h3 className="mb-3 border-b border-border pb-3 text-sm font-semibold">Storage</h3>
 
               <p className="mb-2 text-sm font-medium">
@@ -2026,99 +1885,10 @@ export default function SettingsPanel({
                 </div>
                 <span className="text-muted">{ChevronRightIcon}</span>
               </button>
-
-              <div className="mt-6 border-t border-border pt-5">
-                <div className="mb-3 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold">Memory</h3>
-                    <p className="text-xs text-muted">Facts ChatGiZa remembers about you across chats.</p>
-                  </div>
-                  <Toggle checked={memoryEnabled} onChange={onToggleMemoryEnabled} />
-                </div>
-
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (!newFact.trim()) return;
-                    onAddMemory(newFact.trim());
-                    setNewFact("");
-                  }}
-                  className="mb-3 flex gap-2"
-                >
-                  <input
-                    value={newFact}
-                    onChange={(e) => setNewFact(e.target.value)}
-                    placeholder="Add something to remember…"
-                    className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!newFact.trim()}
-                    className="btn-primary rounded-lg px-3 py-2 text-xs font-medium disabled:opacity-40"
-                  >
-                    Add
-                  </button>
-                </form>
-
-                {memory.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-muted">Nothing saved yet.</p>
-                ) : (
-                  <ul className="space-y-1.5">
-                    {memory.map((fact, i) => (
-                      <li
-                        key={i}
-                        className="flex items-start justify-between gap-2 rounded-lg border border-border p-2.5 text-sm"
-                      >
-                        <span className="flex-1">{fact}</span>
-                        <button
-                          onClick={() => onRemoveMemory(i)}
-                          aria-label="Remove"
-                          className="shrink-0 text-muted hover:text-foreground"
-                        >
-                          {TrashIcon}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              <div className="mt-6 border-t border-border pt-5">
-                <div className="mb-2 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold">Digital Twin</h3>
-                    <p className="text-xs text-muted">
-                      A synthesized profile of your voice, interests, and values — used by &quot;Digital Twin&quot; mode to
-                      answer as you.
-                    </p>
-                  </div>
-                </div>
-                <textarea
-                  value={digitalTwin}
-                  onChange={(e) => onChangeDigitalTwin(e.target.value)}
-                  placeholder="Nothing generated yet — tap Regenerate to build one from your chat history, or write your own."
-                  rows={5}
-                  className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
-                />
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-xs text-muted">
-                    {digitalTwinUpdatedAt > 0
-                      ? `Last updated ${new Date(digitalTwinUpdatedAt).toLocaleDateString()}`
-                      : "Never generated"}
-                  </span>
-                  <button
-                    onClick={onRegenerateDigitalTwin}
-                    disabled={digitalTwinRegenerating}
-                    className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-surface-2 disabled:opacity-40"
-                  >
-                    {digitalTwinRegenerating ? "Generating…" : "Regenerate from my chats"}
-                  </button>
-                </div>
-              </div>
             </div>
           )}
 
-          {tab === "Storage Management" && storageView === "files" && (
+          {tab === "Storage" && storageView === "files" && (
             <div>
               <button
                 onClick={() => setStorageView("root")}
@@ -2147,7 +1917,7 @@ export default function SettingsPanel({
             </div>
           )}
 
-          {tab === "Storage Management" && storageView === "images" && (
+          {tab === "Storage" && storageView === "images" && (
             <div>
               <button
                 onClick={() => setStorageView("root")}
@@ -2180,120 +1950,284 @@ export default function SettingsPanel({
             </div>
           )}
 
-          {tab === "Subaccount" && (
+          {tab === "Billing" && billingView === "root" && (
             <div>
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="text-base font-semibold">Subaccount</h2>
-                <span className="text-xs text-muted">{subaccounts.length}/5</span>
-              </div>
-              <p className="mb-4 text-xs text-muted">Extra accounts that live under yours.</p>
+              <h3 className="mb-3 border-b border-border pb-3 text-lg font-semibold">Billing</h3>
 
-              <form onSubmit={createSubaccount} className="mb-5 flex gap-2">
-                <input
-                  value={newSubaccountName}
-                  onChange={(e) => setNewSubaccountName(e.target.value)}
-                  placeholder="Subaccount name"
-                  maxLength={40}
-                  disabled={subaccounts.length >= 5}
-                  className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40 disabled:opacity-40"
-                />
-                <button
-                  type="submit"
-                  disabled={creatingSubaccount || !newSubaccountName.trim() || subaccounts.length >= 5}
-                  className="btn-primary shrink-0 rounded-lg px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {creatingSubaccount ? "Creating…" : "Create Subaccount"}
-                </button>
-              </form>
-
-              {subaccountError && <p className="mb-3 text-xs text-red-500">{subaccountError}</p>}
-
-              {subaccountsLoading ? (
-                <p className="py-6 text-center text-xs text-muted">Loading…</p>
-              ) : subaccounts.length === 0 ? (
-                <p className="py-6 text-center text-xs text-muted">No subaccounts yet.</p>
+              {!session?.user ? (
+                <p className="text-xs text-muted">Sign in to view billing.</p>
+              ) : billingLoading ? (
+                <p className="py-4 text-center text-xs text-muted">Loading…</p>
+              ) : billingError ? (
+                <p className="text-xs text-red-500">{billingError}</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-border text-xs text-muted">
-                        <th className="py-2 pr-3 font-medium">Nickname</th>
-                        <th className="py-2 pr-3 font-medium">Created</th>
-                        <th className="py-2 pr-3 font-medium">Operation</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {subaccounts.map((s) => (
-                        <tr key={s.id} className="border-b border-border last:border-0">
-                          <td className="py-3 pr-3">
-                            {renamingSubaccountId === s.id ? (
-                              <input
-                                autoFocus
-                                value={renameSubaccountValue}
-                                onChange={(e) => setRenameSubaccountValue(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") renameSubaccount(s.id);
-                                  if (e.key === "Escape") setRenamingSubaccountId(null);
-                                }}
-                                maxLength={40}
-                                className="w-40 rounded-lg border border-border bg-background px-2 py-1 text-sm outline-none focus:border-foreground/40"
-                              />
-                            ) : (
-                              <span className="flex items-center gap-2">
-                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border text-xs">
-                                  {s.name[0]?.toUpperCase() ?? "?"}
-                                </span>
-                                {s.name}
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3 pr-3 text-muted">{new Date(s.created_at).toLocaleDateString()}</td>
-                          <td className="py-3 pr-3">
-                            {renamingSubaccountId === s.id ? (
-                              <span className="flex gap-3">
-                                <button onClick={() => renameSubaccount(s.id)} className="text-xs font-medium text-foreground hover:underline">
-                                  Save
-                                </button>
-                                <button onClick={() => setRenamingSubaccountId(null)} className="text-xs text-muted hover:text-foreground">
-                                  Cancel
-                                </button>
-                              </span>
-                            ) : confirmDeleteSubaccountId === s.id ? (
-                              <span className="flex items-center gap-3">
-                                <span className="text-xs text-muted">Delete?</span>
-                                <button onClick={() => deleteSubaccount(s.id)} className="text-xs font-medium text-red-500 hover:underline">
-                                  Confirm
-                                </button>
-                                <button onClick={() => setConfirmDeleteSubaccountId(null)} className="text-xs text-muted hover:text-foreground">
-                                  Cancel
-                                </button>
-                              </span>
-                            ) : (
-                              <span className="flex gap-3">
-                                <button
-                                  onClick={() => {
-                                    setRenamingSubaccountId(s.id);
-                                    setRenameSubaccountValue(s.name);
-                                  }}
-                                  className="text-xs font-medium text-foreground hover:underline"
-                                >
-                                  Rename
-                                </button>
-                                <button
-                                  onClick={() => setConfirmDeleteSubaccountId(s.id)}
-                                  className="text-xs font-medium text-red-500 hover:underline"
-                                >
-                                  Delete
-                                </button>
-                              </span>
-                            )}
-                          </td>
-                        </tr>
+                <>
+                  <div className="flex items-center justify-between gap-4 border-b border-border py-3.5">
+                    <div>
+                      <h2 className="text-base font-semibold">
+                        ChatGiZa {billing?.subscription ? billing.subscription.planName : "Plan"}
+                      </h2>
+                      <p className="mt-1 text-xs text-muted">
+                        {billing?.subscription?.cancelAtPeriodEnd ? "Your plan ends on " : "Your plan auto-renews on "}
+                        {formatDate(billing?.subscription?.currentPeriodEnd ?? Date.now())}
+                      </p>
+                    </div>
+                    {onOpenUpgradePlan && (
+                      <button
+                        onClick={onOpenUpgradePlan}
+                        className="rounded-full border border-border px-4 py-1.5 text-sm hover:bg-surface-2 transition-colors"
+                      >
+                        Compare plans
+                      </button>
+                    )}
+                  </div>
+
+                  <h4 className="mb-2 mt-4 text-sm font-semibold">Billing history</h4>
+                  {!billing || billing.invoices.length === 0 ? (
+                    <p className="mb-4 rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted">
+                      No invoices yet.
+                    </p>
+                  ) : (
+                    <ul className="mb-4 space-y-1.5">
+                      {billing.invoices.map((inv) => (
+                        <li key={inv.id} className="flex items-center justify-between gap-3 rounded-xl border border-border p-2.5 text-sm">
+                          <span className="text-muted">{formatDate(inv.date)}</span>
+                          <span>
+                            {inv.currency.toUpperCase()} {(inv.amount / 100).toFixed(2)}
+                          </span>
+                          <span className="capitalize text-muted">{inv.status}</span>
+                          {inv.hostedUrl ? (
+                            <a href={inv.hostedUrl} target="_blank" rel="noreferrer" className="underline hover:text-foreground">
+                              View
+                            </a>
+                          ) : (
+                            <span className="text-muted">—</span>
+                          )}
+                        </li>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
+                    </ul>
+                  )}
+
+                  <div className="flex items-center justify-between border-b border-border pb-3">
+                    <h4 className="text-sm font-semibold">Billing information</h4>
+                    <button
+                      onClick={openEditBillingInfo}
+                      className="rounded-full border border-border px-3 py-1.5 text-xs hover:bg-surface-2 transition-colors"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                  <div className="border-b border-border py-3 text-sm">
+                    <p className="text-xs text-muted">Billing email</p>
+                    <p className="mb-2">{billing?.billingInfo?.email ?? session.user.email}</p>
+                    {billing?.billingInfo?.name && (
+                      <>
+                        <p className="text-xs text-muted">Name</p>
+                        <p className="mb-2">{billing.billingInfo.name}</p>
+                      </>
+                    )}
+                    {billing?.billingInfo?.address?.line1 && (
+                      <>
+                        <p className="text-xs text-muted">Address</p>
+                        <p>
+                          {billing.billingInfo.address.line1}, {billing.billingInfo.address.city}
+                          {billing.billingInfo.address.postal_code ? `, ${billing.billingInfo.address.postal_code}` : ""}
+                        </p>
+                        <p>{billing.billingInfo.address.country}</p>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between border-b border-border py-3">
+                    <h4 className="text-sm font-semibold">Payment methods</h4>
+                    <button
+                      onClick={openBillingPortal}
+                      disabled={portalLoading}
+                      className="rounded-full border border-border px-3 py-1.5 text-xs hover:bg-surface-2 transition-colors disabled:opacity-50"
+                    >
+                      Add new
+                    </button>
+                  </div>
+                  {!billing || billing.paymentMethods.length === 0 ? (
+                    <p className="border-b border-border py-3 text-xs text-muted">No cards on file.</p>
+                  ) : (
+                    <ul className="space-y-1.5 border-b border-border py-3">
+                      {billing.paymentMethods.map((pm) => (
+                        <li key={pm.id} className="flex items-center justify-between rounded-xl border border-border p-2.5 text-sm">
+                          <span className="capitalize">
+                            {pm.brand} •••• {pm.last4}
+                          </span>
+                          {pm.isDefault && <span className="text-xs text-muted">Default</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {billing?.subscription && !billing.subscription.cancelAtPeriodEnd && (
+                    <div className="pt-4">
+                      <h4 className="mb-1 text-sm font-semibold">Cancel plan</h4>
+                      <p className="mb-2 text-xs text-muted">
+                        If you cancel, you&apos;ll keep full access to your plan features until the end of your
+                        billing period.
+                      </p>
+                      {confirmCancelPlan ? (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setConfirmCancelPlan(false)}
+                            className="rounded-full border border-border px-4 py-1.5 text-sm hover:bg-surface-2 transition-colors"
+                          >
+                            Keep plan
+                          </button>
+                          <button
+                            onClick={cancelPlan}
+                            disabled={cancelLoading}
+                            className="rounded-full border border-[#b3413e] px-4 py-1.5 text-sm font-medium text-[#b3413e] hover:bg-[#b3413e]/10 transition-colors disabled:opacity-50"
+                          >
+                            {cancelLoading ? "Cancelling…" : "Confirm cancel"}
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmCancelPlan(true)}
+                          className="rounded-full border border-border px-4 py-1.5 text-sm hover:bg-surface-2 transition-colors"
+                        >
+                          Cancel plan
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
+            </div>
+          )}
+
+          {tab === "Billing" && billingView === "edit" && (
+            <div>
+              <button
+                onClick={() => setBillingView("root")}
+                className="mb-4 flex items-center gap-1.5 text-sm font-medium text-muted hover:text-foreground transition-colors"
+              >
+                {ChevronLeftIcon}
+                Billing information
+              </button>
+
+              <form onSubmit={saveBillingInfo}>
+                <label className="mb-1 block text-xs text-muted">Billing email</label>
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  className="mb-4 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+                />
+
+                <label className="mb-1 block text-xs text-muted">Full name</label>
+                <input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="mb-4 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+                />
+
+                <label className="mb-1 block text-xs text-muted">Country or region</label>
+                <div className="mb-4">
+                  <SettingsSelect
+                    value={editCountry}
+                    onChange={setEditCountry}
+                    options={[{ value: "", label: "Select…" }, ...COUNTRIES.map((c) => ({ value: c, label: c }))]}
+                  />
+                </div>
+
+                <label className="mb-1 block text-xs text-muted">Address line 1</label>
+                <input
+                  value={editLine1}
+                  onChange={(e) => setEditLine1(e.target.value)}
+                  className="mb-4 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+                />
+
+                <label className="mb-1 block text-xs text-muted">Address line 2</label>
+                <input
+                  value={editLine2}
+                  onChange={(e) => setEditLine2(e.target.value)}
+                  className="mb-4 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+                />
+
+                <div className="mb-4 grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-xs text-muted">Postal code</label>
+                    <input
+                      value={editPostalCode}
+                      onChange={(e) => setEditPostalCode(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-muted">City</label>
+                    <input
+                      value={editCity}
+                      onChange={(e) => setEditCity(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+                    />
+                  </div>
+                </div>
+
+                <label className="mb-4 flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={editAddTaxId}
+                    onChange={(e) => setEditAddTaxId(e.target.checked)}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  Add tax ID
+                </label>
+
+                {editAddTaxId && (
+                  <div className="mb-4 grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1 block text-xs text-muted">Tax ID type</label>
+                      <SettingsSelect
+                        value={editTaxIdType}
+                        onChange={setEditTaxIdType}
+                        options={[
+                          { value: "eu_vat", label: "EU VAT" },
+                          { value: "gb_vat", label: "UK VAT" },
+                          { value: "us_ein", label: "US EIN" },
+                          { value: "in_gst", label: "India GST" },
+                          { value: "za_vat", label: "South Africa VAT" },
+                          { value: "ae_trn", label: "UAE TRN" },
+                          { value: "au_abn", label: "Australia ABN" },
+                          { value: "ca_bn", label: "Canada BN" },
+                        ]}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs text-muted">Tax ID value</label>
+                      <input
+                        value={editTaxIdValue}
+                        onChange={(e) => setEditTaxIdValue(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {editError && <p className="mb-3 text-xs text-red-500">{editError}</p>}
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBillingView("root")}
+                    className="rounded-full border border-border px-4 py-1.5 text-sm hover:bg-surface-2 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={editSaving}
+                    className="btn-primary rounded-full px-4 py-1.5 text-sm font-medium disabled:opacity-50"
+                  >
+                    {editSaving ? "Saving…" : "Save"}
+                  </button>
+                </div>
+              </form>
             </div>
           )}
         </div>
