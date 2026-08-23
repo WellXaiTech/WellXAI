@@ -22,14 +22,14 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #000000;
+    --background: #151515;
     --foreground: #e5ebfa;
-    --surface: #171d2f;
+    --surface: #151515;
     --surface-2: #1c2333;
     --border: #262e3f;
     --muted: #9aa3b2;
-    --sidebar-bg: #0a0c15;
-    --composer-bg: #171d2c;
+    --sidebar-bg: #111111;
+    --composer-bg: #151515;
     --composer-border: #2b3446;
     --placeholder: #8e98ac;
     --glow-rgb: 255, 255, 255;
@@ -38,14 +38,14 @@
 }
 
 :root[data-theme="dark"] {
-  --background: #10141f;
+  --background: #151515;
   --foreground: #e5ebfa;
-  --surface: #171d2f;
+  --surface: #151515;
   --surface-2: #1c2333;
   --border: #262e3f;
   --muted: #9aa3b2;
-  --sidebar-bg: #0a0c15;
-  --composer-bg: #171d2c;
+  --sidebar-bg: #111111;
+  --composer-bg: #151515;
   --composer-border: #2b3446;
   --placeholder: #8e98ac;
   --glow-rgb: 255, 255, 255;
@@ -140,24 +140,24 @@ textarea:-webkit-autofill:focus {
 
 :root {
   --chat-font-size: 16px;
-  --chat-line-height: 1.85;
+  --chat-line-height: 1.6;
   --chat-font-family: inherit;
 }
 :root[data-font-size="small"] {
   --chat-font-size: 13px;
-  --chat-line-height: 1.65;
+  --chat-line-height: 1.5;
 }
 :root[data-font-size="medium"] {
   --chat-font-size: 16px;
-  --chat-line-height: 1.85;
+  --chat-line-height: 1.6;
 }
 :root[data-font-size="large"] {
   --chat-font-size: 17px;
-  --chat-line-height: 1.8;
+  --chat-line-height: 1.6;
 }
 :root[data-font-size="xlarge"] {
   --chat-font-size: 19px;
-  --chat-line-height: 1.85;
+  --chat-line-height: 1.65;
 }
 /* "plus_jakarta_sans" (the default -- see chatFont.ts) is left unset here
    on purpose: --chat-font-family already inherits the page's own
@@ -247,7 +247,7 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
   font-size: 16px;
-  font-weight: 410;
+  font-weight: 500;
   line-height: 26px;
 }
 
@@ -290,7 +290,7 @@ textarea::placeholder {
 
   border-radius: 26px;
 
-  background: rgba(var(--box-rgb), 0.45);
+  background: var(--composer-bg);
 
   overflow: hidden;
 }
@@ -633,6 +633,35 @@ textarea::placeholder {
 .markdown li {
   margin: 0.2em 0;
 }
+
+/* GFM renders a "loose" list (items separated by blank lines in the
+   model's own markdown) by wrapping each item's text in its own <p>,
+   which then gets the full paragraph margin on top of the list's own
+   margin -- doubled-up spacing between bullet points that reads as
+   unprofessional, oversized gaps rather than a normal tight list.
+   Applied to both Build's narrower column and the main chat's replies
+   (ChatMessageBubble.tsx) rather than the shared .markdown rules
+   everywhere else, since a few other .markdown consumers still want the
+   looser default spacing. */
+.markdown-tight li > p {
+  margin: 0;
+}
+.markdown-tight ul,
+.markdown-tight ol {
+  margin-bottom: 0.4em;
+}
+.markdown-tight li {
+  margin: 0.1em 0;
+}
+/* The model sometimes writes one sentence per paragraph (a blank line
+   between each), which is valid markdown but reads as a wall of isolated,
+   disconnected lines at the full 0.75em paragraph margin -- tightened
+   here so consecutive short paragraphs sit close enough to read as
+   continuous prose instead of each "standing alone". */
+.markdown-tight p {
+  margin: 0 0 0.35em;
+}
+
 .markdown strong {
   font-weight: 600;
 }
