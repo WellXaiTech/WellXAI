@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
@@ -129,6 +130,10 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
 
   var showConnectSheet by remember { mutableStateOf(false) }
   var showPostComposer by remember { mutableStateOf(false) }
+  // "post" from the bottom-nav Create button, "status" from the Stories
+  // row's Create Story card -- both open the same composer, just tagged
+  // for a different feed per ApiMediaPost.destination.
+  var composerDestination by remember { mutableStateOf("post") }
   var replyingToPost by remember { mutableStateOf<ApiMediaPost?>(null) }
   var expandedCommentsPostId by remember { mutableStateOf<String?>(null) }
   var searchOpen by remember { mutableStateOf(false) }
@@ -143,6 +148,16 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
   // that there's no stories UI to have shown them in the first place.
   val feedEligiblePosts = remember(viewModel.mediaPosts) {
     viewModel.mediaPosts.filter { it.destination != "status" }
+  }
+  // One card per author's most recent status/both post with a photo --
+  // mediaPosts is newest-first, so distinctBy keeps each author's latest.
+  // No auto-advancing story-viewer exists yet, so tapping a card opens the
+  // same fullscreen photo viewer regular posts use (see fullscreenPostId
+  // below) rather than leaving this dead until that gets built.
+  val storyPosts = remember(viewModel.mediaPosts) {
+    viewModel.mediaPosts
+      .filter { (it.destination == "status" || it.destination == "both") && it.imageUrls.isNotEmpty() }
+      .distinctBy { it.authorId }
   }
   val visiblePosts = remember(feedEligiblePosts, searchQuery) {
     val q = searchQuery.trim()
@@ -187,6 +202,20 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
 
       item { Spacer(modifier = Modifier.height(if (showHeader) headerHeight else 0.dp)) }
+
+      item {
+        MediaStoriesRow(
+          isDark = isDark,
+          userName = viewModel.userName,
+          userImage = viewModel.userImage,
+          storyPosts = storyPosts,
+          onCreateStory = {
+            composerDestination = "status"
+            showPostComposer = true
+          },
+          onOpenStory = { post -> fullscreenPostId = post.id; fullscreenPage = 0 }
+        )
+      }
 
       if (searchOpen) {
         item {
@@ -282,7 +311,10 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
         isDark = isDark,
         userName = viewModel.userName,
         userImage = viewModel.userImage,
-        onComposerClick = { showPostComposer = true }
+        onComposerClick = {
+          composerDestination = "post"
+          showPostComposer = true
+        }
       )
     }
 
@@ -330,7 +362,10 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
     MediaBottomNavigation(
       viewModel = viewModel,
       isDark = isDark,
-      onCreateClick = { showPostComposer = true },
+      onCreateClick = {
+        composerDestination = "post"
+        showPostComposer = true
+      },
       onProfileClick = {
         val uid = viewModel.userId
         if (uid != null) viewingProfile = ProfileTarget(uid, viewModel.userName ?: "You", viewModel.userImage)
@@ -378,7 +413,7 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
   }
 
   if (showPostComposer) {
-    ChatGizaMediaPostComposerScreen(viewModel, onDismiss = { showPostComposer = false })
+    ChatGizaMediaPostComposerScreen(viewModel, onDismiss = { showPostComposer = false }, destination = composerDestination)
   }
 }
 
@@ -501,6 +536,128 @@ private fun ChatGiZaComposerBar(
         tint = fg,
         modifier = Modifier.size(22.dp)
       )
+    }
+  }
+}
+
+// =============================================================
+// STORIES ROW -- "Create story" (own avatar + blue "+" badge) first, then
+// one card per author with a recent status/both post. A story is a
+// distinct concept from a regular feed post (ApiMediaPost.destination:
+// "post" = feed only, "status" = this row only, "both" = shows in
+// either), not just an album/feed post reused with different framing.
+// =============================================================
+
+private val MEDIA_STORY_CARD_WIDTH = 100.dp
+private val MEDIA_STORY_CARD_HEIGHT = 160.dp
+
+@Composable
+private fun MediaStoriesRow(
+  isDark: Boolean,
+  userName: String?,
+  userImage: String?,
+  storyPosts: List<ApiMediaPost>,
+  onCreateStory: () -> Unit,
+  onOpenStory: (ApiMediaPost) -> Unit
+) {
+  val cardShape = RoundedCornerShape(14.dp)
+  val scrimBrush = Brush.verticalGradient(
+    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f)),
+    startY = 60f
+  )
+  LazyRow(
+    modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp),
+    horizontalArrangement = Arrangement.spacedBy(8.dp)
+  ) {
+    item {
+      Box(
+        modifier = Modifier
+          .width(MEDIA_STORY_CARD_WIDTH)
+          .height(MEDIA_STORY_CARD_HEIGHT)
+          .clip(cardShape)
+          .background(if (isDark) Color(0xFF1F1F1F) else Color(0xFFF0F0F0))
+          .clickable(onClick = onCreateStory)
+      ) {
+        if (userImage != null) {
+          AsyncImage(
+            model = userImage,
+            contentDescription = null,
+            modifier = Modifier.fillMaxWidth().height(MEDIA_STORY_CARD_HEIGHT - 46.dp),
+            contentScale = ContentScale.Crop
+          )
+        } else {
+          Box(modifier = Modifier.fillMaxWidth().height(MEDIA_STORY_CARD_HEIGHT - 46.dp))
+        }
+        Box(modifier = Modifier.fillMaxWidth().height(46.dp).align(Alignment.BottomCenter).background(if (isDark) Color.Black else Color.White))
+        Box(
+          modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .offset(y = (-23).dp)
+            .size(34.dp)
+            .clip(CircleShape)
+            .background(Color(0xFF1877F2)),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(Icons.Filled.AddCircle, contentDescription = "Create story", tint = Color.White, modifier = Modifier.size(20.dp))
+        }
+        Text(
+          "Create story",
+          color = if (isDark) Color.White else Color.Black,
+          fontSize = 11.sp,
+          fontWeight = FontWeight.SemiBold,
+          modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp)
+        )
+      }
+    }
+
+    items(storyPosts, key = { it.id }) { post ->
+      Box(
+        modifier = Modifier
+          .width(MEDIA_STORY_CARD_WIDTH)
+          .height(MEDIA_STORY_CARD_HEIGHT)
+          .clip(cardShape)
+          .clickable { onOpenStory(post) }
+      ) {
+        AsyncImage(
+          model = post.imageUrls[0],
+          contentDescription = post.authorName,
+          modifier = Modifier.fillMaxSize(),
+          contentScale = ContentScale.Crop
+        )
+        Box(modifier = Modifier.fillMaxSize().background(scrimBrush))
+        if (post.authorImage != null) {
+          AsyncImage(
+            model = post.authorImage,
+            contentDescription = null,
+            modifier = Modifier
+              .padding(8.dp)
+              .size(30.dp)
+              .clip(CircleShape)
+              .border(2.dp, Color(0xFF1877F2), CircleShape),
+            contentScale = ContentScale.Crop
+          )
+        } else {
+          Box(
+            modifier = Modifier
+              .padding(8.dp)
+              .size(30.dp)
+              .clip(CircleShape)
+              .border(2.dp, Color(0xFF1877F2), CircleShape)
+          ) {
+            MediaInitialAvatar(name = post.authorName, size = 30.dp)
+          }
+        }
+        Text(
+          post.authorName,
+          color = Color.White,
+          fontSize = 12.sp,
+          fontWeight = FontWeight.SemiBold,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+          modifier = Modifier.align(Alignment.BottomStart).padding(8.dp)
+        )
+      }
     }
   }
 }

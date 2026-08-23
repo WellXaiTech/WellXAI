@@ -8574,7 +8574,7 @@ private fun renderPdfPagesAsAttachment(context: android.content.Context, uri: Ur
 // optional photo, and a bullish/neutral/bearish sentiment tag, submitted to
 // /api/media/posts so it shows up in anyone's feed, not just this device's.
 @Composable
-internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss: () -> Unit) {
+internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss: () -> Unit, destination: String = "post") {
   BackHandler { onDismiss() }
   val context = LocalContext.current
   val composerScope = rememberCoroutineScope()
@@ -8685,7 +8685,7 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
                 videoMime = mime
               }
 
-              viewModel.createMediaPost(text.trim(), imageDataUrls, videoBytes, videoMime, sentiment) { success ->
+              viewModel.createMediaPost(text.trim(), imageDataUrls, videoBytes, videoMime, sentiment, destination) { success ->
                 posting = false
                 if (success) onDismiss()
               }
