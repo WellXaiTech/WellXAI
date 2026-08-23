@@ -7,6 +7,7 @@ import type { Attachment } from "@/lib/attachments";
 import { textToPdfBlob } from "@/lib/generatePdf";
 import { extractPdfSection, stripPdfMarkers, splitAroundPdfSection, splitTitleAndBody } from "@/lib/pdfMarkers";
 import { extractSources, stripSourceMarkers, sourceDomain, type VerifiedSource } from "@/lib/sourceMarkers";
+import { stripReminderMarkers } from "@/lib/reminderMarkers";
 import { speakText, stopSpeaking } from "@/lib/speak";
 
 const FileIcon = (
@@ -96,12 +97,8 @@ const CheckIcon = (
 );
 
 const TrashIcon = (
-  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M7 3.5h6" />
-    <path d="M5 5h10" />
-    <path d="M7 5v10a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1V5" />
-    <path d="M8.5 8v5" />
-    <path d="M11.5 8v5" />
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <path d="m19.5 5.5l-.62 10.025c-.158 2.561-.237 3.842-.88 4.763a4 4 0 0 1-1.2 1.128c-.957.584-2.24.584-4.806.584c-2.57 0-3.855 0-4.814-.585a4 4 0 0 1-1.2-1.13c-.642-.922-.72-2.205-.874-4.77L4.5 5.5M3 5.5h18m-4.944 0l-.683-1.408c-.453-.936-.68-1.403-1.071-1.695a2 2 0 0 0-.275-.172C13.594 2 13.074 2 12.035 2c-1.066 0-1.599 0-2.04.234a2 2 0 0 0-.278.18c-.395.303-.616.788-1.058 1.757L8.053 5.5m1.447 11v-6m5 6v-6" />
   </svg>
 );
 
@@ -381,6 +378,7 @@ export default function ChatMessageBubble({
   onEditImage,
   onRegenerate,
   onDelete,
+  qid,
 }: {
   id?: string;
   role: "user" | "assistant";
@@ -393,6 +391,10 @@ export default function ChatMessageBubble({
   onEditImage?: (instruction: string) => void;
   onRegenerate?: () => void;
   onDelete?: () => void;
+  // "Q-4F2A19" -- shared by this question/answer pair, shown so the
+  // user can actually reference it later the way the system prompt has
+  // always claimed they could.
+  qid?: string;
 }) {
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -405,7 +407,11 @@ export default function ChatMessageBubble({
   const [isSpeaking, setIsSpeaking] = useState(false);
 
   const sources = extractSources(content);
-  const contentSansSources = stripSourceMarkers(content);
+  // Reminder markers are pure plumbing (the actual reminder gets created
+  // as a side effect elsewhere, in page.tsx, the moment a reply finishes
+  // streaming) -- they must never render here as literal `[[REMINDER_...`
+  // JSON text, which is exactly what was happening before this existed.
+  const contentSansSources = stripReminderMarkers(stripSourceMarkers(content));
 
   const { before: beforePdfText, after: afterPdfText, hasSection: hasPdfSection } = splitAroundPdfSection(contentSansSources);
 
@@ -587,7 +593,14 @@ export default function ChatMessageBubble({
             {content}
           </div>
         )}
-        {content && id && <p className="mt-0.5 select-text text-[10px] text-muted/60">ID: {id}</p>}
+        {content && qid && !isStreaming && (
+          <p
+            className="mt-0.5 select-text text-[10px] text-muted/60"
+            title="Mention this ID later (in any chat) to bring this exact exchange back up"
+          >
+            {qid}
+          </p>
+        )}
         {content && (
           <div className="mt-1 hidden items-center gap-1 group-hover:flex">
             <button
@@ -741,7 +754,7 @@ export default function ChatMessageBubble({
         </>
       )}
       {content && (
-        <div className="markdown assistant-reply chat-text w-full max-w-none">
+        <div className="markdown markdown-tight assistant-reply chat-text w-full max-w-none">
           {hasPdfSection ? (
             <>
               {beforePdfText.trim() && (
@@ -761,7 +774,14 @@ export default function ChatMessageBubble({
           )}
         </div>
       )}
-      {content && id && !isStreaming && <p className="mt-0.5 select-text text-[10px] text-muted/60">ID: {id}</p>}
+      {content && qid && !isStreaming && (
+        <p
+          className="mt-0.5 select-text text-[10px] text-muted/60"
+          title="Mention this ID later (in any chat) to bring this exact exchange back up"
+        >
+          {qid}
+        </p>
+      )}
       {!isStreaming && sources.length > 0 && <SourceTrail sources={sources} />}
       {!isStreaming && content && !imageUrl && !videoUrl && (
         <div className="toolbar mt-1">
