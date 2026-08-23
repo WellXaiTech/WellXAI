@@ -2408,7 +2408,13 @@ private fun AskImagineTabs(current: String, onAsk: () -> Unit, onImagine: () -> 
   Row(
     modifier = Modifier
       .clip(RoundedCornerShape(20.dp))
-      .background(colorScheme.onBackground.copy(alpha = 0.06f))
+      // Was 0.06f -- nearly invisible against scrolled message text behind
+      // the (deliberately transparent, see ChatScreenUi's own top bar
+      // comment) top bar, so both this pill and the "Extra" label inside
+      // it read as illegible clutter rather than a real control. Solid
+      // enough to stay legible over any background without losing the
+      // rounded-pill look.
+      .background(colorScheme.background)
       .padding(4.dp),
     horizontalArrangement = Arrangement.spacedBy(2.dp)
   ) {
@@ -2551,7 +2557,11 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
                 .padding(end = 12.dp)
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(colorScheme.onBackground.copy(alpha = 0.12f))
+                // Was 0.12f -- too faint to stay legible once real message
+                // text scrolls behind this (deliberately transparent) top
+                // bar; a solid circle keeps the icon readable regardless
+                // of what's underneath.
+                .background(colorScheme.background)
                 .clickable(onClick = { viewModel.newChat() }),
               contentAlignment = Alignment.Center
             ) {
@@ -2571,7 +2581,9 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
               .padding(end = 12.dp)
               .height(40.dp)
               .clip(RoundedCornerShape(percent = 50))
-              .background(colorScheme.onBackground.copy(alpha = 0.12f)),
+              // Was 0.12f -- see the new-chat circle above for why a
+              // solid background replaced it here too.
+              .background(colorScheme.background),
             verticalAlignment = Alignment.CenterVertically
           ) {
             Box(
