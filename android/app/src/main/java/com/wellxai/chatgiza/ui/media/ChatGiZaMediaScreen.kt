@@ -1551,10 +1551,15 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
                 )
               }
             ) {
-              Icon(Icons.AutoMirrored.Outlined.ListAlt, contentDescription = "Posts", tint = onBg, modifier = Modifier.size(20.dp))
+              Icon(
+                painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_lucide_table_of_contents),
+                contentDescription = "Posts",
+                tint = onBg,
+                modifier = Modifier.size(20.dp)
+              )
             }
             Icon(
-              Icons.Outlined.Comment,
+              painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_lucide_message_circle_code),
               contentDescription = "Replies",
               tint = onBgDim,
               modifier = Modifier.size(20.dp).clickable {
@@ -1562,7 +1567,7 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
               }
             )
             Icon(
-              painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_repost),
+              painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_lucide_rotate_ccw),
               contentDescription = "Reposts",
               tint = onBgDim,
               modifier = Modifier.size(20.dp).clickable {
@@ -1570,7 +1575,7 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
               }
             )
             Icon(
-              Icons.Outlined.Movie,
+              painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_lucide_app_window),
               contentDescription = "Media",
               tint = onBgDim,
               modifier = Modifier.size(20.dp).clickable {
@@ -1578,7 +1583,7 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
               }
             )
             Icon(
-              Icons.Outlined.BookmarkBorder,
+              painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_lucide_bookmark),
               contentDescription = "Likes",
               tint = onBgDim,
               modifier = Modifier.size(20.dp).clickable {
