@@ -5308,13 +5308,12 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
   BackHandler(enabled = viewModel.screen is AppScreen.History) { viewModel.closeHistory() }
   val context = LocalContext.current
 
-  // The account-plan banner below needs this, but Billing is otherwise only
-  // loaded when the user actually opens the Billing screen -- fetch it once
-  // here too so the banner shows the real plan name instead of just "Free"
-  // the whole time.
-  LaunchedEffect(Unit) {
-    if (viewModel.billingSummary == null) viewModel.loadBilling()
-  }
+  // Billing is hidden for now (see the "Your account" banner below and
+  // ChatViewModel.openBilling's callers) while the server-side payment
+  // system is being rebuilt -- no point prefetching it here, and doing so
+  // used to fail silently in the background and stomp viewModel.errorMessage
+  // (a single field shared across unrelated screens) with a stray billing
+  // error that could then show up on a completely different screen.
 
   val query = viewModel.historySearchQuery.trim()
   val visibleConversations = viewModel.conversations
@@ -5400,12 +5399,11 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           }
         }
 
-        // A big account-plan banner instead of an empty gap -- shows which
-        // package the account is actually on. Every real tier already has
-        // its own name from the backend (Starter/Growth/Enterprise via
-        // PLAN_DETAILS); no active subscription just means the free tier,
-        // shown here as "Free" rather than leaving it blank or generic.
-        val planName = viewModel.billingSummary?.subscription?.planName?.takeIf { it != "ChatGiZa" } ?: "Free"
+        // A big account-plan banner instead of an empty gap. Shows the free
+        // tier only -- Billing is hidden while the payment system is being
+        // rebuilt (see ChatViewModel.openBilling's now-nonexistent callers),
+        // so this is a static display, not a tap target, until that's back.
+        val planName = "Free"
         Box(
           modifier = Modifier
             .fillMaxWidth()
@@ -5413,7 +5411,6 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             .height(150.dp)
             .clip(RoundedCornerShape(24.dp))
             .background(Brush.linearGradient(listOf(Color.White, Color(0xFFE0E0E0))))
-            .clickable { viewModel.openBilling() }
             .padding(20.dp)
         ) {
           Icon(
@@ -6716,7 +6713,8 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
     Toast.makeText(context, "$label — coming soon", Toast.LENGTH_SHORT).show()
   }
   LaunchedEffect(Unit) { viewModel.loadTotpStatus() }
-  LaunchedEffect(Unit) { viewModel.loadBilling() }
+  // Billing prefetch removed -- see the comment on HistoryScreen's old
+  // billing LaunchedEffect for why.
   val accountTabsOrder = listOf("My info", "Security", "Preference", "General")
   Box(
     modifier = Modifier
@@ -8754,14 +8752,16 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
   var videoUri by remember { mutableStateOf<Uri?>(null) }
   var sentiment by remember { mutableStateOf<String?>(null) }
   var posting by remember { mutableStateOf(false) }
-  var openingCheckout by remember { mutableStateOf(false) }
   // A failed post used to fail completely silently -- the button just went
   // back to "Post" with nothing else happening, which read as "stuck" or
   // "not doing anything" rather than "failed, here's why."
   LaunchedEffect(Unit) {
     viewModel.clearMediaError()
-    if (viewModel.billingSummary == null) viewModel.loadBilling()
   }
+  // Billing prefetch removed -- see the comment on HistoryScreen's old
+  // billing LaunchedEffect for why. hasGizaPro just stays false while
+  // billingSummary is never populated, same net effect on the caption
+  // paywall below as before.
   val hasGizaPro = viewModel.billingSummary?.subscription != null
   val overFreeCaptionLimit = !hasGizaPro && text.length > MEDIA_POST_FREE_CAPTION_LIMIT
 
@@ -8948,24 +8948,19 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
               fontSize = 13.sp
             )
             Spacer(modifier = Modifier.height(10.dp))
+            // GiZa Pro checkout is offline while the payment system is being
+            // rebuilt -- this used to call viewModel.startCheckout("starter"),
+            // which now always fails server-side and surfaced a dead-end
+            // "Couldn't start checkout" error. Trim the caption instead of
+            // dangling a broken upgrade path in front of someone who can't
+            // actually complete it.
             Button(
-              onClick = {
-                openingCheckout = true
-                viewModel.startCheckout("starter") { url ->
-                  openingCheckout = false
-                  if (url != null) {
-                    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-                  } else {
-                    viewModel.reportMediaError("Couldn't start checkout — try again")
-                  }
-                }
-              },
-              enabled = !openingCheckout,
+              onClick = { viewModel.reportMediaError("GiZa Pro upgrades aren't available right now -- please shorten your caption.") },
               colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
               shape = RoundedCornerShape(20.dp),
               contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp)
             ) {
-              Text(if (openingCheckout) "Opening…" else "Upgrade to GiZa Pro", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+              Text("Not available right now", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
             }
           }
         }
