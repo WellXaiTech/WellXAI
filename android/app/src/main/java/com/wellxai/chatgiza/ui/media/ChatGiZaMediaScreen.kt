@@ -4,6 +4,8 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -45,6 +47,7 @@ import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.filled.Home
@@ -78,6 +81,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -114,6 +118,10 @@ import com.wellxai.chatgiza.MediaCommentComposerSheet
 import com.wellxai.chatgiza.MediaPostComments
 import com.wellxai.chatgiza.MediaPostVideoPlayer
 import com.wellxai.chatgiza.formatMediaPostTimeAgo
+import com.wellxai.chatgiza.uriToPostImageDataUrl
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 // =============================================================
 // CHATGIZA MEDIA -- white/monochrome feed screen (reference layout):
@@ -1249,6 +1257,20 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
   BackHandler(enabled = !showExtraSettings) { onBack() }
   val context = LocalContext.current
   val isOwnProfile = target.authorId == viewModel.userId
+  // Tapping the avatar itself is the change-photo affordance here -- kept
+  // as a self-contained upload rather than routing through "Edit Profile"
+  // below, since navigating out of Media into the main app's own screen
+  // stack has caused back-button mismatches elsewhere (see the comment on
+  // ExtraSettingsRow's Profile row).
+  val photoScope = rememberCoroutineScope()
+  val profilePhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    if (uri != null) {
+      photoScope.launch {
+        val dataUrl = withContext(Dispatchers.IO) { uriToPostImageDataUrl(context, uri) }
+        if (dataUrl != null) viewModel.updateProfilePhoto(dataUrl)
+      }
+    }
+  }
   // Status/story posts never show on a profile -- that's the Stories row's
   // job (and even there, only for 24h; see MEDIA_STORY_MAX_AGE_MS). A
   // profile is the permanent album, not a place ephemeral status content
@@ -1337,6 +1359,7 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
                 .clip(CircleShape)
                 .background(bg)
                 .padding(3.dp)
+                .let { if (isOwnProfile) it.clickable { profilePhotoPicker.launch("image/*") } else it }
             ) {
               if (target.authorImage != null) {
                 AsyncImage(
@@ -1347,6 +1370,23 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
                 )
               } else {
                 MediaInitialAvatar(name = target.authorName, size = 70.dp)
+              }
+              if (isOwnProfile) {
+                Box(
+                  modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black)
+                    .border(2.dp, bg, CircleShape),
+                  contentAlignment = Alignment.Center
+                ) {
+                  if (viewModel.savingProfilePhoto) {
+                    CircularProgressIndicator(modifier = Modifier.size(12.dp), color = Color.White, strokeWidth = 1.5.dp)
+                  } else {
+                    Icon(Icons.Outlined.Edit, contentDescription = "Change photo", tint = Color.White, modifier = Modifier.size(12.dp))
+                  }
+                }
               }
             }
 
