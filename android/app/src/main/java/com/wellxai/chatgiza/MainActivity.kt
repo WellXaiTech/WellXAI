@@ -8318,12 +8318,16 @@ internal fun MediaPostVideoPlayer(url: String, modifier: Modifier = Modifier) {
         .clip(CircleShape)
         .background(Color.Black.copy(alpha = 0.45f))
     ) {
-      Icon(
-        if (muted) Icons.Filled.VolumeOff else Icons.Filled.VolumeUp,
-        contentDescription = if (muted) "Unmute" else "Mute",
-        tint = Color.White,
-        modifier = Modifier.size(18.dp)
-      )
+      if (muted) {
+        Icon(Icons.Filled.VolumeOff, contentDescription = "Unmute", tint = Color.White, modifier = Modifier.size(18.dp))
+      } else {
+        Icon(
+          painter = androidx.compose.ui.res.painterResource(R.drawable.ic_video_volume_up),
+          contentDescription = "Mute",
+          tint = Color.White,
+          modifier = Modifier.size(18.dp)
+        )
+      }
     }
   }
 }
