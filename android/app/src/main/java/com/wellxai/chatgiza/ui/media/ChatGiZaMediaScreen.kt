@@ -968,12 +968,14 @@ private fun MediaPostActionsRow(post: ApiMediaPost, isDark: Boolean, onLikeClick
   val context = LocalContext.current
   // Was a hardcoded near-black Color(0xFF1A1A1A) regardless of theme --
   // stood out badly against the app's actual (usually light) background.
-  // Pill fill now matches the theme background itself (semi-opaque so it
-  // still reads as a pill over varied photo/video content underneath),
-  // icon/text tinted the theme foreground for contrast against that.
+  // Then briefly tinted to the theme background itself, which read fine
+  // over photo/video content but made the pills invisible against a plain
+  // white/black feed card (the pill and the card were the same color) --
+  // now a real neutral gray/charcoal so every action always sits inside a
+  // visible pill, on any background.
   val bg = if (isDark) Color.Black else Color.White
   val fg = if (isDark) Color.White else Color.Black
-  val pillBg = bg.copy(alpha = 0.85f)
+  val pillBg = if (isDark) Color(0xFF262626) else Color(0xFFF0F2F5)
   Row(
     modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp),
     verticalAlignment = Alignment.CenterVertically
@@ -989,7 +991,7 @@ private fun MediaPostActionsRow(post: ApiMediaPost, isDark: Boolean, onLikeClick
         painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_lucide_thumbs_up),
         contentDescription = "Like",
         tint = if (post.likedByMe) Color(0xFFFF4500) else fg,
-        modifier = Modifier.size(22.dp).clickable(onClick = onLikeClick)
+        modifier = Modifier.size(18.dp).clickable(onClick = onLikeClick)
       )
       Spacer(modifier = Modifier.width(6.dp))
       Text(text = post.likeCount.toString(), fontSize = 13.sp, color = fg, fontWeight = FontWeight.Medium)
@@ -1002,7 +1004,7 @@ private fun MediaPostActionsRow(post: ApiMediaPost, isDark: Boolean, onLikeClick
         painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_lucide_thumbs_down),
         contentDescription = "Dislike",
         tint = fg,
-        modifier = Modifier.size(22.dp).clickable {}
+        modifier = Modifier.size(18.dp).clickable {}
       )
     }
 
