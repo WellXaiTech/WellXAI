@@ -117,6 +117,7 @@ import com.wellxai.chatgiza.MEDIA_POST_TEXT_PREVIEW_LENGTH
 import com.wellxai.chatgiza.MediaCommentComposerSheet
 import com.wellxai.chatgiza.MediaPostComments
 import com.wellxai.chatgiza.MediaPostVideoPlayer
+import com.wellxai.chatgiza.ProfilePhotoCropDialog
 import com.wellxai.chatgiza.formatMediaPostTimeAgo
 import com.wellxai.chatgiza.uriToPostImageDataUrl
 import kotlinx.coroutines.Dispatchers
@@ -1293,14 +1294,19 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
   // below, since navigating out of Media into the main app's own screen
   // stack has caused back-button mismatches elsewhere (see the comment on
   // ExtraSettingsRow's Profile row).
-  val photoScope = rememberCoroutineScope()
+  var cropPhotoUri by remember { mutableStateOf<Uri?>(null) }
   val profilePhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-    if (uri != null) {
-      photoScope.launch {
-        val dataUrl = withContext(Dispatchers.IO) { uriToPostImageDataUrl(context, uri) }
-        if (dataUrl != null) viewModel.updateProfilePhoto(dataUrl)
+    if (uri != null) cropPhotoUri = uri
+  }
+  cropPhotoUri?.let { pickedUri ->
+    ProfilePhotoCropDialog(
+      uri = pickedUri,
+      onCancel = { cropPhotoUri = null },
+      onConfirm = { dataUrl ->
+        cropPhotoUri = null
+        viewModel.updateProfilePhoto(dataUrl)
       }
-    }
+    )
   }
   // Status/story posts never show on a profile -- that's the Stories row's
   // job (and even there, only for 24h; see MEDIA_STORY_MAX_AGE_MS). A
