@@ -153,6 +153,31 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
   var fullscreenPostId by remember { mutableStateOf<String?>(null) }
   var fullscreenPage by remember { mutableStateOf(0) }
 
+  // Creating a story skips the composer entirely -- unlike a regular post
+  // (text + optional photo, reviewed before posting), tapping "Create
+  // story" goes straight to the phone's own gallery and posts whatever
+  // photo comes back immediately, no caption step.
+  val context = LocalContext.current
+  val storyScope = rememberCoroutineScope()
+  var postingStory by remember { mutableStateOf(false) }
+  val createStoryPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    if (uri != null) {
+      postingStory = true
+      storyScope.launch {
+        val dataUrl = withContext(Dispatchers.IO) { uriToPostImageDataUrl(context, uri) }
+        if (dataUrl == null) {
+          postingStory = false
+          Toast.makeText(context, "Couldn't read that photo", Toast.LENGTH_SHORT).show()
+        } else {
+          viewModel.createMediaPost(text = "", imageDataUrls = listOf(dataUrl), videoBytes = null, videoMime = null, sentiment = null, destination = "status") { success ->
+            postingStory = false
+            if (!success) Toast.makeText(context, viewModel.mediaError ?: "Failed to post", Toast.LENGTH_SHORT).show()
+          }
+        }
+      }
+    }
+  }
+
   // "status"-destination posts predate the removal of the My Story row --
   // excluding them keeps any old ones from resurfacing in the feed now
   // that there's no stories UI to have shown them in the first place.
@@ -237,10 +262,8 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
             userName = viewModel.userName,
             userImage = viewModel.userImage,
             storyPosts = storyPosts,
-            onCreateStory = {
-              composerDestination = "status"
-              showPostComposer = true
-            },
+            postingStory = postingStory,
+            onCreateStory = { createStoryPicker.launch("image/*") },
             onOpenStory = { post -> fullscreenPostId = post.id; fullscreenPage = 0 }
           )
         }
@@ -588,6 +611,7 @@ private fun MediaStoriesRow(
   userName: String?,
   userImage: String?,
   storyPosts: List<ApiMediaPost>,
+  postingStory: Boolean,
   onCreateStory: () -> Unit,
   onOpenStory: (ApiMediaPost) -> Unit
 ) {
@@ -639,6 +663,11 @@ private fun MediaStoriesRow(
           fontWeight = FontWeight.SemiBold,
           modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp)
         )
+        if (postingStory) {
+          Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(modifier = Modifier.size(28.dp), color = Color.White, strokeWidth = 2.dp)
+          }
+        }
       }
     }
 
