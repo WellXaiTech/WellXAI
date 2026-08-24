@@ -750,7 +750,7 @@ private fun MediaPost(
           onClick = { moreMenuOpen = true },
           modifier = Modifier.size(36.dp)
         ) {
-          Icon(Icons.Filled.MoreVert, contentDescription = "More", tint = fg)
+          Icon(Icons.Filled.MoreVert, contentDescription = "More", tint = fg, modifier = Modifier.size(18.dp))
         }
         androidx.compose.material3.DropdownMenu(
           expanded = moreMenuOpen,
@@ -781,7 +781,7 @@ private fun MediaPost(
         onClick = { dismissed = true },
         modifier = Modifier.size(36.dp)
       ) {
-        Icon(Icons.Outlined.Close, contentDescription = "Dismiss", tint = fg)
+        Icon(Icons.Outlined.Close, contentDescription = "Dismiss", tint = fg, modifier = Modifier.size(18.dp))
       }
     }
 
@@ -1272,48 +1272,41 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
               Box(modifier = Modifier.fillMaxSize().background(Color(0xFF2A2A2A)))
             }
 
-            Row(
-              modifier = Modifier.fillMaxWidth().padding(top = topInset).padding(8.dp),
-              horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-              Box(
-                modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)),
-                contentAlignment = Alignment.Center
+            // Back button removed -- the system back gesture already closes
+            // this screen (see the BackHandler below), and having a visible
+            // circle for it here was redundant with that.
+            if (isOwnProfile) {
+              Row(
+                modifier = Modifier.align(Alignment.TopEnd).padding(top = topInset).padding(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
               ) {
-                IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
-                  Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(18.dp))
-                }
-              }
-              if (isOwnProfile) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                  Box(
-                    modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)),
-                    contentAlignment = Alignment.Center
+                Box(
+                  modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)),
+                  contentAlignment = Alignment.Center
+                ) {
+                  IconButton(
+                    onClick = { Toast.makeText(context, "Search — coming soon", Toast.LENGTH_SHORT).show() },
+                    modifier = Modifier.size(36.dp)
                   ) {
-                    IconButton(
-                      onClick = { Toast.makeText(context, "Search — coming soon", Toast.LENGTH_SHORT).show() },
-                      modifier = Modifier.size(36.dp)
-                    ) {
-                      Icon(
-                        painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_media_profile_search),
-                        contentDescription = "Search",
-                        tint = Color.White,
-                        modifier = Modifier.size(18.dp)
-                      )
-                    }
+                    Icon(
+                      painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_media_profile_search),
+                      contentDescription = "Search",
+                      tint = Color.White,
+                      modifier = Modifier.size(18.dp)
+                    )
                   }
-                  Box(
-                    modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)),
-                    contentAlignment = Alignment.Center
-                  ) {
-                    IconButton(onClick = { showExtraSettings = true }, modifier = Modifier.size(36.dp)) {
-                      Icon(
-                        painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_badge_seal),
-                        contentDescription = "Settings",
-                        tint = Color.White,
-                        modifier = Modifier.size(18.dp)
-                      )
-                    }
+                }
+                Box(
+                  modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)),
+                  contentAlignment = Alignment.Center
+                ) {
+                  IconButton(onClick = { showExtraSettings = true }, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                      painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_badge_seal),
+                      contentDescription = "Settings",
+                      tint = Color.White,
+                      modifier = Modifier.size(18.dp)
+                    )
                   }
                 }
               }
