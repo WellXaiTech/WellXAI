@@ -16139,15 +16139,14 @@ private fun MessageActionBar(
         context.startActivity(Intent.createChooser(intent, null))
       }
       ActionBarItem(
-        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_thumbs_up),
+        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lucide_thumbs_up),
         label = "Like",
         tint = if (reaction == "up") accent else Color(0xFFA8A8A8)
       ) { reaction = if (reaction == "up") null else "up" }
       ActionBarItem(
-        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_thumbs_up),
+        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lucide_thumbs_down),
         label = "Dislike",
-        tint = if (reaction == "down") accent else Color(0xFFA8A8A8),
-        rotation = 180f
+        tint = if (reaction == "down") accent else Color(0xFFA8A8A8)
       ) { reaction = if (reaction == "down") null else "down" }
       readAloudItem()
       ActionBarItem(androidx.compose.ui.res.painterResource(R.drawable.ic_regenerate), "Regenerate", size = 18.dp, onClick = onRegenerate)
