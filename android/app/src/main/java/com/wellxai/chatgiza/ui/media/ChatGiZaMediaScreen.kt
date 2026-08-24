@@ -932,23 +932,23 @@ private fun MediaPostActionsRow(post: ApiMediaPost, isDark: Boolean, onLikeClick
       verticalAlignment = Alignment.CenterVertically
     ) {
       Icon(
-        painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_upvote),
-        contentDescription = "Upvote",
+        painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_lucide_thumbs_up),
+        contentDescription = "Like",
         tint = if (post.likedByMe) Color(0xFFFF4500) else fg,
-        modifier = Modifier.size(16.dp).clickable(onClick = onLikeClick)
+        modifier = Modifier.size(22.dp).clickable(onClick = onLikeClick)
       )
       Spacer(modifier = Modifier.width(6.dp))
       Text(text = post.likeCount.toString(), fontSize = 13.sp, color = fg, fontWeight = FontWeight.Medium)
       Spacer(modifier = Modifier.width(6.dp))
       Box(modifier = Modifier.width(1.dp).height(12.dp).background(fg.copy(alpha = 0.3f)))
       Spacer(modifier = Modifier.width(6.dp))
-      // Visual-only for now -- no downvote backend built yet, matching
+      // Visual-only for now -- no dislike backend built yet, matching
       // how repost below has always been decorative.
       Icon(
-        painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_downvote),
-        contentDescription = "Downvote",
+        painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_lucide_thumbs_down),
+        contentDescription = "Dislike",
         tint = fg,
-        modifier = Modifier.size(16.dp).clickable {}
+        modifier = Modifier.size(22.dp).clickable {}
       )
     }
 
@@ -966,7 +966,7 @@ private fun MediaPostActionsRow(post: ApiMediaPost, isDark: Boolean, onLikeClick
         painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_comment),
         contentDescription = "Comment",
         tint = fg,
-        modifier = Modifier.size(16.dp)
+        modifier = Modifier.size(22.dp)
       )
       Spacer(modifier = Modifier.width(6.dp))
       Text(text = post.commentCount.toString(), fontSize = 13.sp, color = fg, fontWeight = FontWeight.Medium)
@@ -984,10 +984,10 @@ private fun MediaPostActionsRow(post: ApiMediaPost, isDark: Boolean, onLikeClick
       contentAlignment = Alignment.Center
     ) {
       Icon(
-        painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_repost),
+        painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_lucide_rotate_ccw),
         contentDescription = "Repost",
         tint = fg,
-        modifier = Modifier.size(16.dp)
+        modifier = Modifier.size(20.dp)
       )
     }
 
@@ -1011,7 +1011,7 @@ private fun MediaPostActionsRow(post: ApiMediaPost, isDark: Boolean, onLikeClick
         painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_share_nodes),
         contentDescription = "Share",
         tint = fg,
-        modifier = Modifier.size(16.dp)
+        modifier = Modifier.size(20.dp)
       )
     }
   }
