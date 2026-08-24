@@ -1060,23 +1060,26 @@ object ChatGizaApi {
   }
 
   // Points users.image (the real account avatar, read everywhere userImage
-  // is -- ChatGiZa Media posts/profile included) at a preset avatar's
-  // Twemoji image, so picking one in the picker isn't only visible in the
-  // couple of screens that check the local preset id directly.
-  suspend fun updateAvatar(token: String, imageUrl: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
+  // is -- ChatGiZa Media posts/profile included) at either a preset avatar's
+  // Twemoji image (an https URL) or a photo picked from the device's own
+  // gallery (a data: URL, uploaded server-side to Storage). Returns the
+  // final image URL the server actually stored, since a data: URL input
+  // gets swapped for the uploaded https URL.
+  suspend fun updateAvatar(token: String, image: String): ApiResult<String> = withContext(Dispatchers.IO) {
     try {
-      val payload = JSONObject().put("image", imageUrl).toString().toRequestBody(JSON)
+      val payload = JSONObject().put("image", image).toString().toRequestBody(JSON)
       val request = Request.Builder()
         .url("$BASE_URL/api/profile/avatar")
         .header("Authorization", "Bearer $token")
         .put(payload)
         .build()
       client.newCall(request).execute().use { response ->
+        val text = response.body?.string().orEmpty()
         if (!response.isSuccessful) {
-          val text = response.body?.string().orEmpty()
           return@withContext ApiResult.Failure(errorMessage(text, response.code))
         }
-        ApiResult.Success(Unit)
+        val storedImage = JSONObject(text).optString("image").ifEmpty { image }
+        ApiResult.Success(storedImage)
       }
     } catch (e: Exception) {
       ApiResult.Failure(e.message ?: "Network error")

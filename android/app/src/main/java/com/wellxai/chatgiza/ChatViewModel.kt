@@ -1243,12 +1243,40 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     val token = tokenStore.getToken() ?: return
     val imageUrl = emojiToTwemojiUrl(emoji)
     viewModelScope.launch {
-      when (ChatGizaApi.updateAvatar(token, imageUrl)) {
+      when (val result = ChatGizaApi.updateAvatar(token, imageUrl)) {
         is ApiResult.Success -> {
-          userImage = imageUrl
-          tokenStore.setUserImage(imageUrl)
+          userImage = result.value
+          tokenStore.setUserImage(result.value)
         }
         is ApiResult.Failure -> {}
+      }
+    }
+  }
+
+  // A photo picked from the device's own gallery for the account avatar
+  // (EditProfileScreen's "Change photo" button) -- separate from
+  // updateAvatarPreset above since this always sends a data: URL, never a
+  // preset id/Twemoji URL, and doesn't touch avatarPresetId.
+  var savingProfilePhoto by mutableStateOf(false)
+    private set
+  var profilePhotoError by mutableStateOf<String?>(null)
+    private set
+
+  fun updateProfilePhoto(dataUrl: String) {
+    val token = tokenStore.getToken() ?: return
+    savingProfilePhoto = true
+    profilePhotoError = null
+    viewModelScope.launch {
+      when (val result = ChatGizaApi.updateAvatar(token, dataUrl)) {
+        is ApiResult.Success -> {
+          userImage = result.value
+          tokenStore.setUserImage(result.value)
+          savingProfilePhoto = false
+        }
+        is ApiResult.Failure -> {
+          profilePhotoError = result.message
+          savingProfilePhoto = false
+        }
       }
     }
   }
