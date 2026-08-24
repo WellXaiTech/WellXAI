@@ -684,7 +684,6 @@ private fun MediaPost(
   val context = LocalContext.current
   val pagerState = rememberPagerState(pageCount = { post.imageUrls.size })
   var textExpanded by remember(post.id) { mutableStateOf(false) }
-  var following by remember(post.id) { mutableStateOf(false) }
   var moreMenuOpen by remember(post.id) { mutableStateOf(false) }
   val isLongText = post.text.length > MEDIA_POST_TEXT_PREVIEW_LENGTH
   val bg = if (isDark) Color.Black else Color.White
@@ -737,20 +736,9 @@ private fun MediaPost(
         }
       }
 
-      if (!isOwnPost) {
-        OutlinedButton(
-          onClick = { following = !following },
-          shape = RoundedCornerShape(percent = 50),
-          colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = fg),
-          border = androidx.compose.foundation.BorderStroke(1.dp, fg.copy(alpha = 0.4f)),
-          contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 0.dp),
-          modifier = Modifier.height(30.dp)
-        ) {
-          Text(if (following) "Following" else "Follow", fontSize = 12.sp)
-        }
-        Spacer(modifier = Modifier.width(2.dp))
-      }
-
+      // Follow moved to the profile screen only (MediaProfileScreen) --
+      // was also here on every feed card, which duplicated the same
+      // action in two places for the same person.
       Box {
         IconButton(
           onClick = { moreMenuOpen = true },
@@ -896,7 +884,7 @@ private fun MediaPost(
     // ACTIONS
     // =====================================================
 
-    MediaPostActionsRow(post = post, onLikeClick = onLikeClick, onToggleComments = onToggleComments)
+    MediaPostActionsRow(post = post, isDark = isDark, onLikeClick = onLikeClick, onToggleComments = onToggleComments)
 
     if (commentsExpanded) {
       Box(modifier = Modifier.padding(horizontal = 10.dp)) {
@@ -916,8 +904,16 @@ private fun MediaPost(
 // (bubble + count), then plain circular repost/share icons. Shared between
 // the feed card and the fullscreen image viewer so both stay in sync.
 @Composable
-private fun MediaPostActionsRow(post: ApiMediaPost, onLikeClick: () -> Unit, onToggleComments: () -> Unit) {
+private fun MediaPostActionsRow(post: ApiMediaPost, isDark: Boolean, onLikeClick: () -> Unit, onToggleComments: () -> Unit) {
   val context = LocalContext.current
+  // Was a hardcoded near-black Color(0xFF1A1A1A) regardless of theme --
+  // stood out badly against the app's actual (usually light) background.
+  // Pill fill now matches the theme background itself (semi-opaque so it
+  // still reads as a pill over varied photo/video content underneath),
+  // icon/text tinted the theme foreground for contrast against that.
+  val bg = if (isDark) Color.Black else Color.White
+  val fg = if (isDark) Color.White else Color.Black
+  val pillBg = bg.copy(alpha = 0.85f)
   Row(
     modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp),
     verticalAlignment = Alignment.CenterVertically
@@ -925,27 +921,27 @@ private fun MediaPostActionsRow(post: ApiMediaPost, onLikeClick: () -> Unit, onT
     Row(
       modifier = Modifier
         .clip(RoundedCornerShape(percent = 50))
-        .background(Color(0xFF1A1A1A))
+        .background(pillBg)
         .padding(horizontal = 10.dp, vertical = 6.dp),
       verticalAlignment = Alignment.CenterVertically
     ) {
       Icon(
         painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_upvote),
         contentDescription = "Upvote",
-        tint = if (post.likedByMe) Color(0xFFFF4500) else Color.White,
+        tint = if (post.likedByMe) Color(0xFFFF4500) else fg,
         modifier = Modifier.size(16.dp).clickable(onClick = onLikeClick)
       )
       Spacer(modifier = Modifier.width(6.dp))
-      Text(text = post.likeCount.toString(), fontSize = 13.sp, color = Color.White, fontWeight = FontWeight.Medium)
+      Text(text = post.likeCount.toString(), fontSize = 13.sp, color = fg, fontWeight = FontWeight.Medium)
       Spacer(modifier = Modifier.width(6.dp))
-      Box(modifier = Modifier.width(1.dp).height(12.dp).background(Color.White.copy(alpha = 0.3f)))
+      Box(modifier = Modifier.width(1.dp).height(12.dp).background(fg.copy(alpha = 0.3f)))
       Spacer(modifier = Modifier.width(6.dp))
       // Visual-only for now -- no downvote backend built yet, matching
       // how repost below has always been decorative.
       Icon(
         painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_downvote),
         contentDescription = "Downvote",
-        tint = Color.White,
+        tint = fg,
         modifier = Modifier.size(16.dp).clickable {}
       )
     }
@@ -955,7 +951,7 @@ private fun MediaPostActionsRow(post: ApiMediaPost, onLikeClick: () -> Unit, onT
     Row(
       modifier = Modifier
         .clip(RoundedCornerShape(percent = 50))
-        .background(Color(0xFF1A1A1A))
+        .background(pillBg)
         .clickable(onClick = onToggleComments)
         .padding(horizontal = 10.dp, vertical = 6.dp),
       verticalAlignment = Alignment.CenterVertically
@@ -963,11 +959,11 @@ private fun MediaPostActionsRow(post: ApiMediaPost, onLikeClick: () -> Unit, onT
       Icon(
         painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_comment),
         contentDescription = "Comment",
-        tint = Color.White,
+        tint = fg,
         modifier = Modifier.size(16.dp)
       )
       Spacer(modifier = Modifier.width(6.dp))
-      Text(text = post.commentCount.toString(), fontSize = 13.sp, color = Color.White, fontWeight = FontWeight.Medium)
+      Text(text = post.commentCount.toString(), fontSize = 13.sp, color = fg, fontWeight = FontWeight.Medium)
     }
 
     Spacer(modifier = Modifier.weight(1f))
@@ -977,14 +973,14 @@ private fun MediaPostActionsRow(post: ApiMediaPost, onLikeClick: () -> Unit, onT
       modifier = Modifier
         .size(32.dp)
         .clip(CircleShape)
-        .background(Color(0xFF1A1A1A))
+        .background(pillBg)
         .clickable {},
       contentAlignment = Alignment.Center
     ) {
       Icon(
         painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_extra_repost),
         contentDescription = "Repost",
-        tint = Color.White,
+        tint = fg,
         modifier = Modifier.size(16.dp)
       )
     }
@@ -995,7 +991,7 @@ private fun MediaPostActionsRow(post: ApiMediaPost, onLikeClick: () -> Unit, onT
       modifier = Modifier
         .size(32.dp)
         .clip(CircleShape)
-        .background(Color(0xFF1A1A1A))
+        .background(pillBg)
         .clickable {
           val sendIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
@@ -1008,7 +1004,7 @@ private fun MediaPostActionsRow(post: ApiMediaPost, onLikeClick: () -> Unit, onT
       Icon(
         painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_share_nodes),
         contentDescription = "Share",
-        tint = Color.White,
+        tint = fg,
         modifier = Modifier.size(16.dp)
       )
     }
@@ -1096,7 +1092,10 @@ private fun MediaPostFullscreenViewer(
           modifier = Modifier.padding(bottom = 8.dp)
         )
       }
-      MediaPostActionsRow(post = post, onLikeClick = onLikeClick, onToggleComments = onToggleComments)
+      // Always the dark-pill styling here -- this viewer's own backdrop is
+      // always black regardless of the app's light/dark setting, unlike
+      // the feed card these pills were copied from.
+      MediaPostActionsRow(post = post, isDark = true, onLikeClick = onLikeClick, onToggleComments = onToggleComments)
     }
   }
 }
