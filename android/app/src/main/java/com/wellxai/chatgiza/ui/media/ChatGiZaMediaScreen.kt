@@ -84,6 +84,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -209,17 +211,32 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
       item { Spacer(modifier = Modifier.height(if (showHeader) headerHeight else 0.dp)) }
 
       item {
-        MediaStoriesRow(
-          isDark = isDark,
-          userName = viewModel.userName,
-          userImage = viewModel.userImage,
-          storyPosts = storyPosts,
-          onCreateStory = {
-            composerDestination = "status"
-            showPostComposer = true
-          },
-          onOpenStory = { post -> fullscreenPostId = post.id; fullscreenPage = 0 }
-        )
+        val dividerColor = if (isDark) Color(0xFF2A2A2A) else Color.LightGray
+        androidx.compose.material3.HorizontalDivider(color = dividerColor)
+        // Lines above/below plus a shadow give this row a "raised panel"
+        // look -- it stays in the exact same spot in the feed, it just
+        // reads as sitting a little above the surrounding background
+        // instead of flat against it.
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .zIndex(1f)
+            .shadow(elevation = 6.dp)
+            .background(bg)
+        ) {
+          MediaStoriesRow(
+            isDark = isDark,
+            userName = viewModel.userName,
+            userImage = viewModel.userImage,
+            storyPosts = storyPosts,
+            onCreateStory = {
+              composerDestination = "status"
+              showPostComposer = true
+            },
+            onOpenStory = { post -> fullscreenPostId = post.id; fullscreenPage = 0 }
+          )
+        }
+        androidx.compose.material3.HorizontalDivider(color = dividerColor)
       }
 
       if (searchOpen) {
