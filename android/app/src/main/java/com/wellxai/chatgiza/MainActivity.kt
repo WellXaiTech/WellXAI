@@ -8889,23 +8889,8 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
             modifier = Modifier.size(20.dp)
           )
         }
-        IconButton(onClick = { text += "#" }, modifier = Modifier.size(30.dp)) {
-          Icon(Icons.Outlined.Tag, contentDescription = "Hashtag", tint = Color(0xFFA8A8A8), modifier = Modifier.size(22.dp))
-        }
-        IconButton(onClick = { text += "$" }, modifier = Modifier.size(30.dp)) {
-          Icon(Icons.Outlined.AttachMoney, contentDescription = "Cashtag", tint = Color(0xFFA8A8A8), modifier = Modifier.size(22.dp))
-        }
-        IconButton(onClick = {}, modifier = Modifier.size(30.dp)) {
-          Icon(Icons.Outlined.Poll, contentDescription = "Poll", tint = Color(0xFFA8A8A8), modifier = Modifier.size(22.dp))
-        }
-        IconButton(onClick = {}, modifier = Modifier.size(30.dp)) {
-          Icon(Icons.Outlined.CardGiftcard, contentDescription = "Gift", tint = Color(0xFFA8A8A8), modifier = Modifier.size(22.dp))
-        }
-        IconButton(onClick = {}, modifier = Modifier.size(30.dp)) {
-          Icon(Icons.Outlined.MoreHoriz, contentDescription = "More", tint = Color(0xFFA8A8A8), modifier = Modifier.size(22.dp))
-        }
-        Spacer(modifier = Modifier.weight(1f))
-        SentimentToggle(selected = sentiment, onSelect = { sentiment = if (sentiment == it) null else it })
+        // Hashtag/cashtag/poll/gift/more and the bullish/neutral/bearish
+        // sentiment toggle removed from here -- just emoji/photo/video now.
       }
     }
   }
@@ -9334,6 +9319,17 @@ private fun EditProfileScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeEditProfile() }
   var xNote by remember { mutableStateOf(false) }
 
+  val context = LocalContext.current
+  val photoScope = rememberCoroutineScope()
+  val profilePhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    if (uri != null) {
+      photoScope.launch {
+        val dataUrl = withContext(Dispatchers.IO) { uriToPostImageDataUrl(context, uri) }
+        if (dataUrl != null) viewModel.updateProfilePhoto(dataUrl)
+      }
+    }
+  }
+
   Column(
     modifier = Modifier
       .fillMaxSize()
@@ -9367,7 +9363,7 @@ private fun EditProfileScreen(viewModel: ChatViewModel) {
     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
       ProfileAvatar(imageUrl = viewModel.userImage, size = 120.dp)
       FilledIconButton(
-        onClick = { xNote = true },
+        onClick = { profilePhotoPicker.launch("image/*") },
         modifier = Modifier
           .size(40.dp)
           .align(Alignment.BottomEnd)
@@ -9375,7 +9371,11 @@ private fun EditProfileScreen(viewModel: ChatViewModel) {
           .border(2.dp, Color(0xFF181818), CircleShape),
         colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.Black)
       ) {
-        Icon(Icons.Outlined.Edit, contentDescription = "Change photo", tint = Color.White, modifier = Modifier.size(18.dp))
+        if (viewModel.savingProfilePhoto) {
+          CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+        } else {
+          Icon(Icons.Outlined.Edit, contentDescription = "Change photo", tint = Color.White, modifier = Modifier.size(18.dp))
+        }
       }
     }
 
