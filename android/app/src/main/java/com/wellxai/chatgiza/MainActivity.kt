@@ -97,6 +97,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.scrollBy
@@ -8000,6 +8001,24 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
   var activeTab by remember { mutableStateOf("Default") }
   var nameInput by remember { mutableStateOf(viewModel.avatarName ?: "") }
   val context = LocalContext.current
+  // This dialog used to be preset-emoji-only -- no way to actually set your
+  // own real photo from here, only from EditProfileScreen or the Extra
+  // Media profile screen. "Choose from gallery" below fixes that gap.
+  var cropPhotoUri by remember { mutableStateOf<Uri?>(null) }
+  val galleryPhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    if (uri != null) cropPhotoUri = uri
+  }
+  cropPhotoUri?.let { pickedUri ->
+    ProfilePhotoCropDialog(
+      uri = pickedUri,
+      onCancel = { cropPhotoUri = null },
+      onConfirm = { dataUrl ->
+        cropPhotoUri = null
+        viewModel.updateProfilePhoto(dataUrl)
+        viewModel.closeAvatarPicker()
+      }
+    )
+  }
   Dialog(
     onDismissRequest = { viewModel.closeAvatarPicker() },
     properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -8034,6 +8053,16 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
           Icon(Icons.Outlined.AccountCircle, contentDescription = null, tint = Color.Black, modifier = Modifier.size(88.dp))
         }
       }
+
+      Spacer(modifier = Modifier.height(10.dp))
+      Text(
+        "Choose from gallery",
+        color = Color.Black,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.SemiBold,
+        textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
+        modifier = Modifier.align(Alignment.CenterHorizontally).clickable { galleryPhotoPicker.launch("image/*") }
+      )
 
       Spacer(modifier = Modifier.height(16.dp))
       // Shown on top of the avatar itself wherever it renders, e.g. "Boss".
@@ -8458,6 +8487,144 @@ internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () ->
         ) {
           Text("Connect", color = Color.White, fontWeight = FontWeight.SemiBold)
         }
+      }
+    }
+  }
+}
+
+// Bounds-first decode of a picked photo, downsampled close to [maxDim] so a
+// full camera-resolution image never gets fully decoded into memory --
+// shared by the profile-photo crop dialog below (which needs real pixels to
+// crop, unlike uriToPostImageDataUrl's already-final small JPEG).
+private fun decodeBitmapCapped(context: android.content.Context, uri: Uri, maxDim: Int): Bitmap? {
+  return try {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+    var sampleSize = 1
+    while (bounds.outWidth / (sampleSize * 2) >= maxDim || bounds.outHeight / (sampleSize * 2) >= maxDim) {
+      sampleSize *= 2
+    }
+    context.contentResolver.openInputStream(uri)?.use {
+      BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sampleSize })
+    }
+  } catch (e: Exception) {
+    null
+  } catch (e: OutOfMemoryError) {
+    null
+  }
+}
+
+// A round, pinch-to-zoom/drag-to-pan crop step for the profile photo --
+// opened between picking a photo and actually uploading it. Outputs a
+// small fixed 480x480 JPEG regardless of the source photo's resolution,
+// which also fixes uploads stalling/spinning for a long time on a slow
+// connection (a full-resolution picked photo was going out over the wire
+// with no size cap of its own, unlike post photos which already went
+// through uriToPostImageDataUrl's downscale).
+private const val PROFILE_PHOTO_CROP_OUTPUT_SIZE = 480
+
+@Composable
+internal fun ProfilePhotoCropDialog(uri: Uri, onCancel: () -> Unit, onConfirm: (String) -> Unit) {
+  val context = LocalContext.current
+  val density = LocalDensity.current
+  var srcBitmap by remember(uri) { mutableStateOf<Bitmap?>(null) }
+  var loadFailed by remember(uri) { mutableStateOf(false) }
+  LaunchedEffect(uri) {
+    val bmp = withContext(Dispatchers.IO) { decodeBitmapCapped(context, uri, 1600) }
+    if (bmp == null) loadFailed = true else srcBitmap = bmp
+  }
+  LaunchedEffect(loadFailed) { if (loadFailed) onCancel() }
+
+  var zoomFactor by remember(uri) { mutableStateOf(1f) }
+  var offset by remember(uri) { mutableStateOf(Offset.Zero) }
+  val viewportDp = 280.dp
+  val viewportPx = with(density) { viewportDp.toPx() }
+
+  Dialog(onDismissRequest = onCancel, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    EdgeToEdgeDialogWindow()
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+      Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+        Row(
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Text("Cancel", color = Color.White, fontSize = 16.sp, modifier = Modifier.clickable(onClick = onCancel))
+          Text("Move and Scale", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+          val bitmapNow = srcBitmap
+          Text(
+            "Done",
+            color = if (bitmapNow != null) Color(0xFF4DA6FF) else Color.White.copy(alpha = 0.3f),
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.clickable(enabled = bitmapNow != null) {
+              val bmp = bitmapNow ?: return@clickable
+              val baseScale = maxOf(viewportPx / bmp.width, viewportPx / bmp.height)
+              val totalScale = baseScale * zoomFactor
+              val srcLeft = ((-offset.x) / totalScale).roundToInt().coerceIn(0, bmp.width - 1)
+              val srcTop = ((-offset.y) / totalScale).roundToInt().coerceIn(0, bmp.height - 1)
+              val cropSize = (viewportPx / totalScale).roundToInt()
+                .coerceAtMost(minOf(bmp.width - srcLeft, bmp.height - srcTop))
+                .coerceAtLeast(1)
+              val cropped = Bitmap.createBitmap(bmp, srcLeft, srcTop, cropSize, cropSize)
+              val output = Bitmap.createScaledBitmap(cropped, PROFILE_PHOTO_CROP_OUTPUT_SIZE, PROFILE_PHOTO_CROP_OUTPUT_SIZE, true)
+              val out = ByteArrayOutputStream()
+              output.compress(Bitmap.CompressFormat.JPEG, 85, out)
+              val base64 = Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
+              onConfirm("data:image/jpeg;base64,$base64")
+            }
+          )
+        }
+
+        Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+          val bmp = srcBitmap
+          if (bmp == null) {
+            CircularProgressIndicator(color = Color.White)
+          } else {
+            val baseScale = maxOf(viewportPx / bmp.width, viewportPx / bmp.height)
+            Box(
+              modifier = Modifier
+                .size(viewportDp)
+                .clip(CircleShape)
+                .background(Color(0xFF1A1A1A))
+                .pointerInput(bmp) {
+                  detectTransformGestures { _, pan, gestureZoom, _ ->
+                    val oldScale = baseScale * zoomFactor
+                    val newZoom = (zoomFactor * gestureZoom).coerceIn(1f, 4f)
+                    val newScale = baseScale * newZoom
+                    val center = viewportPx / 2f
+                    val imgX = (center - offset.x) / oldScale
+                    val imgY = (center - offset.y) / oldScale
+                    var newX = center - imgX * newScale + pan.x
+                    var newY = center - imgY * newScale + pan.y
+                    val dw = bmp.width * newScale
+                    val dh = bmp.height * newScale
+                    newX = newX.coerceIn((viewportPx - dw).coerceAtMost(0f), 0f)
+                    newY = newY.coerceIn((viewportPx - dh).coerceAtMost(0f), 0f)
+                    zoomFactor = newZoom
+                    offset = Offset(newX, newY)
+                  }
+                }
+            ) {
+              val totalScale = baseScale * zoomFactor
+              Image(
+                bitmap = bmp.asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier
+                  .size(with(density) { (bmp.width * totalScale).toDp() }, with(density) { (bmp.height * totalScale).toDp() })
+                  .graphicsLayer { translationX = offset.x; translationY = offset.y }
+              )
+            }
+          }
+        }
+
+        Text(
+          "Pinch to zoom, drag to reposition",
+          color = Color.White.copy(alpha = 0.6f),
+          fontSize = 13.sp,
+          modifier = Modifier.align(Alignment.CenterHorizontally).padding(vertical = 20.dp)
+        )
       }
     }
   }
@@ -9323,15 +9490,19 @@ private fun EditProfileScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeEditProfile() }
   var xNote by remember { mutableStateOf(false) }
 
-  val context = LocalContext.current
-  val photoScope = rememberCoroutineScope()
+  var cropPhotoUri by remember { mutableStateOf<Uri?>(null) }
   val profilePhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-    if (uri != null) {
-      photoScope.launch {
-        val dataUrl = withContext(Dispatchers.IO) { uriToPostImageDataUrl(context, uri) }
-        if (dataUrl != null) viewModel.updateProfilePhoto(dataUrl)
+    if (uri != null) cropPhotoUri = uri
+  }
+  if (cropPhotoUri != null) {
+    ProfilePhotoCropDialog(
+      uri = cropPhotoUri!!,
+      onCancel = { cropPhotoUri = null },
+      onConfirm = { dataUrl ->
+        cropPhotoUri = null
+        viewModel.updateProfilePhoto(dataUrl)
       }
-    }
+    )
   }
 
   Column(
