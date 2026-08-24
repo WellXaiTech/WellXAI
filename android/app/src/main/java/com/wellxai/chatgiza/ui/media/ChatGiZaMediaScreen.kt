@@ -244,18 +244,19 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
       item { Spacer(modifier = Modifier.height(if (showHeader) headerHeight else 0.dp)) }
 
       item {
-        val dividerColor = if (isDark) Color(0xFF2A2A2A) else Color.LightGray
-        androidx.compose.material3.HorizontalDivider(color = dividerColor)
-        // Lines above/below plus a shadow give this row a "raised panel"
-        // look -- it stays in the exact same spot in the feed, it just
-        // reads as sitting a little above the surrounding background
-        // instead of flat against it.
+        // Was two plain hairlines around a flat panel -- flat gray lines on
+        // a flat background read as clutter, not a section. Replaced with
+        // an actual floating card: rounded corners, a soft shadow, and a
+        // tint a shade off the page background so it visually separates
+        // itself instead of needing lines to mark where it starts/ends.
+        val cardBg = if (isDark) Color(0xFF161616) else Color(0xFFF7F7F9)
         Box(
           modifier = Modifier
             .fillMaxWidth()
-            .zIndex(1f)
-            .shadow(elevation = 6.dp)
-            .background(bg)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .shadow(elevation = 10.dp, shape = RoundedCornerShape(20.dp), ambientColor = Color.Black.copy(alpha = 0.25f), spotColor = Color.Black.copy(alpha = 0.25f))
+            .clip(RoundedCornerShape(20.dp))
+            .background(cardBg)
         ) {
           MediaStoriesRow(
             isDark = isDark,
@@ -267,7 +268,6 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
             onOpenStory = { post -> fullscreenPostId = post.id; fullscreenPage = 0 }
           )
         }
-        androidx.compose.material3.HorizontalDivider(color = dividerColor)
       }
 
       if (searchOpen) {
