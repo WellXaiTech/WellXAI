@@ -155,8 +155,13 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
   // same fullscreen photo viewer regular posts use (see fullscreenPostId
   // below) rather than leaving this dead until that gets built.
   val storyPosts = remember(viewModel.mediaPosts) {
+    val cutoff = System.currentTimeMillis() - MEDIA_STORY_MAX_AGE_MS
     viewModel.mediaPosts
-      .filter { (it.destination == "status" || it.destination == "both") && it.imageUrls.isNotEmpty() }
+      .filter {
+        (it.destination == "status" || it.destination == "both") &&
+          it.imageUrls.isNotEmpty() &&
+          it.createdAt >= cutoff
+      }
       .distinctBy { it.authorId }
   }
   val visiblePosts = remember(feedEligiblePosts, searchQuery) {
@@ -550,6 +555,7 @@ private fun ChatGiZaComposerBar(
 
 private val MEDIA_STORY_CARD_WIDTH = 100.dp
 private val MEDIA_STORY_CARD_HEIGHT = 160.dp
+private const val MEDIA_STORY_MAX_AGE_MS = 24L * 60 * 60 * 1000
 
 @Composable
 private fun MediaStoriesRow(
@@ -1226,8 +1232,12 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
   BackHandler(enabled = !showExtraSettings) { onBack() }
   val context = LocalContext.current
   val isOwnProfile = target.authorId == viewModel.userId
+  // Status/story posts never show on a profile -- that's the Stories row's
+  // job (and even there, only for 24h; see MEDIA_STORY_MAX_AGE_MS). A
+  // profile is the permanent album, not a place ephemeral status content
+  // should ever surface.
   val authorPosts = remember(viewModel.mediaPosts, target.authorId) {
-    viewModel.mediaPosts.filter { it.authorId == target.authorId }
+    viewModel.mediaPosts.filter { it.authorId == target.authorId && it.destination != "status" }
   }
   LaunchedEffect(target.authorId) { viewModel.loadMediaUserProfile(target.authorId) }
   val userProfile = viewModel.mediaUserProfiles[target.authorId]
@@ -1249,7 +1259,7 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
           // field exists yet). Back/menu controls float over it and the
           // avatar overlaps its bottom edge, matching the reference
           // profile-header layout.
-          Box(modifier = Modifier.fillMaxWidth().height(130.dp)) {
+          Box(modifier = Modifier.fillMaxWidth().height(100.dp)) {
             if (target.authorImage != null) {
               AsyncImage(
                 model = target.authorImage,
@@ -1336,7 +1346,7 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
               modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .offset(x = (-16).dp, y = 36.dp)
-                .size(40.dp)
+                .size(32.dp)
                 .clip(CircleShape)
                 .border(1.dp, onBgDim.copy(alpha = 0.4f), CircleShape)
                 .clickable {
@@ -1541,11 +1551,18 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
             verticalAlignment = Alignment.CenterVertically
           ) {
             Box(
-              modifier = Modifier.padding(bottom = 10.dp).drawBehind {
+              // Was padding(bottom = 10.dp) to make room for the
+              // underline -- that extra padding made this box taller than
+              // its four siblings, so centering the row pushed this one
+              // icon up relative to the others. drawBehind paints outside
+              // the box's own layout bounds without needing padding to
+              // reserve space for it, so the line just moves further down
+              // (18.dp instead of 8.dp) to land in the same place visually.
+              modifier = Modifier.drawBehind {
                 drawLine(
                   color = onBg,
-                  start = androidx.compose.ui.geometry.Offset(0f, size.height + 8.dp.toPx()),
-                  end = androidx.compose.ui.geometry.Offset(size.width, size.height + 8.dp.toPx()),
+                  start = androidx.compose.ui.geometry.Offset(0f, size.height + 18.dp.toPx()),
+                  end = androidx.compose.ui.geometry.Offset(size.width, size.height + 18.dp.toPx()),
                   strokeWidth = 2.dp.toPx()
                 )
               }
