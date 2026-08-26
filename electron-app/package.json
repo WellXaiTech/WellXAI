@@ -10,7 +10,8 @@
   "scripts": {
     "build": "tsc -p .",
     "dev": "npm run build && electron .",
-    "dist": "npm run build && electron-builder --win nsis"
+    "dist": "npm run build && electron-builder --win nsis",
+    "dist:mac": "npm run build && electron-builder --mac dmg"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -36,6 +37,14 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "build/icon.png",
+      "category": "public.app-category.productivity"
+    },
+    "dmg": {
+      "title": "ChatGiZa"
     }
   },
   "allowScripts": {
