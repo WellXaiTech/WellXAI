@@ -13,7 +13,19 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            dist-script: dist
+            artifact-glob: "release/*.exe"
+            artifact-name: chatgiza-windows-installer
+          - os: macos-latest
+            dist-script: dist:mac
+            artifact-glob: "release/*.dmg"
+            artifact-name: chatgiza-mac-installer
+    runs-on: ${{ matrix.os }}
     defaults:
       run:
         working-directory: electron-app
@@ -29,29 +41,45 @@ jobs:
         shell: bash
         run: npm ci
 
-      - name: Build the Windows installer
+      # Unsigned build -- there's no Apple Developer / Windows code-signing
+      # certificate configured as a repo secret. Windows shows a
+      # SmartScreen "unknown publisher" prompt on first run (click "More
+      # info" -> "Run anyway"); macOS Gatekeeper blocks it outright until
+      # the user right-clicks the app -> Open once, or runs
+      # `xattr -cr /Applications/ChatGiZa.app`. Same tradeoff the sideloaded
+      # Android APK already has -- a real cert for either platform is a
+      # separate, paid step to add later if it's worth it.
+      - name: Build installer
         shell: bash
-        run: npm run dist
+        run: npm run ${{ matrix.dist-script }}
 
       - name: Upload installer as workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: chatgiza-desktop-installer
-          path: electron-app/release/*.exe
+          name: ${{ matrix.artifact-name }}
+          path: electron-app/${{ matrix.artifact-glob }}
 
       # Workflow artifacts require a GitHub login to download. A Release
-      # attaches the same installer to a public, direct download URL instead —
-      # this repo is public, so the link works for anyone without signing in.
+      # attaches the same installer to a public, direct download URL
+      # instead -- this repo is public, so the link works for anyone
+      # without signing in. Both OS jobs publish to the SAME release tag
+      # (one release per run number, two files attached to it).
       - name: Publish installer to a GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: desktop-build-${{ github.run_number }}
           name: "ChatGiZa Desktop build #${{ github.run_number }}"
           body: |
-            Windows installer built from commit ${{ github.sha }}.
-            A chrome-free window onto chatgiza.com — not code-signed, so
-            Windows SmartScreen may warn on first run ("More info" > "Run
-            anyway").
-          files: electron-app/release/*.exe
+            Unsigned desktop build from commit ${{ github.sha }}. A
+            chrome-free window onto chatgiza.com.
+
+            - Windows: SmartScreen will warn on first run -- click "More
+              info" then "Run anyway".
+            - Mac: Gatekeeper will block it on first run -- right-click the
+              app and choose "Open" once, or run
+              `xattr -cr /Applications/ChatGiZa.app` in Terminal.
+
+            Not distributed through the Microsoft Store or Mac App Store.
+          files: electron-app/${{ matrix.artifact-glob }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
