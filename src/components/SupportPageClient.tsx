@@ -157,7 +157,7 @@ export default function SupportPageClient() {
 
   return (
     <div className="w-full">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 pt-8 pb-4 sm:px-6">
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 pt-8 pb-4 sm:px-6">
         <a
           href="https://wellxai.world"
           className="inline-flex items-center gap-2"
