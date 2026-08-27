@@ -31,6 +31,11 @@ const sections: { title: string; description: string; href: string }[] = [
     description: "Our commitment to accessible, transparent AI.",
     href: "/foundation",
   },
+  {
+    title: "Help Center",
+    description: "Answers to common questions about WellXAI and ChatGiZa.",
+    href: "/support",
+  },
 ];
 
 export default function HomePage() {

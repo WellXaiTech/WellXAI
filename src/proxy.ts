@@ -41,6 +41,7 @@ const COMPANY_ONLY_EXACT = new Set([
   "/research",
   "/products",
   "/stories",
+  "/support",
 ]);
 const COMPANY_ONLY_PREFIXES = ["/workspace", "/advertise", ADMIN_PREFIX];
 // The chat product itself -- never allowed on the company domain.
