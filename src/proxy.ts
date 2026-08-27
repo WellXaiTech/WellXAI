@@ -47,6 +47,12 @@ const SUPPORT_PREFIX = "/support";
 const ADMIN_HOSTNAME = "wx-6f44c8d2a535.wellxai.world";
 const ADMIN_HOSTS = new Set([ADMIN_HOSTNAME]);
 const ADMIN_PREFIX = "/wx-6f44c8d2a535";
+// The actual admin sub-routes (src/app/wx-6f44c8d2a535/<name>/page.tsx) --
+// an allowlist, not a blanket "rewrite everything", so shared routes that
+// also need to work on this host (/login, the NextAuth error page it
+// redirects to on a failed sign-in) pass through untouched instead of
+// getting the admin prefix wrongly glued onto them and 404ing.
+const ADMIN_SUBROUTES = ["/agents", "/apps", "/billing", "/identity-access", "/org-memory", "/user-analytics", "/users"];
 
 // Paths (and, for the ones with their own sub-routes, prefixes) that only
 // make sense on the company site, never on the product domain.
@@ -91,9 +97,12 @@ export function proxy(req: NextRequest) {
   }
 
   if (ADMIN_HOSTS.has(host)) {
-    const url = new URL(req.url);
-    url.pathname = ADMIN_PREFIX + (pathname === "/" ? "" : pathname);
-    return NextResponse.rewrite(url);
+    if (pathname === "/" || matchesAny(pathname, ADMIN_SUBROUTES)) {
+      const url = new URL(req.url);
+      url.pathname = ADMIN_PREFIX + (pathname === "/" ? "" : pathname);
+      return NextResponse.rewrite(url);
+    }
+    return NextResponse.next();
   }
 
   if (matchesAny(pathname, [SUPPORT_PREFIX])) return redirectToSubdomain(req, SUPPORT_HOSTNAME, SUPPORT_PREFIX);
