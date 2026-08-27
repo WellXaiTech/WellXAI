@@ -7,28 +7,28 @@ type Article = { question: string; answer: string };
 type Category = { title: string; description: string; icon: ReactElement; articles: Article[] };
 
 const IconGettingStarted = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
     <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 const IconChat = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10Z" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 const IconBusiness = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
     <rect x="3" y="7" width="18" height="14" rx="2" />
     <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 const IconPrivacy = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
     <path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5l-8-3Z" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 const IconContact = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
     <rect x="3" y="5" width="18" height="14" rx="2" />
     <path d="m4 6 8 6 8-6" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
@@ -275,7 +275,7 @@ export default function SupportPageClient() {
                 onClick={() => setActiveIndex(i)}
                 className="flex items-start gap-4 text-left"
               >
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-foreground text-background">
+                <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-foreground text-background">
                   {c.icon}
                 </span>
                 <span>
