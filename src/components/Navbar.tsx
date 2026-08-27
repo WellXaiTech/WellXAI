@@ -65,7 +65,10 @@ export default function Navbar() {
           </button>
         </div>
         <div className="flex items-center gap-3">
-          <NavAuthButton />
+          {/* wellxai.world is a plain company/marketing site, not a product
+              with accounts -- "Log in" only makes sense on chatgiza.com,
+              where people actually sign in to save chat history. */}
+          {!isCompanyHost && <NavAuthButton />}
           {isCompanyHost ? (
             // wellxai.world must never render the chat app itself (see
             // src/proxy.ts) -- opening chatgiza.com in a new tab instead of
