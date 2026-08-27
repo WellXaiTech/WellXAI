@@ -57,12 +57,16 @@ const SsoIcon = (
   </svg>
 );
 
-// wellxai.world is the WellXAI *company* site, not the ChatGiZa product (see
-// src/proxy.ts) -- this page is shared by both hosts, so it needs to say
-// "WellXAI" and never send a signed-in visitor to /chatgiza there, or
-// proxy.ts immediately bounces them over to chatgiza.com. Same COMPANY_HOSTS
-// set as Navbar.tsx / Footer.tsx / layout.tsx.
+// wellxai.world is the WellXAI *company* site and wx-6f44c8d2a535.wellxai.world
+// is the admin dashboard (neither is the ChatGiZa product -- see
+// src/proxy.ts) -- this page is shared by every host, so it needs to say
+// "WellXAI" and never send a signed-in visitor to /chatgiza there. On the
+// admin host specifically, sending them to /chatgiza doesn't even redirect
+// away -- that path just isn't blocked there, so it silently renders the
+// chat app instead of landing back on the dashboard. Same COMPANY_HOSTS set
+// as Navbar.tsx / Footer.tsx / layout.tsx.
 const COMPANY_HOSTS = new Set(["wellxai.world", "www.wellxai.world"]);
+const ADMIN_HOSTS = new Set(["wx-6f44c8d2a535.wellxai.world"]);
 
 function LoginPageInner() {
   const [comingSoon, setComingSoon] = useState<string | null>(null);
@@ -72,11 +76,13 @@ function LoginPageInner() {
   const [ssoBusy, setSsoBusy] = useState(false);
   const [ssoError, setSsoError] = useState<string | null>(null);
   const [isCompanyHost, setIsCompanyHost] = useState(false);
+  const [isAdminHost, setIsAdminHost] = useState(false);
   useEffect(() => {
     setIsCompanyHost(COMPANY_HOSTS.has(window.location.hostname));
+    setIsAdminHost(ADMIN_HOSTS.has(window.location.hostname));
   }, []);
-  const brand = isCompanyHost ? "WellXAI" : "ChatGiZa";
-  const postLoginPath = isCompanyHost ? "/" : "/chatgiza";
+  const brand = isCompanyHost || isAdminHost ? "WellXAI" : "ChatGiZa";
+  const postLoginPath = isCompanyHost || isAdminHost ? "/" : "/chatgiza";
   const { status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
