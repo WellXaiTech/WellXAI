@@ -15,6 +15,10 @@ declare global {
 
 const SNOOZE_KEY = "chatgiza:one-tap-dismissed-until";
 const SNOOZE_MS = 24 * 60 * 60 * 1000;
+// wellxai.world is a plain company/marketing site with no accounts (see
+// Navbar.tsx) -- One Tap has no business prompting sign-in there, and its
+// callback below assumes /chatgiza exists on the current host anyway.
+const COMPANY_HOSTS = new Set(["wellxai.world", "www.wellxai.world"]);
 
 function isSnoozed(): boolean {
   const until = Number(localStorage.getItem(SNOOZE_KEY) ?? "0");
@@ -36,7 +40,14 @@ export default function GoogleOneTap() {
     // attempt showing the One Tap prompt — for a guest visitor that fires on
     // every app open, before they've tapped anything. Skip it entirely inside
     // the native shell; guests can still sign in manually from the app.
-    if (isNativeShell() || status !== "unauthenticated" || started.current || isSnoozed()) return;
+    if (
+      isNativeShell() ||
+      status !== "unauthenticated" ||
+      started.current ||
+      isSnoozed() ||
+      COMPANY_HOSTS.has(window.location.hostname)
+    )
+      return;
     const clientId = process.env.NEXT_PUBLIC_AUTH_GOOGLE_ID;
     if (!clientId) return;
 
