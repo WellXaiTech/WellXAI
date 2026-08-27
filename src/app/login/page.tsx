@@ -57,6 +57,13 @@ const SsoIcon = (
   </svg>
 );
 
+// wellxai.world is the WellXAI *company* site, not the ChatGiZa product (see
+// src/proxy.ts) -- this page is shared by both hosts, so it needs to say
+// "WellXAI" and never send a signed-in visitor to /chatgiza there, or
+// proxy.ts immediately bounces them over to chatgiza.com. Same COMPANY_HOSTS
+// set as Navbar.tsx / Footer.tsx / layout.tsx.
+const COMPANY_HOSTS = new Set(["wellxai.world", "www.wellxai.world"]);
+
 function LoginPageInner() {
   const [comingSoon, setComingSoon] = useState<string | null>(null);
   const [signingIn, setSigningIn] = useState(false);
@@ -64,6 +71,12 @@ function LoginPageInner() {
   const [ssoEmail, setSsoEmail] = useState("");
   const [ssoBusy, setSsoBusy] = useState(false);
   const [ssoError, setSsoError] = useState<string | null>(null);
+  const [isCompanyHost, setIsCompanyHost] = useState(false);
+  useEffect(() => {
+    setIsCompanyHost(COMPANY_HOSTS.has(window.location.hostname));
+  }, []);
+  const brand = isCompanyHost ? "WellXAI" : "ChatGiZa";
+  const postLoginPath = isCompanyHost ? "/" : "/chatgiza";
   const { status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -91,13 +104,13 @@ function LoginPageInner() {
   }
 
   useEffect(() => {
-    if (status === "authenticated") router.replace("/chatgiza");
-  }, [status, router]);
+    if (status === "authenticated") router.replace(postLoginPath);
+  }, [status, router, postLoginPath]);
 
   function handleGoogleSignIn() {
     if (signingIn) return;
     setSigningIn(true);
-    signIn("google", { callbackUrl: "/chatgiza" }, { prompt: "select_account" }).catch(() => {
+    signIn("google", { callbackUrl: postLoginPath }, { prompt: "select_account" }).catch(() => {
       setSigningIn(false);
     });
   }
@@ -107,18 +120,20 @@ function LoginPageInner() {
       <div className="relative flex h-[34vh] shrink-0 items-center justify-center overflow-hidden bg-surface md:hidden">
         <div className="hero-shimmer-bg" style={{ position: "absolute" }} />
         <span className="glow-badge relative z-10 rounded-full px-8 py-3 text-4xl font-extrabold tracking-tight">
-          ChatGiZa
+          {brand}
         </span>
       </div>
 
       <div className="flex w-full flex-1 flex-col justify-center px-8 py-8 sm:px-16 md:flex-none md:w-[46%] md:px-20 md:py-0">
         <Link href="/" className="mb-6 hidden text-lg font-extrabold tracking-tight md:mb-12 md:inline-block">
-          ChatGiZa
+          {brand}
         </Link>
 
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-4xl">Sign in to ChatGiZa</h1>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-4xl">Sign in to {brand}</h1>
         <p className="mt-3 max-w-sm text-sm leading-6 text-muted md:mt-4">
-          Save your chat history, pick up conversations across devices, and personalize ChatGiZa to how you work.
+          {isCompanyHost
+            ? "Sign in to manage your WellXAI account."
+            : "Save your chat history, pick up conversations across devices, and personalize ChatGiZa to how you work."}
         </p>
 
         {errorMessage && (
@@ -136,7 +151,7 @@ function LoginPageInner() {
           <button
             onClick={handleGoogleSignIn}
             disabled={signingIn}
-            className="flex items-center justify-center gap-3 rounded-full border border-border bg-surface px-5 py-3 text-sm font-bold transition-colors hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60 md:py-4"
+            className="flex items-center justify-center gap-3 rounded-full border border-border bg-surface px-5 py-3 text-sm font-bold transition-colors hover:bg-surface-2 disabled:opacity-60 md:py-4"
           >
             {GoogleIcon}
             {signingIn ? "Opening Google…" : "Continue with Google"}
@@ -199,7 +214,7 @@ function LoginPageInner() {
         )}
 
         <p className="mt-6 text-xs text-muted md:mt-10">
-          By continuing, you agree to ChatGiZa&apos;s{" "}
+          By continuing, you agree to {brand}&apos;s{" "}
           <Link href="/terms" className="underline hover:text-foreground">
             Terms of Service
           </Link>{" "}
@@ -214,7 +229,7 @@ function LoginPageInner() {
       <div className="relative hidden overflow-hidden bg-surface md:flex md:w-[54%] md:items-center md:justify-center">
         <div className="hero-shimmer-bg" style={{ position: "absolute" }} />
         <span className="glow-badge relative z-10 rounded-full px-10 py-4 text-6xl font-extrabold tracking-tight lg:text-7xl">
-          ChatGiZa
+          {brand}
         </span>
       </div>
     </div>
