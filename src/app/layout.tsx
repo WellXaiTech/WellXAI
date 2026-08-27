@@ -75,11 +75,23 @@ const COMPANY_HOSTS = new Set(["wellxai.world", "www.wellxai.world"]);
 const COMPANY_SITE_NAME = "WellXAI";
 const COMPANY_DESCRIPTION =
   "WellXAI is the company behind ChatGiZa, building AI closer to people everywhere.";
-// support.wellxai.world is the Help Center -- its own standalone site (see
-// src/app/support/page.tsx and src/proxy.ts).
-const SUPPORT_HOSTS = new Set(["support.wellxai.world"]);
-const SUPPORT_SITE_NAME = "WellXAI Support";
-const SUPPORT_DESCRIPTION = "Answers to common questions about WellXAI and ChatGiZa.";
+// support.wellxai.world is the Help Center and admin.wellxai.world is the
+// admin dashboard -- each its own standalone site (see src/app/support,
+// src/app/wx-6f44c8d2a535, and src/proxy.ts).
+const HOST_METADATA: { hosts: Set<string>; siteName: string; description: string; url: string }[] = [
+  {
+    hosts: new Set(["support.wellxai.world"]),
+    siteName: "WellXAI Support",
+    description: "Answers to common questions about WellXAI and ChatGiZa.",
+    url: "https://support.wellxai.world",
+  },
+  {
+    hosts: new Set(["admin.wellxai.world"]),
+    siteName: "WellXAI Admin",
+    description: "WellXAI's internal admin dashboard.",
+    url: "https://admin.wellxai.world",
+  },
+];
 
 // Reinforces the site-name signal for Google's search-result header (the line
 // shown above the URL, e.g. "ChatGiZa" instead of the bare domain) — Google's
@@ -103,19 +115,11 @@ const STRUCTURED_DATA = [
 
 export async function generateMetadata(): Promise<Metadata> {
   const host = (await headers()).get("host")?.split(":")[0] ?? "";
+  const matched = HOST_METADATA.find((m) => m.hosts.has(host));
   const isCompanyHost = COMPANY_HOSTS.has(host);
-  const isSupportHost = SUPPORT_HOSTS.has(host);
-  const siteName = isSupportHost ? SUPPORT_SITE_NAME : isCompanyHost ? COMPANY_SITE_NAME : SITE_NAME;
-  const description = isSupportHost
-    ? SUPPORT_DESCRIPTION
-    : isCompanyHost
-      ? COMPANY_DESCRIPTION
-      : SITE_DESCRIPTION;
-  const url = isSupportHost
-    ? "https://support.wellxai.world"
-    : isCompanyHost
-      ? "https://wellxai.world"
-      : "https://chatgiza.com";
+  const siteName = matched ? matched.siteName : isCompanyHost ? COMPANY_SITE_NAME : SITE_NAME;
+  const description = matched ? matched.description : isCompanyHost ? COMPANY_DESCRIPTION : SITE_DESCRIPTION;
+  const url = matched ? matched.url : isCompanyHost ? "https://wellxai.world" : "https://chatgiza.com";
 
   return {
     metadataBase: new URL(url),
