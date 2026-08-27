@@ -2,11 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import Logo from "./Logo";
 
 // These pages represent WellXAI, the company, rather than the ChatGiZa
 // product — the brand shown in the footer should read "WellXAI" there.
-const COMPANY_BRANDED_PATHS = ["/terms", "/privacy", "/wx-6f44c8d2a535"];
+const COMPANY_BRANDED_PATHS = ["/terms", "/privacy", "/wx-6f44c8d2a535", "/company"];
+// wellxai.world's "/" is proxy-rewritten to "/company" (see src/proxy.ts)
+// rather than redirected, so usePathname() there still reports "/" -- the
+// hostname check catches that case too. See Navbar.tsx for the same fix.
+const COMPANY_HOSTS = new Set(["wellxai.world", "www.wellxai.world"]);
 
 const columns: { heading: string; links: { label: string; href: string }[] }[] = [
   {
@@ -54,7 +59,11 @@ const columns: { heading: string; links: { label: string; href: string }[] }[] =
 
 export default function Footer() {
   const pathname = usePathname();
-  const isCompanyBranded = COMPANY_BRANDED_PATHS.includes(pathname);
+  const [isCompanyHost, setIsCompanyHost] = useState(false);
+  useEffect(() => {
+    setIsCompanyHost(COMPANY_HOSTS.has(window.location.hostname));
+  }, []);
+  const isCompanyBranded = COMPANY_BRANDED_PATHS.includes(pathname) || isCompanyHost;
   const brand = isCompanyBranded ? "WellXAI" : "ChatGiZa";
 
   return (
@@ -64,13 +73,30 @@ export default function Footer() {
           <div key={col.heading}>
             <h4 className="font-medium mb-3">{col.heading}</h4>
             <ul className="space-y-2 text-muted">
-              {col.links.map((l) => (
-                <li key={l.label}>
-                  <Link href={l.href} className="hover:text-foreground">
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
+              {col.links.map((l) =>
+                // On wellxai.world, "/chatgiza" is company-only-blocked (see
+                // src/proxy.ts) and would redirect this same tab away to
+                // chatgiza.com. Opening it in a new tab keeps the company
+                // site open, matching the "Try ChatGiZa" button.
+                isCompanyHost && l.href === "/chatgiza" ? (
+                  <li key={l.label}>
+                    <a
+                      href="https://chatgiza.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-foreground"
+                    >
+                      {l.label}
+                    </a>
+                  </li>
+                ) : (
+                  <li key={l.label}>
+                    <Link href={l.href} className="hover:text-foreground">
+                      {l.label}
+                    </Link>
+                  </li>
+                )
+              )}
             </ul>
           </div>
         ))}
