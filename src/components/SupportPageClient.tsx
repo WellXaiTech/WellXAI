@@ -4,45 +4,55 @@ import { useMemo, useState, type ReactElement } from "react";
 import Logo from "@/components/Logo";
 
 type Article = { question: string; answer: string };
-type Category = { title: string; icon: ReactElement; articles: Article[] };
+type Category = { title: string; description: string; icon: ReactElement; articles: Article[] };
 
 const IconGettingStarted = (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 const IconChat = (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10Z" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 const IconBusiness = (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <rect x="3" y="7" width="18" height="14" rx="2" />
     <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 const IconPrivacy = (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5l-8-3Z" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 const IconContact = (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <rect x="3" y="5" width="18" height="14" rx="2" />
     <path d="m4 6 8 6 8-6" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 const SearchIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <circle cx="11" cy="11" r="7" />
     <line x1="21" y1="21" x2="16.65" y2="16.65" />
   </svg>
 );
+const BackIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M19 12H5" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="m12 19-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
 
+// The category grid is meant to grow -- more categories get added here over
+// time as more of the product gets documented, same way help.openai.com's
+// grid covers many products.
 const categories: Category[] = [
   {
     title: "Getting Started",
+    description: "What WellXAI and ChatGiZa are, and whether it's free.",
     icon: IconGettingStarted,
     articles: [
       {
@@ -64,6 +74,7 @@ const categories: Category[] = [
   },
   {
     title: "ChatGiZa App",
+    description: "Languages, mobile, and signing in.",
     icon: IconChat,
     articles: [
       {
@@ -85,6 +96,7 @@ const categories: Category[] = [
   },
   {
     title: "Business & API",
+    description: "Team access and building on the ChatGiZa API.",
     icon: IconBusiness,
     articles: [
       {
@@ -101,6 +113,7 @@ const categories: Category[] = [
   },
   {
     title: "Privacy & Legal",
+    description: "How your data is handled, and our policies.",
     icon: IconPrivacy,
     articles: [
       {
@@ -115,6 +128,7 @@ const categories: Category[] = [
   },
   {
     title: "Contact",
+    description: "Reach the WellXAI team directly.",
     icon: IconContact,
     articles: [
       {
@@ -126,7 +140,7 @@ const categories: Category[] = [
 ];
 
 export default function SupportPageClient() {
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [query, setQuery] = useState("");
 
   const results = useMemo(() => {
@@ -139,97 +153,51 @@ export default function SupportPageClient() {
     );
   }, [query]);
 
-  const active = categories[activeIndex];
+  const active = activeIndex === null ? null : categories[activeIndex];
 
   return (
     <div className="w-full">
       <div className="border-b border-border">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <a href="https://wellxai.world" className="inline-flex items-center gap-2">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+          <a
+            href="https://wellxai.world"
+            className="inline-flex items-center gap-2"
+            onClick={() => {
+              setActiveIndex(null);
+              setQuery("");
+            }}
+          >
             <Logo brand="WellXAI" />
             <span className="text-muted">Support</span>
           </a>
-          <div className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm text-muted focus-within:border-foreground/40 sm:w-72">
-            {SearchIcon}
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search for help"
-              className="w-full bg-transparent outline-none placeholder:text-muted"
-            />
-          </div>
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-[220px_1fr]">
-        <nav className="space-y-1">
-          {categories.map((c, i) => (
-            <button
-              key={c.title}
-              onClick={() => {
-                setActiveIndex(i);
-                setQuery("");
-              }}
-              className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                !results && i === activeIndex
-                  ? "bg-surface-2 text-foreground"
-                  : "text-muted hover:bg-surface-2 hover:text-foreground"
-              }`}
-            >
-              <span className="shrink-0">{c.icon}</span>
-              {c.title}
-            </button>
-          ))}
-        </nav>
+      {active && !results ? (
+        <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+          <button
+            onClick={() => setActiveIndex(null)}
+            className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-foreground"
+          >
+            {BackIcon} All categories
+          </button>
 
-        <div>
-          {results ? (
-            <>
-              <h2 className="text-lg font-semibold">
-                {results.length} result{results.length === 1 ? "" : "s"} for &quot;{query}&quot;
-              </h2>
-              <div className="mt-6 space-y-3">
-                {results.map((a) => (
-                  <details key={a.question} className="card group rounded-2xl p-5">
-                    <summary className="cursor-pointer list-none font-medium marker:content-none">
-                      <span className="flex items-center justify-between gap-4">
-                        <span>
-                          {a.question}
-                          <span className="ml-2 text-xs uppercase tracking-wide text-muted">{a.category}</span>
-                        </span>
-                        <span className="text-muted transition-transform group-open:rotate-45">+</span>
-                      </span>
-                    </summary>
-                    <p className="mt-3 text-sm text-muted">{a.answer}</p>
-                  </details>
-                ))}
-                {results.length === 0 && (
-                  <p className="text-sm text-muted">
-                    No results. Email <span className="text-foreground">hello@chatgiza.com</span> and we&apos;ll
-                    help directly.
-                  </p>
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-              <h2 className="text-lg font-semibold">{active.title}</h2>
-              <p className="mt-1 text-sm text-muted">{active.articles.length} articles</p>
-              <div className="mt-6 space-y-3">
-                {active.articles.map((a) => (
-                  <details key={a.question} className="card group rounded-2xl p-5">
-                    <summary className="cursor-pointer list-none font-medium marker:content-none">
-                      <span className="flex items-center justify-between gap-4">
-                        {a.question}
-                        <span className="text-muted transition-transform group-open:rotate-45">+</span>
-                      </span>
-                    </summary>
-                    <p className="mt-3 text-sm text-muted">{a.answer}</p>
-                  </details>
-                ))}
-              </div>
-            </>
-          )}
+          <h1 className="mt-4 text-2xl font-semibold sm:text-3xl">{active.title}</h1>
+          <p className="mt-1 text-sm text-muted">{active.articles.length} articles</p>
+
+          <div className="mt-6 space-y-3">
+            {active.articles.map((a) => (
+              <details key={a.question} className="card group rounded-2xl p-5">
+                <summary className="cursor-pointer list-none font-medium marker:content-none">
+                  <span className="flex items-center justify-between gap-4">
+                    {a.question}
+                    <span className="text-muted transition-transform group-open:rotate-45">+</span>
+                  </span>
+                </summary>
+                <p className="mt-3 text-sm text-muted">{a.answer}</p>
+              </details>
+            ))}
+          </div>
 
           <div className="card mt-10 rounded-2xl p-6 text-center">
             <p className="text-sm text-muted">
@@ -238,7 +206,75 @@ export default function SupportPageClient() {
             </p>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="mx-auto max-w-3xl px-4 pt-16 pb-10 text-center sm:px-6">
+          <h1 className="text-3xl font-semibold sm:text-4xl">How can we help?</h1>
+          <div className="mx-auto mt-8 flex max-w-xl items-center gap-2.5 rounded-full border border-border px-5 py-3.5 text-left text-sm text-muted focus-within:border-foreground/40">
+            {SearchIcon}
+            <input
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setActiveIndex(null);
+              }}
+              placeholder="Search for articles..."
+              className="w-full bg-transparent outline-none placeholder:text-muted"
+            />
+          </div>
+        </div>
+      )}
+
+      {results && (
+        <div className="mx-auto max-w-3xl px-4 pb-16 sm:px-6">
+          <h2 className="text-lg font-semibold">
+            {results.length} result{results.length === 1 ? "" : "s"} for &quot;{query}&quot;
+          </h2>
+          <div className="mt-6 space-y-3">
+            {results.map((a) => (
+              <details key={a.question} className="card group rounded-2xl p-5">
+                <summary className="cursor-pointer list-none font-medium marker:content-none">
+                  <span className="flex items-center justify-between gap-4">
+                    <span>
+                      {a.question}
+                      <span className="ml-2 text-xs uppercase tracking-wide text-muted">{a.category}</span>
+                    </span>
+                    <span className="text-muted transition-transform group-open:rotate-45">+</span>
+                  </span>
+                </summary>
+                <p className="mt-3 text-sm text-muted">{a.answer}</p>
+              </details>
+            ))}
+            {results.length === 0 && (
+              <p className="text-sm text-muted">
+                No results. Email <span className="text-foreground">hello@chatgiza.com</span> and we&apos;ll help
+                directly.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {!active && !results && (
+        <div className="mx-auto max-w-5xl px-4 pb-20 sm:px-6">
+          <div className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+            {categories.map((c, i) => (
+              <button
+                key={c.title}
+                onClick={() => setActiveIndex(i)}
+                className="flex items-start gap-4 text-left"
+              >
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-foreground text-background">
+                  {c.icon}
+                </span>
+                <span>
+                  <span className="block font-semibold">{c.title}</span>
+                  <span className="mt-1 block text-sm text-muted">{c.description}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
