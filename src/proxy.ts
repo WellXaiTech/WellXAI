@@ -41,8 +41,11 @@ const PRODUCT_HOSTS = new Set(["chatgiza.com", "www.chatgiza.com"]);
 const SUPPORT_HOSTS = new Set(["support.wellxai.world"]);
 const SUPPORT_HOSTNAME = "support.wellxai.world";
 const SUPPORT_PREFIX = "/support";
-const ADMIN_HOSTS = new Set(["admin.wellxai.world"]);
-const ADMIN_HOSTNAME = "admin.wellxai.world";
+// Deliberately not "admin.wellxai.world" -- an obvious name defeats the
+// point of the admin panel already living behind an unguessable path;
+// reusing that same secret string as the subdomain keeps it consistent.
+const ADMIN_HOSTNAME = "wx-6f44c8d2a535.wellxai.world";
+const ADMIN_HOSTS = new Set([ADMIN_HOSTNAME]);
 const ADMIN_PREFIX = "/wx-6f44c8d2a535";
 
 // Paths (and, for the ones with their own sub-routes, prefixes) that only
