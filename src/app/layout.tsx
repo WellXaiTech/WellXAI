@@ -75,8 +75,9 @@ const COMPANY_HOSTS = new Set(["wellxai.world", "www.wellxai.world"]);
 const COMPANY_SITE_NAME = "WellXAI";
 const COMPANY_DESCRIPTION =
   "WellXAI is the company behind ChatGiZa, building AI closer to people everywhere.";
-// support.wellxai.world is the Help Center and admin.wellxai.world is the
-// admin dashboard -- each its own standalone site (see src/app/support,
+// support.wellxai.world is the Help Center and wx-6f44c8d2a535.wellxai.world
+// (an unguessable name on purpose, matching its path -- see src/proxy.ts) is
+// the admin dashboard -- each its own standalone site (see src/app/support,
 // src/app/wx-6f44c8d2a535, and src/proxy.ts).
 const HOST_METADATA: { hosts: Set<string>; siteName: string; description: string; url: string }[] = [
   {
@@ -86,10 +87,10 @@ const HOST_METADATA: { hosts: Set<string>; siteName: string; description: string
     url: "https://support.wellxai.world",
   },
   {
-    hosts: new Set(["admin.wellxai.world"]),
+    hosts: new Set(["wx-6f44c8d2a535.wellxai.world"]),
     siteName: "WellXAI Admin",
     description: "WellXAI's internal admin dashboard.",
-    url: "https://admin.wellxai.world",
+    url: "https://wx-6f44c8d2a535.wellxai.world",
   },
 ];
 
