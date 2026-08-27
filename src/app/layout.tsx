@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Manrope, Geist_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, Manrope, Geist_Mono, Cascadia_Code, Cascadia_Mono } from "next/font/google";
+import localFont from "next/font/local";
+import { headers } from "next/headers";
 import Script from "next/script";
 import AuthProvider from "@/components/AuthProvider";
 import GoogleOneTap from "@/components/GoogleOneTap";
@@ -26,10 +28,53 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// The Font picker's Microsoft options -- the only two Microsoft-made
+// typefaces actually released under a free/open license (SIL OFL). Segoe
+// UI itself is NOT free: it ships only under a Windows/Office license, so
+// it can't be offered here. Both are on Google Fonts as variable fonts.
+const cascadiaCodeFont = Cascadia_Code({
+  variable: "--font-cascadia-code",
+  subsets: ["latin"],
+});
+
+const cascadiaMonoFont = Cascadia_Mono({
+  variable: "--font-cascadia-mono",
+  subsets: ["latin"],
+});
+
+// Selawik isn't on Google Fonts, so it's self-hosted here instead of via
+// next/font/google -- files are Microsoft's own official 1.01 release
+// (github.com/microsoft/Selawik, SIL Open Font License 1.1), just Regular
+// and Bold since that's all chat text ever actually renders (body copy +
+// markdown "**bold**"), not the full five-weight family from the release.
+const selawikFont = localFont({
+  variable: "--font-selawik",
+  src: [
+    { path: "../fonts/selawik/selawik-regular.woff2", weight: "400", style: "normal" },
+    { path: "../fonts/selawik/selawik-bold.woff2", weight: "700", style: "normal" },
+  ],
+});
+
+// User-supplied font file (Fontshare's Clash Display), self-hosted the same
+// way as Selawik above -- a single variable-weight file covers the whole
+// 200-700 range instead of separate per-weight files.
+const clashDisplayFont = localFont({
+  variable: "--font-clash-display",
+  src: [{ path: "../fonts/clash-display/ClashDisplay-Variable.ttf", weight: "200 700", style: "normal" }],
+});
+
 const SITE_NAME = "ChatGiZa";
-const HOME_TITLE = "ChatGiZa";
 const SITE_DESCRIPTION =
   "ChatGiZa is a conversational AI assistant — chat, generate images and video, search the web, and get deep research reports, with an API for developers who want to build on it.";
+
+// wellxai.world is the WellXAI *company* site, not the ChatGiZa product (see
+// src/proxy.ts) -- the browser tab title and share-link previews need to say
+// "WellXAI" there instead of "ChatGiZa". Matches the COMPANY_HOSTS set in
+// proxy.ts / Navbar.tsx / Footer.tsx.
+const COMPANY_HOSTS = new Set(["wellxai.world", "www.wellxai.world"]);
+const COMPANY_SITE_NAME = "WellXAI";
+const COMPANY_DESCRIPTION =
+  "WellXAI is the company behind ChatGiZa, building AI for East Africa and beyond.";
 
 // Reinforces the site-name signal for Google's search-result header (the line
 // shown above the URL, e.g. "ChatGiZa" instead of the bare domain) — Google's
@@ -51,42 +96,57 @@ const STRUCTURED_DATA = [
   },
 ];
 
-export const metadata: Metadata = {
-  metadataBase: new URL("https://chatgiza.com"),
-  title: {
-    default: HOME_TITLE,
-    template: `%s — ${SITE_NAME}`,
-  },
-  description: SITE_DESCRIPTION,
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: SITE_NAME,
-  },
-  icons: {
-    icon: "/icon.png",
-    apple: "/icons/apple-touch-icon.png",
-  },
-  alternates: {
-    canonical: "/",
-  },
-  openGraph: {
-    title: HOME_TITLE,
-    description: SITE_DESCRIPTION,
-    siteName: SITE_NAME,
-    url: "https://chatgiza.com",
-    type: "website",
-  },
-  twitter: {
-    card: "summary",
-    title: HOME_TITLE,
-    description: SITE_DESCRIPTION,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const host = (await headers()).get("host")?.split(":")[0] ?? "";
+  const isCompanyHost = COMPANY_HOSTS.has(host);
+  const siteName = isCompanyHost ? COMPANY_SITE_NAME : SITE_NAME;
+  const description = isCompanyHost ? COMPANY_DESCRIPTION : SITE_DESCRIPTION;
+  const url = isCompanyHost ? "https://wellxai.world" : "https://chatgiza.com";
+
+  return {
+    metadataBase: new URL(url),
+    title: {
+      default: siteName,
+      template: `%s — ${siteName}`,
+    },
+    description,
+    manifest: "/manifest.json",
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: siteName,
+    },
+    icons: {
+      icon: "/icon.png",
+      apple: "/icons/apple-touch-icon.png",
+    },
+    alternates: {
+      canonical: "/",
+    },
+    openGraph: {
+      title: siteName,
+      description,
+      siteName,
+      url,
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title: siteName,
+      description,
+    },
+  };
+}
 
 export const viewport = {
   themeColor: "#000000",
+  // Without this, Android Chrome's on-screen keyboard overlays the page
+  // instead of shrinking it -- the layout viewport (and so 100dvh) never
+  // changes, so a bottom-anchored composer stays exactly where it was and
+  // ends up hidden behind the keyboard instead of pushed up above it.
+  // "resizes-content" makes the keyboard actually shrink the layout
+  // viewport like it always has on iOS Safari.
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({
@@ -97,7 +157,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${bodyFont.variable} ${manropeFont.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${bodyFont.variable} ${manropeFont.variable} ${geistMono.variable} ${cascadiaCodeFont.variable} ${cascadiaMonoFont.variable} ${selawikFont.variable} ${clashDisplayFont.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
