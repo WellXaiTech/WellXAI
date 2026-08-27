@@ -157,19 +157,17 @@ export default function SupportPageClient() {
 
   return (
     <div className="w-full">
-      <div className="border-b border-border">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <a
-            href="https://wellxai.world"
-            className="inline-flex items-center gap-2"
-            onClick={() => {
-              setActiveIndex(null);
-              setQuery("");
-            }}
-          >
-            <Logo brand="WellXAI" />
-          </a>
-        </div>
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 pt-8 pb-4 sm:px-6">
+        <a
+          href="https://wellxai.world"
+          className="inline-flex items-center gap-2"
+          onClick={() => {
+            setActiveIndex(null);
+            setQuery("");
+          }}
+        >
+          <Logo brand="WellXAI" />
+        </a>
       </div>
 
       {active && !results ? (
@@ -208,7 +206,7 @@ export default function SupportPageClient() {
       ) : (
         <div className="mx-auto max-w-3xl px-4 pt-16 pb-10 text-center sm:px-6">
           <h1 className="text-3xl font-semibold sm:text-4xl">How can we help?</h1>
-          <div className="mx-auto mt-8 flex max-w-xl items-center gap-2.5 rounded-full border border-border px-5 py-3.5 text-left text-sm text-muted focus-within:border-foreground/40">
+          <div className="mx-auto mt-10 flex max-w-xl items-center gap-2.5 border-b border-border pb-3 text-left text-base text-muted focus-within:border-foreground/60">
             {SearchIcon}
             <input
               value={query}
