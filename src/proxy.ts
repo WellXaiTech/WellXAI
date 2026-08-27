@@ -2,13 +2,18 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // wellxai.world is the official WellXAI *company* site (marketing pages +
-// admin dashboard); chatgiza.com is the ChatGiZa *product* -- chat only.
-// Both are served from this same Next.js app rather than a second
-// deployment, since the (marketing) route group and the admin dashboard
-// already exist here. This proxy just decides which host is allowed to
-// show what:
+// admin dashboard); chatgiza.com is the ChatGiZa *product* -- chat only;
+// support.wellxai.world is the Help Center -- its own standalone site (no
+// main nav/footer, see src/app/support/page.tsx), same relationship
+// chatgiza.com has to wellxai.world. All three are served from this same
+// Next.js app rather than separate deployments, since the (marketing) route
+// group, the admin dashboard, and the chat app already exist here. This
+// proxy just decides which host is allowed to show what:
 //
 //  - wellxai.world "/" is rewritten to "/home" (its home page).
+//  - support.wellxai.world "/" is rewritten to "/support" (its only page).
+//  - Any host visiting "/support" is redirected to support.wellxai.world
+//    instead of serving it locally -- it only exists on its own subdomain.
 //  - chatgiza.com visiting a company-only or admin path is redirected to
 //    the same path on wellxai.world instead of serving it locally -- e.g.
 //    chatgiza.com/wx-6f44c8d2a535 -> wellxai.world/wx-6f44c8d2a535.
@@ -28,6 +33,8 @@ import type { NextRequest } from "next/server";
 // node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/proxy.md.
 const COMPANY_HOSTS = new Set(["wellxai.world", "www.wellxai.world"]);
 const PRODUCT_HOSTS = new Set(["chatgiza.com", "www.chatgiza.com"]);
+const SUPPORT_HOSTS = new Set(["support.wellxai.world"]);
+const SUPPORT_HOSTNAME = "support.wellxai.world";
 
 const ADMIN_PREFIX = "/wx-6f44c8d2a535";
 // Paths (and, for the ones with their own sub-routes, prefixes) that only
@@ -41,11 +48,13 @@ const COMPANY_ONLY_EXACT = new Set([
   "/research",
   "/products",
   "/stories",
-  "/support",
 ]);
 const COMPANY_ONLY_PREFIXES = ["/workspace", "/advertise", ADMIN_PREFIX];
 // The chat product itself -- never allowed on the company domain.
 const PRODUCT_ONLY_PREFIXES = ["/chatgiza"];
+// The Help Center only exists on support.wellxai.world -- never served at
+// this path on any other host.
+const SUPPORT_PREFIX = "/support";
 
 function matchesAny(pathname: string, prefixes: string[]): boolean {
   return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -58,6 +67,18 @@ function isCompanyOnlyPath(pathname: string): boolean {
 export function proxy(req: NextRequest) {
   const host = req.headers.get("host")?.split(":")[0] ?? "";
   const { pathname } = req.nextUrl;
+
+  if (SUPPORT_HOSTS.has(host)) {
+    if (pathname === "/") return NextResponse.rewrite(new URL("/support", req.url));
+    return NextResponse.next();
+  }
+
+  if (matchesAny(pathname, [SUPPORT_PREFIX])) {
+    const url = new URL(req.url);
+    url.hostname = SUPPORT_HOSTNAME;
+    url.pathname = pathname.slice(SUPPORT_PREFIX.length) || "/";
+    return NextResponse.redirect(url);
+  }
 
   if (COMPANY_HOSTS.has(host)) {
     if (pathname === "/") return NextResponse.rewrite(new URL("/home", req.url));

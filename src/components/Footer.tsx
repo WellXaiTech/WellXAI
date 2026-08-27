@@ -52,7 +52,7 @@ const columns: { heading: string; links: { label: string; href: string }[] }[] =
     heading: "More",
     links: [
       { label: "Stories", href: "/stories" },
-      { label: "Help Center", href: "/support" },
+      { label: "Help Center", href: "https://support.wellxai.world" },
       { label: "Contact", href: "/company" },
     ],
   },
@@ -75,30 +75,17 @@ export default function Footer() {
             <h4 className="font-medium mb-3">{col.heading}</h4>
             <ul className="space-y-2 text-muted">
               {col.links.map((l) => {
-                // On the company host, "/chatgiza" is blocked (see
-                // src/proxy.ts) and would redirect this tab away to
-                // chatgiza.com, and "/support" (Help Center) should feel
-                // like its own destination rather than a page swap. Both
-                // open in a new tab so wellxai.world stays open.
-                if (isCompanyHost && l.href === "/chatgiza") {
+                // "https://..." links point at another site entirely
+                // (chatgiza.com, support.wellxai.world) -- a new tab keeps
+                // this site open instead of navigating it away. On the
+                // company host, "/chatgiza" is also blocked (see
+                // src/proxy.ts) and would redirect this tab to chatgiza.com.
+                const external = l.href.startsWith("https://");
+                if (external || (isCompanyHost && l.href === "/chatgiza")) {
                   return (
                     <li key={l.label}>
                       <a
-                        href="https://chatgiza.com"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:text-foreground"
-                      >
-                        {l.label}
-                      </a>
-                    </li>
-                  );
-                }
-                if (isCompanyHost && l.href === "/support") {
-                  return (
-                    <li key={l.label}>
-                      <a
-                        href="/support"
+                        href={external ? l.href : "https://chatgiza.com"}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="hover:text-foreground"
