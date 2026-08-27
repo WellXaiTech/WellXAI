@@ -87,19 +87,37 @@ export default function HomePage() {
 
       <section className="mx-auto max-w-5xl px-4 pb-20">
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {sections.map((s) => (
-            <Link
-              key={s.href}
-              href={s.href}
-              className="card group rounded-2xl p-6 transition-colors hover:border-foreground/40"
-            >
-              <h2 className="text-lg font-semibold">{s.title}</h2>
-              <p className="mt-2 text-sm text-muted">{s.description}</p>
-              <span className="mt-4 inline-block text-sm font-medium group-hover:underline">
-                Learn more →
-              </span>
-            </Link>
-          ))}
+          {sections.map((s) =>
+            // Help Center opens as its own new-tab destination rather than
+            // swapping this page out, same as the ChatGiZa banner above.
+            s.href === "/support" ? (
+              <a
+                key={s.href}
+                href={s.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="card group rounded-2xl p-6 transition-colors hover:border-foreground/40"
+              >
+                <h2 className="text-lg font-semibold">{s.title}</h2>
+                <p className="mt-2 text-sm text-muted">{s.description}</p>
+                <span className="mt-4 inline-block text-sm font-medium group-hover:underline">
+                  Learn more →
+                </span>
+              </a>
+            ) : (
+              <Link
+                key={s.href}
+                href={s.href}
+                className="card group rounded-2xl p-6 transition-colors hover:border-foreground/40"
+              >
+                <h2 className="text-lg font-semibold">{s.title}</h2>
+                <p className="mt-2 text-sm text-muted">{s.description}</p>
+                <span className="mt-4 inline-block text-sm font-medium group-hover:underline">
+                  Learn more →
+                </span>
+              </Link>
+            )
+          )}
         </div>
       </section>
 
