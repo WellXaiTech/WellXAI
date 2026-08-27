@@ -1178,11 +1178,11 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     screen = AppScreen.ProfileHub
   }
 
-  // Permission gate for the Chat<->Extra Media bridge: the user connects
-  // once (via the "+" -> "Connect With ChatGiZa" sheet in Extra Media),
-  // then a "Push to Extra" action appears under substantial ChatGiZa
+  // Permission gate for the Chat<->Quantara bridge: the user connects
+  // once (via the "+" -> "Connect With ChatGiZa" sheet in Quantara),
+  // then a "Push to Quantara" action appears under substantial ChatGiZa
   // replies (documents/letters, not short conversational ones) so they can
-  // send that specific reply to their own Extra Media feed if they want.
+  // send that specific reply to their own Quantara feed if they want.
   // Nothing is ever posted automatically -- every push is a deliberate tap.
   var chatGizaMediaConnected by mutableStateOf(tokenStore.getChatGizaMediaConnected())
     private set
