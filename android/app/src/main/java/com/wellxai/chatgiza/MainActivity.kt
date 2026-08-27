@@ -2404,7 +2404,7 @@ private fun AskImagineTab(label: String, selected: Boolean, onClick: () -> Unit)
   }
 }
 
-// Ask / Extra segmented tabs: a narrow pill container, with the selected
+// Ask / Quantara segmented tabs: a narrow pill container, with the selected
 // word getting its own tight background pill (not just an underline).
 @Composable
 private fun AskImagineTabs(current: String, onAsk: () -> Unit, onImagine: () -> Unit) {
@@ -2413,7 +2413,7 @@ private fun AskImagineTabs(current: String, onAsk: () -> Unit, onImagine: () -> 
       .clip(RoundedCornerShape(20.dp))
       // Was 0.06f -- nearly invisible against scrolled message text behind
       // the (deliberately transparent, see ChatScreenUi's own top bar
-      // comment) top bar, so both this pill and the "Extra" label inside
+      // comment) top bar, so both this pill and the "Quantara" label inside
       // it read as illegible clutter rather than a real control. Solid
       // enough to stay legible over any background without losing the
       // rounded-pill look.
@@ -2422,7 +2422,7 @@ private fun AskImagineTabs(current: String, onAsk: () -> Unit, onImagine: () -> 
     horizontalArrangement = Arrangement.spacedBy(2.dp)
   ) {
     AskImagineTab("Ask", current == "Ask", onAsk)
-    AskImagineTab("Extra", current == "Imagine", onImagine)
+    AskImagineTab("Quantara", current == "Imagine", onImagine)
   }
 }
 
@@ -2533,12 +2533,12 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
     topBar = {
       // Fully transparent all the way up, including the true status-bar
       // strip (clock/battery) -- scrolled messages read crisply through
-      // the entire top bar, with only the hamburger/Ask-Extra/New Chat/
+      // the entire top bar, with only the hamburger/Ask-Quantara/New Chat/
       // dots icons and text sitting visibly on top of the passing content.
       CenterAlignedTopAppBar(
         modifier = Modifier.statusBarsPadding(),
         windowInsets = WindowInsets(0, 0, 0, 0),
-        // Ask/Extra tabs removed from here -- Extra (ChatGiZa Media) now
+        // Ask/Quantara tabs removed from here -- Quantara (ChatGiZa Media) now
         // has its own entry in the Events carousel instead (see
         // CHATGIZA_ANNOUNCEMENTS' isFeatureLink item / ChatGizaEventsCard).
         title = {},
@@ -3220,7 +3220,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
         .padding(horizontal = 6.dp, vertical = 8.dp),
       horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-      QuickActionChip(icon = { Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(22.dp)) }, label = "GiZa Extra") {
+      QuickActionChip(icon = { Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(22.dp)) }, label = "Quantara") {
         viewModel.openChatGizaMedia()
       }
       QuickActionChip(icon = { Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_create_video), contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(22.dp)) }, label = "Create Video") {
@@ -3662,7 +3662,7 @@ private fun QuickActionChip(icon: @Composable () -> Unit, label: String, onClick
     modifier = Modifier
       .height(52.dp)
       // Fixed + equal width across every chip in the row (was auto-sized
-      // to each label, so "GiZa Extra" ended up noticeably narrower than
+      // to each label, so "Quantara" ended up noticeably narrower than
       // "Customize GiZa") -- wide enough to fit the longest label
       // ("Create an image") without clipping. Corner radius down from
       // 26.dp (half the height, a full stadium pill) to 16.dp, matching
@@ -5137,7 +5137,7 @@ private data class ChatGizaAnnouncement(
   val subtitle: String,
   val isAd: Boolean = false,
   val linkUrl: String? = null,
-  // Was the standalone "Extra" tab next to "Ask" in the chat top bar --
+  // Was the standalone "Quantara" tab next to "Ask" in the chat top bar --
   // folded into this rotation instead of its own always-visible control.
   // Handled separately from linkUrl since it opens an in-app screen
   // (viewModel.openChatGizaMedia()), not a browser Intent.
@@ -5641,7 +5641,7 @@ private fun PrivateChatScreen(viewModel: ChatViewModel) {
   }
   val context = LocalContext.current
   // Photo attachment -- reuses uriToPostImageDataUrl (the same URI->data-
-  // URL helper the main composer and Extra Media's post composer already
+  // URL helper the main composer and Quantara's post composer already
   // rely on) rather than a third copy of that decode/downscale logic.
   val privateComposerScope = rememberCoroutineScope()
   var attachPrivateMenuOpen by remember { mutableStateOf(false) }
@@ -6320,7 +6320,7 @@ private fun PrivateHistoryList(viewModel: ChatViewModel) {
 }
 
 // --- ChatGiZa Media --------------------------------------------------------
-// Reached via the "Extra" tab at the top of the Chat screen now (see
+// Reached via the "Quantara" tab at the top of the Chat screen now (see
 // ChatGizaMediaScreen). A real shared feed backed by /api/media/posts:
 // posting, liking, and commenting all round-trip to the backend, so any
 // signed-in user sees any other user's posts here.
@@ -8000,7 +8000,7 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
   var nameInput by remember { mutableStateOf(viewModel.avatarName ?: "") }
   val context = LocalContext.current
   // This dialog used to be preset-emoji-only -- no way to actually set your
-  // own real photo from here, only from EditProfileScreen or the Extra
+  // own real photo from here, only from EditProfileScreen or the Quantara
   // Media profile screen. "Choose from gallery" below fixes that gap.
   var cropPhotoUri by remember { mutableStateOf<Uri?>(null) }
   val galleryPhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -8360,9 +8360,9 @@ internal fun MediaPostVideoPlayer(url: String, modifier: Modifier = Modifier) {
 }
 
 // "+" in ChatGiZa Media now opens this instead of a Post/Article/Video
-// menu -- it's the permission gate for the Chat<->Extra Media bridge.
+// menu -- it's the permission gate for the Chat<->Quantara bridge.
 // Connecting only flips a local flag (ChatViewModel.chatGizaMediaConnected)
-// that unlocks the "Push to Extra" action under substantial ChatGiZa
+// that unlocks the "Push to Quantara" action under substantial ChatGiZa
 // replies in Chat (see MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH) -- nothing is
 // posted automatically just from connecting.
 @Composable
@@ -8428,8 +8428,8 @@ internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () ->
       Text("Connect With ChatGiZa", color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(6.dp))
       Text(
-        "Ruhusu akaunti yako ya Extra kuingiliana moja kwa moja na ChatGiZa. Ukishaunganisha, " +
-          "utaona chaguo la \"Extra\" chini ya majibu marefu ya ChatGiZa kwenye chat.",
+        "Ruhusu akaunti yako ya Quantara kuingiliana moja kwa moja na ChatGiZa. Ukishaunganisha, " +
+          "utaona chaguo la \"Quantara\" chini ya majibu marefu ya ChatGiZa kwenye chat.",
         color = Color.Black.copy(alpha = 0.75f),
         fontSize = 14.sp,
         lineHeight = 20.sp
@@ -8439,7 +8439,7 @@ internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () ->
       ConnectFeatureRow(
         painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connect_post),
         title = "Post",
-        body = "Tuma barua, makala, au maandishi marefu moja kwa moja kwenye Extra Media -- ukitaka tu."
+        body = "Tuma barua, makala, au maandishi marefu moja kwa moja kwenye Quantara -- ukitaka tu."
       )
       ConnectFeatureRow(
         painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connect_caption),
@@ -16217,7 +16217,7 @@ private fun ActionBarItemShell(label: String, tint: Color, onClick: () -> Unit, 
 
 // Below this length a reply reads as ordinary conversation ("Habari",
 // "Mambo vipi", a quick answer) rather than something worth publishing --
-// "Extra" only shows up for replies that look like an actual generated
+// "Quantara" only shows up for replies that look like an actual generated
 // document/letter/article, not every back-and-forth line.
 private const val MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH = 150
 
@@ -16237,7 +16237,7 @@ private fun MessageActionBar(
 ) {
   val context = LocalContext.current
   val clipboard = LocalClipboardManager.current
-  // Copy/Share/PDF/Extra all deal in reader-facing text -- never leak the
+  // Copy/Share/PDF/Quantara all deal in reader-facing text -- never leak the
   // raw [[SOURCES_START]] JSON marker block into any of them.
   val cleanContent = remember(message.content) { stripSourceMarkers(message.content) }
   var reaction by remember(message.id) { mutableStateOf<String?>(null) }
@@ -16258,7 +16258,7 @@ private fun MessageActionBar(
         pushState = if (success) "pushed" else "idle"
         Toast.makeText(
           context,
-          if (success) "Sent to Extra Media" else "Couldn't send — try again",
+          if (success) "Sent to Quantara" else "Couldn't send — try again",
           Toast.LENGTH_SHORT
         ).show()
         if (success) extraStage = "none"
@@ -16299,7 +16299,7 @@ private fun MessageActionBar(
     } else {
       // Trimmed to the essentials shown inline (matching the generated-
       // image/video reply row: Copy/Share/Like/Dislike/Read Aloud/
-      // Regenerate) -- Translate, Extra, and PDF export moved into "More"
+      // Regenerate) -- Translate, Quantara, and PDF export moved into "More"
       // below instead of crowding the row for every single reply.
       ActionBarItem(androidx.compose.ui.res.painterResource(R.drawable.ic_share), "Share") {
         val intent = Intent(Intent.ACTION_SEND).apply {
@@ -16341,7 +16341,7 @@ private fun MessageActionBar(
           )
           if (cleanContent.length >= MESSAGE_PUSH_TO_EXTRA_MIN_LENGTH) {
             DropdownMenuItem(
-              text = { Text(if (pushState == "pushed") "Sent to Extra Media" else "Send to Extra Media") },
+              text = { Text(if (pushState == "pushed") "Sent to Quantara" else "Send to Quantara") },
               leadingIcon = {
                 Icon(
                   painter = androidx.compose.ui.res.painterResource(R.drawable.ic_share),
@@ -16356,7 +16356,7 @@ private fun MessageActionBar(
                 } else {
                   Toast.makeText(
                     context,
-                    "Connect ChatGiZa with Extra Media first — Extra > + > Connect With ChatGiZa",
+                    "Connect ChatGiZa with Quantara first — Quantara > + > Connect With ChatGiZa",
                     Toast.LENGTH_LONG
                   ).show()
                 }
@@ -16413,7 +16413,7 @@ private fun MessageActionBar(
   }
 }
 
-// "Extra" between Copy and Like. A single icon with a small dropdown-arrow
+// "Quantara" between Copy and Like. A single icon with a small dropdown-arrow
 // badge in the corner (instead of two icons crammed side by side) opens
 // the full-size ExtraOptionsSheet below -- tapping while not connected
 // skips it entirely and tells the user to connect first, rather than the
@@ -16442,7 +16442,7 @@ private fun ActionBarExtraItem(label: String, tint: Color, connected: Boolean, o
   }
 }
 
-// Reached via the "Extra" icon -- a bigger, full-weight sheet (matching
+// Reached via the "Quantara" icon -- a bigger, full-weight sheet (matching
 // the size of a real share sheet) instead of a cramped dropdown, offering
 // the same two choices: "Post" goes straight to the preview step, straight
 // through preview before it actually posts; "Caption" collects a caption
@@ -16498,10 +16498,10 @@ private fun ExtraOptionsSheet(onDismiss: () -> Unit, onPost: () -> Unit, onCapti
         .padding(horizontal = 24.dp)
         .padding(bottom = 36.dp, top = 4.dp)
     ) {
-      Text("Send to Extra Media", color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+      Text("Send to Quantara", color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(6.dp))
       Text(
-        "Choose how this reply goes to your Extra profile. You'll see exactly how it looks before it's sent.",
+        "Choose how this reply goes to your Quantara profile. You'll see exactly how it looks before it's sent.",
         color = Color.Black.copy(alpha = 0.6f),
         fontSize = 14.sp,
         lineHeight = 19.sp
@@ -16510,7 +16510,7 @@ private fun ExtraOptionsSheet(onDismiss: () -> Unit, onPost: () -> Unit, onCapti
       ExtraOptionRow(
         icon = Icons.Filled.Send,
         title = "Post",
-        subtitle = "Send this reply to Extra Media as-is.",
+        subtitle = "Send this reply to Quantara as-is.",
         onClick = onPost
       )
       Spacer(modifier = Modifier.height(10.dp))
@@ -16525,7 +16525,7 @@ private fun ExtraOptionsSheet(onDismiss: () -> Unit, onPost: () -> Unit, onCapti
 }
 
 // The step that actually matters: shows the reply (and caption, if any)
-// laid out the way it'll actually appear on Extra Media -- avatar, name,
+// laid out the way it'll actually appear on Quantara -- avatar, name,
 // body text -- so something that reads wrong can be caught with "Edit"
 // instead of only being noticed after it's already public.
 @OptIn(ExperimentalMaterial3Api::class)
@@ -16575,7 +16575,7 @@ private fun ExtraPostPreviewSheet(
       Text("Preview", color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(4.dp))
       Text(
-        "This is how it'll look on Extra Media.",
+        "This is how it'll look on Quantara.",
         color = Color.Black.copy(alpha = 0.6f),
         fontSize = 14.sp
       )
@@ -16653,16 +16653,16 @@ private fun ExtraPostPreviewSheet(
           shape = RoundedCornerShape(24.dp),
           modifier = Modifier.weight(1f).height(52.dp)
         ) {
-          Text(if (posting) "Posting…" else "Post to Extra", color = Color.White, fontWeight = FontWeight.SemiBold)
+          Text(if (posting) "Posting…" else "Post to Quantara", color = Color.White, fontWeight = FontWeight.SemiBold)
         }
       }
     }
   }
 }
 
-// Reached via "Extra" -> "Caption": a short caption the user writes
+// Reached via "Quantara" -> "Caption": a short caption the user writes
 // themselves, which lands under the reply's own text when posted to
-// Extra Media (ChatViewModel.pushReplyToExtraMedia builds the combined
+// Quantara (ChatViewModel.pushReplyToExtraMedia builds the combined
 // text; this sheet only collects the caption itself). Bigger and more
 // explanatory than a bare text box -- an icon badge, a heading, and a
 // line explaining what happens on submit, closer to the rest of the
@@ -16692,7 +16692,7 @@ private fun CaptionComposerSheet(onDismiss: () -> Unit, onSubmit: (String) -> Un
       Text("Add a caption", color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(6.dp))
       Text(
-        "This reply becomes the post; what you write below is added underneath it on your Extra Media profile.",
+        "This reply becomes the post; what you write below is added underneath it on your Quantara profile.",
         color = Color.Black.copy(alpha = 0.6f),
         fontSize = 14.sp,
         lineHeight = 19.sp

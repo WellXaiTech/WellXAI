@@ -206,7 +206,7 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
     else feedEligiblePosts.filter { it.text.contains(q, ignoreCase = true) || it.authorName.contains(q, ignoreCase = true) }
   }
 
-  // Extra Media's own light/dark toggle (Extra Settings), independent of
+  // Quantara's own light/dark toggle (Quantara Settings), independent of
   // the main app's appearance setting -- flips backgrounds white<->black
   // and icon/text black<->white across this whole section, leaving
   // deliberately-dark accents (vote/comment pills, photo overlays, the
@@ -438,8 +438,8 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
     }
 
     // Draggable floating shortcut into the AI Agent tool, styled after
-    // Binance's floating assistant button -- Extra Media only, per request.
-    // Selecting the tool no longer leaves Extra: it used to close straight
+    // Binance's floating assistant button -- Quantara only, per request.
+    // Selecting the tool no longer leaves Quantara: it used to close straight
     // back to Ask, which read as the button unexpectedly kicking you out.
     GizaProFloatingAgent(
       modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = navHeight + 24.dp),
@@ -474,7 +474,7 @@ fun ChatGiZaMediaScreen(viewModel: ChatViewModel) {
 // Draggable floating shortcut to GiZa Pro's AI Agent, shaped like Binance's
 // floating assistant button -- a rotated rounded square, freely draggable
 // around the screen. Position resets to the default corner each time this
-// screen (Extra Media) is re-entered, since it isn't meant to persist.
+// screen (Quantara) is re-entered, since it isn't meant to persist.
 @Composable
 private fun GizaProFloatingAgent(onClick: () -> Unit, modifier: Modifier = Modifier) {
   var offsetX by remember { mutableStateOf(0f) }
@@ -1318,7 +1318,7 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
   LaunchedEffect(target.authorId) { viewModel.loadMediaUserProfile(target.authorId) }
   val userProfile = viewModel.mediaUserProfiles[target.authorId]
   val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-  // Follows Extra's own light/dark toggle (Extra Settings) -- defaults to
+  // Follows Quantara's own light/dark toggle (Quantara Settings) -- defaults to
   // dark, matching the rest of the app, same reasoning as before this
   // toggle existed.
   val isDark = viewModel.extraDarkMode
@@ -1707,7 +1707,7 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
           // Full X-style post cards (caption above image, rounded/bordered
           // media, Reddit-pill actions) instead of the old Instagram-style
           // square-thumbnail grid -- this profile's feed should read the
-          // same as the main Extra feed, not a separate compressed view.
+          // same as the main Quantara feed, not a separate compressed view.
           items(authorPosts, key = { it.id }) { post ->
             MediaPost(
               post = post,
@@ -1766,8 +1766,8 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
   }
 }
 
-// Reached only from the menu icon on your own profile inside Extra Media --
-// scoped to Extra's own features rather than mixed into the main app's
+// Reached only from the menu icon on your own profile inside Quantara --
+// scoped to Quantara's own features rather than mixed into the main app's
 // Settings list, per explicit correction after an earlier attempt put
 // these rows there instead.
 @Composable
@@ -1793,13 +1793,13 @@ private fun ExtraSettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
           Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = onBg, modifier = Modifier.size(20.dp))
         }
         Spacer(modifier = Modifier.width(4.dp))
-        Text("Extra Settings", color = onBg, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text("Quantara Settings", color = onBg, fontSize = 18.sp, fontWeight = FontWeight.Bold)
       }
       Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
         // Not viewModel.openCustomize() -- that jumps into the main app's
         // own screen stack, and its back button then lands in Ask's
         // settings instead of returning here, per explicit bug report.
-        // Extra Settings stays self-contained until a real Extra-scoped
+        // Quantara Settings stays self-contained until a real Quantara-scoped
         // profile editor exists.
         ExtraSettingsRow(Icons.Outlined.AccountCircle, "Profile", onBg) {
           Toast.makeText(context, "Profile — coming soon", Toast.LENGTH_SHORT).show()
@@ -1820,7 +1820,7 @@ private fun ExtraSettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
           Toast.makeText(context, "Creator Studio — coming soon", Toast.LENGTH_SHORT).show()
         }
         androidx.compose.material3.HorizontalDivider(color = onBg.copy(alpha = 0.12f), modifier = Modifier.padding(vertical = 8.dp))
-        // Extra's own light/dark toggle -- independent of the main app's
+        // Quantara's own light/dark toggle -- independent of the main app's
         // appearance setting, per explicit request.
         Row(
           modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),

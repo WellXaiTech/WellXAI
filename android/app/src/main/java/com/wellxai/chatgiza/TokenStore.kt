@@ -124,8 +124,8 @@ class TokenStore(context: Context) {
     prefs.edit().putBoolean(KEY_HAPTICS_ENABLED, value).apply()
   }
 
-  // Extra Media's own light/dark toggle -- independent of the main app's
-  // appearance setting, scoped to Extra per explicit request.
+  // Quantara's own light/dark toggle -- independent of the main app's
+  // appearance setting, scoped to Quantara per explicit request.
   fun getExtraDarkMode(): Boolean = prefs.getBoolean(KEY_EXTRA_DARK_MODE, false)
   fun setExtraDarkMode(value: Boolean) {
     prefs.edit().putBoolean(KEY_EXTRA_DARK_MODE, value).apply()
@@ -264,8 +264,8 @@ class TokenStore(context: Context) {
     prefs.edit().putBoolean(KEY_AGE_CONFIRMED_18PLUS, value).apply()
   }
 
-  /** Permission gate for the Chat<->Extra Media bridge (granted via the "+"
-   * -> "Connect With ChatGiZa" sheet in Extra Media). Off by default, and
+  /** Permission gate for the Chat<->Quantara bridge (granted via the "+"
+   * -> "Connect With ChatGiZa" sheet in Quantara). Off by default, and
    * deliberately NOT preserved across clear() (sign-out) -- this permission
    * is what lets chat replies reach a public feed under whichever account
    * is signed in, so a new sign-in on a shared device shouldn't silently
