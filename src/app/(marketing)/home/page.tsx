@@ -48,6 +48,8 @@ export default function HomePage() {
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <a
             href="https://chatgiza.com"
+            target="_blank"
+            rel="noopener noreferrer"
             className="btn-primary rounded-full px-6 py-3 text-sm font-medium transition-opacity hover:opacity-85"
           >
             Try ChatGiZa
@@ -64,6 +66,8 @@ export default function HomePage() {
       <section className="mx-auto max-w-5xl px-4 pb-16">
         <a
           href="https://chatgiza.com"
+          target="_blank"
+          rel="noopener noreferrer"
           className="group relative flex h-64 items-center justify-center overflow-hidden rounded-3xl border border-border bg-surface sm:h-80"
         >
           <div className="hero-shimmer-bg" style={{ position: "absolute" }} />
