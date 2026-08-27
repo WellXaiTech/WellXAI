@@ -9,7 +9,12 @@ import { CHATGIZA_APK_URL } from "@/lib/useInstallPrompt";
 
 // These pages represent WellXAI, the company, rather than the ChatGiZa
 // product — the logo should read "WellXAI" there instead.
-const COMPANY_BRANDED_PATHS = ["/terms", "/privacy", "/wx-6f44c8d2a535"];
+const COMPANY_BRANDED_PATHS = ["/terms", "/privacy", "/wx-6f44c8d2a535", "/company"];
+// wellxai.world's "/" is proxy-rewritten to "/company" (see src/proxy.ts)
+// rather than redirected, so the browser's address bar -- and therefore
+// usePathname() -- stays on "/", never actually reporting "/company". Path
+// alone can't detect that case; checking the hostname too covers it.
+const COMPANY_HOSTS = new Set(["wellxai.world", "www.wellxai.world"]);
 
 const links = [
   { href: "/research", label: "Research" },
@@ -22,7 +27,11 @@ const links = [
 
 export default function Navbar() {
   const pathname = usePathname();
-  const isCompanyBranded = COMPANY_BRANDED_PATHS.includes(pathname);
+  const [isCompanyHost, setIsCompanyHost] = useState(false);
+  useEffect(() => {
+    setIsCompanyHost(COMPANY_HOSTS.has(window.location.hostname));
+  }, []);
+  const isCompanyBranded = COMPANY_BRANDED_PATHS.includes(pathname) || isCompanyHost;
 
   // On an Android phone/tablet, "Try ChatGiZa" should get people into the
   // real native app (via its APK download) rather than the web chat —
@@ -57,12 +66,26 @@ export default function Navbar() {
         </div>
         <div className="flex items-center gap-3">
           <NavAuthButton />
-          <Link
-            href={isAndroid ? CHATGIZA_APK_URL : "/chatgiza"}
-            className="btn-primary rounded-full px-4 py-2 text-sm font-medium transition-opacity hover:opacity-85"
-          >
-            Try ChatGiZa
-          </Link>
+          {isCompanyHost ? (
+            // wellxai.world must never render the chat app itself (see
+            // src/proxy.ts) -- opening chatgiza.com in a new tab instead of
+            // navigating away keeps the WellXAI site open in this one.
+            <a
+              href="https://chatgiza.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-primary rounded-full px-4 py-2 text-sm font-medium transition-opacity hover:opacity-85"
+            >
+              Try ChatGiZa
+            </a>
+          ) : (
+            <Link
+              href={isAndroid ? CHATGIZA_APK_URL : "/chatgiza"}
+              className="btn-primary rounded-full px-4 py-2 text-sm font-medium transition-opacity hover:opacity-85"
+            >
+              Try ChatGiZa
+            </Link>
+          )}
         </div>
       </nav>
     </header>
