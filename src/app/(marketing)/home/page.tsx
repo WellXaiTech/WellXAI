@@ -34,7 +34,7 @@ const sections: { title: string; description: string; href: string }[] = [
   {
     title: "Help Center",
     description: "Answers to common questions about WellXAI and ChatGiZa.",
-    href: "/support",
+    href: "https://support.wellxai.world",
   },
 ];
 
@@ -88,9 +88,9 @@ export default function HomePage() {
       <section className="mx-auto max-w-5xl px-4 pb-20">
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {sections.map((s) =>
-            // Help Center opens as its own new-tab destination rather than
-            // swapping this page out, same as the ChatGiZa banner above.
-            s.href === "/support" ? (
+            // Help Center is its own site (support.wellxai.world) -- a new
+            // tab keeps this page open, same as the ChatGiZa banner above.
+            s.href.startsWith("https://") ? (
               <a
                 key={s.href}
                 href={s.href}

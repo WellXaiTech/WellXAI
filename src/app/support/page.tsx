@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactElement } from "react";
+import Logo from "@/components/Logo";
 
 type Article = { question: string; answer: string };
 type Category = { title: string; icon: ReactElement; articles: Article[] };
@@ -143,8 +144,11 @@ export default function SupportPage() {
   return (
     <div className="w-full">
       <div className="border-b border-border">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-6">
-          <h1 className="text-xl font-semibold">WellXAI Support</h1>
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
+          <a href="https://wellxai.world" className="inline-flex items-center gap-2">
+            <Logo brand="WellXAI" />
+            <span className="text-muted">Support</span>
+          </a>
           <div className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm text-muted focus-within:border-foreground/40 sm:w-72">
             {SearchIcon}
             <input
