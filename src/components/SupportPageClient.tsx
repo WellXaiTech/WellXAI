@@ -168,7 +168,6 @@ export default function SupportPageClient() {
             }}
           >
             <Logo brand="WellXAI" />
-            <span className="text-muted">Support</span>
           </a>
         </div>
       </div>
@@ -221,6 +220,7 @@ export default function SupportPageClient() {
               className="w-full bg-transparent outline-none placeholder:text-muted"
             />
           </div>
+          <p className="mt-3 text-sm text-muted">WellXAI Support</p>
         </div>
       )}
 
