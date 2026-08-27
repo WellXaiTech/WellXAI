@@ -74,7 +74,7 @@ const SITE_DESCRIPTION =
 const COMPANY_HOSTS = new Set(["wellxai.world", "www.wellxai.world"]);
 const COMPANY_SITE_NAME = "WellXAI";
 const COMPANY_DESCRIPTION =
-  "WellXAI is the company behind ChatGiZa, building AI for East Africa and beyond.";
+  "WellXAI is the company behind ChatGiZa, building AI closer to people everywhere.";
 
 // Reinforces the site-name signal for Google's search-result header (the line
 // shown above the URL, e.g. "ChatGiZa" instead of the bare domain) — Google's
