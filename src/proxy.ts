@@ -102,6 +102,14 @@ export function proxy(req: NextRequest) {
       url.pathname = ADMIN_PREFIX + (pathname === "/" ? "" : pathname);
       return NextResponse.rewrite(url);
     }
+    // Same rule as the company host below -- the admin dashboard must
+    // never render the chat app either, e.g. if something ever sends a
+    // signed-in admin visitor to /chatgiza by mistake.
+    if (matchesAny(pathname, PRODUCT_ONLY_PREFIXES)) {
+      const url = new URL(req.url);
+      url.hostname = "chatgiza.com";
+      return NextResponse.redirect(url);
+    }
     return NextResponse.next();
   }
 
