@@ -74,30 +74,48 @@ export default function Footer() {
           <div key={col.heading}>
             <h4 className="font-medium mb-3">{col.heading}</h4>
             <ul className="space-y-2 text-muted">
-              {col.links.map((l) =>
-                // On wellxai.world, "/chatgiza" is company-only-blocked (see
-                // src/proxy.ts) and would redirect this same tab away to
-                // chatgiza.com. Opening it in a new tab keeps the company
-                // site open, matching the "Try ChatGiZa" button.
-                isCompanyHost && l.href === "/chatgiza" ? (
-                  <li key={l.label}>
-                    <a
-                      href="https://chatgiza.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:text-foreground"
-                    >
-                      {l.label}
-                    </a>
-                  </li>
-                ) : (
+              {col.links.map((l) => {
+                // On the company host, "/chatgiza" is blocked (see
+                // src/proxy.ts) and would redirect this tab away to
+                // chatgiza.com, and "/support" (Help Center) should feel
+                // like its own destination rather than a page swap. Both
+                // open in a new tab so wellxai.world stays open.
+                if (isCompanyHost && l.href === "/chatgiza") {
+                  return (
+                    <li key={l.label}>
+                      <a
+                        href="https://chatgiza.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-foreground"
+                      >
+                        {l.label}
+                      </a>
+                    </li>
+                  );
+                }
+                if (isCompanyHost && l.href === "/support") {
+                  return (
+                    <li key={l.label}>
+                      <a
+                        href="/support"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-foreground"
+                      >
+                        {l.label}
+                      </a>
+                    </li>
+                  );
+                }
+                return (
                   <li key={l.label}>
                     <Link href={l.href} className="hover:text-foreground">
                       {l.label}
                     </Link>
                   </li>
-                )
-              )}
+                );
+              })}
             </ul>
           </div>
         ))}
