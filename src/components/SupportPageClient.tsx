@@ -204,9 +204,8 @@ export default function SupportPageClient() {
           </div>
         </div>
       ) : (
-        <div className="mx-auto max-w-3xl px-4 pt-16 pb-10 text-center sm:px-6">
-          <h1 className="text-3xl font-semibold sm:text-4xl">How can we help?</h1>
-          <div className="mx-auto mt-10 flex max-w-xl items-center gap-2.5 border-b border-border pb-3 text-left text-base text-muted focus-within:border-foreground/60">
+        <div className="mx-auto max-w-5xl px-4 pt-10 pb-10 sm:px-6">
+          <div className="flex items-center gap-2.5 border-b border-border pb-3 text-base text-muted focus-within:border-foreground/60">
             {SearchIcon}
             <input
               value={query}
