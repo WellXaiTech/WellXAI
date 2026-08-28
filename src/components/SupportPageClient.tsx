@@ -190,7 +190,7 @@ export default function SupportPageClient() {
       </div>
 
       {active && !results ? (
-        <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
           <button
             onClick={() => setActiveIndex(null)}
             className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-foreground"
@@ -240,7 +240,7 @@ export default function SupportPageClient() {
       )}
 
       {results && (
-        <div className="mx-auto max-w-3xl px-4 pb-16 sm:px-6">
+        <div className="mx-auto max-w-5xl px-4 pb-16 sm:px-6">
           <h2 className="text-lg font-semibold">
             {results.length} result{results.length === 1 ? "" : "s"} for &quot;{query}&quot;
           </h2>
