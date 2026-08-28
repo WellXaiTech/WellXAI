@@ -15,8 +15,15 @@ const CloseIcon = (
   </svg>
 );
 const SendIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M12 19V5M5 12l7-7 7 7" strokeLinecap="round" strokeLinejoin="round" />
+  <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+    <path d="M19.3 0a.7.7 0 0 1 .7.7v8.278a6.7 6.7 0 0 1-6.699 6.698l-10.996-.001l3.131 3.13a.7.7 0 0 1-.99.99l-4.24-4.241a.7.7 0 0 1 0-.99l4.241-4.241a.7.7 0 1 1 .99.99l-2.965 2.963h10.83A5.3 5.3 0 0 0 18.6 8.978V.7a.7.7 0 0 1 .7-.7" />
+  </svg>
+);
+// Shown on the send button instead while a reply is streaming in -- clicking
+// it aborts the in-flight request (lucide's "square" glyph).
+const StopIcon = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect width="18" height="18" x="3" y="3" rx="2" />
   </svg>
 );
 // New conversation -- clears back to the greeting. Same glyph as ChatSidebar's
@@ -63,6 +70,7 @@ export default function SupportChatWidget() {
   const [error, setError] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
@@ -83,20 +91,32 @@ export default function SupportChatWidget() {
     const next = [...messages, { role: "user" as const, content: text }];
     setMessages(next);
     setSending(true);
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
       const res = await fetch("/api/support-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text, history: next.slice(-10) }),
+        signal: controller.signal,
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Something went wrong.");
       setMessages((m) => [...m, { role: "assistant", content: data.reply }]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      if (err instanceof DOMException && err.name === "AbortError") {
+        // User hit stop -- not a real error, nothing to show.
+      } else {
+        setError(err instanceof Error ? err.message : "Something went wrong.");
+      }
     } finally {
       setSending(false);
+      abortRef.current = null;
     }
+  }
+
+  function stop() {
+    abortRef.current?.abort();
   }
 
   if (!open) {
@@ -113,7 +133,7 @@ export default function SupportChatWidget() {
 
   return (
     <div className="fixed bottom-2 right-4 z-50">
-      <div className="flex h-[600px] w-[420px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
+      <div className="flex h-[600px] w-[420px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-2xl">
         <div className="flex items-center justify-end gap-3 border-b border-border px-4 py-3 text-muted">
           <button
             onClick={() => setMessages([GREETING])}
@@ -134,7 +154,7 @@ export default function SupportChatWidget() {
             {messages.map((m, i) => (
               <div key={i} className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}>
                 <p
-                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm ${
+                  className={`max-w-[85%] rounded-lg px-3.5 py-2.5 text-sm ${
                     m.role === "user" ? "btn-primary" : "bg-surface-2 text-foreground"
                   }`}
                 >
@@ -154,14 +174,14 @@ export default function SupportChatWidget() {
             ))}
             {sending && (
               <div className="flex justify-start">
-                <p className="rounded-2xl bg-surface-2 px-3.5 py-2.5 text-sm text-muted">Thinking…</p>
+                <p className="rounded-lg bg-surface-2 px-3.5 py-2.5 text-sm text-muted">Thinking…</p>
               </div>
             )}
             {error && <p className="text-xs text-red-500">{error}</p>}
           </div>
 
           <div className="border-t border-border p-3">
-            <div className="flex items-center gap-2 rounded-full border border-border px-3 py-2">
+            <div className="flex items-center gap-2 rounded-xl border border-border px-3 py-2">
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -173,12 +193,12 @@ export default function SupportChatWidget() {
                 className="w-full bg-transparent text-sm outline-none placeholder:text-muted"
               />
               <button
-                onClick={send}
-                disabled={sending || !input.trim()}
-                aria-label="Send"
+                onClick={sending ? stop : send}
+                disabled={!sending && !input.trim()}
+                aria-label={sending ? "Stop" : "Send"}
                 className="btn-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full disabled:opacity-40"
               >
-                {SendIcon}
+                {sending ? StopIcon : SendIcon}
               </button>
             </div>
             <p className="mt-4 text-center text-[11px] leading-4 text-muted">
