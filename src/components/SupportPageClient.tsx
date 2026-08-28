@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type ReactElement } from "react";
 import Logo from "@/components/Logo";
+import SupportChatWidget from "@/components/SupportChatWidget";
 
 type Article = { question: string; answer: string };
 type Category = { title: string; description: string; icon: ReactElement; articles: Article[] };
@@ -289,6 +290,8 @@ export default function SupportPageClient() {
           </div>
         </div>
       )}
+
+      <SupportChatWidget />
     </div>
   );
 }
