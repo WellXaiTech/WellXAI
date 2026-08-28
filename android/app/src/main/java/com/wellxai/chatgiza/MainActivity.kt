@@ -1744,7 +1744,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
             color = Color.Black.copy(alpha = 0.4f),
             fontSize = 12.sp,
             modifier = Modifier.clickable {
-              menuFooterContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/terms")))
+              menuFooterContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://support.wellxai.world")))
             }
           )
           Text(" · ", color = Color.Black.copy(alpha = 0.3f), fontSize = 12.sp)
@@ -1753,7 +1753,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
             color = Color.Black.copy(alpha = 0.4f),
             fontSize = 12.sp,
             modifier = Modifier.clickable {
-              menuFooterContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/privacy")))
+              menuFooterContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://support.wellxai.world")))
             }
           )
         }
@@ -1970,7 +1970,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
           color = Color.Black.copy(alpha = 0.4f),
           fontSize = 12.sp,
           modifier = Modifier.clickable {
-            footerContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/terms")))
+            footerContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://support.wellxai.world")))
           }
         )
         Text(" · ", color = Color.Black.copy(alpha = 0.3f), fontSize = 12.sp)
@@ -1979,7 +1979,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
           color = Color.Black.copy(alpha = 0.4f),
           fontSize = 12.sp,
           modifier = Modifier.clickable {
-            footerContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/privacy")))
+            footerContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://support.wellxai.world")))
           }
         )
       }
@@ -7535,11 +7535,11 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
           .padding(horizontal = 14.dp)
       ) {
         AboutUsRow(icon = Icons.AutoMirrored.Outlined.Article, label = "Terms of Use") {
-          context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/terms")))
+          context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://support.wellxai.world")))
         }
         HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
         AboutUsRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_solid), label = "Privacy Policy") {
-          context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.chatgiza.com/privacy")))
+          context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://support.wellxai.world")))
         }
         HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
         AboutUsRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_report_problem), label = "Report a Problem") {
