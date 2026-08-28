@@ -6,16 +6,19 @@ import Logo from "@/components/Logo";
 type Article = { question: string; answer: string };
 type Category = { title: string; description: string; icon: ReactElement; articles: Article[] };
 
-const IconGettingStarted = (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-    <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z" strokeLinecap="round" strokeLinejoin="round" />
+// Shared icon for Getting Started / ChatGiZa App / Contact -- Business & API
+// and Privacy & Legal deliberately keep their own distinct icons instead.
+const IconFolder = (
+  <svg width="24" height="24" viewBox="0 0 512 512">
+    <path d="M0 0h512v512H0z" fill="none" />
+    <path
+      fill="currentColor"
+      d="M251.7 127.6c10.5 10.5 24.7 16.4 39.6 16.4H448c8.8 0 16 7.2 16 16v32H48V96c0-8.8 7.2-16 16-16h133.5c4.2 0 8.3 1.7 11.3 4.7l33.9-33.9l-33.9 33.9zM48 240h416v176c0 8.8-7.2 16-16 16H64c-8.8 0-16-7.2-16-16zM285.7 93.7l-43-43c-12-12-28.3-18.7-45.3-18.7H64C28.7 32 0 60.7 0 96v320c0 35.3 28.7 64 64 64h384c35.3 0 64-28.7 64-64V160c0-35.3-28.7-64-64-64H291.3c-2.1 0-4.2-.8-5.7-2.3z"
+    />
   </svg>
 );
-const IconChat = (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10Z" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
+const IconGettingStarted = IconFolder;
+const IconChat = IconFolder;
 const IconBusiness = (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
     <rect x="3" y="7" width="18" height="14" rx="2" />
@@ -27,12 +30,7 @@ const IconPrivacy = (
     <path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5l-8-3Z" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
-const IconContact = (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-    <rect x="3" y="5" width="18" height="14" rx="2" />
-    <path d="m4 6 8 6 8-6" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
+const IconContact = IconFolder;
 const SearchIcon = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <circle cx="11" cy="11" r="7" />
