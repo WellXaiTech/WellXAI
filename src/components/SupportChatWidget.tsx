@@ -75,27 +75,38 @@ export default function SupportChatWidget() {
     }
   }
 
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        aria-label="Open support chat"
+        className="btn-primary fixed bottom-4 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-opacity hover:opacity-90"
+      >
+        {ChatBubbleIcon}
+      </button>
+    );
+  }
+
   return (
     <div className="fixed bottom-2 right-4 z-50">
-      {open && (
-        <div className="mb-3 flex h-[600px] w-[420px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
-          <div className="flex items-center justify-end gap-3 border-b border-border px-4 py-3 text-muted">
-            <button
-              onClick={() => setMessages([GREETING])}
-              aria-label="New conversation"
-              className="hover:text-foreground"
-            >
-              {EditIcon}
-            </button>
-            <button aria-label="History" className="hover:text-foreground">
-              {HistoryIcon}
-            </button>
-            <button onClick={() => setOpen(false)} aria-label="Close" className="hover:text-foreground">
-              {CloseIcon}
-            </button>
-          </div>
+      <div className="flex h-[600px] w-[420px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
+        <div className="flex items-center justify-end gap-3 border-b border-border px-4 py-3 text-muted">
+          <button
+            onClick={() => setMessages([GREETING])}
+            aria-label="New conversation"
+            className="hover:text-foreground"
+          >
+            {EditIcon}
+          </button>
+          <button aria-label="History" className="hover:text-foreground">
+            {HistoryIcon}
+          </button>
+          <button onClick={() => setOpen(false)} aria-label="Close" className="hover:text-foreground">
+            {CloseIcon}
+          </button>
+        </div>
 
-          <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+        <div ref={listRef} className="no-scrollbar flex-1 space-y-3 overflow-y-auto px-4 py-4">
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                 <p
@@ -141,15 +152,8 @@ export default function SupportChatWidget() {
             </p>
           </div>
         </div>
-      )}
-
-      <button
-        onClick={() => setOpen((v) => !v)}
-        aria-label="Open support chat"
-        className="btn-primary flex h-14 w-14 shrink-0 items-center justify-center rounded-full shadow-lg transition-opacity hover:opacity-90"
-      >
-        {ChatBubbleIcon}
-      </button>
-    </div>
+      </div>
   );
 }
+
+
