@@ -113,7 +113,7 @@ const categories: Category[] = [
       {
         question: "How do I bring ChatGiZa to my company?",
         answer:
-          "Visit the Business page, or email hello@chatgiza.com and our team will get back to you about team access and integration.",
+          "Visit the Business page, or email hello@wellxai.world and our team will get back to you about team access and integration.",
       },
       {
         question: "Where can I get API access?",
@@ -144,7 +144,7 @@ const categories: Category[] = [
     articles: [
       {
         question: "How do I contact support?",
-        answer: "Email hello@chatgiza.com and our team will get back to you.",
+        answer: "Email support@wellxai.world and our team will get back to you.",
       },
     ],
   },
@@ -218,7 +218,7 @@ export default function SupportPageClient() {
           <div className="card mt-10 rounded-2xl p-6 text-center">
             <p className="text-sm text-muted">
               Can&apos;t find what you&apos;re looking for? Email{" "}
-              <span className="text-foreground">hello@chatgiza.com</span>.
+              <span className="text-foreground">support@wellxai.world</span>.
             </p>
           </div>
         </div>
@@ -261,7 +261,7 @@ export default function SupportPageClient() {
             ))}
             {results.length === 0 && (
               <p className="text-sm text-muted">
-                No results. Email <span className="text-foreground">hello@chatgiza.com</span> and we&apos;ll help
+                No results. Email <span className="text-foreground">support@wellxai.world</span> and we&apos;ll help
                 directly.
               </p>
             )}

@@ -19,7 +19,7 @@ ChatGiZa App
 - How do I sign in to ChatGiZa? Continue with Google, Apple, Microsoft, or company SSO at chatgiza.com to save chat history across devices.
 
 Business & API
-- How do I bring ChatGiZa to my company? Visit the Business page on wellxai.world, or email hello@chatgiza.com.
+- How do I bring ChatGiZa to my company? Visit the Business page on wellxai.world, or email hello@wellxai.world.
 - Where can I get API access? The Developers page on wellxai.world has details on the ChatGiZa API.
 
 Privacy & Legal
@@ -27,13 +27,13 @@ Privacy & Legal
 - Where are the Terms of Service? On the Terms page.
 
 Contact
-- How do I contact support? Email hello@chatgiza.com.
+- How do I contact support? Email support@wellxai.world.
 `.trim();
 
 const SUPPORT_CHAT_PROMPT =
   `You are AI-assisted support for WellXAI, embedded as a chat widget on the Help Center (support.wellxai.world). ` +
   `Answer only using the Help Center content below -- don't invent policies, prices, or features it doesn't cover. ` +
-  `If the answer isn't in this content, say so plainly and point them to hello@chatgiza.com rather than guessing. ` +
+  `If the answer isn't in this content, say so plainly and point them to support@wellxai.world rather than guessing. ` +
   `Keep replies short and direct (2-5 sentences), plain text, no markdown headers.\n\n` +
   `Help Center content:\n${FAQ_CONTEXT}\n\n${COMPANY_IDENTITY_PROMPT}`;
 

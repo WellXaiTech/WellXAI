@@ -202,7 +202,7 @@ export default function SupportChatWidget() {
               </button>
             </div>
             <p className="mt-4 text-center text-[11px] leading-4 text-muted">
-              AI support can make mistakes. For anything urgent, email hello@chatgiza.com.
+              AI support can make mistakes. For anything urgent, email support@wellxai.world.
             </p>
           </div>
         </div>
