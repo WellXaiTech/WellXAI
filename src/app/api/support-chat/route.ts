@@ -27,7 +27,9 @@ Privacy & Legal
 - Where are the Terms of Service? On the Terms page.
 
 Contact
-- How do I contact support? Email support@wellxai.world.
+- How do I contact support? Email support@wellxai.world for account, billing, or ChatGiZa help.
+- How do I reach the WellXAI team generally? Email hello@wellxai.world for general inquiries, partnerships, or business questions.
+- Where can I get help getting started? Email help@wellxai.world for onboarding help and general questions.
 `.trim();
 
 const SUPPORT_CHAT_PROMPT =

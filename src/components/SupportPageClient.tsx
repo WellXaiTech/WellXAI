@@ -144,7 +144,15 @@ const categories: Category[] = [
     articles: [
       {
         question: "How do I contact support?",
-        answer: "Email support@wellxai.world and our team will get back to you.",
+        answer: "Email support@wellxai.world for help with your account, billing, or using ChatGiZa.",
+      },
+      {
+        question: "How do I reach the WellXAI team generally?",
+        answer: "Email hello@wellxai.world for general inquiries, partnerships, or business questions.",
+      },
+      {
+        question: "Where can I get help getting started?",
+        answer: "Email help@wellxai.world for onboarding help and general questions about WellXAI or ChatGiZa.",
       },
     ],
   },
