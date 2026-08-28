@@ -97,7 +97,9 @@ const HOST_METADATA: { hosts: Set<string>; siteName: string; description: string
 // Reinforces the site-name signal for Google's search-result header (the line
 // shown above the URL, e.g. "ChatGiZa" instead of the bare domain) — Google's
 // own docs recommend Organization/WebSite structured data for this rather
-// than relying on `og:site_name` alone.
+// than relying on `og:site_name` alone. Kept per-host (like HOST_METADATA
+// above) since wellxai.world and support.wellxai.world are their own sites,
+// not ChatGiZa, and shouldn't claim to be "ChatGiZa" to search engines.
 const STRUCTURED_DATA = [
   {
     "@context": "https://schema.org",
@@ -113,6 +115,37 @@ const STRUCTURED_DATA = [
     url: "https://chatgiza.com",
   },
 ];
+
+const COMPANY_STRUCTURED_DATA = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: COMPANY_SITE_NAME,
+    url: "https://wellxai.world",
+    logo: "https://wellxai.world/icon.png",
+    sameAs: ["https://chatgiza.com"],
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: COMPANY_SITE_NAME,
+    url: "https://wellxai.world",
+  },
+];
+
+const SUPPORT_STRUCTURED_DATA = [
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "WellXAI Support",
+    url: "https://support.wellxai.world",
+    isPartOf: { "@type": "Organization", name: COMPANY_SITE_NAME, url: "https://wellxai.world" },
+  },
+];
+
+// Admin dashboard is unguessable on purpose and not meant to be indexed --
+// it gets no structured data (see RootLayout below).
+const ADMIN_HOSTS_FOR_SEO = new Set(["wx-6f44c8d2a535.wellxai.world"]);
 
 export async function generateMetadata(): Promise<Metadata> {
   const host = (await headers()).get("host")?.split(":")[0] ?? "";
@@ -168,11 +201,20 @@ export const viewport = {
   interactiveWidget: "resizes-content",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const host = (await headers()).get("host")?.split(":")[0] ?? "";
+  const structuredData = ADMIN_HOSTS_FOR_SEO.has(host)
+    ? null
+    : host === "support.wellxai.world"
+      ? SUPPORT_STRUCTURED_DATA
+      : COMPANY_HOSTS.has(host)
+        ? COMPANY_STRUCTURED_DATA
+        : STRUCTURED_DATA;
+
   return (
     <html
       lang="en"
@@ -180,11 +222,13 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <script
-          type="application/ld+json"
-          // eslint-disable-next-line react/no-danger
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }}
-        />
+        {structuredData && (
+          <script
+            type="application/ld+json"
+            // eslint-disable-next-line react/no-danger
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+          />
+        )}
         <Script id="theme-init" strategy="beforeInteractive">
           {`(function(){try{var t=localStorage.getItem("chatgiza:theme");if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t);}var f=localStorage.getItem("chatgiza:font-size");if(f==="small"||f==="medium"||f==="large"||f==="xlarge"){document.documentElement.setAttribute("data-font-size",f);}var a=localStorage.getItem("chatgiza:assistant-color");if(a==="warm"){document.documentElement.setAttribute("data-assistant-color",a);}var c=localStorage.getItem("chatgiza:contrast");if(c==="medium"||c==="increased"){document.documentElement.setAttribute("data-contrast",c);}var cf=localStorage.getItem("chatgiza:chat-font");if(cf==="manrope"||cf==="system"){document.documentElement.setAttribute("data-chat-font",cf);}}catch(e){}})();`}
         </Script>
