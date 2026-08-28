@@ -180,7 +180,7 @@ export default function SupportChatWidget() {
             {error && <p className="text-xs text-red-500">{error}</p>}
           </div>
 
-          <div className="border-t border-border p-3">
+          <div className="p-3">
             <div className="flex items-center gap-2 rounded-xl border border-border px-3 py-2">
               <input
                 value={input}
