@@ -20,14 +20,19 @@ const IconFolder = (
 const IconGettingStarted = IconFolder;
 const IconChat = IconFolder;
 const IconBusiness = (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-    <rect x="3" y="7" width="18" height="14" rx="2" />
-    <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" strokeLinecap="round" strokeLinejoin="round" />
+  <svg width="24" height="24" viewBox="0 0 24 24">
+    <g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
+      <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <path d="M8 21a2 2 0 0 0 2-2v-8a4 4 0 0 0-8 0v8a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-8a4 4 0 0 0-4-4H6m-4 6h20" />
+    </g>
   </svg>
 );
 const IconPrivacy = (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-    <path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5l-8-3Z" strokeLinecap="round" strokeLinejoin="round" />
+  <svg width="24" height="24" viewBox="0 0 24 24">
+    <g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
+      <path d="M12 12h.01M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2m14 7a18.15 18.15 0 0 1-20 0" />
+      <rect width="20" height="14" x="2" y="6" rx="2" />
+    </g>
   </svg>
 );
 const IconContact = IconFolder;
