@@ -284,8 +284,6 @@ export default function SupportPageClient() {
               </button>
             ))}
           </div>
-
-          <p className="mt-24 text-center text-xs text-muted">WellXAI Support</p>
         </div>
       )}
     </div>
