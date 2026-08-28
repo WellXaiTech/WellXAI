@@ -19,6 +19,20 @@ const SendIcon = (
     <path d="M12 19V5M5 12l7-7 7 7" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
+// New conversation -- clears back to the greeting.
+const EditIcon = (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+// Placeholder for now -- there's no conversation history backend yet.
+const HistoryIcon = (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M3 12a9 9 0 1 0 3-6.7" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M3 5v5h5" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M12 8v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
 
 const GREETING: Message = {
   role: "assistant",
@@ -62,12 +76,21 @@ export default function SupportChatWidget() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-2 right-4 z-50">
       {open && (
-        <div className="mb-3 flex h-[520px] w-[360px] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <span className="text-sm font-semibold">WellXAI Support</span>
-            <button onClick={() => setOpen(false)} aria-label="Close" className="text-muted hover:text-foreground">
+        <div className="mb-3 flex h-[600px] w-[420px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
+          <div className="flex items-center justify-end gap-3 border-b border-border px-4 py-3 text-muted">
+            <button
+              onClick={() => setMessages([GREETING])}
+              aria-label="New conversation"
+              className="hover:text-foreground"
+            >
+              {EditIcon}
+            </button>
+            <button aria-label="History" className="hover:text-foreground">
+              {HistoryIcon}
+            </button>
+            <button onClick={() => setOpen(false)} aria-label="Close" className="hover:text-foreground">
               {CloseIcon}
             </button>
           </div>
@@ -113,7 +136,7 @@ export default function SupportChatWidget() {
                 {SendIcon}
               </button>
             </div>
-            <p className="mt-2 text-center text-[11px] leading-4 text-muted">
+            <p className="mt-4 text-center text-[11px] leading-4 text-muted">
               AI support can make mistakes. For anything urgent, email hello@chatgiza.com.
             </p>
           </div>
@@ -123,9 +146,9 @@ export default function SupportChatWidget() {
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label="Open support chat"
-        className="btn-primary flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-opacity hover:opacity-90"
+        className="btn-primary flex h-14 w-14 shrink-0 items-center justify-center rounded-full shadow-lg transition-opacity hover:opacity-90"
       >
-        {open ? CloseIcon : ChatBubbleIcon}
+        {ChatBubbleIcon}
       </button>
     </div>
   );
