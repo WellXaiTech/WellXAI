@@ -134,7 +134,7 @@ export default function SupportChatWidget() {
   return (
     <div className="fixed bottom-2 right-4 z-50">
       <div className="flex h-[600px] w-[420px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-2xl">
-        <div className="flex items-center justify-end gap-3 border-b border-border px-4 py-3 text-muted">
+        <div className="flex items-center justify-end gap-3 px-4 py-3 text-muted">
           <button
             onClick={() => setMessages([GREETING])}
             aria-label="New conversation"
