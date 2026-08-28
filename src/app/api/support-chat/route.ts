@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { COMPANY_IDENTITY_PROMPT } from "@/lib/promptShared";
+import { COMPANY_IDENTITY_PROMPT, MODELS } from "@/lib/promptShared";
 
 export const maxDuration = 30;
 
@@ -40,7 +40,7 @@ const SUPPORT_CHAT_PROMPT =
 type ChatTurn = { role: "user" | "assistant"; content: string };
 
 export async function POST(req: NextRequest) {
-  if (!process.env.OPENAI_API_KEY) {
+  if (!process.env.OPENAI_API_KEY && !process.env.DEEPSEEK_API_KEY) {
     return NextResponse.json({ error: "Support chat is temporarily unavailable." }, { status: 503 });
   }
 
@@ -52,25 +52,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Message is required." }, { status: 400 });
   }
 
-  try {
-    const { default: OpenAI } = await import("openai");
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const chatMessages = [
+    { role: "system" as const, content: SUPPORT_CHAT_PROMPT },
+    ...history.slice(-10).map((t) => ({ role: t.role, content: t.content })),
+    { role: "user" as const, content: message },
+  ];
 
-    const completion = await client.chat.completions.create({
-      model: "gpt-5.5",
-      messages: [
-        { role: "system", content: SUPPORT_CHAT_PROMPT },
-        ...history.slice(-10).map((t) => ({ role: t.role, content: t.content })),
-        { role: "user", content: message },
-      ],
-    });
+  const { default: OpenAI } = await import("openai");
 
-    const reply = completion.choices[0]?.message?.content?.trim();
-    if (!reply) throw new Error("Empty response");
-
-    return NextResponse.json({ reply });
-  } catch (err) {
-    console.error("Support chat failed:", err);
-    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+  // Same primary-OpenAI/fallback-DeepSeek resilience as the main chat (see
+  // src/lib/ai.ts) -- without it, an exhausted OpenAI quota takes this
+  // widget down even while the fallback key is perfectly usable.
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const completion = await client.chat.completions.create({ model: MODELS.primary, messages: chatMessages });
+      const reply = completion.choices[0]?.message?.content?.trim();
+      if (reply) return NextResponse.json({ reply });
+    } catch (err) {
+      console.error("Support chat (OpenAI) failed, trying fallback:", err);
+    }
   }
+
+  if (process.env.DEEPSEEK_API_KEY) {
+    try {
+      const client = new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY, baseURL: MODELS.fallbackBaseUrl });
+      const completion = await client.chat.completions.create({ model: MODELS.fallback, messages: chatMessages });
+      const reply = completion.choices[0]?.message?.content?.trim();
+      if (reply) return NextResponse.json({ reply });
+    } catch (err) {
+      console.error("Support chat (DeepSeek fallback) failed:", err);
+    }
+  }
+
+  return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
 }
