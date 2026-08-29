@@ -82,8 +82,8 @@ export default function PrivacyPage() {
       <h2 className="mt-10 text-lg font-medium">Contact us</h2>
       <p className="mt-3 text-muted">
         Questions about this policy? Use &quot;Wasiliana nasi&quot; inside ChatGiZa, or email{" "}
-        <a href="mailto:nicoloustz@gmail.com" className="text-foreground underline">
-          nicoloustz@gmail.com
+        <a href="mailto:support@wellxai.world" className="text-foreground underline">
+          support@wellxai.world
         </a>
         .
       </p>
