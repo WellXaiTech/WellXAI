@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import { sendMailBestEffort } from "@/lib/mailer";
 import { getWorkspaceForUser } from "@/lib/workspace";
 
-const SUPPORT_NOTIFY_EMAIL = process.env.SUPPORT_NOTIFY_EMAIL || "nicoloustz@gmail.com";
+const SUPPORT_NOTIFY_EMAIL = process.env.SUPPORT_NOTIFY_EMAIL || "support@wellxai.world";
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
