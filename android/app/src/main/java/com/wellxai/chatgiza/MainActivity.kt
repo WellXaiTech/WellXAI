@@ -2054,33 +2054,40 @@ private fun ToolSelectSheet(activeTool: String?, onSelect: (String?) -> Unit, on
         )
       }
       Spacer(modifier = Modifier.height(12.dp))
-      Column {
-        TOOL_SELECT_ORDER.forEachIndexed { index, tool ->
+      // Each row is its own raised white card against the sheet's slightly
+      // off-white APP_BACKGROUND (a flat divided list read as one flat
+      // gray field instead of distinct, tappable options).
+      Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        TOOL_SELECT_ORDER.forEach { tool ->
           Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
               .fillMaxWidth()
+              .clip(RoundedCornerShape(14.dp))
+              .background(Color.White)
+              .border(1.dp, Color.Black.copy(alpha = 0.06f), RoundedCornerShape(14.dp))
               .clickable { onSelect(tool); onDismiss() }
-              .padding(vertical = 14.dp)
+              .padding(horizontal = 14.dp, vertical = 14.dp)
           ) {
             Column(modifier = Modifier.weight(1f)) {
               Text(
                 tool?.let { TOOL_LABELS[it] } ?: "GiZa Pro",
-                color = Color.Black,
+                color = if (activeTool == tool) Color(0xFF0A84FF) else Color.Black,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold
               )
               TOOL_DESCRIPTIONS[tool]?.let {
                 Spacer(modifier = Modifier.height(2.dp))
-                Text(it, color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
+                Text(
+                  it,
+                  color = if (activeTool == tool) Color(0xFF0A84FF) else Color.Black.copy(alpha = 0.5f),
+                  fontSize = 13.sp
+                )
               }
             }
             if (activeTool == tool) {
               Icon(Icons.Filled.Check, contentDescription = "Selected", tint = Color(0xFF0A84FF), modifier = Modifier.size(20.dp))
             }
-          }
-          if (index < TOOL_SELECT_ORDER.lastIndex) {
-            HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
           }
         }
       }
