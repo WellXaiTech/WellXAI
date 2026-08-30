@@ -9200,7 +9200,8 @@ private fun AttachQuickAction(iconRes: Int, label: String, onClick: () -> Unit, 
     horizontalAlignment = Alignment.CenterHorizontally,
     modifier = modifier
       .clip(RoundedCornerShape(16.dp))
-      .background(Color.Black.copy(alpha = 0.05f))
+      .background(Color.White)
+      .border(1.dp, Color.Black.copy(alpha = 0.06f), RoundedCornerShape(16.dp))
       .clickable(onClick = onClick)
       .padding(vertical = 16.dp)
   ) {
@@ -9225,8 +9226,11 @@ private fun AttachMenuDetailRow(icon: @Composable () -> Unit, label: String, des
     verticalAlignment = Alignment.CenterVertically,
     modifier = Modifier
       .fillMaxWidth()
+      .clip(RoundedCornerShape(14.dp))
+      .background(Color.White)
+      .border(1.dp, Color.Black.copy(alpha = 0.06f), RoundedCornerShape(14.dp))
       .clickable(onClick = onClick)
-      .padding(vertical = 12.dp)
+      .padding(horizontal = 14.dp, vertical = 12.dp)
   ) {
     Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) { icon() }
     Spacer(modifier = Modifier.width(16.dp))
@@ -9262,26 +9266,27 @@ private fun AttachMenuSheet(
         AttachQuickAction(iconRes = R.drawable.ic_files, label = "Files", onClick = onFiles, modifier = Modifier.weight(1f))
       }
       Spacer(modifier = Modifier.height(16.dp))
-      AttachMenuDetailRow(
-        icon = { SkillsIconCustom(tint = Color.Black, modifier = Modifier.size(24.dp)) },
-        label = "Skills",
-        description = "Reuse specialized skills to handle specific tasks reliably",
-        onClick = onSkills
-      )
-      HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
-      AttachMenuDetailRow(
-        icon = {
-          Icon(
-            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connectors),
-            contentDescription = null,
-            tint = Color.Black,
-            modifier = Modifier.size(24.dp)
-          )
-        },
-        label = "Connectors",
-        description = "Connect apps and databases to automate actions for you",
-        onClick = onConnectors
-      )
+      Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        AttachMenuDetailRow(
+          icon = { SkillsIconCustom(tint = Color.Black, modifier = Modifier.size(24.dp)) },
+          label = "Skills",
+          description = "Reuse specialized skills to handle specific tasks reliably",
+          onClick = onSkills
+        )
+        AttachMenuDetailRow(
+          icon = {
+            Icon(
+              painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connectors),
+              contentDescription = null,
+              tint = Color.Black,
+              modifier = Modifier.size(24.dp)
+            )
+          },
+          label = "Connectors",
+          description = "Connect apps and databases to automate actions for you",
+          onClick = onConnectors
+        )
+      }
     }
   }
 }
