@@ -2011,6 +2011,83 @@ private val TOOL_LABELS = mapOf(
   "digital_twin" to "Digital Twin"
 )
 
+// One-line subtitle shown under each tool in ToolSelectSheet -- null key is
+// the default "GiZa Pro" row (no tool selected).
+private val TOOL_DESCRIPTIONS = mapOf<String?, String>(
+  null to "Chat, create images, and more",
+  "web_search" to "Search the web for current information",
+  "deep_research" to "In-depth reports on complex topics",
+  "deep_think" to "Extra reasoning for harder problems",
+  "document_writer" to "Draft and edit long documents",
+  "sql_helper" to "Write and debug SQL queries",
+  "python_helper" to "Write and debug Python code",
+  "business_assistant" to "Plans, memos, and business tasks",
+  "ai_agent" to "Completes multi-step tasks for you",
+  "agent_team" to "Multiple agents working together",
+  "digital_twin" to "An assistant trained on your data"
+)
+
+// Iteration order for ToolSelectSheet -- null (GiZa Pro) first, then every
+// TOOL_LABELS entry in the same order the old DropdownMenu listed them.
+private val TOOL_SELECT_ORDER: List<String?> = listOf(null) + TOOL_LABELS.keys.toList()
+
+// Replaces the old plain DropdownMenu for tool selection with a proper
+// bottom sheet -- title + close button, one row per tool with a subtitle
+// and a checkmark on whichever one is active, matching the rest of the
+// app's own bottom-sheet pickers (see e.g. the voice/output-device sheets
+// just above) instead of a bare Material dropdown popup.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ToolSelectSheet(activeTool: String?, onSelect: (String?) -> Unit, onDismiss: () -> Unit) {
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = APP_BACKGROUND) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
+      Box(modifier = Modifier.fillMaxWidth()) {
+        IconButton(onClick = onDismiss, modifier = Modifier.align(Alignment.CenterStart).size(28.dp)) {
+          Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.Black, modifier = Modifier.size(24.dp))
+        }
+        Text(
+          "Select tool",
+          color = Color.Black,
+          fontSize = 18.sp,
+          fontWeight = FontWeight.Bold,
+          modifier = Modifier.align(Alignment.Center)
+        )
+      }
+      Spacer(modifier = Modifier.height(12.dp))
+      Column {
+        TOOL_SELECT_ORDER.forEachIndexed { index, tool ->
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+              .fillMaxWidth()
+              .clickable { onSelect(tool); onDismiss() }
+              .padding(vertical = 14.dp)
+          ) {
+            Column(modifier = Modifier.weight(1f)) {
+              Text(
+                tool?.let { TOOL_LABELS[it] } ?: "GiZa Pro",
+                color = Color.Black,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold
+              )
+              TOOL_DESCRIPTIONS[tool]?.let {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(it, color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
+              }
+            }
+            if (activeTool == tool) {
+              Icon(Icons.Filled.Check, contentDescription = "Selected", tint = Color(0xFF0A84FF), modifier = Modifier.size(20.dp))
+            }
+          }
+          if (index < TOOL_SELECT_ORDER.lastIndex) {
+            HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
+          }
+        }
+      }
+    }
+  }
+}
+
 @Composable
 private fun TwoLineMenuIcon(tint: Color) {
   // Small circular backdrop so the icon reads as a proper tappable button
@@ -3548,18 +3625,12 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
             )
             Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = colorScheme.onBackground, modifier = Modifier.size(18.dp))
           }
-          DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
-            DropdownMenuItem(text = { Text("GiZa Pro") }, onClick = { viewModel.selectTool(null); toolMenuOpen = false })
-            DropdownMenuItem(text = { Text("Web search") }, onClick = { viewModel.selectTool("web_search"); toolMenuOpen = false })
-            DropdownMenuItem(text = { Text("Deep research") }, onClick = { viewModel.selectTool("deep_research"); toolMenuOpen = false })
-            DropdownMenuItem(text = { Text("Deep Think") }, onClick = { viewModel.selectTool("deep_think"); toolMenuOpen = false })
-            DropdownMenuItem(text = { Text("Document Writer") }, onClick = { viewModel.selectTool("document_writer"); toolMenuOpen = false })
-            DropdownMenuItem(text = { Text("SQL Helper") }, onClick = { viewModel.selectTool("sql_helper"); toolMenuOpen = false })
-            DropdownMenuItem(text = { Text("Python Helper") }, onClick = { viewModel.selectTool("python_helper"); toolMenuOpen = false })
-            DropdownMenuItem(text = { Text("Business Assistant") }, onClick = { viewModel.selectTool("business_assistant"); toolMenuOpen = false })
-            DropdownMenuItem(text = { Text("AI Agent") }, onClick = { viewModel.selectTool("ai_agent"); toolMenuOpen = false })
-            DropdownMenuItem(text = { Text("Agent Team") }, onClick = { viewModel.selectTool("agent_team"); toolMenuOpen = false })
-            DropdownMenuItem(text = { Text("Digital Twin") }, onClick = { viewModel.selectTool("digital_twin"); toolMenuOpen = false })
+          if (toolMenuOpen) {
+            ToolSelectSheet(
+              activeTool = viewModel.activeTool,
+              onSelect = { viewModel.selectTool(it) },
+              onDismiss = { toolMenuOpen = false }
+            )
           }
         }
         Spacer(modifier = Modifier.weight(1f))
@@ -4272,18 +4343,12 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
                 ) {
                   Icon(Icons.Filled.Add, contentDescription = "Tools", tint = Color.Black, modifier = Modifier.size(22.dp))
                 }
-                DropdownMenu(expanded = toolMenuOpen, onDismissRequest = { toolMenuOpen = false }) {
-                  DropdownMenuItem(text = { Text("GiZa Pro") }, onClick = { viewModel.selectTool(null); toolMenuOpen = false })
-                  DropdownMenuItem(text = { Text("Web search") }, onClick = { viewModel.selectTool("web_search"); toolMenuOpen = false })
-                  DropdownMenuItem(text = { Text("Deep research") }, onClick = { viewModel.selectTool("deep_research"); toolMenuOpen = false })
-                  DropdownMenuItem(text = { Text("Deep Think") }, onClick = { viewModel.selectTool("deep_think"); toolMenuOpen = false })
-                  DropdownMenuItem(text = { Text("Document Writer") }, onClick = { viewModel.selectTool("document_writer"); toolMenuOpen = false })
-                  DropdownMenuItem(text = { Text("SQL Helper") }, onClick = { viewModel.selectTool("sql_helper"); toolMenuOpen = false })
-                  DropdownMenuItem(text = { Text("Python Helper") }, onClick = { viewModel.selectTool("python_helper"); toolMenuOpen = false })
-                  DropdownMenuItem(text = { Text("Business Assistant") }, onClick = { viewModel.selectTool("business_assistant"); toolMenuOpen = false })
-                  DropdownMenuItem(text = { Text("AI Agent") }, onClick = { viewModel.selectTool("ai_agent"); toolMenuOpen = false })
-                  DropdownMenuItem(text = { Text("Agent Team") }, onClick = { viewModel.selectTool("agent_team"); toolMenuOpen = false })
-                  DropdownMenuItem(text = { Text("Digital Twin") }, onClick = { viewModel.selectTool("digital_twin"); toolMenuOpen = false })
+                if (toolMenuOpen) {
+                  ToolSelectSheet(
+                    activeTool = viewModel.activeTool,
+                    onSelect = { viewModel.selectTool(it) },
+                    onDismiss = { toolMenuOpen = false }
+                  )
                 }
               }
               // Material3 TextField's own vertical padding is sized for a
