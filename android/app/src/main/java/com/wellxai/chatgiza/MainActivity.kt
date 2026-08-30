@@ -3557,47 +3557,23 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
           ) {
             Icon(Icons.Filled.Add, contentDescription = "Attach", modifier = Modifier.size(18.dp))
           }
-          DropdownMenu(
-            expanded = attachMenuOpen,
-            onDismissRequest = { attachMenuOpen = false },
-            shape = RoundedCornerShape(32.dp),
-            containerColor = APP_BACKGROUND,
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A2A2A))
-          ) {
-            AttachMenuRow(
-              iconRes = R.drawable.ic_camera,
-              label = "Camera",
-              onClick = {
+          if (attachMenuOpen) {
+            AttachMenuSheet(
+              onDismiss = { attachMenuOpen = false },
+              onCamera = {
                 attachMenuOpen = false
                 if (hasCameraPermission) launchCamera() else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-              }
-            )
-            AttachMenuRow(
-              iconRes = R.drawable.ic_gallery,
-              label = "Gallery",
-              onClick = {
+              },
+              onGallery = {
                 attachMenuOpen = false
                 imagePicker.launch("image/*")
-              }
-            )
-            AttachMenuRow(
-              iconRes = R.drawable.ic_files,
-              label = "Files",
-              onClick = {
+              },
+              onFiles = {
                 attachMenuOpen = false
                 filePicker.launch("*/*")
-              }
-            )
-            HorizontalDivider(color = Color(0xFF262626), thickness = 1.dp)
-            AttachMenuRow(
-              icon = { SkillsIconCustom(tint = Color.Black, modifier = Modifier.size(24.dp)) },
-              label = "Skills",
-              onClick = { attachMenuOpen = false }
-            )
-            AttachMenuRow(
-              iconRes = R.drawable.ic_connectors,
-              label = "Connectors",
-              onClick = { attachMenuOpen = false }
+              },
+              onSkills = { attachMenuOpen = false },
+              onConnectors = { attachMenuOpen = false }
             )
           }
         }
@@ -9191,6 +9167,100 @@ private fun AttachMenuRow(iconRes: Int = 0, icon: (@Composable () -> Unit)? = nu
     }
     Spacer(modifier = Modifier.width(24.dp))
     Text(label, color = Color.Black, fontSize = 15.sp)
+  }
+}
+
+// One of the three square quick-action cards (Camera/Gallery/Files) across
+// the top of AttachMenuSheet -- icon over label, evenly spaced in a row.
+@Composable
+private fun AttachQuickAction(iconRes: Int, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+  Column(
+    horizontalAlignment = Alignment.CenterHorizontally,
+    modifier = modifier
+      .clip(RoundedCornerShape(16.dp))
+      .background(Color.Black.copy(alpha = 0.05f))
+      .clickable(onClick = onClick)
+      .padding(vertical = 16.dp)
+  ) {
+    Icon(
+      painter = androidx.compose.ui.res.painterResource(iconRes),
+      contentDescription = null,
+      tint = Color.Black,
+      modifier = Modifier.size(24.dp)
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    Text(label, color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+  }
+}
+
+// A Skills/Connectors row below the quick-action grid -- icon, title +
+// one-line description, and a trailing chevron, matching the app's other
+// "opens a bigger picker" rows (see MyInfoRow) rather than the plain
+// icon+label-only AttachMenuRow above.
+@Composable
+private fun AttachMenuDetailRow(icon: @Composable () -> Unit, label: String, description: String, onClick: () -> Unit) {
+  Row(
+    verticalAlignment = Alignment.CenterVertically,
+    modifier = Modifier
+      .fillMaxWidth()
+      .clickable(onClick = onClick)
+      .padding(vertical = 12.dp)
+  ) {
+    Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) { icon() }
+    Spacer(modifier = Modifier.width(16.dp))
+    Column(modifier = Modifier.weight(1f)) {
+      Text(label, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+      Spacer(modifier = Modifier.height(2.dp))
+      Text(description, color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
+    }
+    Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black.copy(alpha = 0.35f), modifier = Modifier.size(20.dp))
+  }
+}
+
+// Replaces the old bare DropdownMenu (Camera/Gallery/Files/Skills/
+// Connectors as plain rows) with a bottom sheet: Camera/Gallery/Files as
+// a row of square quick-action cards up top, Skills/Connectors below as
+// description+chevron rows, matching the reference layout the user asked
+// to copy.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AttachMenuSheet(
+  onDismiss: () -> Unit,
+  onCamera: () -> Unit,
+  onGallery: () -> Unit,
+  onFiles: () -> Unit,
+  onSkills: () -> Unit,
+  onConnectors: () -> Unit
+) {
+  ModalBottomSheet(onDismissRequest = onDismiss, containerColor = APP_BACKGROUND) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
+      Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+        AttachQuickAction(iconRes = R.drawable.ic_camera, label = "Camera", onClick = onCamera, modifier = Modifier.weight(1f))
+        AttachQuickAction(iconRes = R.drawable.ic_gallery, label = "Gallery", onClick = onGallery, modifier = Modifier.weight(1f))
+        AttachQuickAction(iconRes = R.drawable.ic_files, label = "Files", onClick = onFiles, modifier = Modifier.weight(1f))
+      }
+      Spacer(modifier = Modifier.height(16.dp))
+      AttachMenuDetailRow(
+        icon = { SkillsIconCustom(tint = Color.Black, modifier = Modifier.size(24.dp)) },
+        label = "Skills",
+        description = "Reuse specialized skills to handle specific tasks reliably",
+        onClick = onSkills
+      )
+      HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
+      AttachMenuDetailRow(
+        icon = {
+          Icon(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_connectors),
+            contentDescription = null,
+            tint = Color.Black,
+            modifier = Modifier.size(24.dp)
+          )
+        },
+        label = "Connectors",
+        description = "Connect apps and databases to automate actions for you",
+        onClick = onConnectors
+      )
+    }
   }
 }
 
