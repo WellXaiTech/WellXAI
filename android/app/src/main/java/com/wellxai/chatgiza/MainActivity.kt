@@ -2834,6 +2834,21 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
                 }
               )
             }
+            // Scrolls with the chat instead of sitting fixed in the
+            // composer area -- a real list item after the last message, the
+            // same way it moves up out of view as older turns replace it at
+            // the bottom, rather than staying pinned on screen.
+            if (displayedMessages.isNotEmpty()) {
+              item(key = "ai-disclaimer") {
+                Text(
+                  "ChatGiZa is AI and can make mistakes. Please double-check responses.",
+                  color = Color.Black.copy(alpha = 0.4f),
+                  fontSize = 11.sp,
+                  textAlign = TextAlign.Center,
+                  modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp)
+                )
+              }
+            }
           }
         }
         // The composer floats on top of this Box now instead of sitting
