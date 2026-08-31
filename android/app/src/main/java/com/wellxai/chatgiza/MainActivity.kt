@@ -2961,19 +2961,17 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
             // the bottom, rather than staying pinned on screen.
             if (displayedMessages.isNotEmpty()) {
               item(key = "ai-disclaimer") {
-                // A compact, right-hugging two-line caption -- not a full-
-                // width centered banner -- sitting in its own corner of
-                // the list the way the reference app's disclaimer does,
-                // rather than spanning and competing with the chat itself.
-                Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp), horizontalArrangement = Arrangement.End) {
-                  Text(
-                    "ChatGiZa is AI and can make mistakes.\nPlease double-check responses.",
-                    color = APP_TEXT_COLOR.copy(alpha = 0.4f),
-                    fontSize = 11.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.widthIn(max = 190.dp).padding(end = 4.dp)
-                  )
-                }
+                // Two short lines hugging the right edge -- end-aligned
+                // text on a full-width Text, not a boxed/narrowed layout,
+                // so there's no separate width to get wrong and no empty
+                // gap to the left of a floating box.
+                Text(
+                  "ChatGiZa is AI and can make mistakes.\nPlease double-check responses.",
+                  color = APP_TEXT_COLOR.copy(alpha = 0.4f),
+                  fontSize = 11.sp,
+                  textAlign = TextAlign.End,
+                  modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp, end = 4.dp)
+                )
               }
             }
           }
