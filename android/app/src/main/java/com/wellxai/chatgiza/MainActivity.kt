@@ -377,8 +377,11 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -17134,6 +17137,42 @@ private fun inlineMarkdown(raw: String) = buildAnnotatedString {
           appendInlineContent("cite:" + raw.substring(idx + 7, end), "•")
           idx = end + 2
         }
+      }
+      // Ordinary markdown links -- [label](https://...) -- the model
+      // types these into lists/recommendations all the time, independent
+      // of whether a real, verified web search ran (that's what [[CITE]]
+      // above is for). Left unhandled, these rendered as raw literal
+      // "[label](https://...)" text; this turns them into an actual
+      // clickable, underlined link instead, same as any other markdown
+      // renderer would, regardless of which model or tool produced them.
+      raw[idx] == '[' -> {
+        val closeBracket = raw.indexOf(']', idx + 1)
+        val url = if (closeBracket != -1 && closeBracket + 1 < len && raw[closeBracket + 1] == '(') {
+          val closeParen = raw.indexOf(')', closeBracket + 2)
+          if (closeParen != -1) raw.substring(closeBracket + 2, closeParen) to closeParen else null
+        } else null
+        if (url != null && (url.first.startsWith("http://") || url.first.startsWith("https://"))) {
+          val label = raw.substring(idx + 1, closeBracket).ifBlank { url.first }
+          withLink(LinkAnnotation.Url(url.first, TextLinkStyles(SpanStyle(color = Color(0xFF0A84FF), textDecoration = TextDecoration.Underline)))) {
+            append(label)
+          }
+          idx = url.second + 1
+        } else {
+          append(raw[idx]); idx++
+        }
+      }
+      // Bare URLs typed directly into prose (no markdown link syntax at
+      // all) -- same treatment, trimmed of trailing punctuation so a
+      // sentence-ending period/comma doesn't get swallowed into the link.
+      raw.startsWith("http://", idx) || raw.startsWith("https://", idx) -> {
+        var end = idx
+        while (end < len && !raw[end].isWhitespace()) end++
+        while (end > idx && raw[end - 1] in ".,;:!?)]") end--
+        val url = raw.substring(idx, end)
+        withLink(LinkAnnotation.Url(url, TextLinkStyles(SpanStyle(color = Color(0xFF0A84FF), textDecoration = TextDecoration.Underline)))) {
+          append(url)
+        }
+        idx = end
       }
       raw.startsWith("**", idx) -> {
         val end = raw.indexOf("**", idx + 2)
