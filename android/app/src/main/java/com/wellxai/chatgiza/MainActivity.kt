@@ -141,6 +141,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.GenericShape
@@ -16208,6 +16212,14 @@ private data class VerifiedSource(val url: String, val title: String)
 private val SOURCES_BLOCK_RE = Regex("\\[\\[SOURCES_START]]([\\s\\S]*?)\\[\\[SOURCES_END]]")
 private val SOURCES_PARTIAL_RE = Regex("\\n?\\[\\[SOURCES_START]][\\s\\S]*$")
 
+// Unlike the flat SOURCES_START/END block, [[CITE:i]] (or [[CITE:i,j]] when
+// several sources back the same claim) markers stay in the visible text --
+// ai.ts splices them in right after the span they support, using the real
+// end_index offsets OpenAI's url_citation annotations carry, indexing into
+// this same SOURCES array. inlineMarkdown below turns each one into a
+// tappable inline badge instead of stripping it.
+private val CITE_TOKEN_RE = Regex("\\[\\[CITE:([0-9]+(?:,[0-9]+)*)]]")
+
 private fun extractSources(text: String): List<VerifiedSource> {
   val match = SOURCES_BLOCK_RE.find(text) ?: return emptyList()
   return runCatching {
@@ -16360,7 +16372,8 @@ private fun MessageBubble(
           MarkdownText(
             text = cleanContent.ifEmpty { "…" },
             baseColor = Color.Black,
-            fontSize = 16.sp
+            fontSize = 16.sp,
+            sources = verifiedSources
           )
         }
       }
@@ -17095,6 +17108,15 @@ private fun inlineMarkdown(raw: String) = buildAnnotatedString {
   val len = raw.length
   while (idx < len) {
     when {
+      raw.startsWith("[[CITE:", idx) -> {
+        val end = raw.indexOf("]]", idx + 7)
+        if (end == -1) {
+          append(raw.substring(idx)); idx = len
+        } else {
+          appendInlineContent("cite:" + raw.substring(idx + 7, end), "•")
+          idx = end + 2
+        }
+      }
       raw.startsWith("**", idx) -> {
         val end = raw.indexOf("**", idx + 2)
         if (end == -1) {
@@ -17134,14 +17156,75 @@ private fun inlineMarkdown(raw: String) = buildAnnotatedString {
   }
 }
 
+// A small inline favicon badge for a [[CITE:i]] / [[CITE:i,j]] marker --
+// tapping it opens the article directly when it backs a single source, or
+// opens a picker sheet when several sources land at the same point, rather
+// than only ever listing everything at the very end (see SourceTrail).
+@Composable
+private fun CiteBadge(sources: List<VerifiedSource>, onOpenSingle: (String) -> Unit, onChoose: (List<VerifiedSource>) -> Unit) {
+  if (sources.isEmpty()) return
+  Row(
+    verticalAlignment = Alignment.CenterVertically,
+    modifier = Modifier
+      .padding(horizontal = 2.dp)
+      .clip(RoundedCornerShape(50))
+      .background(colorScheme.onBackground.copy(alpha = 0.08f))
+      .clickable {
+        if (sources.size == 1) onOpenSingle(sources[0].url) else onChoose(sources)
+      }
+      .padding(horizontal = if (sources.size > 1) 4.dp else 3.dp, vertical = 2.dp)
+  ) {
+    sources.take(2).forEachIndexed { i, source ->
+      AsyncImage(
+        model = "https://www.google.com/s2/favicons?sz=32&domain=${sourceDomain(source.url)}",
+        contentDescription = null,
+        modifier = Modifier
+          .size(14.dp)
+          .clip(CircleShape)
+          .then(if (i > 0) Modifier.offset(x = (-5).dp) else Modifier)
+      )
+    }
+    if (sources.size > 2) {
+      Text(
+        "+${sources.size - 2}",
+        color = colorScheme.onBackground.copy(alpha = 0.55f),
+        fontSize = 9.sp,
+        modifier = Modifier.padding(start = 1.dp)
+      )
+    }
+  }
+}
+
 @Composable
 private fun MarkdownText(
   text: String,
   baseColor: Color,
   fontSize: TextUnit,
+  sources: List<VerifiedSource> = emptyList(),
   modifier: Modifier = Modifier
 ) {
   val blocks = remember(text) { parseMarkdownBlocks(text) }
+  val context = LocalContext.current
+  var chooserSources by remember { mutableStateOf<List<VerifiedSource>?>(null) }
+  val citeIds = remember(text) { CITE_TOKEN_RE.findAll(text).map { it.groupValues[1] }.toSet() }
+  val inlineContentMap = remember(citeIds, sources) {
+    citeIds.associateWith { ids ->
+      val matched = ids.split(",").mapNotNull { it.trim().toIntOrNull() }.mapNotNull { sources.getOrNull(it) }
+      InlineTextContent(
+        Placeholder(
+          width = fontSize * (if (matched.size > 1) 2.4f else 1.35f),
+          height = fontSize * 1.15f,
+          placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+        )
+      ) {
+        CiteBadge(
+          sources = matched,
+          onOpenSingle = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } },
+          onChoose = { chooserSources = it }
+        )
+      }
+    }.mapKeys { "cite:${it.key}" }
+  }
   Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
     for (block in blocks) {
       when (block) {
@@ -17153,16 +17236,17 @@ private fun MarkdownText(
             1 -> fontSize * 1.3f
             2 -> fontSize * 1.2f
             else -> fontSize * 1.1f
-          }
+          },
+          inlineContent = inlineContentMap
         )
-        is MdBlock.Paragraph -> Text(text = inlineMarkdown(block.text), color = baseColor, fontSize = fontSize, fontWeight = FontWeight.Medium)
+        is MdBlock.Paragraph -> Text(text = inlineMarkdown(block.text), color = baseColor, fontSize = fontSize, fontWeight = FontWeight.Medium, inlineContent = inlineContentMap)
         is MdBlock.Bullet -> Row {
           Text("•  ", color = baseColor, fontSize = fontSize, fontWeight = FontWeight.Medium)
-          Text(inlineMarkdown(block.text), color = baseColor, fontSize = fontSize, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+          Text(inlineMarkdown(block.text), color = baseColor, fontSize = fontSize, fontWeight = FontWeight.Medium, inlineContent = inlineContentMap, modifier = Modifier.weight(1f))
         }
         is MdBlock.Numbered -> Row {
           Text("${block.index}.  ", color = baseColor, fontSize = fontSize, fontWeight = FontWeight.Medium)
-          Text(inlineMarkdown(block.text), color = baseColor, fontSize = fontSize, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+          Text(inlineMarkdown(block.text), color = baseColor, fontSize = fontSize, fontWeight = FontWeight.Medium, inlineContent = inlineContentMap, modifier = Modifier.weight(1f))
         }
         is MdBlock.CodeBlock -> Box(
           modifier = Modifier
@@ -17172,6 +17256,44 @@ private fun MarkdownText(
             .padding(10.dp)
         ) {
           Text(block.code, color = baseColor, fontFamily = FontFamily.Monospace, fontSize = fontSize * 0.9f)
+        }
+      }
+    }
+  }
+  val pickSources = chooserSources
+  if (pickSources != null) {
+    ModalBottomSheet(onDismissRequest = { chooserSources = null }) {
+      Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp).padding(bottom = 24.dp)) {
+        Text(
+          "Choose a source",
+          color = colorScheme.onBackground,
+          fontSize = 14.sp,
+          fontWeight = FontWeight.SemiBold,
+          modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
+        )
+        pickSources.forEach { source ->
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+              .fillMaxWidth()
+              .clip(RoundedCornerShape(10.dp))
+              .clickable {
+                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(source.url))) }
+                chooserSources = null
+              }
+              .padding(horizontal = 8.dp, vertical = 10.dp)
+          ) {
+            AsyncImage(
+              model = "https://www.google.com/s2/favicons?sz=32&domain=${sourceDomain(source.url)}",
+              contentDescription = null,
+              modifier = Modifier.size(18.dp).clip(RoundedCornerShape(4.dp))
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+              Text(source.title, color = colorScheme.onBackground.copy(alpha = 0.9f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+              Text(sourceDomain(source.url), color = colorScheme.onBackground.copy(alpha = 0.4f), fontSize = 11.sp, maxLines = 1)
+            }
+          }
         }
       }
     }
