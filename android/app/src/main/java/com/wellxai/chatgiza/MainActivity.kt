@@ -911,11 +911,11 @@ private fun BoxScope.ScreenshotShareOverlay(viewModel: ChatViewModel) {
       verticalAlignment = Alignment.CenterVertically
     ) {
       Column(modifier = Modifier.weight(1f)) {
-        Text("Share a link to chat?", color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+        Text("Share a link to chat?", color = APP_TEXT_COLOR, fontSize = 17.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(2.dp))
         Text(
           "This creates a copy that others can chat with",
-          color = Color.Black.copy(alpha = 0.5f),
+          color = APP_TEXT_COLOR.copy(alpha = 0.5f),
           fontSize = 13.sp
         )
       }
@@ -971,9 +971,9 @@ private fun BoxScope.MemorySuggestionOverlay(viewModel: ChatViewModel) {
           .background(Color.White)
           .padding(16.dp)
       ) {
-        Text("Remember this?", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text("Remember this?", color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         Spacer(modifier = Modifier.height(4.dp))
-        Text("\"$suggestion\"", color = Color.Black.copy(alpha = 0.7f), fontSize = 13.sp)
+        Text("\"$suggestion\"", color = APP_TEXT_COLOR.copy(alpha = 0.7f), fontSize = 13.sp)
         Spacer(modifier = Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
           Box(
@@ -985,7 +985,7 @@ private fun BoxScope.MemorySuggestionOverlay(viewModel: ChatViewModel) {
               .padding(vertical = 10.dp),
             contentAlignment = Alignment.Center
           ) {
-            Text("Not now", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            Text("Not now", color = APP_TEXT_COLOR, fontSize = 13.sp, fontWeight = FontWeight.Medium)
           }
           Box(
             modifier = Modifier
@@ -1137,7 +1137,7 @@ private fun BoxScope.PreferenceWizardOverlay(viewModel: ChatViewModel) {
         }
         Text(
           "${step + 1} of ${wizard.steps.size}",
-          color = Color.Black.copy(alpha = 0.6f),
+          color = APP_TEXT_COLOR.copy(alpha = 0.6f),
           fontSize = 13.sp,
           modifier = Modifier.weight(1f),
           textAlign = TextAlign.Center
@@ -1157,9 +1157,9 @@ private fun BoxScope.PreferenceWizardOverlay(viewModel: ChatViewModel) {
       }
       Spacer(modifier = Modifier.height(14.dp))
       if (current != null) {
-        Text(current.question, color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+        Text(current.question, color = APP_TEXT_COLOR, fontSize = 17.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(4.dp))
-        Text("Select all that apply", color = Color.Black.copy(alpha = 0.5f), fontSize = 12.sp)
+        Text("Select all that apply", color = APP_TEXT_COLOR.copy(alpha = 0.5f), fontSize = 12.sp)
         Spacer(modifier = Modifier.height(10.dp))
         val selections = viewModel.wizardSelections.getOrElse(step) { emptySet() }
         current.options.forEach { option ->
@@ -1183,9 +1183,9 @@ private fun WizardCheckboxRow(label: String, checked: Boolean, onClick: () -> Un
   ) {
     WizardOptionCircle(filled = checked)
     Spacer(modifier = Modifier.width(12.dp))
-    Text(label, color = Color.Black, fontSize = 15.sp)
+    Text(label, color = APP_TEXT_COLOR, fontSize = 15.sp)
   }
-  HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
+  HorizontalDivider(color = APP_TEXT_COLOR.copy(alpha = 0.08f), thickness = 1.dp)
 }
 
 // Plain circle indicator, matching the reference design used for every
@@ -1212,7 +1212,7 @@ private fun WizardSkipRow(label: String, onSkip: () -> Unit) {
   ) {
     WizardOptionCircle(filled = false)
     Spacer(modifier = Modifier.width(12.dp))
-    Text(label, color = Color.Black.copy(alpha = 0.7f), fontSize = 15.sp, modifier = Modifier.weight(1f))
+    Text(label, color = APP_TEXT_COLOR.copy(alpha = 0.7f), fontSize = 15.sp, modifier = Modifier.weight(1f))
     OutlinedButton(
       onClick = onSkip,
       colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Black),
@@ -1328,6 +1328,12 @@ private fun chatGizaTypography(family: FontFamily): Typography {
 // colorScheme.background) stays in sync with the theme below instead of
 // drifting back to plain white piecemeal.
 val APP_BACKGROUND = Color(0xFFFCFCFC)
+
+// The app's one main text color -- #0D0D0D (a soft near-black) instead of
+// pure Color.Black, per feedback. Every `color = Color.Black` in a Text()/
+// TextStyle call was swapped to this constant in one pass, so it stays a
+// single source of truth the same way APP_BACKGROUND is above.
+val APP_TEXT_COLOR = Color(0xFF0D0D0D)
 
 @Composable
 private fun ChatGizaTheme(themeMode: String, fontChoice: String, content: @Composable () -> Unit) {
@@ -1560,7 +1566,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
             } else {
               Text(
                 (viewModel.rememberedAccountName ?: viewModel.rememberedAccountEmail ?: "?").take(1).uppercase(),
-                color = Color.Black,
+                color = APP_TEXT_COLOR,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold
               )
@@ -1569,7 +1575,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
           Spacer(modifier = Modifier.height(16.dp))
           Text(
             if (viewModel.rememberedAccountName.isNullOrBlank()) "Welcome back" else "Welcome back, ${viewModel.rememberedAccountName}",
-            color = Color.Black,
+            color = APP_TEXT_COLOR,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
@@ -1577,7 +1583,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
           Spacer(modifier = Modifier.height(6.dp))
           Text(
             "Continue to pick up right where you left off.",
-            color = Color.Black.copy(alpha = 0.5f),
+            color = APP_TEXT_COLOR.copy(alpha = 0.5f),
             fontSize = 14.sp,
             textAlign = TextAlign.Center
           )
@@ -1652,7 +1658,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
               modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Continue with Google", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Text("Continue with Google", color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.Medium)
           }
 
           Spacer(modifier = Modifier.height(12.dp))
@@ -1666,7 +1672,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
               .padding(vertical = 14.dp),
             horizontalArrangement = Arrangement.Center
           ) {
-            Text("Log in another way", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Text("Log in another way", color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.Medium)
           }
           Spacer(modifier = Modifier.height(8.dp))
         }
@@ -1685,11 +1691,11 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
           modifier = Modifier.size(48.dp)
         )
         Spacer(modifier = Modifier.height(14.dp))
-        Text("Log in or sign up", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text("Log in or sign up", color = APP_TEXT_COLOR, fontSize = 22.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
           "You'll get smarter responses and can upload files, images and more.",
-          color = Color.Black.copy(alpha = 0.5f),
+          color = APP_TEXT_COLOR.copy(alpha = 0.5f),
           fontSize = 14.sp,
           textAlign = TextAlign.Center
         )
@@ -1719,7 +1725,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
             modifier = Modifier.size(18.dp)
           )
           Spacer(modifier = Modifier.width(8.dp))
-          Text(if (signingIn) "Signing in…" else "Continue with Google", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+          Text(if (signingIn) "Signing in…" else "Continue with Google", color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.Medium)
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -1739,7 +1745,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
         ) {
           Icon(Icons.Outlined.Phone, contentDescription = null, tint = Color.Black.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
           Spacer(modifier = Modifier.width(8.dp))
-          Text("Continue with phone", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+          Text("Continue with phone", color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.Medium)
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -1759,7 +1765,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
         ) {
           Icon(Icons.Outlined.Email, contentDescription = null, tint = Color.Black.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
           Spacer(modifier = Modifier.width(8.dp))
-          Text("Continue with email", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+          Text("Continue with email", color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.Medium)
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -1768,16 +1774,16 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
           Text(
             "Terms of Use",
-            color = Color.Black.copy(alpha = 0.4f),
+            color = APP_TEXT_COLOR.copy(alpha = 0.4f),
             fontSize = 12.sp,
             modifier = Modifier.clickable {
               menuFooterContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://support.wellxai.world")))
             }
           )
-          Text(" · ", color = Color.Black.copy(alpha = 0.3f), fontSize = 12.sp)
+          Text(" · ", color = APP_TEXT_COLOR.copy(alpha = 0.3f), fontSize = 12.sp)
           Text(
             "Privacy Policy",
-            color = Color.Black.copy(alpha = 0.4f),
+            color = APP_TEXT_COLOR.copy(alpha = 0.4f),
             fontSize = 12.sp,
             modifier = Modifier.clickable {
               menuFooterContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://support.wellxai.world")))
@@ -1798,7 +1804,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
         // side flag+code pill next to a cramped number field.
         Text(
           "Country/Region",
-          color = Color.Black.copy(alpha = 0.5f),
+          color = APP_TEXT_COLOR.copy(alpha = 0.5f),
           fontSize = 13.sp,
           fontWeight = FontWeight.Medium
         )
@@ -1816,7 +1822,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
           Spacer(modifier = Modifier.width(8.dp))
           Text(
             "${viewModel.signInCountry.name} (${viewModel.signInCountry.dialCode})",
-            color = Color.Black,
+            color = APP_TEXT_COLOR,
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(1f)
@@ -1828,7 +1834,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
 
         Text(
           "Phone number",
-          color = Color.Black.copy(alpha = 0.5f),
+          color = APP_TEXT_COLOR.copy(alpha = 0.5f),
           fontSize = 13.sp,
           fontWeight = FontWeight.Medium
         )
@@ -1846,7 +1852,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
               value = viewModel.signInIdentifierInput,
               onValueChange = { new -> if (new.length <= 20) viewModel.onSignInIdentifierChange(new) },
               singleLine = true,
-              textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp),
+              textStyle = androidx.compose.ui.text.TextStyle(color = APP_TEXT_COLOR, fontSize = 16.sp),
               cursorBrush = SolidColor(Color.Black),
               keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone),
               modifier = Modifier.fillMaxWidth()
@@ -1856,7 +1862,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
       } else {
       Text(
         "Email",
-        color = Color.Black.copy(alpha = 0.5f),
+        color = APP_TEXT_COLOR.copy(alpha = 0.5f),
         fontSize = 13.sp,
         fontWeight = FontWeight.Medium
       )
@@ -1881,7 +1887,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
               value = viewModel.signInIdentifierInput,
               onValueChange = { new -> viewModel.onSignInIdentifierChange(new) },
               singleLine = true,
-              textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp),
+              textStyle = androidx.compose.ui.text.TextStyle(color = APP_TEXT_COLOR, fontSize = 16.sp),
               cursorBrush = SolidColor(Color.Black),
               keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Email),
               modifier = Modifier.fillMaxWidth()
@@ -1922,15 +1928,15 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
       Spacer(modifier = Modifier.height(20.dp))
 
       Row(verticalAlignment = Alignment.CenterVertically) {
-        HorizontalDivider(modifier = Modifier.weight(1f), color = Color.Black.copy(alpha = 0.1f))
+        HorizontalDivider(modifier = Modifier.weight(1f), color = APP_TEXT_COLOR.copy(alpha = 0.1f))
         Text(
           "OR",
-          color = Color.Black.copy(alpha = 0.4f),
+          color = APP_TEXT_COLOR.copy(alpha = 0.4f),
           fontSize = 12.sp,
           fontWeight = FontWeight.Medium,
           modifier = Modifier.padding(horizontal = 10.dp)
         )
-        HorizontalDivider(modifier = Modifier.weight(1f), color = Color.Black.copy(alpha = 0.1f))
+        HorizontalDivider(modifier = Modifier.weight(1f), color = APP_TEXT_COLOR.copy(alpha = 0.1f))
       }
 
       Spacer(modifier = Modifier.height(20.dp))
@@ -1956,7 +1962,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
           modifier = Modifier.size(18.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text(if (signingIn) "Signing in…" else "Continue with Google", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        Text(if (signingIn) "Signing in…" else "Continue with Google", color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.Medium)
       }
 
       Spacer(modifier = Modifier.height(12.dp))
@@ -1982,7 +1988,7 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
         Spacer(modifier = Modifier.width(8.dp))
         Text(
           if (viewModel.signInTab == "mobile") "Continue with email" else "Continue with phone",
-          color = Color.Black,
+          color = APP_TEXT_COLOR,
           fontSize = 15.sp,
           fontWeight = FontWeight.Medium
         )
@@ -1994,16 +2000,16 @@ private fun SignedOutScreen(viewModel: ChatViewModel, onSignIn: () -> Unit) {
       Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
         Text(
           "Terms of Use",
-          color = Color.Black.copy(alpha = 0.4f),
+          color = APP_TEXT_COLOR.copy(alpha = 0.4f),
           fontSize = 12.sp,
           modifier = Modifier.clickable {
             footerContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://support.wellxai.world")))
           }
         )
-        Text(" · ", color = Color.Black.copy(alpha = 0.3f), fontSize = 12.sp)
+        Text(" · ", color = APP_TEXT_COLOR.copy(alpha = 0.3f), fontSize = 12.sp)
         Text(
           "Privacy Policy",
-          color = Color.Black.copy(alpha = 0.4f),
+          color = APP_TEXT_COLOR.copy(alpha = 0.4f),
           fontSize = 12.sp,
           modifier = Modifier.clickable {
             footerContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://support.wellxai.world")))
@@ -2074,7 +2080,7 @@ private fun ToolSelectSheet(activeTool: String?, onSelect: (String?) -> Unit, on
         }
         Text(
           "Select tool",
-          color = Color.Black,
+          color = APP_TEXT_COLOR,
           fontSize = 18.sp,
           fontWeight = FontWeight.Bold,
           modifier = Modifier.align(Alignment.Center)
@@ -2876,7 +2882,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
               item(key = "ai-disclaimer") {
                 Text(
                   "ChatGiZa is AI and can make mistakes. Please double-check responses.",
-                  color = Color.Black.copy(alpha = 0.4f),
+                  color = APP_TEXT_COLOR.copy(alpha = 0.4f),
                   fontSize = 11.sp,
                   textAlign = TextAlign.Center,
                   modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp)
@@ -2898,7 +2904,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
           if (viewModel.errorMessage != null) {
             Text(
               viewModel.errorMessage ?: "",
-              color = Color.Black,
+              color = APP_TEXT_COLOR,
               fontSize = 12.sp,
               modifier = Modifier.padding(horizontal = 16.dp)
             )
@@ -2941,7 +2947,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
           target?.let { viewModel.deleteConversation(it.id) }
           chatDeleteConfirm = false
         }) {
-          Text("Delete", color = Color.Black, fontWeight = FontWeight.Bold)
+          Text("Delete", color = APP_TEXT_COLOR, fontWeight = FontWeight.Bold)
         }
       },
       dismissButton = {
@@ -3047,13 +3053,13 @@ private fun NowPlayingBar(isPremium: Boolean, player: PremiumTtsPlayer, onClose:
           }
           .padding(horizontal = 8.dp, vertical = 4.dp)
       ) {
-        Text("${PLAYBACK_SPEEDS[speedIndex]}x", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        Text("${PLAYBACK_SPEEDS[speedIndex]}x", color = APP_TEXT_COLOR, fontSize = 11.sp, fontWeight = FontWeight.Medium)
       }
     }
     Spacer(modifier = Modifier.weight(1f))
     Text(
       if (durationMs > 0) "${formatTime(positionMs)} / ${formatTime(durationMs)}" else formatTime(positionMs),
-      color = Color.Black,
+      color = APP_TEXT_COLOR,
       fontSize = 12.sp
     )
     Spacer(modifier = Modifier.width(10.dp))
@@ -3097,7 +3103,7 @@ private fun ChatConversationMenuSheet(
   ) {
     Text(
       title,
-      color = Color.Black.copy(alpha = 0.5f),
+      color = APP_TEXT_COLOR.copy(alpha = 0.5f),
       fontSize = 13.sp,
       maxLines = 1,
       overflow = TextOverflow.Ellipsis,
@@ -3507,7 +3513,7 @@ private fun ChatComposerCard(viewModel: ChatViewModel) {
       if (attachError) {
         Text(
           "Couldn't attach that — try a different file",
-          color = Color.Black,
+          color = APP_TEXT_COLOR,
           fontSize = 12.sp,
           modifier = Modifier.padding(top = 6.dp)
         )
@@ -4064,7 +4070,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
       ) {
         Text(
           "Live Vision needs microphone access.",
-          color = Color.Black,
+          color = APP_TEXT_COLOR,
           fontSize = 15.sp,
           textAlign = TextAlign.Center
         )
@@ -4182,7 +4188,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
                 modifier = Modifier.size(22.dp)
               )
               Spacer(modifier = Modifier.size(8.dp))
-              Text("Connecting…", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+              Text("Connecting…", color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             } else if (connectionLost) {
               Icon(
                 imageVector = Icons.Filled.Refresh,
@@ -4200,7 +4206,7 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
                 modifier = Modifier.size(20.dp)
               )
               Spacer(modifier = Modifier.size(6.dp))
-              Text(statusText, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+              Text(statusText, color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
           }
           if (cameraEnabled) {
@@ -4383,14 +4389,14 @@ private fun LiveVisionScreen(viewModel: ChatViewModel) {
               // that padding so the text actually sits centered and legible.
               Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                 if (viewModel.input.isEmpty()) {
-                  Text("Ask anything", color = Color.Black.copy(alpha = 0.38f), fontSize = 15.sp)
+                  Text("Ask anything", color = APP_TEXT_COLOR.copy(alpha = 0.38f), fontSize = 15.sp)
                 }
                 BasicTextField(
                   value = viewModel.input,
                   onValueChange = viewModel::onInputChange,
                   modifier = Modifier.fillMaxWidth(),
                   singleLine = true,
-                  textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 15.sp),
+                  textStyle = androidx.compose.ui.text.TextStyle(color = APP_TEXT_COLOR, fontSize = 15.sp),
                   cursorBrush = SolidColor(Color.Black)
                 )
               }
@@ -4604,7 +4610,7 @@ private fun VoiceControlPillShell(contentDescription: String, active: Boolean, e
       // background moved from #F2F2F2 to #FCFCFC (much closer to this
       // pill's own white fill), the contrast that alpha relied on almost
       // entirely disappeared. Bumped to restore a clearly visible edge.
-      .border(width = 1.dp, color = Color.Black.copy(alpha = 0.18f), shape = RoundedCornerShape(percent = 50))
+      .border(width = 1.dp, color = APP_TEXT_COLOR.copy(alpha = 0.18f), shape = RoundedCornerShape(percent = 50))
       .clickable(enabled = enabled, onClick = onClick),
     contentAlignment = Alignment.Center
   ) {
@@ -4655,7 +4661,7 @@ private fun PushToTalkPill(enabled: Boolean = true, onPress: () -> Unit, onRelea
       .alpha(if (enabled) 1f else 0.4f)
       .clip(CircleShape)
       .background(if (pressed) Color.Black else Color.White)
-      .border(width = 1.dp, color = Color.Black.copy(alpha = 0.1f), shape = CircleShape)
+      .border(width = 1.dp, color = APP_TEXT_COLOR.copy(alpha = 0.1f), shape = CircleShape)
       .pointerInput(enabled) {
         if (!enabled) return@pointerInput
         awaitEachGesture {
@@ -4864,7 +4870,7 @@ private fun LiveVoiceSettingsSheet(
           }
           Text(
             "Voice Library",
-            color = Color.Black,
+            color = APP_TEXT_COLOR,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.align(Alignment.Center)
@@ -4924,7 +4930,7 @@ private fun LiveVoiceSettingsSheet(
     ) {
       Text(
         "Voice Settings",
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = 18.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.fillMaxWidth(),
@@ -4932,7 +4938,7 @@ private fun LiveVoiceSettingsSheet(
       )
 
       Spacer(modifier = Modifier.height(28.dp))
-      Text("Voice", color = Color.Black.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+      Text("Voice", color = APP_TEXT_COLOR.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
       Spacer(modifier = Modifier.height(10.dp))
       Row(
         modifier = Modifier
@@ -4944,11 +4950,11 @@ private fun LiveVoiceSettingsSheet(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Text("Voice", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        Text("Voice", color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.Medium)
         Row(verticalAlignment = Alignment.CenterVertically) {
           Text(
             VOICE_OPTIONS.find { it.id == selectedVoiceId }?.name ?: selectedVoiceId,
-            color = Color.Black.copy(alpha = 0.5f),
+            color = APP_TEXT_COLOR.copy(alpha = 0.5f),
             fontSize = 15.sp
           )
           Spacer(modifier = Modifier.width(4.dp))
@@ -4962,7 +4968,7 @@ private fun LiveVoiceSettingsSheet(
       }
 
       Spacer(modifier = Modifier.height(26.dp))
-      Text("Personality", color = Color.Black.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+      Text("Personality", color = APP_TEXT_COLOR.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
       Spacer(modifier = Modifier.height(10.dp))
       Row(
         modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -4978,7 +4984,7 @@ private fun LiveVoiceSettingsSheet(
       }
 
       Spacer(modifier = Modifier.height(26.dp))
-      Text("Voice Activation", color = Color.Black.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+      Text("Voice Activation", color = APP_TEXT_COLOR.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
       Spacer(modifier = Modifier.height(10.dp))
       Row(
         modifier = Modifier
@@ -5010,8 +5016,8 @@ private fun LiveVoiceSettingsSheet(
 
       Spacer(modifier = Modifier.height(26.dp))
       Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text("Voice Speed", color = Color.Black.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-        Text(String.format("%.1fx", speed), color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text("Voice Speed", color = APP_TEXT_COLOR.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text(String.format("%.1fx", speed), color = APP_TEXT_COLOR, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
       }
       Spacer(modifier = Modifier.height(12.dp))
       PreviewSlider(
@@ -5021,7 +5027,7 @@ private fun LiveVoiceSettingsSheet(
       )
 
       Spacer(modifier = Modifier.height(26.dp))
-      Text("Output Device", color = Color.Black.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+      Text("Output Device", color = APP_TEXT_COLOR.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
       Spacer(modifier = Modifier.height(10.dp))
       Row(
         modifier = Modifier
@@ -5033,11 +5039,11 @@ private fun LiveVoiceSettingsSheet(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Text("Output Device", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        Text("Output Device", color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.Medium)
         Row(verticalAlignment = Alignment.CenterVertically) {
           Text(
             outputDeviceOptions.find { it.first == outputDevice }?.second ?: outputDevice,
-            color = Color.Black.copy(alpha = 0.5f),
+            color = APP_TEXT_COLOR.copy(alpha = 0.5f),
             fontSize = 15.sp
           )
           Spacer(modifier = Modifier.width(4.dp))
@@ -5061,7 +5067,7 @@ private fun LiveVoiceSettingsSheet(
           .background(Color.White)
           .padding(20.dp)
       ) {
-        Text("Output Device", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text("Output Device", color = APP_TEXT_COLOR, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
         outputDeviceOptions.forEach { (id, label, icon) ->
           val selected = outputDevice == id
@@ -5093,7 +5099,7 @@ private fun LiveVoiceSettingsSheet(
               Icon(icon, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
             }
             Spacer(modifier = Modifier.width(10.dp))
-            Text(label, color = Color.Black, fontSize = 16.sp)
+            Text(label, color = APP_TEXT_COLOR, fontSize = 16.sp)
           }
         }
       }
@@ -5313,7 +5319,7 @@ private fun ChatGizaEventsCard(viewModel: ChatViewModel) {
           }
       ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-          Text("Events", color = Color.Black.copy(alpha = 0.5f), fontSize = 10.sp)
+          Text("Events", color = APP_TEXT_COLOR.copy(alpha = 0.5f), fontSize = 10.sp)
           if (item.isAd) {
             Spacer(modifier = Modifier.width(6.dp))
             Box(
@@ -5322,20 +5328,20 @@ private fun ChatGizaEventsCard(viewModel: ChatViewModel) {
                 .background(Color.Black.copy(alpha = 0.15f))
                 .padding(horizontal = 4.dp, vertical = 1.dp)
             ) {
-              Text("Ad", color = Color.Black.copy(alpha = 0.7f), fontSize = 8.sp, fontWeight = FontWeight.Medium)
+              Text("Ad", color = APP_TEXT_COLOR.copy(alpha = 0.7f), fontSize = 8.sp, fontWeight = FontWeight.Medium)
             }
           }
         }
         Spacer(modifier = Modifier.height(1.dp))
         Text(
           item.headline,
-          color = Color.Black,
+          color = APP_TEXT_COLOR,
           fontSize = 13.sp,
           fontWeight = FontWeight.Bold
         )
         Text(
           item.subtitle,
-          color = Color.Black.copy(alpha = 0.6f),
+          color = APP_TEXT_COLOR.copy(alpha = 0.6f),
           fontSize = 10.sp,
           maxLines = 1,
           overflow = TextOverflow.Ellipsis
@@ -5351,7 +5357,7 @@ private fun ChatGizaEventsCard(viewModel: ChatViewModel) {
     ) {
       Text(
         "${pagerState.currentPage + 1}/${items.size}",
-        color = Color.Black.copy(alpha = 0.7f),
+        color = APP_TEXT_COLOR.copy(alpha = 0.7f),
         fontSize = 9.sp,
         fontWeight = FontWeight.Medium
       )
@@ -5510,9 +5516,9 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
             modifier = Modifier.align(Alignment.TopEnd).size(72.dp)
           )
           Column(modifier = Modifier.align(Alignment.BottomStart)) {
-            Text("Your account", color = Color.Black.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            Text("Your account", color = APP_TEXT_COLOR.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(planName, color = Color.Black, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+            Text(planName, color = APP_TEXT_COLOR, fontSize = 30.sp, fontWeight = FontWeight.Bold)
           }
         }
 
@@ -5629,7 +5635,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
         ) {
           DeleteIcon(tint = Color.Black)
           Spacer(modifier = Modifier.size(16.dp))
-          Text("Delete", color = Color.Black, fontSize = 16.sp)
+          Text("Delete", color = APP_TEXT_COLOR, fontSize = 16.sp)
         }
         Row(
           verticalAlignment = Alignment.CenterVertically,
@@ -5675,7 +5681,7 @@ private fun HistoryScreen(viewModel: ChatViewModel) {
           viewModel.deleteConversation(toDelete.id)
           deleteConfirmConvo = null
         }) {
-          Text("Delete", color = Color.Black, fontWeight = FontWeight.Bold)
+          Text("Delete", color = APP_TEXT_COLOR, fontWeight = FontWeight.Bold)
         }
       },
       dismissButton = {
@@ -6271,7 +6277,7 @@ private fun PrivateChatLockScreen(viewModel: ChatViewModel) {
     ) {
       Text(
         if (!hasPin) (if (viewModel.privateChatSetupStep == "enter") "Continue" else "Confirm") else "Unlock",
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = 16.sp,
         fontWeight = FontWeight.SemiBold
       )
@@ -6602,7 +6608,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
             modifier = Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
           ) {
-            Text(headerName.take(1).uppercase(), color = Color.Black, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(headerName.take(1).uppercase(), color = APP_TEXT_COLOR, fontSize = 20.sp, fontWeight = FontWeight.Bold)
           }
         } else if (viewModel.userImage != null) {
           AsyncImage(
@@ -6618,7 +6624,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
       Column(modifier = Modifier.weight(1f)) {
         Text(
           headerName,
-          color = Color.Black,
+          color = APP_TEXT_COLOR,
           fontSize = 21.sp,
           fontWeight = FontWeight.Bold,
           maxLines = 1,
@@ -6626,7 +6632,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
         )
         Spacer(modifier = Modifier.height(3.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-          Text("UID: $headerUid", color = Color.Black.copy(alpha = 0.5f), fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+          Text("UID: $headerUid", color = APP_TEXT_COLOR.copy(alpha = 0.5f), fontSize = 11.sp, fontFamily = FontFamily.Monospace)
           Spacer(modifier = Modifier.width(6.dp))
           Icon(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_copy),
@@ -6638,9 +6644,9 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
             }
           )
           Spacer(modifier = Modifier.width(8.dp))
-          Text("|", color = Color.Black.copy(alpha = 0.25f), fontSize = 11.sp)
+          Text("|", color = APP_TEXT_COLOR.copy(alpha = 0.25f), fontSize = 11.sp)
           Spacer(modifier = Modifier.width(8.dp))
-          Text("Site: GiZa Glo...", color = Color.Black.copy(alpha = 0.5f), fontSize = 11.sp)
+          Text("Site: GiZa Glo...", color = APP_TEXT_COLOR.copy(alpha = 0.5f), fontSize = 11.sp)
         }
       }
       Icon(
@@ -6668,7 +6674,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
       ) {
         Icon(Icons.Filled.Check, contentDescription = null, tint = Color.Black, modifier = Modifier.size(13.dp))
         Spacer(modifier = Modifier.width(4.dp))
-        Text("Verified", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        Text("Verified", color = APP_TEXT_COLOR, fontSize = 11.sp, fontWeight = FontWeight.Medium)
       }
       Spacer(modifier = Modifier.width(8.dp))
       Row(
@@ -6680,7 +6686,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
           .clickable { comingSoon("Plan") }
           .padding(horizontal = 4.dp)
       ) {
-        Text("Free plan", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        Text("Free plan", color = APP_TEXT_COLOR, fontSize = 11.sp, fontWeight = FontWeight.Medium)
         Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black.copy(alpha = 0.6f), modifier = Modifier.size(13.dp))
       }
     }
@@ -6698,23 +6704,23 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
         .background(Color(0xFFF4F4F4))
         .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
-      Text("Unlock GiZa Pro Perks", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+      Text("Unlock GiZa Pro Perks", color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(4.dp))
       Text(
         "Upgrade to GiZa Pro for unlimited chats, priority responses, and exclusive perks!",
-        color = Color.Black.copy(alpha = 0.5f),
+        color = APP_TEXT_COLOR.copy(alpha = 0.5f),
         fontSize = 11.sp,
         lineHeight = 14.sp
       )
       Spacer(modifier = Modifier.height(8.dp))
       HorizontalDivider(modifier = Modifier.fillMaxWidth(0.45f), color = Color(0xFFE0E0E0), thickness = 3.dp)
       Spacer(modifier = Modifier.height(6.dp))
-      Text("Current plan: Free", color = Color.Black.copy(alpha = 0.3f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+      Text("Current plan: Free", color = APP_TEXT_COLOR.copy(alpha = 0.3f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(8.dp))
       Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
           "Pro Benefits ›",
-          color = Color.Black.copy(alpha = 0.6f),
+          color = APP_TEXT_COLOR.copy(alpha = 0.6f),
           fontSize = 14.sp,
           fontWeight = FontWeight.Bold,
           modifier = Modifier.weight(1f).clickable { comingSoon("Pro Benefits") }
@@ -6726,7 +6732,7 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
             .clickable { comingSoon("Enter GiZa Max") }
             .padding(horizontal = 12.dp, vertical = 4.dp)
         ) {
-          Text("Enter GiZa Max", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+          Text("Enter GiZa Max", color = APP_TEXT_COLOR, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
       }
     }
@@ -6744,12 +6750,12 @@ private fun ProfileHubScreen(viewModel: ChatViewModel) {
       .navigationBarsPadding()
       .padding(horizontal = 16.dp)
   ) {
-    HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
+    HorizontalDivider(color = APP_TEXT_COLOR.copy(alpha = 0.08f), thickness = 1.dp)
     Spacer(modifier = Modifier.height(10.dp))
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-      Text("GiZa Lite", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { comingSoon("GiZa Lite") })
+      Text("GiZa Lite", color = APP_TEXT_COLOR, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { comingSoon("GiZa Lite") })
       Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { viewModel.openAboutUs() }) {
-        Text("About Us", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text("About Us", color = APP_TEXT_COLOR, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
       }
     }
@@ -6841,7 +6847,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         Box(modifier = Modifier.fillMaxWidth()) {
           Text(
             "User Center",
-            color = Color.Black,
+            color = APP_TEXT_COLOR,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.align(Alignment.Center)
@@ -6889,7 +6895,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         Column {
           Text(
             (viewModel.avatarName ?: viewModel.userName ?: "You").uppercase(),
-            color = Color.Black,
+            color = APP_TEXT_COLOR,
             fontSize = 20.sp,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(top = 3.dp)
@@ -6900,7 +6906,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
               .background(Color.Black.copy(alpha = 0.1f), RoundedCornerShape(3.dp))
               .padding(horizontal = 3.dp, vertical = 1.dp)
           ) {
-            Text("Site: ChatGiZa Global", color = Color.Black.copy(alpha = 0.6f), fontSize = 10.sp)
+            Text("Site: ChatGiZa Global", color = APP_TEXT_COLOR.copy(alpha = 0.6f), fontSize = 10.sp)
           }
         }
       }
@@ -6922,11 +6928,11 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             .border(1.dp, Color.Black.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
             .padding(12.dp)
         ) {
-          Text("Upgrade to GiZa Pro", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+          Text("Upgrade to GiZa Pro", color = APP_TEXT_COLOR, fontSize = 14.sp, fontWeight = FontWeight.Medium)
           Spacer(modifier = Modifier.height(4.dp))
           Text(
             "Unlimited chats, priority responses, and exclusive perks.",
-            color = Color.Black.copy(alpha = 0.55f),
+            color = APP_TEXT_COLOR.copy(alpha = 0.55f),
             fontSize = 12.sp,
             lineHeight = 16.sp
           )
@@ -7064,10 +7070,10 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             }
           }
           MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_id_lines), iconSize = 24.dp, label = "Nickname", onClick = { viewModel.leaveAccountTabsFor { viewModel.openNickname() } }) {
-            Text(viewModel.userName?.takeIf { it.isNotBlank() } ?: "-", color = Color.Black.copy(alpha = 0.5f), fontSize = 14.sp)
+            Text(viewModel.userName?.takeIf { it.isNotBlank() } ?: "-", color = APP_TEXT_COLOR.copy(alpha = 0.5f), fontSize = 14.sp)
           }
           MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_id_rounded), iconSize = 26.dp, label = "UID", showChevron = false, onClick = {}) {
-            Text(uid, color = Color.Black.copy(alpha = 0.5f), fontSize = 14.sp, fontFamily = FontFamily.Monospace)
+            Text(uid, color = APP_TEXT_COLOR.copy(alpha = 0.5f), fontSize = 14.sp, fontFamily = FontFamily.Monospace)
             Spacer(modifier = Modifier.width(6.dp))
             Icon(
               painter = androidx.compose.ui.res.painterResource(R.drawable.ic_copy),
@@ -7106,7 +7112,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             label = "Email",
             onClick = { showEmailOptions = true }
           ) {
-            Text(maskEmail(viewModel.userEmail), color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
+            Text(maskEmail(viewModel.userEmail), color = APP_TEXT_COLOR.copy(alpha = 0.5f), fontSize = 13.sp)
           }
           // Real, self-reported phone number (users.phone) -- linked/changed
           // from MobileNumberScreen. No SMS provider is wired up here, so
@@ -7120,7 +7126,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           ) {
             Text(
               viewModel.userPhone?.takeIf { it.isNotBlank() } ?: "Not linked",
-              color = Color.Black.copy(alpha = 0.5f),
+              color = APP_TEXT_COLOR.copy(alpha = 0.5f),
               fontSize = 13.sp
             )
           }
@@ -7137,7 +7143,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           ) {
             Text(
               if (viewModel.totpEnabled == true) "On" else "Off",
-              color = Color.Black.copy(alpha = 0.5f),
+              color = APP_TEXT_COLOR.copy(alpha = 0.5f),
               fontSize = 13.sp
             )
           }
@@ -7180,7 +7186,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             label = "App Lock",
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openAppLockSetup() } }
           ) {
-            Text(if (viewModel.appLockEnabled) "On" else "Off", color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
+            Text(if (viewModel.appLockEnabled) "On" else "Off", color = APP_TEXT_COLOR.copy(alpha = 0.5f), fontSize = 13.sp)
           }
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_account_settings),
@@ -7191,12 +7197,12 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-        Text("Last login time 2026-08-06 22:06:13", color = Color.Black.copy(alpha = 0.35f), fontSize = 12.sp)
+        Text("Last login time 2026-08-06 22:06:13", color = APP_TEXT_COLOR.copy(alpha = 0.35f), fontSize = 12.sp)
         Spacer(modifier = Modifier.height(2.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-          Text("Login device ", color = Color.Black.copy(alpha = 0.35f), fontSize = 12.sp)
+          Text("Login device ", color = APP_TEXT_COLOR.copy(alpha = 0.35f), fontSize = 12.sp)
           Icon(Icons.Outlined.Smartphone, contentDescription = null, tint = Color.Black.copy(alpha = 0.35f), modifier = Modifier.size(12.dp))
-          Text(" android", color = Color.Black.copy(alpha = 0.35f), fontSize = 12.sp)
+          Text(" android", color = APP_TEXT_COLOR.copy(alpha = 0.35f), fontSize = 12.sp)
         }
         Spacer(modifier = Modifier.height(20.dp))
       } else if (tabForPage == "Preference") {
@@ -7254,7 +7260,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             .padding(horizontal = 16.dp)
         ) {
           MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_world), label = "Language", onClick = { viewModel.leaveAccountTabsFor { viewModel.openAppLanguage() } }) {
-            Text("English", color = Color.Black.copy(alpha = 0.4f), fontSize = 13.sp)
+            Text("English", color = APP_TEXT_COLOR.copy(alpha = 0.4f), fontSize = 13.sp)
           }
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_theme_sun_outline),
@@ -7266,14 +7272,14 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             // fix as Profile Picture above.
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openAppearance() } }
           ) {
-            Text(AppTheme.fromKey(viewModel.themeMode).label, color = Color.Black.copy(alpha = 0.4f), fontSize = 13.sp)
+            Text(AppTheme.fromKey(viewModel.themeMode).label, color = APP_TEXT_COLOR.copy(alpha = 0.4f), fontSize = 13.sp)
           }
           MyInfoRow(
             icon = Icons.Outlined.TextFields,
             label = "Font",
             onClick = { viewModel.leaveAccountTabsFor { viewModel.openFontChoice() } }
           ) {
-            Text(FONT_OPTIONS.find { it.id == viewModel.fontChoice }?.label ?: "System", color = Color.Black.copy(alpha = 0.4f), fontSize = 13.sp)
+            Text(FONT_OPTIONS.find { it.id == viewModel.fontChoice }?.label ?: "System", color = APP_TEXT_COLOR.copy(alpha = 0.4f), fontSize = 13.sp)
           }
           MyInfoRow(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_advanced),
@@ -7350,7 +7356,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             .padding(vertical = 10.dp),
           contentAlignment = Alignment.Center
         ) {
-          Text("Log Out", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+          Text("Log Out", color = APP_TEXT_COLOR, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
       }
     }
@@ -7378,7 +7384,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
               runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, webUri)) }
             }
           }) {
-            Text("Rate Now", color = Color.Black, fontWeight = FontWeight.Bold)
+            Text("Rate Now", color = APP_TEXT_COLOR, fontWeight = FontWeight.Bold)
           }
         },
         dismissButton = {
@@ -7415,15 +7421,15 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           ) {
             Text(
               "Please Select",
-              color = Color.Black.copy(alpha = 0.5f),
+              color = APP_TEXT_COLOR.copy(alpha = 0.5f),
               fontSize = 14.sp,
               textAlign = TextAlign.Center,
               modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
             )
-            HorizontalDivider(color = Color.Black.copy(alpha = 0.08f))
+            HorizontalDivider(color = APP_TEXT_COLOR.copy(alpha = 0.08f))
             Text(
               "Unlink my Registered Email",
-              color = Color.Black,
+              color = APP_TEXT_COLOR,
               fontWeight = FontWeight.Normal,
               fontSize = 16.sp,
               textAlign = TextAlign.Center,
@@ -7434,7 +7440,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             )
             Text(
               "Change my Registered Email",
-              color = Color.Black,
+              color = APP_TEXT_COLOR,
               fontWeight = FontWeight.Normal,
               fontSize = 16.sp,
               textAlign = TextAlign.Center,
@@ -7450,7 +7456,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           Spacer(modifier = Modifier.height(8.dp))
           Text(
             "Cancel",
-            color = Color.Black,
+            color = APP_TEXT_COLOR,
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp,
             textAlign = TextAlign.Center,
@@ -7475,7 +7481,7 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
             viewModel.unlinkEmail()
             confirmUnlinkEmail = false
           }) {
-            Text("Unlink", color = Color.Black, fontWeight = FontWeight.Bold)
+            Text("Unlink", color = APP_TEXT_COLOR, fontWeight = FontWeight.Bold)
           }
         },
         dismissButton = {
@@ -7495,10 +7501,10 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
 @Composable
 private fun SecurityGroupHeader(title: String, subtitle: String? = null, titleSize: androidx.compose.ui.unit.TextUnit = 16.sp) {
   Column(modifier = Modifier.padding(bottom = 10.dp)) {
-    Text(title, color = Color.Black, fontSize = titleSize, fontWeight = FontWeight.SemiBold)
+    Text(title, color = APP_TEXT_COLOR, fontSize = titleSize, fontWeight = FontWeight.SemiBold)
     if (subtitle != null) {
       Spacer(modifier = Modifier.height(2.dp))
-      Text(subtitle, color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp)
+      Text(subtitle, color = APP_TEXT_COLOR.copy(alpha = 0.4f), fontSize = 12.sp)
     }
   }
 }
@@ -7530,7 +7536,7 @@ private fun MyInfoRow(
       Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(iconSize))
     }
     Spacer(modifier = Modifier.width(14.dp))
-    Text(label, color = Color.Black, fontSize = 17.sp, modifier = Modifier.weight(1f))
+    Text(label, color = APP_TEXT_COLOR, fontSize = 17.sp, modifier = Modifier.weight(1f))
     trailing()
     if (showChevron) {
       Spacer(modifier = Modifier.width(4.dp))
@@ -7541,7 +7547,7 @@ private fun MyInfoRow(
 
 @Composable
 private fun MyInfoDivider() {
-  HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
+  HorizontalDivider(color = APP_TEXT_COLOR.copy(alpha = 0.08f), thickness = 1.dp)
 }
 
 // Terms of Use / Privacy Policy / Report a Problem / Help Center / User
@@ -7573,7 +7579,7 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
       Box(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
         Text(
           "About Us",
-          color = Color.Black,
+          color = APP_TEXT_COLOR,
           fontSize = 18.sp,
           fontWeight = FontWeight.Bold,
           modifier = Modifier.align(Alignment.Center)
@@ -7592,13 +7598,13 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
           modifier = Modifier.size(64.dp)
         )
         Spacer(modifier = Modifier.height(10.dp))
-        Text("ChatGiZa", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+        Text("ChatGiZa", color = APP_TEXT_COLOR, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
         Spacer(modifier = Modifier.height(3.dp))
-        Text("Version ${BuildConfig.VERSION_NAME}", color = Color.Black.copy(alpha = 0.5f), fontSize = 12.sp)
+        Text("Version ${BuildConfig.VERSION_NAME}", color = APP_TEXT_COLOR.copy(alpha = 0.5f), fontSize = 12.sp)
       }
 
       Spacer(modifier = Modifier.height(24.dp))
-      HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
+      HorizontalDivider(color = APP_TEXT_COLOR.copy(alpha = 0.08f), thickness = 1.dp)
 
       // Same real update check the (unreachable) old Settings footer used --
       // silently compares against the public GitHub Release the CI pipeline
@@ -7613,7 +7619,7 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
           Toast.makeText(context, "You're on the latest version", Toast.LENGTH_SHORT).show()
         }
       }
-      HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
+      HorizontalDivider(color = APP_TEXT_COLOR.copy(alpha = 0.08f), thickness = 1.dp)
 
       Spacer(modifier = Modifier.height(24.dp))
 
@@ -7627,11 +7633,11 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
         AboutUsRow(icon = Icons.AutoMirrored.Outlined.Article, label = "Terms of Use") {
           context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://support.wellxai.world")))
         }
-        HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
+        HorizontalDivider(color = APP_TEXT_COLOR.copy(alpha = 0.08f), thickness = 1.dp)
         AboutUsRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_lock_solid), label = "Privacy Policy") {
           context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://support.wellxai.world")))
         }
-        HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
+        HorizontalDivider(color = APP_TEXT_COLOR.copy(alpha = 0.08f), thickness = 1.dp)
         AboutUsRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_report_problem), label = "Report a Problem") {
           // openReportProblem() now handles closing About Us itself (and
           // remembers to reopen it) -- calling closeAboutUs() here first
@@ -7639,11 +7645,11 @@ private fun AboutUsDialog(viewModel: ChatViewModel) {
           // reportProblemReturnToAboutUs in ChatViewModel.
           viewModel.openReportProblem()
         }
-        HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
+        HorizontalDivider(color = APP_TEXT_COLOR.copy(alpha = 0.08f), thickness = 1.dp)
         AboutUsRow(icon = Icons.Outlined.HelpOutline, label = "Help Center") { comingSoon("Help Center") }
-        HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
+        HorizontalDivider(color = APP_TEXT_COLOR.copy(alpha = 0.08f), thickness = 1.dp)
         AboutUsRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_compose), label = "User feedback") { comingSoon("User feedback") }
-        HorizontalDivider(color = Color.Black.copy(alpha = 0.08f), thickness = 1.dp)
+        HorizontalDivider(color = APP_TEXT_COLOR.copy(alpha = 0.08f), thickness = 1.dp)
         AboutUsRow(icon = Icons.Outlined.BugReport, label = "Crash Log") {
           val crash = ChatGizaApplication.lastCrash(context)
           if (crash == null) {
@@ -7688,7 +7694,7 @@ private fun AboutUsRowShell(label: String, onClick: () -> Unit, icon: @Composabl
   ) {
     icon()
     Spacer(modifier = Modifier.width(16.dp))
-    Text(label, color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Normal, modifier = Modifier.weight(1f))
+    Text(label, color = APP_TEXT_COLOR, fontSize = 16.sp, fontWeight = FontWeight.Normal, modifier = Modifier.weight(1f))
     Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
   }
 }
@@ -7758,7 +7764,7 @@ private fun AvatarPresetThumbnail(preset: AvatarPreset, size: Dp, modifier: Modi
     if (!name.isNullOrBlank() && size >= 40.dp) {
       Text(
         name,
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = (size.value * 0.16f).sp,
         fontWeight = FontWeight.Bold,
         maxLines = 1,
@@ -8127,7 +8133,7 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
         IconButton(onClick = { viewModel.closeAvatarPicker() }, modifier = Modifier.align(Alignment.CenterStart).size(32.dp)) {
           Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
         }
-        Text("Profile Picture", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
+        Text("Profile Picture", color = APP_TEXT_COLOR, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
       }
 
       Spacer(modifier = Modifier.height(20.dp))
@@ -8145,7 +8151,7 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
       Spacer(modifier = Modifier.height(10.dp))
       Text(
         "Choose from gallery",
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = 14.sp,
         fontWeight = FontWeight.SemiBold,
         textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
@@ -8158,7 +8164,7 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
         value = nameInput,
         onValueChange = { if (it.length <= 20) nameInput = it },
         modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text("Name your avatar (optional)", color = Color.Black.copy(alpha = 0.4f)) },
+        placeholder = { Text("Name your avatar (optional)", color = APP_TEXT_COLOR.copy(alpha = 0.4f)) },
         singleLine = true,
         shape = RoundedCornerShape(12.dp),
         colors = OutlinedTextFieldDefaults.colors(
@@ -8316,7 +8322,7 @@ internal fun MediaCommentComposerSheet(authorName: String, onDismiss: () -> Unit
     ) {
       Row(verticalAlignment = Alignment.CenterVertically) {
         Text("Replying to ", color = Color(0xFF8A8A8A), fontSize = 14.sp)
-        Text("@$authorName", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        Text("@$authorName", color = APP_TEXT_COLOR, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
       }
       Spacer(modifier = Modifier.height(12.dp))
       Box(
@@ -8330,7 +8336,7 @@ internal fun MediaCommentComposerSheet(authorName: String, onDismiss: () -> Unit
         BasicTextField(
           value = text,
           onValueChange = { text = it },
-          textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 15.sp, lineHeight = 20.sp),
+          textStyle = androidx.compose.ui.text.TextStyle(color = APP_TEXT_COLOR, fontSize = 15.sp, lineHeight = 20.sp),
           cursorBrush = SolidColor(Color.Black),
           modifier = Modifier.fillMaxSize(),
           decorationBox = { inner ->
@@ -8483,9 +8489,9 @@ private fun ConnectFeatureRowShell(title: String, body: String, icon: @Composabl
     }
     Spacer(modifier = Modifier.width(12.dp))
     Column {
-      Text(title, color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+      Text(title, color = APP_TEXT_COLOR, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
       Spacer(modifier = Modifier.height(2.dp))
-      Text(body, color = Color.Black.copy(alpha = 0.6f), fontSize = 13.sp, lineHeight = 18.sp)
+      Text(body, color = APP_TEXT_COLOR.copy(alpha = 0.6f), fontSize = 13.sp, lineHeight = 18.sp)
     }
   }
 }
@@ -8515,12 +8521,12 @@ internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () ->
         )
       }
       Spacer(modifier = Modifier.height(16.dp))
-      Text("Connect With ChatGiZa", color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+      Text("Connect With ChatGiZa", color = APP_TEXT_COLOR, fontSize = 21.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(6.dp))
       Text(
         "Ruhusu akaunti yako ya Quantara kuingiliana moja kwa moja na ChatGiZa. Ukishaunganisha, " +
           "utaona chaguo la \"Quantara\" chini ya majibu marefu ya ChatGiZa kwenye chat.",
-        color = Color.Black.copy(alpha = 0.75f),
+        color = APP_TEXT_COLOR.copy(alpha = 0.75f),
         fontSize = 14.sp,
         lineHeight = 20.sp
       )
@@ -8556,7 +8562,7 @@ internal fun ConnectWithChatGizaSheet(viewModel: ChatViewModel, onDismiss: () ->
         Row(verticalAlignment = Alignment.CenterVertically) {
           Icon(Icons.Filled.Check, contentDescription = null, tint = Color.Black, modifier = Modifier.size(20.dp))
           Spacer(modifier = Modifier.width(8.dp))
-          Text("Connected", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+          Text("Connected", color = APP_TEXT_COLOR, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         }
         Spacer(modifier = Modifier.height(14.dp))
         OutlinedButton(
@@ -8970,7 +8976,7 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
       if (viewModel.mediaError != null) {
         Text(
           viewModel.mediaError.orEmpty(),
-          color = Color.Black,
+          color = APP_TEXT_COLOR,
           fontSize = 13.sp,
           modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
         )
@@ -9006,7 +9012,7 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
             BasicTextField(
               value = text,
               onValueChange = { text = it },
-              textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 17.sp),
+              textStyle = androidx.compose.ui.text.TextStyle(color = APP_TEXT_COLOR, fontSize = 17.sp),
               cursorBrush = SolidColor(Color.Black),
               modifier = Modifier.fillMaxWidth()
             )
@@ -9034,7 +9040,7 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
           ) {
             Text(
               "Captions over $MEDIA_POST_FREE_CAPTION_LIMIT characters need GiZa Pro.",
-              color = Color.Black,
+              color = APP_TEXT_COLOR,
               fontSize = 13.sp
             )
             Spacer(modifier = Modifier.height(10.dp))
@@ -9103,7 +9109,7 @@ internal fun ChatGizaMediaPostComposerScreen(viewModel: ChatViewModel, onDismiss
                 modifier = Modifier.size(20.dp)
               )
               Spacer(modifier = Modifier.width(8.dp))
-              Text("Video attached", color = Color.Black, fontSize = 14.sp)
+              Text("Video attached", color = APP_TEXT_COLOR, fontSize = 14.sp)
             }
             IconButton(
               onClick = { videoUri = null },
@@ -9215,7 +9221,7 @@ private fun AttachMenuRow(iconRes: Int = 0, icon: (@Composable () -> Unit)? = nu
       )
     }
     Spacer(modifier = Modifier.width(24.dp))
-    Text(label, color = Color.Black, fontSize = 15.sp)
+    Text(label, color = APP_TEXT_COLOR, fontSize = 15.sp)
   }
 }
 
@@ -9239,7 +9245,7 @@ private fun AttachQuickAction(iconRes: Int, label: String, onClick: () -> Unit, 
       modifier = Modifier.size(24.dp)
     )
     Spacer(modifier = Modifier.height(8.dp))
-    Text(label, color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+    Text(label, color = APP_TEXT_COLOR, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1)
   }
 }
 
@@ -9262,9 +9268,9 @@ private fun AttachMenuDetailRow(icon: @Composable () -> Unit, label: String, des
     Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) { icon() }
     Spacer(modifier = Modifier.width(16.dp))
     Column(modifier = Modifier.weight(1f)) {
-      Text(label, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+      Text(label, color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.Medium)
       Spacer(modifier = Modifier.height(2.dp))
-      Text(description, color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
+      Text(description, color = APP_TEXT_COLOR.copy(alpha = 0.5f), fontSize = 13.sp)
     }
     Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black.copy(alpha = 0.35f), modifier = Modifier.size(20.dp))
   }
@@ -9337,7 +9343,7 @@ private fun CameraMenuRow(iconRes: Int, label: String, onClick: () -> Unit) {
       modifier = Modifier.size(19.dp)
     )
     Spacer(modifier = Modifier.width(16.dp))
-    Text(label, color = Color.Black, fontSize = 16.sp)
+    Text(label, color = APP_TEXT_COLOR, fontSize = 16.sp)
   }
 }
 
@@ -9424,7 +9430,7 @@ private fun HistoryRow(
       } else {
         Text(
           title.trim().take(1).uppercase(),
-          color = Color.Black,
+          color = APP_TEXT_COLOR,
           fontSize = 14.sp,
           fontWeight = FontWeight.Bold
         )
@@ -9643,7 +9649,7 @@ private fun EmailCard(icon: ImageVector, title: String, subtitle: String) {
       Icon(icon, contentDescription = null, tint = Color.Black)
       Spacer(modifier = Modifier.width(16.dp))
       Column {
-        Text(title, color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        Text(title, color = APP_TEXT_COLOR, fontSize = 16.sp, fontWeight = FontWeight.Medium)
         Text(subtitle, color = Color(0xFFA8A8A8), fontSize = 13.sp)
       }
     }
@@ -9663,7 +9669,7 @@ private fun XAccountCard(icon: ImageVector, title: String, onClick: () -> Unit) 
     ) {
       Icon(icon, contentDescription = null, tint = Color.Black)
       Spacer(modifier = Modifier.width(16.dp))
-      Text(title, color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+      Text(title, color = APP_TEXT_COLOR, fontSize = 16.sp, fontWeight = FontWeight.Medium)
     }
   }
 }
@@ -9704,7 +9710,7 @@ private fun EditProfileScreen(viewModel: ChatViewModel) {
       // (BackHandler above), same as the other settings sub-screens.
       Text(
         "Profile",
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = 20.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.weight(1f)
@@ -9801,7 +9807,7 @@ private fun EditProfileScreen(viewModel: ChatViewModel) {
       ) {
         Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_logout), contentDescription = null, tint = Color.Black)
         Spacer(modifier = Modifier.width(16.dp))
-        Text("Sign out", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        Text("Sign out", color = APP_TEXT_COLOR, fontSize = 16.sp, fontWeight = FontWeight.Medium)
       }
     }
 
@@ -10059,7 +10065,7 @@ private fun FontCard(option: FontOption, selected: Boolean, onClick: () -> Unit)
       // Preview text rendered IN the option's own font -- the whole point
       // of this card is to show what each one actually looks like, not
       // just name it.
-      Text(option.label, color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold, fontFamily = option.family)
+      Text(option.label, color = APP_TEXT_COLOR, fontSize = 18.sp, fontWeight = FontWeight.Bold, fontFamily = option.family)
       Spacer(modifier = Modifier.height(2.dp))
       Text(option.description, color = Color(0xFFA8A8A8), fontSize = 14.sp, fontWeight = FontWeight.Normal, fontFamily = option.family)
     }
@@ -10117,7 +10123,7 @@ private fun VoiceCard(option: VoiceOption, selected: Boolean, onClick: () -> Uni
     verticalAlignment = Alignment.CenterVertically
   ) {
     Column(modifier = Modifier.weight(1f)) {
-      Text(option.name, color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+      Text(option.name, color = APP_TEXT_COLOR, fontSize = 18.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(2.dp))
       Text(option.description, color = Color(0xFFA8A8A8), fontSize = 15.sp, fontWeight = FontWeight.Normal)
     }
@@ -10383,7 +10389,7 @@ private fun DataControlsAppBar(
       }
       Text(
         title,
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = titleFontSize,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.align(Alignment.Center)
@@ -10400,7 +10406,7 @@ private fun DataControlsAppBar(
       Spacer(modifier = Modifier.width(20.dp))
       Text(
         title,
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = titleFontSize,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(top = 2.dp)
@@ -10413,7 +10419,7 @@ private fun DataControlsAppBar(
 private fun DataControlToggleRow(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
   Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
     Column(modifier = Modifier.weight(1f)) {
-      Text(title, color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+      Text(title, color = APP_TEXT_COLOR, fontSize = 14.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(3.dp))
       Text(subtitle, color = Color(0xFFA8A8A8), fontSize = 12.sp, lineHeight = 15.sp, fontWeight = FontWeight.Normal)
     }
@@ -10430,7 +10436,7 @@ private fun DataControlToggleRow(title: String, subtitle: String, checked: Boole
 private fun DangerRow(label: String, onClick: () -> Unit) {
   Text(
     label,
-    color = Color.Black,
+    color = APP_TEXT_COLOR,
     fontSize = 14.sp,
     fontWeight = FontWeight.Bold,
     modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
@@ -10445,7 +10451,7 @@ private fun ConfirmDangerDialog(title: String, message: String, onConfirm: () ->
     text = { Text(message) },
     confirmButton = {
       TextButton(onClick = { onConfirm(); onDismiss() }) {
-        Text("Delete", color = Color.Black)
+        Text("Delete", color = APP_TEXT_COLOR)
       }
     },
     dismissButton = {
@@ -10480,7 +10486,7 @@ private fun DataControlsScreen(viewModel: ChatViewModel) {
       ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
           Column(modifier = Modifier.weight(1f)) {
-            Text("Manage Cloud Storage", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text("Manage Cloud Storage", color = APP_TEXT_COLOR, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(3.dp))
             Text(
               "See all the files and assets you have uploaded to ChatGiZa. You can also delete them here.",
@@ -10777,7 +10783,7 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
       Spacer(modifier = Modifier.height(20.dp))
       Text(
         "Are you sure you want to deactivate your account?",
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = 17.sp,
         fontWeight = FontWeight.Bold,
         fontFamily = FontFamily.Monospace,
@@ -10791,7 +10797,7 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
           .border(1.dp, Color.Black.copy(alpha = 0.1f), RoundedCornerShape(14.dp))
           .padding(16.dp)
       ) {
-        Text("Account to be deactivated", color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+        Text("Account to be deactivated", color = APP_TEXT_COLOR.copy(alpha = 0.4f), fontSize = 12.sp, fontFamily = FontFamily.Monospace)
         Spacer(modifier = Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
           if (viewModel.userImage != null) {
@@ -10803,13 +10809,13 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
           Column {
             Text(
               viewModel.userName?.takeIf { it.isNotBlank() } ?: "You",
-              color = Color.Black,
+              color = APP_TEXT_COLOR,
               fontSize = 15.sp,
               fontWeight = FontWeight.SemiBold,
               fontFamily = FontFamily.Monospace
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
-              Text("UID: $mainUid", color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+              Text("UID: $mainUid", color = APP_TEXT_COLOR.copy(alpha = 0.4f), fontSize = 12.sp, fontFamily = FontFamily.Monospace)
               Spacer(modifier = Modifier.width(4.dp))
               Icon(
                 painter = androidx.compose.ui.res.painterResource(R.drawable.ic_copy),
@@ -10822,7 +10828,7 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
         }
         if (viewModel.subaccounts.isNotEmpty()) {
           Spacer(modifier = Modifier.height(14.dp))
-          HorizontalDivider(color = Color.Black.copy(alpha = 0.08f))
+          HorizontalDivider(color = APP_TEXT_COLOR.copy(alpha = 0.08f))
           Spacer(modifier = Modifier.height(14.dp))
           Row(
             modifier = Modifier
@@ -10830,8 +10836,8 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
               .clickable { subaccountsExpanded = !subaccountsExpanded },
             verticalAlignment = Alignment.CenterVertically
           ) {
-            Text("Subaccount", color = Color.Black.copy(alpha = 0.4f), fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.weight(1f))
-            Text("${viewModel.subaccounts.size}", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace)
+            Text("Subaccount", color = APP_TEXT_COLOR.copy(alpha = 0.4f), fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.weight(1f))
+            Text("${viewModel.subaccounts.size}", color = APP_TEXT_COLOR, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace)
             Icon(
               Icons.Outlined.KeyboardArrowDown,
               contentDescription = if (subaccountsExpanded) "Collapse" else "Expand",
@@ -10861,9 +10867,9 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
                   horizontalArrangement = Arrangement.SpaceBetween,
                   verticalAlignment = Alignment.CenterVertically
                 ) {
-                  Text(sub.name, color = Color.Black, fontSize = 13.sp, fontFamily = FontFamily.Monospace)
+                  Text(sub.name, color = APP_TEXT_COLOR, fontSize = 13.sp, fontFamily = FontFamily.Monospace)
                   Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("UID: $subUid", color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                    Text("UID: $subUid", color = APP_TEXT_COLOR.copy(alpha = 0.4f), fontSize = 12.sp, fontFamily = FontFamily.Monospace)
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
                       painter = androidx.compose.ui.res.painterResource(R.drawable.ic_copy),
@@ -10891,7 +10897,7 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
         // and a few seconds' countdown so it can't be tapped on reflex.
         Text(
           "Deactivating your account will result in the following:",
-          color = Color.Black,
+          color = APP_TEXT_COLOR,
           fontSize = 15.sp,
           fontWeight = FontWeight.Bold,
           fontFamily = FontFamily.Monospace,
@@ -10904,8 +10910,8 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
           "Your conversations and data stay intact -- nothing is deleted."
         ).forEach { line ->
           Row(modifier = Modifier.padding(vertical = 10.dp)) {
-            Text("• ", color = Color.Black.copy(alpha = 0.6f), fontSize = 13.sp, fontFamily = FontFamily.Monospace)
-            Text(line, color = Color.Black.copy(alpha = 0.6f), fontSize = 13.sp, fontFamily = FontFamily.Monospace, lineHeight = 18.sp)
+            Text("• ", color = APP_TEXT_COLOR.copy(alpha = 0.6f), fontSize = 13.sp, fontFamily = FontFamily.Monospace)
+            Text(line, color = APP_TEXT_COLOR.copy(alpha = 0.6f), fontSize = 13.sp, fontFamily = FontFamily.Monospace, lineHeight = 18.sp)
           }
         }
         Spacer(modifier = Modifier.weight(1f))
@@ -10921,7 +10927,7 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
           Spacer(modifier = Modifier.width(4.dp))
           Text(
             "I have read, understood, and agree to the above.",
-            color = Color.Black,
+            color = APP_TEXT_COLOR,
             fontSize = 13.sp,
             fontFamily = FontFamily.Monospace,
             lineHeight = 18.sp,
@@ -10938,7 +10944,7 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
           colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9C2D)),
           modifier = Modifier.fillMaxWidth().height(52.dp)
         ) {
-          Text("Deactivate", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace)
+          Text("Deactivate", color = APP_TEXT_COLOR, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace)
         }
       } else {
         val readyToConfirm = agreedToConsequences && confirmCountdown <= 0
@@ -10953,11 +10959,11 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
           modifier = Modifier.fillMaxWidth().height(52.dp)
         ) {
           if (viewModel.deactivatingAccount) {
-            CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            CircularProgressIndicator(color = APP_TEXT_COLOR, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
           } else {
             Text(
               if (confirmCountdown > 0) "I Understand (${confirmCountdown}s)" else "I Understand",
-              color = Color.Black,
+              color = APP_TEXT_COLOR,
               fontSize = 16.sp,
               fontWeight = FontWeight.SemiBold,
               fontFamily = FontFamily.Monospace
@@ -10968,7 +10974,7 @@ private fun DeactivateAccountDialog(viewModel: ChatViewModel, onDismiss: () -> U
       Spacer(modifier = Modifier.height(16.dp))
       Text(
         "Cancel",
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = 15.sp,
         fontWeight = FontWeight.SemiBold,
         fontFamily = FontFamily.Monospace,
@@ -11057,7 +11063,7 @@ private fun DeleteAccountDialog(viewModel: ChatViewModel, onDismiss: () -> Unit)
       Spacer(modifier = Modifier.height(20.dp))
       Text(
         "Are you sure you want to delete your account?",
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = 17.sp,
         fontWeight = FontWeight.Bold,
         fontFamily = FontFamily.Monospace,
@@ -11067,7 +11073,7 @@ private fun DeleteAccountDialog(viewModel: ChatViewModel, onDismiss: () -> Unit)
       Spacer(modifier = Modifier.height(8.dp))
       Text(
         "This permanently deletes your account and all its data.",
-        color = Color.Black.copy(alpha = 0.5f),
+        color = APP_TEXT_COLOR.copy(alpha = 0.5f),
         fontSize = 13.sp,
         fontFamily = FontFamily.Monospace,
         textAlign = TextAlign.Center,
@@ -11083,7 +11089,7 @@ private fun DeleteAccountDialog(viewModel: ChatViewModel, onDismiss: () -> Unit)
       ) {
         Text(
           "Applies to this Main Account and all Subaccounts",
-          color = Color.Black,
+          color = APP_TEXT_COLOR,
           fontSize = 13.sp,
           fontWeight = FontWeight.Bold,
           fontFamily = FontFamily.Monospace
@@ -11094,8 +11100,8 @@ private fun DeleteAccountDialog(viewModel: ChatViewModel, onDismiss: () -> Unit)
           "This action cannot be undone"
         ).forEach { line ->
           Row(modifier = Modifier.padding(vertical = 3.dp)) {
-            Text("• ", color = Color.Black, fontSize = 13.sp, fontFamily = FontFamily.Monospace)
-            Text(line, color = Color.Black, fontSize = 13.sp, fontFamily = FontFamily.Monospace, lineHeight = 18.sp)
+            Text("• ", color = APP_TEXT_COLOR, fontSize = 13.sp, fontFamily = FontFamily.Monospace)
+            Text(line, color = APP_TEXT_COLOR, fontSize = 13.sp, fontFamily = FontFamily.Monospace, lineHeight = 18.sp)
           }
         }
       }
@@ -11120,7 +11126,7 @@ private fun DeleteAccountDialog(viewModel: ChatViewModel, onDismiss: () -> Unit)
       Spacer(modifier = Modifier.height(16.dp))
       Text(
         "Cancel",
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = 15.sp,
         fontWeight = FontWeight.SemiBold,
         fontFamily = FontFamily.Monospace,
@@ -11154,11 +11160,11 @@ private fun AccountSettingsRow(
         Icon(icon, contentDescription = null, tint = Color.Black, modifier = Modifier.size(22.dp))
       }
       Spacer(modifier = Modifier.width(14.dp))
-      Text(title, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+      Text(title, color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
       Icon(Icons.Filled.ArrowForwardIos, contentDescription = null, tint = Color.Black.copy(alpha = 0.45f), modifier = Modifier.size(14.dp))
     }
     Spacer(modifier = Modifier.height(10.dp))
-    Text(description, color = Color.Black.copy(alpha = 0.4f), fontSize = 12.5.sp, lineHeight = 18.sp)
+    Text(description, color = APP_TEXT_COLOR.copy(alpha = 0.4f), fontSize = 12.5.sp, lineHeight = 18.sp)
   }
 }
 
@@ -11186,7 +11192,7 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
     Box(modifier = Modifier.fillMaxWidth().padding(top = 26.dp, bottom = 20.dp)) {
       Text(
         "Subaccount",
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = 18.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.align(Alignment.Center)
@@ -11196,7 +11202,7 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
       }
     }
 
-    Text("Main Account", color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
+    Text("Main Account", color = APP_TEXT_COLOR.copy(alpha = 0.5f), fontSize = 13.sp)
     Spacer(modifier = Modifier.height(8.dp))
     SwitchAccountRow(
       name = (viewModel.userName ?: "You").uppercase(),
@@ -11216,11 +11222,11 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
     // Everything subaccount-related (rules, create, list) grouped together
     // below Main Account, instead of the Create button sitting between the
     // two sections.
-    Text("Subaccounts", color = Color.Black.copy(alpha = 0.5f), fontSize = 13.sp)
+    Text("Subaccounts", color = APP_TEXT_COLOR.copy(alpha = 0.5f), fontSize = 13.sp)
     Spacer(modifier = Modifier.height(8.dp))
     Text(
       "You can create up to 5 subaccounts. Each one has its own separate chat history.",
-      color = Color.Black.copy(alpha = 0.4f),
+      color = APP_TEXT_COLOR.copy(alpha = 0.4f),
       fontSize = 12.sp,
       lineHeight = 16.sp,
       modifier = Modifier
@@ -11250,12 +11256,12 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
 
     if (viewModel.loadingSubaccounts && viewModel.subaccounts.isEmpty()) {
       Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(22.dp))
+        CircularProgressIndicator(color = APP_TEXT_COLOR, modifier = Modifier.size(22.dp))
       }
     } else if (viewModel.subaccounts.isEmpty()) {
       Text(
         "You haven't created any subaccounts yet.",
-        color = Color.Black.copy(alpha = 0.4f),
+        color = APP_TEXT_COLOR.copy(alpha = 0.4f),
         fontSize = 13.sp,
         modifier = Modifier.padding(vertical = 16.dp)
       )
@@ -11287,7 +11293,7 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
 
     viewModel.subaccountError?.let {
       Spacer(modifier = Modifier.height(8.dp))
-      Text(it, color = Color.Black, fontSize = 12.sp)
+      Text(it, color = APP_TEXT_COLOR, fontSize = 12.sp)
     }
 
     Spacer(modifier = Modifier.height(24.dp))
@@ -11324,7 +11330,7 @@ private fun SwitchAccountScreen(viewModel: ChatViewModel) {
     ModalBottomSheet(onDismissRequest = { moreSheetTarget = null }, containerColor = APP_BACKGROUND) {
       Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
-          Text("More", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+          Text("More", color = APP_TEXT_COLOR, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
           IconButton(onClick = { moreSheetTarget = null }, modifier = Modifier.size(28.dp)) {
             Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.Black)
           }
@@ -11368,8 +11374,8 @@ private fun SwitchAccountRow(
     avatar(Color.Black.copy(alpha = 0.7f))
     Spacer(modifier = Modifier.width(12.dp))
     Column(modifier = Modifier.weight(1f)) {
-      Text(name, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-      Text("UID: $uid", color = Color.Black.copy(alpha = 0.4f), fontSize = 12.sp)
+      Text(name, color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+      Text("UID: $uid", color = APP_TEXT_COLOR.copy(alpha = 0.4f), fontSize = 12.sp)
     }
     if (selected) {
       Icon(Icons.Filled.Check, contentDescription = "Active", tint = Color.Black, modifier = Modifier.size(20.dp))
@@ -11388,7 +11394,7 @@ private fun SubaccountMoreRow(label: String, onClick: () -> Unit) {
     modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    Text(label, color = Color.Black, fontSize = 16.sp, modifier = Modifier.weight(1f))
+    Text(label, color = APP_TEXT_COLOR, fontSize = 16.sp, modifier = Modifier.weight(1f))
     Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
   }
 }
@@ -11415,7 +11421,7 @@ private fun SubaccountSettingsScreen(viewModel: ChatViewModel) {
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
       Text(
         sub.name,
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = 18.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.align(Alignment.Center)
@@ -11433,12 +11439,12 @@ private fun SubaccountSettingsScreen(viewModel: ChatViewModel) {
           .padding(vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Text("Nickname", color = Color.Black, fontSize = 16.sp, modifier = Modifier.weight(1f))
-        Text(sub.name, color = Color.Black.copy(alpha = 0.4f), fontSize = 14.sp)
+        Text("Nickname", color = APP_TEXT_COLOR, fontSize = 16.sp, modifier = Modifier.weight(1f))
+        Text(sub.name, color = APP_TEXT_COLOR.copy(alpha = 0.4f), fontSize = 14.sp)
         Spacer(Modifier.width(6.dp))
         Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
       }
-      HorizontalDivider(color = Color.Black.copy(alpha = 0.08f))
+      HorizontalDivider(color = APP_TEXT_COLOR.copy(alpha = 0.08f))
       Row(
         modifier = Modifier
           .fillMaxWidth()
@@ -11446,7 +11452,7 @@ private fun SubaccountSettingsScreen(viewModel: ChatViewModel) {
           .padding(vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Text("Delete Subaccount", color = Color.Black, fontSize = 16.sp, modifier = Modifier.weight(1f))
+        Text("Delete Subaccount", color = APP_TEXT_COLOR, fontSize = 16.sp, modifier = Modifier.weight(1f))
         Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
       }
     }
@@ -11497,7 +11503,7 @@ private fun DashboardStatTile(label: String, value: String, modifier: Modifier =
       .background(Color.Black.copy(alpha = 0.06f))
       .padding(12.dp)
   ) {
-    Text(value, color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+    Text(value, color = APP_TEXT_COLOR, fontSize = 18.sp, fontWeight = FontWeight.Bold)
     Spacer(modifier = Modifier.height(2.dp))
     Text(label, color = Color(0xFFA8A8A8), fontSize = 11.sp)
   }
@@ -11573,14 +11579,14 @@ private fun DataDashboardScreen(viewModel: ChatViewModel) {
       }
 
       Spacer(modifier = Modifier.height(24.dp))
-      Text("Manage your data", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 10.dp))
+      Text("Manage your data", color = APP_TEXT_COLOR, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 10.dp))
       Row(
         modifier = Modifier
           .fillMaxWidth()
           .clickable { viewModel.openDataControls() },
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Text("Data controls & delete account", color = Color.Black, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Text("Data controls & delete account", color = APP_TEXT_COLOR, fontSize = 14.sp, modifier = Modifier.weight(1f))
         Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color(0xFFA8A8A8), modifier = Modifier.size(22.dp))
       }
       Spacer(modifier = Modifier.height(24.dp))
@@ -11592,7 +11598,7 @@ private fun DataDashboardScreen(viewModel: ChatViewModel) {
 private fun DashboardInfoRow(label: String, value: String) {
   Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
     Text(label, color = Color(0xFFA8A8A8), fontSize = 13.sp)
-    Text(value, color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+    Text(value, color = APP_TEXT_COLOR, fontSize = 13.sp, fontWeight = FontWeight.Medium)
   }
 }
 
@@ -11603,7 +11609,7 @@ private val CLOUD_STORAGE_SORTS = listOf("Last used", "Date created", "Name", "S
 private fun CloudStorageFilterMenuItem(label: String, selected: Boolean, onClick: () -> Unit) {
   DropdownMenuItem(
     text = {
-      Text(label, color = Color.Black, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal, fontSize = 15.sp)
+      Text(label, color = APP_TEXT_COLOR, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal, fontSize = 15.sp)
     },
     leadingIcon = {
       if (selected) {
@@ -11637,7 +11643,7 @@ private fun ManageCloudStorageScreen(viewModel: ChatViewModel) {
       }
       Spacer(modifier = Modifier.width(20.dp))
       Column(modifier = Modifier.weight(1f)) {
-        Text("0 B", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text("0 B", color = APP_TEXT_COLOR, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Text("0% used", color = Color(0xFFA8A8A8), fontSize = 13.sp)
       }
       Box {
@@ -11668,7 +11674,7 @@ private fun ManageCloudStorageScreen(viewModel: ChatViewModel) {
               filterMenuOpen = false
             }
           }
-          HorizontalDivider(color = Color.Black.copy(alpha = 0.1f))
+          HorizontalDivider(color = APP_TEXT_COLOR.copy(alpha = 0.1f))
           Text(
             "Sort by",
             color = Color(0xFFA8A8A8),
@@ -11712,7 +11718,7 @@ private fun WidgetMockPreview(modifier: Modifier = Modifier) {
           Text("G", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.width(8.dp))
-        Text("ChatGiZa", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        Text("ChatGiZa", color = APP_TEXT_COLOR, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
       }
       Spacer(modifier = Modifier.height(14.dp))
       Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -11735,7 +11741,7 @@ private fun WidgetMockAction(icon: ImageVector, label: String, modifier: Modifie
   ) {
     Icon(icon, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
     Spacer(modifier = Modifier.height(4.dp))
-    Text(label, color = Color.Black.copy(alpha = 0.8f), fontSize = 11.sp)
+    Text(label, color = APP_TEXT_COLOR.copy(alpha = 0.8f), fontSize = 11.sp)
   }
 }
 
@@ -11778,7 +11784,7 @@ private fun WidgetsScreen(viewModel: ChatViewModel) {
 
         Text(
           text = "Get quick access to chat, imagine and voice with ChatGiZa",
-          color = Color.Black,
+          color = APP_TEXT_COLOR,
           fontSize = 18.sp,
           textAlign = TextAlign.Center,
           modifier = Modifier.fillMaxWidth().padding(20.dp)
@@ -11800,7 +11806,7 @@ private fun WidgetsScreen(viewModel: ChatViewModel) {
         ) {
           Icon(Icons.Outlined.AddBox, contentDescription = null, tint = Color.Black)
           Spacer(modifier = Modifier.width(16.dp))
-          Text("Add Widget", color = Color.Black, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+          Text("Add Widget", color = APP_TEXT_COLOR, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
       }
 
@@ -11822,7 +11828,7 @@ private fun WidgetsScreen(viewModel: ChatViewModel) {
     ) {
       Text(
         "Add to Desktop",
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = 28.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(24.dp)
@@ -11830,7 +11836,7 @@ private fun WidgetsScreen(viewModel: ChatViewModel) {
 
       Text(
         "ChatGiZa",
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = 24.sp,
         modifier = Modifier.align(Alignment.CenterHorizontally)
       )
@@ -11935,7 +11941,7 @@ private fun OpenSourceLicensesScreen(viewModel: ChatViewModel) {
           colors = CardDefaults.cardColors(containerColor = APP_BACKGROUND)
         ) {
           Column(modifier = Modifier.padding(16.dp)) {
-            Text(entry.name, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(entry.name, color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(4.dp))
             Text(entry.license, color = Color(0xFFA8A8A8), fontSize = 13.sp)
           }
@@ -12028,7 +12034,7 @@ private fun ShareTargetPickerScreen(viewModel: ChatViewModel) {
             Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
               Icon(Icons.Filled.Add, contentDescription = null, tint = Color.Black, modifier = Modifier.size(20.dp))
               Spacer(modifier = Modifier.width(12.dp))
-              Text("New chat", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+              Text("New chat", color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
           }
         }
@@ -12040,7 +12046,7 @@ private fun ShareTargetPickerScreen(viewModel: ChatViewModel) {
           ) {
             Text(
               convo.title.ifBlank { "Untitled" },
-              color = Color.Black,
+              color = APP_TEXT_COLOR,
               fontSize = 15.sp,
               maxLines = 1,
               overflow = TextOverflow.Ellipsis,
@@ -12054,7 +12060,7 @@ private fun ShareTargetPickerScreen(viewModel: ChatViewModel) {
           modifier = Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.4f)),
           contentAlignment = Alignment.Center
         ) {
-          CircularProgressIndicator(color = Color.Black)
+          CircularProgressIndicator(color = APP_TEXT_COLOR)
         }
       }
     }
@@ -12074,7 +12080,7 @@ private fun HapticCard(icon: ImageVector, title: String, checked: Boolean, onChe
     ) {
       Icon(imageVector = icon, contentDescription = null, tint = Color.Black, modifier = Modifier.size(30.dp))
       Spacer(Modifier.width(18.dp))
-      Text(text = title, color = Color.Black, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+      Text(text = title, color = APP_TEXT_COLOR, fontSize = 20.sp, fontWeight = FontWeight.Bold)
       Spacer(Modifier.weight(1f))
       Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
@@ -12120,7 +12126,7 @@ private fun HapticsScreen(viewModel: ChatViewModel) {
         Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
       }
       Spacer(Modifier.width(18.dp))
-      Text(text = "Haptics", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+      Text(text = "Haptics", color = APP_TEXT_COLOR, fontSize = 22.sp, fontWeight = FontWeight.Bold)
     }
 
     Spacer(Modifier.height(28.dp))
@@ -12184,7 +12190,7 @@ private fun KidsModeScreen(viewModel: ChatViewModel) {
         Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
       }
       Spacer(Modifier.width(18.dp))
-      Text(text = "Kids Mode", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+      Text(text = "Kids Mode", color = APP_TEXT_COLOR, fontSize = 22.sp, fontWeight = FontWeight.Bold)
     }
     Spacer(Modifier.height(28.dp))
     HapticCard(
@@ -12214,7 +12220,7 @@ private fun SharedConversationsScreen(viewModel: ChatViewModel) {
         Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
       }
       Spacer(Modifier.width(18.dp))
-      Text(text = "Collaborative Chat", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+      Text(text = "Collaborative Chat", color = APP_TEXT_COLOR, fontSize = 22.sp, fontWeight = FontWeight.Bold)
     }
     Spacer(Modifier.height(20.dp))
     Text(
@@ -12238,14 +12244,14 @@ private fun SharedConversationsScreen(viewModel: ChatViewModel) {
     }
 
     Spacer(Modifier.height(28.dp))
-    Text("Join with a code", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    Text("Join with a code", color = APP_TEXT_COLOR, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
     Spacer(Modifier.height(10.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
       OutlinedTextField(
         value = viewModel.collabJoinCodeInput,
         onValueChange = { viewModel.onCollabJoinCodeChange(it) },
         modifier = Modifier.weight(1f),
-        placeholder = { Text("ABC123", color = Color.Black.copy(alpha = 0.35f)) },
+        placeholder = { Text("ABC123", color = APP_TEXT_COLOR.copy(alpha = 0.35f)) },
         singleLine = true,
         shape = RoundedCornerShape(12.dp),
         colors = OutlinedTextFieldDefaults.colors(
@@ -12276,7 +12282,7 @@ private fun SharedConversationsScreen(viewModel: ChatViewModel) {
     val error = viewModel.collabError
     if (error != null) {
       Spacer(Modifier.height(10.dp))
-      Text(error, color = Color.Black, fontSize = 12.sp)
+      Text(error, color = APP_TEXT_COLOR, fontSize = 12.sp)
     }
   }
   // Fires the OS share sheet the moment a session is created, so the
@@ -12317,11 +12323,11 @@ private fun CollabChatScreen(viewModel: ChatViewModel) {
       }
       Spacer(Modifier.width(12.dp))
       Column(modifier = Modifier.weight(1f)) {
-        Text("Collaborative Chat", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text("Collaborative Chat", color = APP_TEXT_COLOR, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         if (session != null) {
           Text(
             "${session.participants.size} in this chat",
-            color = Color.Black.copy(alpha = 0.5f),
+            color = APP_TEXT_COLOR.copy(alpha = 0.5f),
             fontSize = 12.sp
           )
         }
@@ -12338,7 +12344,7 @@ private fun CollabChatScreen(viewModel: ChatViewModel) {
             }
             .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-          Text(session.code, color = Color.Black, fontSize = 13.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+          Text(session.code, color = APP_TEXT_COLOR, fontSize = 13.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
           Spacer(Modifier.width(6.dp))
           Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_copy), contentDescription = "Copy code", tint = Color.Black.copy(alpha = 0.6f), modifier = Modifier.size(14.dp))
         }
@@ -12353,7 +12359,7 @@ private fun CollabChatScreen(viewModel: ChatViewModel) {
         session.participants.forEach { p ->
           Text(
             p.name,
-            color = Color.Black.copy(alpha = 0.5f),
+            color = APP_TEXT_COLOR.copy(alpha = 0.5f),
             fontSize = 11.sp,
             modifier = Modifier
               .clip(RoundedCornerShape(50))
@@ -12377,7 +12383,7 @@ private fun CollabChatScreen(viewModel: ChatViewModel) {
           Column(horizontalAlignment = Alignment.End, modifier = Modifier.fillMaxWidth()) {
             Text(
               if (msg.authorName == myName) "You" else (msg.authorName ?: "Someone"),
-              color = Color.Black.copy(alpha = 0.4f),
+              color = APP_TEXT_COLOR.copy(alpha = 0.4f),
               fontSize = 11.sp,
               modifier = Modifier.padding(bottom = 2.dp, end = 4.dp)
             )
@@ -12387,7 +12393,7 @@ private fun CollabChatScreen(viewModel: ChatViewModel) {
                 .background(colorScheme.onBackground.copy(alpha = 0.1f))
                 .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
-              Text(msg.content, color = Color.Black, fontSize = 15.sp)
+              Text(msg.content, color = APP_TEXT_COLOR, fontSize = 15.sp)
             }
           }
         } else {
@@ -12398,7 +12404,7 @@ private fun CollabChatScreen(viewModel: ChatViewModel) {
       }
       if (viewModel.collabSending) {
         item {
-          Text("GiZa is replying…", color = Color.Black.copy(alpha = 0.4f), fontSize = 13.sp)
+          Text("GiZa is replying…", color = APP_TEXT_COLOR.copy(alpha = 0.4f), fontSize = 13.sp)
         }
       }
     }
@@ -12415,7 +12421,7 @@ private fun CollabChatScreen(viewModel: ChatViewModel) {
         value = viewModel.collabInput,
         onValueChange = { viewModel.onCollabInputChange(it) },
         modifier = Modifier.weight(1f),
-        placeholder = { Text("Message the group…", color = Color.Black.copy(alpha = 0.35f)) },
+        placeholder = { Text("Message the group…", color = APP_TEXT_COLOR.copy(alpha = 0.35f)) },
         shape = RoundedCornerShape(20.dp),
         colors = OutlinedTextFieldDefaults.colors(
           focusedTextColor = Color.Black,
@@ -12463,7 +12469,7 @@ private fun CommunityScreen(viewModel: ChatViewModel) {
         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
       }
       Spacer(Modifier.width(12.dp))
-      Text("ChatGiZa Community", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+      Text("ChatGiZa Community", color = APP_TEXT_COLOR, fontSize = 16.sp, fontWeight = FontWeight.Bold)
     }
 
     LazyColumn(
@@ -12480,7 +12486,7 @@ private fun CommunityScreen(viewModel: ChatViewModel) {
         ) {
           Text(
             if (isMe) "You" else msg.authorName,
-            color = Color.Black.copy(alpha = 0.4f),
+            color = APP_TEXT_COLOR.copy(alpha = 0.4f),
             fontSize = 11.sp,
             modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 2.dp)
           )
@@ -12490,7 +12496,7 @@ private fun CommunityScreen(viewModel: ChatViewModel) {
               .background(if (isMe) colorScheme.onBackground.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.06f))
               .padding(horizontal = 14.dp, vertical = 10.dp)
           ) {
-            Text(msg.content, color = Color.Black, fontSize = 15.sp)
+            Text(msg.content, color = APP_TEXT_COLOR, fontSize = 15.sp)
           }
         }
       }
@@ -12498,7 +12504,7 @@ private fun CommunityScreen(viewModel: ChatViewModel) {
 
     val error = viewModel.communityError
     if (error != null) {
-      Text(error, color = Color.Black, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp))
+      Text(error, color = APP_TEXT_COLOR, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp))
     }
 
     Row(
@@ -12513,7 +12519,7 @@ private fun CommunityScreen(viewModel: ChatViewModel) {
         value = viewModel.communityInput,
         onValueChange = { viewModel.onCommunityInputChange(it) },
         modifier = Modifier.weight(1f),
-        placeholder = { Text("Message the community…", color = Color.Black.copy(alpha = 0.35f)) },
+        placeholder = { Text("Message the community…", color = APP_TEXT_COLOR.copy(alpha = 0.35f)) },
         shape = RoundedCornerShape(20.dp),
         colors = OutlinedTextFieldDefaults.colors(
           focusedTextColor = Color.Black,
@@ -12559,7 +12565,7 @@ private fun TrustedDevicesScreen(viewModel: ChatViewModel) {
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
       Text(
         "Trusted Devices",
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = 18.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.align(Alignment.Center)
@@ -12571,26 +12577,26 @@ private fun TrustedDevicesScreen(viewModel: ChatViewModel) {
 
     Text(
       "These devices have been authorized to allow logging into your account.",
-      color = Color.Black.copy(alpha = 0.5f),
+      color = APP_TEXT_COLOR.copy(alpha = 0.5f),
       fontSize = 13.sp,
       modifier = Modifier.padding(horizontal = 16.dp)
     )
     Spacer(Modifier.height(8.dp))
-    HorizontalDivider(color = Color.Black.copy(alpha = 0.08f))
+    HorizontalDivider(color = APP_TEXT_COLOR.copy(alpha = 0.08f))
 
     val error = viewModel.trustedDevicesError
     if (error != null) {
-      Text(error, color = Color.Black, fontSize = 12.sp, modifier = Modifier.padding(16.dp))
+      Text(error, color = APP_TEXT_COLOR, fontSize = 12.sp, modifier = Modifier.padding(16.dp))
     }
 
     if (viewModel.trustedDevicesLoading && viewModel.trustedDevices.isEmpty()) {
       Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(28.dp))
+        CircularProgressIndicator(color = APP_TEXT_COLOR, modifier = Modifier.size(28.dp))
       }
     } else if (viewModel.trustedDevices.isEmpty()) {
       Text(
         "No sign-ins recorded yet.",
-        color = Color.Black.copy(alpha = 0.4f),
+        color = APP_TEXT_COLOR.copy(alpha = 0.4f),
         fontSize = 13.sp,
         modifier = Modifier.padding(16.dp)
       )
@@ -12619,11 +12625,11 @@ private fun TrustedDevicesScreen(viewModel: ChatViewModel) {
                 )
               }
               Spacer(Modifier.width(10.dp))
-              Text(device.device, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Normal, modifier = Modifier.weight(1f))
+              Text(device.device, color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.Normal, modifier = Modifier.weight(1f))
               if (isCurrent) {
                 Text(
                   "This device",
-                  color = Color.Black.copy(alpha = 0.4f),
+                  color = APP_TEXT_COLOR.copy(alpha = 0.4f),
                   fontSize = 11.sp,
                   modifier = Modifier
                     .clip(RoundedCornerShape(50))
@@ -12631,7 +12637,7 @@ private fun TrustedDevicesScreen(viewModel: ChatViewModel) {
                     .padding(horizontal = 10.dp, vertical = 4.dp)
                 )
               } else if (viewModel.isRevokingDevice(device.id)) {
-                CircularProgressIndicator(color = Color.Black.copy(alpha = 0.6f), modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(color = APP_TEXT_COLOR.copy(alpha = 0.6f), modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
               } else {
                 IconButton(onClick = { confirmRevoke = device }, modifier = Modifier.size(32.dp)) {
                   DeleteIcon(tint = Color.Black.copy(alpha = 0.5f))
@@ -12639,11 +12645,11 @@ private fun TrustedDevicesScreen(viewModel: ChatViewModel) {
               }
             }
             Spacer(Modifier.height(6.dp))
-            Text("Time: ${formatSessionTime(device.signedInAt)}", color = Color.Black.copy(alpha = 0.3f), fontSize = 11.sp)
-            Text("Login Location: ${device.location}", color = Color.Black.copy(alpha = 0.3f), fontSize = 11.sp)
-            Text("IP Address: ${device.ip}", color = Color.Black.copy(alpha = 0.3f), fontSize = 11.sp)
+            Text("Time: ${formatSessionTime(device.signedInAt)}", color = APP_TEXT_COLOR.copy(alpha = 0.3f), fontSize = 11.sp)
+            Text("Login Location: ${device.location}", color = APP_TEXT_COLOR.copy(alpha = 0.3f), fontSize = 11.sp)
+            Text("IP Address: ${device.ip}", color = APP_TEXT_COLOR.copy(alpha = 0.3f), fontSize = 11.sp)
           }
-          HorizontalDivider(color = Color.Black.copy(alpha = 0.06f))
+          HorizontalDivider(color = APP_TEXT_COLOR.copy(alpha = 0.06f))
         }
       }
     }
@@ -12660,7 +12666,7 @@ private fun TrustedDevicesScreen(viewModel: ChatViewModel) {
           viewModel.revokeTrustedDevice(target.id)
           confirmRevoke = null
         }) {
-          Text("Remove", color = Color.Black, fontWeight = FontWeight.Bold)
+          Text("Remove", color = APP_TEXT_COLOR, fontWeight = FontWeight.Bold)
         }
       },
       dismissButton = {
@@ -12718,7 +12724,7 @@ private fun StorageManagementScreen(viewModel: ChatViewModel) {
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
       Text(
         "Storage management",
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = 18.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.align(Alignment.Center)
@@ -12751,26 +12757,26 @@ private fun StorageManagementScreen(viewModel: ChatViewModel) {
       Row(verticalAlignment = Alignment.CenterVertically) {
         Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color.Black))
         Spacer(Modifier.width(6.dp))
-        Text("ChatGiZa used", color = Color.Black.copy(alpha = 0.6f), fontSize = 12.sp)
+        Text("ChatGiZa used", color = APP_TEXT_COLOR.copy(alpha = 0.6f), fontSize = 12.sp)
         Spacer(Modifier.width(14.dp))
         Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color.Black))
         Spacer(Modifier.width(6.dp))
-        Text("Other Apps used", color = Color.Black.copy(alpha = 0.6f), fontSize = 12.sp)
+        Text("Other Apps used", color = APP_TEXT_COLOR.copy(alpha = 0.6f), fontSize = 12.sp)
         Spacer(Modifier.width(14.dp))
         Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.25f)))
         Spacer(Modifier.width(6.dp))
-        Text("Remaining", color = Color.Black.copy(alpha = 0.6f), fontSize = 12.sp)
+        Text("Remaining", color = APP_TEXT_COLOR.copy(alpha = 0.6f), fontSize = 12.sp)
       }
       Spacer(Modifier.height(14.dp))
       Text(
         "ChatGiZa currently uses ${formatStorageBytes(appBytes)}, accounting for ${String.format(java.util.Locale.US, "%.2f", percentOfDevice)}% of your device's storage.",
-        color = Color.Black.copy(alpha = 0.5f),
+        color = APP_TEXT_COLOR.copy(alpha = 0.5f),
         fontSize = 13.sp
       )
     }
 
     Spacer(Modifier.height(20.dp))
-    HorizontalDivider(color = Color.Black.copy(alpha = 0.08f))
+    HorizontalDivider(color = APP_TEXT_COLOR.copy(alpha = 0.08f))
 
     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
       Row(
@@ -12782,13 +12788,13 @@ private fun StorageManagementScreen(viewModel: ChatViewModel) {
         verticalAlignment = Alignment.CenterVertically
       ) {
         Column(modifier = Modifier.weight(1f)) {
-          Text("Cache", color = Color.Black, fontSize = 14.sp)
+          Text("Cache", color = APP_TEXT_COLOR, fontSize = 14.sp)
           Spacer(Modifier.height(4.dp))
-          Text(formatStorageBytes(cacheBytes), color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+          Text(formatStorageBytes(cacheBytes), color = APP_TEXT_COLOR, fontSize = 18.sp, fontWeight = FontWeight.Bold)
           Spacer(Modifier.height(4.dp))
           Text(
             "Clearing Cache will not affect the normal use of ChatGiZa",
-            color = Color.Black.copy(alpha = 0.4f),
+            color = APP_TEXT_COLOR.copy(alpha = 0.4f),
             fontSize = 12.sp,
             lineHeight = 16.sp
           )
@@ -12807,13 +12813,13 @@ private fun StorageManagementScreen(viewModel: ChatViewModel) {
           .background(Color.Black.copy(alpha = 0.05f))
           .padding(16.dp)
       ) {
-        Text("Important files", color = Color.Black, fontSize = 14.sp)
+        Text("Important files", color = APP_TEXT_COLOR, fontSize = 14.sp)
         Spacer(Modifier.height(4.dp))
-        Text(formatStorageBytes(filesBytes), color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text(formatStorageBytes(filesBytes), color = APP_TEXT_COLOR, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         Text(
           "Includes data ChatGiZa needs to work -- not clearable here.",
-          color = Color.Black.copy(alpha = 0.4f),
+          color = APP_TEXT_COLOR.copy(alpha = 0.4f),
           fontSize = 12.sp,
           lineHeight = 16.sp
         )
@@ -12857,7 +12863,7 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
       Text(
         "Change Password",
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = 18.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.align(Alignment.Center)
@@ -12896,7 +12902,7 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
             "new" -> "Note: This password is separate from your Google sign-in and is only ever used inside ChatGiZa. You're free to change it again at any time from Security settings. Choose one that's at least 8 characters long."
             else -> "Note: For your account's security, we've sent a 6-digit verification code to the email on this account. Enter it below to finish confirming this change -- the code expires in 10 minutes."
           },
-          color = Color.Black,
+          color = APP_TEXT_COLOR,
           fontSize = 10.sp,
           lineHeight = 14.sp,
           fontWeight = FontWeight.Medium
@@ -12969,7 +12975,7 @@ private fun ChangePasswordScreen(viewModel: ChatViewModel) {
         if (viewModel.changingPassword) {
           CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
         } else {
-          Text("Confirm", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+          Text("Confirm", color = APP_TEXT_COLOR, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
       }
     }
@@ -12996,7 +13002,7 @@ private fun MobileNumberScreen(viewModel: ChatViewModel) {
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
       Text(
         "Mobile Number",
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = 18.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.align(Alignment.Center)
@@ -13027,7 +13033,7 @@ private fun MobileNumberScreen(viewModel: ChatViewModel) {
           } else {
             "Note: Changing this number only updates the contact detail on your account -- your Google sign-in is unaffected."
           },
-          color = Color.Black,
+          color = APP_TEXT_COLOR,
           fontSize = 10.sp,
           lineHeight = 14.sp,
           fontWeight = FontWeight.Medium
@@ -13054,7 +13060,7 @@ private fun MobileNumberScreen(viewModel: ChatViewModel) {
         ) {
           Text(viewModel.phoneCountry.flag, fontSize = 16.sp)
           Spacer(modifier = Modifier.width(6.dp))
-          Text(viewModel.phoneCountry.dialCode, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+          Text(viewModel.phoneCountry.dialCode, color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.Medium)
           Spacer(modifier = Modifier.width(4.dp))
           Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "Choose country", tint = Color.Black.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
         }
@@ -13069,13 +13075,13 @@ private fun MobileNumberScreen(viewModel: ChatViewModel) {
         ) {
           Box(modifier = Modifier.weight(1f).padding(vertical = 11.dp)) {
             if (viewModel.phoneInput.isEmpty()) {
-              Text("Phone number", color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
+              Text("Phone number", color = APP_TEXT_COLOR.copy(alpha = 0.35f), fontSize = 16.sp)
             }
             BasicTextField(
               value = viewModel.phoneInput,
               onValueChange = { new -> if (new.length <= 20) viewModel.onPhoneInputChange(new) },
               singleLine = true,
-              textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp),
+              textStyle = androidx.compose.ui.text.TextStyle(color = APP_TEXT_COLOR, fontSize = 16.sp),
               cursorBrush = SolidColor(Color.Black),
               keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone),
               modifier = Modifier.fillMaxWidth()
@@ -13099,9 +13105,9 @@ private fun MobileNumberScreen(viewModel: ChatViewModel) {
         modifier = Modifier.fillMaxWidth().height(52.dp)
       ) {
         if (viewModel.phoneUpdateBusy) {
-          CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+          CircularProgressIndicator(color = APP_TEXT_COLOR, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
         } else {
-          Text("Save", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+          Text("Save", color = APP_TEXT_COLOR, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
       }
     }
@@ -13125,7 +13131,7 @@ private fun CountryPickerSheet(onDismiss: () -> Unit, onSelect: (CountryDialCode
   }
   ModalBottomSheet(onDismissRequest = onDismiss, containerColor = APP_BACKGROUND) {
     Column(modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp).padding(horizontal = 16.dp)) {
-      Text("Choose a country", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+      Text("Choose a country", color = APP_TEXT_COLOR, fontSize = 18.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(12.dp))
       Row(
         modifier = Modifier
@@ -13139,13 +13145,13 @@ private fun CountryPickerSheet(onDismiss: () -> Unit, onSelect: (CountryDialCode
         Spacer(modifier = Modifier.width(10.dp))
         Box(modifier = Modifier.weight(1f).padding(vertical = 11.dp)) {
           if (query.isEmpty()) {
-            Text("Search country", color = Color.Black.copy(alpha = 0.35f), fontSize = 15.sp)
+            Text("Search country", color = APP_TEXT_COLOR.copy(alpha = 0.35f), fontSize = 15.sp)
           }
           BasicTextField(
             value = query,
             onValueChange = { query = it },
             singleLine = true,
-            textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 15.sp),
+            textStyle = androidx.compose.ui.text.TextStyle(color = APP_TEXT_COLOR, fontSize = 15.sp),
             cursorBrush = SolidColor(Color.Black),
             modifier = Modifier.fillMaxWidth()
           )
@@ -13163,8 +13169,8 @@ private fun CountryPickerSheet(onDismiss: () -> Unit, onSelect: (CountryDialCode
           ) {
             Text(country.flag, fontSize = 18.sp)
             Spacer(modifier = Modifier.width(12.dp))
-            Text(country.name, color = Color.Black, fontSize = 15.sp, modifier = Modifier.weight(1f))
-            Text(country.dialCode, color = Color.Black.copy(alpha = 0.5f), fontSize = 14.sp, fontFamily = FontFamily.Monospace)
+            Text(country.name, color = APP_TEXT_COLOR, fontSize = 15.sp, modifier = Modifier.weight(1f))
+            Text(country.dialCode, color = APP_TEXT_COLOR.copy(alpha = 0.5f), fontSize = 14.sp, fontFamily = FontFamily.Monospace)
           }
         }
       }
@@ -13192,7 +13198,7 @@ private fun ChangeEmailScreen(viewModel: ChatViewModel) {
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
       Text(
         "Change Email",
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = 18.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.align(Alignment.Center)
@@ -13222,7 +13228,7 @@ private fun ChangeEmailScreen(viewModel: ChatViewModel) {
             "email" -> "Note: This updates the contact email ChatGiZa has on file -- it doesn't change your Google sign-in. We'll send a 6-digit code to the new address to confirm you can receive mail there."
             else -> "Note: We've sent a 6-digit verification code to ${viewModel.emailInput.trim()}. Enter it below to finish confirming this change -- the code expires in 10 minutes."
           },
-          color = Color.Black,
+          color = APP_TEXT_COLOR,
           fontSize = 10.sp,
           lineHeight = 14.sp,
           fontWeight = FontWeight.Medium
@@ -13249,13 +13255,13 @@ private fun ChangeEmailScreen(viewModel: ChatViewModel) {
           Spacer(modifier = Modifier.width(12.dp))
           Box(modifier = Modifier.weight(1f).padding(vertical = 11.dp)) {
             if (viewModel.emailInput.isEmpty()) {
-              Text("Email address", color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
+              Text("Email address", color = APP_TEXT_COLOR.copy(alpha = 0.35f), fontSize = 16.sp)
             }
             BasicTextField(
               value = viewModel.emailInput,
               onValueChange = { new -> if (new.length <= 254) viewModel.onEmailInputChange(new) },
               singleLine = true,
-              textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp),
+              textStyle = androidx.compose.ui.text.TextStyle(color = APP_TEXT_COLOR, fontSize = 16.sp),
               cursorBrush = SolidColor(Color.Black),
               keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Email),
               modifier = Modifier.fillMaxWidth()
@@ -13289,9 +13295,9 @@ private fun ChangeEmailScreen(viewModel: ChatViewModel) {
         modifier = Modifier.fillMaxWidth().height(52.dp)
       ) {
         if (viewModel.emailUpdateBusy) {
-          CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+          CircularProgressIndicator(color = APP_TEXT_COLOR, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
         } else {
-          Text(if (viewModel.emailStep == "email") "Continue" else "Confirm", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+          Text(if (viewModel.emailStep == "email") "Continue" else "Confirm", color = APP_TEXT_COLOR, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
       }
     }
@@ -13318,7 +13324,7 @@ private fun NicknameScreen(viewModel: ChatViewModel) {
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
       Text(
         "Nickname",
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = 18.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.align(Alignment.Center)
@@ -13339,13 +13345,13 @@ private fun NicknameScreen(viewModel: ChatViewModel) {
           .padding(horizontal = 16.dp, vertical = 18.dp)
       ) {
         if (viewModel.accountNicknameInput.isEmpty()) {
-          Text("Nickname", color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
+          Text("Nickname", color = APP_TEXT_COLOR.copy(alpha = 0.35f), fontSize = 16.sp)
         }
         BasicTextField(
           value = viewModel.accountNicknameInput,
           onValueChange = { viewModel.onNicknameInputChange(it) },
           singleLine = true,
-          textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp),
+          textStyle = androidx.compose.ui.text.TextStyle(color = APP_TEXT_COLOR, fontSize = 16.sp),
           cursorBrush = SolidColor(Color.Black),
           modifier = Modifier.fillMaxWidth()
         )
@@ -13366,9 +13372,9 @@ private fun NicknameScreen(viewModel: ChatViewModel) {
         modifier = Modifier.fillMaxWidth().height(52.dp)
       ) {
         if (viewModel.nicknameUpdateBusy) {
-          CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+          CircularProgressIndicator(color = APP_TEXT_COLOR, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
         } else {
-          Text("Save", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+          Text("Save", color = APP_TEXT_COLOR, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
       }
     }
@@ -13435,7 +13441,7 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
       Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
         Text(
           title,
-          color = Color.Black,
+          color = APP_TEXT_COLOR,
           fontSize = 18.sp,
           fontWeight = FontWeight.Bold,
           modifier = Modifier.align(Alignment.Center)
@@ -13475,14 +13481,14 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
             Spacer(modifier = Modifier.width(8.dp))
             Text(
               "Note: 2FA is currently ON. Every sign-in needs a fresh code from your authenticator app after your Google sign-in, on top of it -- not instead of it. Turning it off below only needs a currently-valid code.",
-              color = Color.Black,
+              color = APP_TEXT_COLOR,
               fontSize = 10.sp,
               lineHeight = 14.sp,
               fontWeight = FontWeight.Medium
             )
           }
           Spacer(modifier = Modifier.height(20.dp))
-          Text("Turn off 2FA", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+          Text("Turn off 2FA", color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
           Spacer(modifier = Modifier.height(10.dp))
           CodeField(value = viewModel.totpDisableCodeInput, onValueChange = viewModel::onTotpDisableCodeChange)
           if (viewModel.totpError != null) {
@@ -13510,8 +13516,8 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
         // app installed before anything account-specific is shown.
         viewModel.totpSetupSecret == null -> {
           Spacer(modifier = Modifier.height(8.dp))
-          Text("Authenticator App", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold, lineHeight = 27.sp)
-          Text("Verification", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold, lineHeight = 27.sp)
+          Text("Authenticator App", color = APP_TEXT_COLOR, fontSize = 22.sp, fontWeight = FontWeight.Bold, lineHeight = 27.sp)
+          Text("Verification", color = APP_TEXT_COLOR, fontSize = 22.sp, fontWeight = FontWeight.Bold, lineHeight = 27.sp)
           Spacer(modifier = Modifier.height(28.dp))
           Icon(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_totp_verify),
@@ -13522,14 +13528,14 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
           Spacer(modifier = Modifier.height(16.dp))
           Text(
             "Instead of waiting for text messages, get verification codes from an authenticator app like Google Authenticator. It works even if your phone is offline.",
-            color = Color.Black.copy(alpha = 0.6f),
+            color = APP_TEXT_COLOR.copy(alpha = 0.6f),
             fontSize = 13.sp,
             lineHeight = 19.sp
           )
           Spacer(modifier = Modifier.height(20.dp))
-          HorizontalDivider(color = Color.Black.copy(alpha = 0.08f))
+          HorizontalDivider(color = APP_TEXT_COLOR.copy(alpha = 0.08f))
           Spacer(modifier = Modifier.height(20.dp))
-          Text("1. Download Authenticator App", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+          Text("1. Download Authenticator App", color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
           Spacer(modifier = Modifier.height(10.dp))
           Row(
             modifier = Modifier.fillMaxWidth(),
@@ -13538,7 +13544,7 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
           ) {
             Text(
               "Google Authenticator",
-              color = Color.Black,
+              color = APP_TEXT_COLOR,
               fontSize = 14.sp,
               modifier = Modifier
                 .weight(1f)
@@ -13548,7 +13554,7 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
             )
             Text(
               "Download",
-              color = Color.Black,
+              color = APP_TEXT_COLOR,
               fontSize = 13.sp,
               fontWeight = FontWeight.SemiBold,
               modifier = Modifier
@@ -13569,7 +13575,7 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
             )
           }
           Spacer(modifier = Modifier.height(20.dp))
-          Text("2. Link Authenticator App", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+          Text("2. Link Authenticator App", color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
           Spacer(modifier = Modifier.height(10.dp))
           Box(
             modifier = Modifier
@@ -13580,7 +13586,7 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
           ) {
             Text(
               "Tap 'Enable Authenticator App' below and follow the instructions to complete the link.",
-              color = Color.Black.copy(alpha = 0.6f),
+              color = APP_TEXT_COLOR.copy(alpha = 0.6f),
               fontSize = 12.sp,
               lineHeight = 17.sp
             )
@@ -13598,7 +13604,7 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
           Spacer(modifier = Modifier.height(20.dp))
           NumberedTotpStep(number = "01", text = "Copy the 16-digit key. Or you can scan the QR code.")
           Spacer(modifier = Modifier.height(10.dp))
-          Text("16-digit key", color = Color.Black.copy(alpha = 0.5f), fontSize = 11.sp)
+          Text("16-digit key", color = APP_TEXT_COLOR.copy(alpha = 0.5f), fontSize = 11.sp)
           Spacer(modifier = Modifier.height(4.dp))
           // No background box -- just plain text, pulled to the side
           // instead of the wide filled bar it sat in before.
@@ -13608,7 +13614,7 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
           ) {
             Text(
               viewModel.totpSetupSecret.orEmpty(),
-              color = Color.Black,
+              color = APP_TEXT_COLOR,
               fontSize = 13.sp,
               fontWeight = FontWeight.SemiBold,
               letterSpacing = 0.5.sp,
@@ -13656,7 +13662,7 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
                 .background(Color(0xFFFF9C2D)),
               contentAlignment = Alignment.Center
             ) {
-              Text("+", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+              Text("+", color = APP_TEXT_COLOR, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
           }
           Spacer(modifier = Modifier.height(24.dp))
@@ -13670,12 +13676,12 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
           Spacer(modifier = Modifier.height(20.dp))
           Text(
             "Enter the 6-digit code generated by the Authenticator App.",
-            color = Color.Black.copy(alpha = 0.6f),
+            color = APP_TEXT_COLOR.copy(alpha = 0.6f),
             fontSize = 14.sp,
             lineHeight = 20.sp
           )
           Spacer(modifier = Modifier.height(24.dp))
-          Text("Authenticator App Code", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+          Text("Authenticator App Code", color = APP_TEXT_COLOR, fontSize = 13.sp, fontWeight = FontWeight.Medium)
           Spacer(modifier = Modifier.height(8.dp))
           CodeField(
             value = viewModel.totpSetupCodeInput,
@@ -13701,7 +13707,7 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
             if (viewModel.totpBusy) {
               CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
             } else {
-              Text("Submit", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+              Text("Submit", color = APP_TEXT_COLOR, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
           }
           Spacer(modifier = Modifier.height(24.dp))
@@ -13730,7 +13736,7 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
         if (viewModel.totpBusy) {
           CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
         } else {
-          Text("Enable Authenticator App", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+          Text("Enable Authenticator App", color = APP_TEXT_COLOR, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
       }
     }
@@ -13748,7 +13754,7 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
           .padding(bottom = 16.dp)
           .height(44.dp)
       ) {
-        Text("Next", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        Text("Next", color = APP_TEXT_COLOR, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
       }
     }
   }
@@ -13757,11 +13763,11 @@ private fun TwoFactorSetupScreen(viewModel: ChatViewModel) {
 @Composable
 private fun NumberedTotpStep(number: String, text: String) {
   Row(verticalAlignment = Alignment.Top) {
-    Text(number, color = Color.Black.copy(alpha = 0.25f), fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+    Text(number, color = APP_TEXT_COLOR.copy(alpha = 0.25f), fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
     Spacer(modifier = Modifier.width(12.dp))
     Text(
       text,
-      color = Color.Black,
+      color = APP_TEXT_COLOR,
       fontSize = 14.sp,
       lineHeight = 20.sp,
       modifier = Modifier.padding(top = 3.dp)
@@ -13784,7 +13790,7 @@ private fun TotpLoginVerifyScreen(viewModel: ChatViewModel) {
       if (viewModel.loginVerifyKind == "email") "Check your email" else "Enter your 2FA code",
       fontSize = 24.sp,
       fontWeight = FontWeight.ExtraBold,
-      color = Color.Black
+      color = APP_TEXT_COLOR
     )
     Spacer(modifier = Modifier.height(10.dp))
     Text(
@@ -13794,7 +13800,7 @@ private fun TotpLoginVerifyScreen(viewModel: ChatViewModel) {
         "Open your authenticator app and enter the current 6-digit code for ChatGiZa"
       },
       fontSize = 14.sp,
-      color = Color.Black.copy(alpha = 0.6f),
+      color = APP_TEXT_COLOR.copy(alpha = 0.6f),
       textAlign = androidx.compose.ui.text.style.TextAlign.Center
     )
     Spacer(modifier = Modifier.height(28.dp))
@@ -13818,7 +13824,7 @@ private fun TotpLoginVerifyScreen(viewModel: ChatViewModel) {
     }
     Spacer(modifier = Modifier.height(12.dp))
     TextButton(onClick = { viewModel.cancelLoginTotp() }) {
-      Text("Cancel", color = Color.Black.copy(alpha = 0.6f))
+      Text("Cancel", color = APP_TEXT_COLOR.copy(alpha = 0.6f))
     }
   }
 }
@@ -13839,16 +13845,16 @@ private fun PasskeyLoginConfirmScreen(viewModel: ChatViewModel, onConfirm: () ->
     verticalArrangement = Arrangement.Center,
     horizontalAlignment = Alignment.CenterHorizontally
   ) {
-    Text("Confirm it's you", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+    Text("Confirm it's you", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = APP_TEXT_COLOR)
     Spacer(modifier = Modifier.height(10.dp))
     Text(
       "Use your passkey to finish signing in on this device",
       fontSize = 14.sp,
-      color = Color.Black.copy(alpha = 0.6f),
+      color = APP_TEXT_COLOR.copy(alpha = 0.6f),
       textAlign = androidx.compose.ui.text.style.TextAlign.Center
     )
     Spacer(modifier = Modifier.height(28.dp))
-    CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(28.dp), strokeWidth = 2.dp)
+    CircularProgressIndicator(color = APP_TEXT_COLOR, modifier = Modifier.size(28.dp), strokeWidth = 2.dp)
     if (viewModel.errorMessage != null) {
       Spacer(modifier = Modifier.height(20.dp))
       Text(viewModel.errorMessage ?: "", color = Color(0xFFE14050), fontSize = 13.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
@@ -13859,7 +13865,7 @@ private fun PasskeyLoginConfirmScreen(viewModel: ChatViewModel, onConfirm: () ->
     }
     Spacer(modifier = Modifier.height(12.dp))
     TextButton(onClick = { viewModel.cancelPasskeyLoginConfirm() }) {
-      Text("Cancel", color = Color.Black.copy(alpha = 0.6f))
+      Text("Cancel", color = APP_TEXT_COLOR.copy(alpha = 0.6f))
     }
   }
 }
@@ -13880,7 +13886,7 @@ private fun AppLockSetupScreen(viewModel: ChatViewModel) {
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
       Text(
         "App Lock",
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = 18.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.align(Alignment.Center)
@@ -13917,7 +13923,7 @@ private fun AppLockSetupScreen(viewModel: ChatViewModel) {
           } else {
             "Note: This sets a PIN that's required to open ChatGiZa, on top of being signed in -- so someone else picking up your phone can't get into your chats even if the phone itself is unlocked."
           },
-          color = Color.Black,
+          color = APP_TEXT_COLOR,
           fontSize = 10.sp,
           lineHeight = 14.sp,
           fontWeight = FontWeight.Medium
@@ -13927,7 +13933,7 @@ private fun AppLockSetupScreen(viewModel: ChatViewModel) {
       Spacer(modifier = Modifier.height(20.dp))
 
       if (viewModel.appLockEnabled) {
-        Text("Enter your PIN to turn off App Lock", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text("Enter your PIN to turn off App Lock", color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         Spacer(modifier = Modifier.height(10.dp))
         CodeField(value = viewModel.appLockDisableInput, onValueChange = viewModel::onAppLockDisableChange, placeholder = "Enter PIN")
         if (viewModel.appLockError != null) {
@@ -13946,7 +13952,7 @@ private fun AppLockSetupScreen(viewModel: ChatViewModel) {
       } else {
         Text(
           if (viewModel.appLockSetupStep == "enter") "Choose a PIN (4-6 digits)" else "Enter the same PIN again to confirm",
-          color = Color.Black,
+          color = APP_TEXT_COLOR,
           fontSize = 15.sp,
           fontWeight = FontWeight.SemiBold
         )
@@ -13965,7 +13971,7 @@ private fun AppLockSetupScreen(viewModel: ChatViewModel) {
         ) {
           Text(
             if (viewModel.appLockSetupStep == "enter") "Continue" else "Confirm",
-            color = Color.Black,
+            color = APP_TEXT_COLOR,
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold
           )
@@ -14000,9 +14006,9 @@ private fun AppLockGateScreen(viewModel: ChatViewModel) {
       modifier = Modifier.size(40.dp)
     )
     Spacer(modifier = Modifier.height(16.dp))
-    Text("ChatGiZa", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+    Text("ChatGiZa", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = APP_TEXT_COLOR)
     Spacer(modifier = Modifier.height(8.dp))
-    Text("Enter your PIN to continue", fontSize = 15.sp, color = Color.Black.copy(alpha = 0.6f))
+    Text("Enter your PIN to continue", fontSize = 15.sp, color = APP_TEXT_COLOR.copy(alpha = 0.6f))
     Spacer(modifier = Modifier.height(28.dp))
     CodeField(value = viewModel.appLockGateInput, onValueChange = viewModel::onAppLockGateInputChange, placeholder = "Enter PIN")
     if (viewModel.appLockGateError != null) {
@@ -14037,7 +14043,7 @@ private fun PasskeysManageScreen(viewModel: ChatViewModel, onAddPasskey: () -> U
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
       Text(
         "Passkeys",
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = 18.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.align(Alignment.Center)
@@ -14070,7 +14076,7 @@ private fun PasskeysManageScreen(viewModel: ChatViewModel, onAddPasskey: () -> U
         Spacer(modifier = Modifier.width(8.dp))
         Text(
           "Note: A passkey lets you sign in with just your device's screen lock (fingerprint, face, or PIN) instead of typing anything -- it's tied to this device (or synced through your Google Password Manager) and works alongside your Google sign-in.",
-          color = Color.Black,
+          color = APP_TEXT_COLOR,
           fontSize = 10.sp,
           lineHeight = 14.sp,
           fontWeight = FontWeight.Medium
@@ -14089,7 +14095,7 @@ private fun PasskeysManageScreen(viewModel: ChatViewModel, onAddPasskey: () -> U
         if (viewModel.passkeyRegisterBusy) {
           CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
         } else {
-          Text("Add a passkey", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+          Text("Add a passkey", color = APP_TEXT_COLOR, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
       }
       if (viewModel.passkeyError != null) {
@@ -14101,17 +14107,17 @@ private fun PasskeysManageScreen(viewModel: ChatViewModel, onAddPasskey: () -> U
 
       if (viewModel.passkeysLoading && viewModel.passkeys.isEmpty()) {
         Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
-          CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+          CircularProgressIndicator(color = APP_TEXT_COLOR, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
         }
       } else if (viewModel.passkeys.isEmpty()) {
         Text(
           "No passkeys yet",
-          color = Color.Black.copy(alpha = 0.5f),
+          color = APP_TEXT_COLOR.copy(alpha = 0.5f),
           fontSize = 14.sp,
           modifier = Modifier.padding(vertical = 12.dp)
         )
       } else {
-        Text("Your passkeys", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text("Your passkeys", color = APP_TEXT_COLOR, fontSize = 13.sp, fontWeight = FontWeight.Medium)
         Spacer(modifier = Modifier.height(8.dp))
         viewModel.passkeys.forEachIndexed { index, passkey ->
           Row(
@@ -14126,9 +14132,9 @@ private fun PasskeysManageScreen(viewModel: ChatViewModel, onAddPasskey: () -> U
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-              Text(passkey.deviceName?.takeIf { it.isNotBlank() } ?: "Passkey", color = Color.Black, fontSize = 15.sp)
+              Text(passkey.deviceName?.takeIf { it.isNotBlank() } ?: "Passkey", color = APP_TEXT_COLOR, fontSize = 15.sp)
               if (passkey.createdAt != null) {
-                Text("Added ${passkey.createdAt.take(10)}", color = Color.Black.copy(alpha = 0.5f), fontSize = 12.sp)
+                Text("Added ${passkey.createdAt.take(10)}", color = APP_TEXT_COLOR.copy(alpha = 0.5f), fontSize = 12.sp)
               }
             }
             Text(
@@ -14208,7 +14214,7 @@ private fun PasswordField(
     Spacer(modifier = Modifier.width(12.dp))
     Box(modifier = Modifier.weight(1f).padding(vertical = 11.dp)) {
       if (value.isEmpty()) {
-        Text(placeholder, color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
+        Text(placeholder, color = APP_TEXT_COLOR.copy(alpha = 0.35f), fontSize = 16.sp)
       }
       BasicTextField(
         value = value,
@@ -14219,7 +14225,7 @@ private fun PasswordField(
           }
         },
         singleLine = true,
-        textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp),
+        textStyle = androidx.compose.ui.text.TextStyle(color = APP_TEXT_COLOR, fontSize = 16.sp),
         cursorBrush = SolidColor(Color.Black),
         visualTransformation = if (visible) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
         // Without keyboardType = Password the IME had no idea this was a
@@ -14297,13 +14303,13 @@ private fun CodeField(
     }
     Box(modifier = Modifier.weight(1f).padding(vertical = 11.dp)) {
       if (value.isEmpty()) {
-        Text(placeholder, color = Color.Black.copy(alpha = 0.35f), fontSize = 16.sp)
+        Text(placeholder, color = APP_TEXT_COLOR.copy(alpha = 0.35f), fontSize = 16.sp)
       }
       BasicTextField(
         value = value,
         onValueChange = { new -> if (new.length <= 6 && new.all { it.isDigit() }) onValueChange(new) },
         singleLine = true,
-        textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp, letterSpacing = 4.sp),
+        textStyle = androidx.compose.ui.text.TextStyle(color = APP_TEXT_COLOR, fontSize = 16.sp, letterSpacing = 4.sp),
         cursorBrush = SolidColor(Color.Black),
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
         modifier = Modifier
@@ -14337,7 +14343,7 @@ private fun NsfwPreferencesScreen(viewModel: ChatViewModel) {
         Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
       }
       Spacer(Modifier.width(18.dp))
-      Text(text = "NSFW Preferences", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+      Text(text = "NSFW Preferences", color = APP_TEXT_COLOR, fontSize = 22.sp, fontWeight = FontWeight.Bold)
     }
     Spacer(Modifier.height(10.dp))
     Text(
@@ -14393,13 +14399,13 @@ private fun ConnectorRow(info: ConnectorInfo, busy: Boolean, onConnect: () -> Un
           modifier = Modifier.size(20.dp)
         )
       } else {
-        Text(info.name.take(1), color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Text(info.name.take(1), color = APP_TEXT_COLOR, fontSize = 15.sp, fontWeight = FontWeight.Bold)
       }
     }
     Spacer(Modifier.width(12.dp))
-    Text(info.name, color = Color.Black, fontSize = 15.sp, modifier = Modifier.weight(1f))
+    Text(info.name, color = APP_TEXT_COLOR, fontSize = 15.sp, modifier = Modifier.weight(1f))
     when {
-      busy -> CircularProgressIndicator(color = Color.Black.copy(alpha = 0.6f), modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+      busy -> CircularProgressIndicator(color = APP_TEXT_COLOR.copy(alpha = 0.6f), modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
       info.connected -> Box(
         modifier = Modifier
           .clip(RoundedCornerShape(50))
@@ -14407,7 +14413,7 @@ private fun ConnectorRow(info: ConnectorInfo, busy: Boolean, onConnect: () -> Un
           .clickable(onClick = onDisconnect)
           .padding(horizontal = 14.dp, vertical = 6.dp)
       ) {
-        Text("Connected", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text("Connected", color = APP_TEXT_COLOR, fontSize = 13.sp, fontWeight = FontWeight.Medium)
       }
       info.configured -> Box(
         modifier = Modifier
@@ -14416,7 +14422,7 @@ private fun ConnectorRow(info: ConnectorInfo, busy: Boolean, onConnect: () -> Un
           .clickable(onClick = onConnect)
           .padding(horizontal = 14.dp, vertical = 6.dp)
       ) {
-        Text("Connect", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text("Connect", color = APP_TEXT_COLOR, fontSize = 13.sp, fontWeight = FontWeight.Medium)
       }
       else -> Box(
         modifier = Modifier
@@ -14425,7 +14431,7 @@ private fun ConnectorRow(info: ConnectorInfo, busy: Boolean, onConnect: () -> Un
           .clickable(onClick = onConnect)
           .padding(horizontal = 14.dp, vertical = 6.dp)
       ) {
-        Text("Setup needed", color = Color.Black.copy(alpha = 0.4f), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text("Setup needed", color = APP_TEXT_COLOR.copy(alpha = 0.4f), fontSize = 13.sp, fontWeight = FontWeight.Medium)
       }
     }
   }
@@ -14468,7 +14474,7 @@ private fun ConnectorsScreen(viewModel: ChatViewModel) {
         Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
       }
       Spacer(Modifier.width(18.dp))
-      Text(text = "Connectors", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+      Text(text = "Connectors", color = APP_TEXT_COLOR, fontSize = 22.sp, fontWeight = FontWeight.Bold)
     }
     Spacer(Modifier.height(10.dp))
     Text(
@@ -14496,7 +14502,7 @@ private fun ConnectorsScreen(viewModel: ChatViewModel) {
           value = query,
           onValueChange = { query = it },
           singleLine = true,
-          textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 14.sp),
+          textStyle = androidx.compose.ui.text.TextStyle(color = APP_TEXT_COLOR, fontSize = 14.sp),
           cursorBrush = SolidColor(Color.Black),
           modifier = Modifier.fillMaxWidth()
         )
@@ -14505,12 +14511,12 @@ private fun ConnectorsScreen(viewModel: ChatViewModel) {
     Spacer(Modifier.height(24.dp))
 
     viewModel.connectorsError?.let {
-      Text(it, color = Color.Black, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+      Text(it, color = APP_TEXT_COLOR, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
     }
 
     if (viewModel.loadingConnectors && viewModel.connectors.isEmpty()) {
       Box(modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(24.dp))
+        CircularProgressIndicator(color = APP_TEXT_COLOR, modifier = Modifier.size(24.dp))
       }
     } else {
       Text(text = "Featured", color = Color(0xFFA8A8A8), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
@@ -14575,7 +14581,7 @@ private fun LanguageRow(label: String, selected: Boolean, onClick: () -> Unit) {
       .padding(vertical = 14.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    Text(label, color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+    Text(label, color = APP_TEXT_COLOR, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
     if (selected) {
       Icon(Icons.Filled.Check, contentDescription = "Selected", tint = Color.Black, modifier = Modifier.size(22.dp))
     }
@@ -14631,7 +14637,7 @@ private fun AppLanguageScreen(viewModel: ChatViewModel) {
     Box(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
       Text(
         "Language",
-        color = Color.Black,
+        color = APP_TEXT_COLOR,
         fontSize = 18.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.align(Alignment.Center)
@@ -14671,7 +14677,7 @@ private fun AppLanguageScreen(viewModel: ChatViewModel) {
     }
 
     if (query.isBlank()) {
-      Text("Suggested", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+      Text("Suggested", color = APP_TEXT_COLOR, fontSize = 18.sp, fontWeight = FontWeight.Bold)
       LanguageRow("System", selected = isAutoDetect) { applyLocale(null) }
       suggested.forEach { e ->
         LanguageRow(e.nativeName, selected = !isAutoDetect && currentLabel.equals(e.englishName, ignoreCase = true)) {
@@ -14680,7 +14686,7 @@ private fun AppLanguageScreen(viewModel: ChatViewModel) {
       }
 
       Spacer(modifier = Modifier.height(12.dp))
-      Text("All Languages", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+      Text("All Languages", color = APP_TEXT_COLOR, fontSize = 18.sp, fontWeight = FontWeight.Bold)
       LazyColumn(modifier = Modifier.weight(1f)) {
         items(allEntries, key = { it.iso2 }) { e ->
           LanguageRow(e.nativeName, selected = !isAutoDetect && currentLabel.equals(e.englishName, ignoreCase = true)) {
@@ -14744,7 +14750,7 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(28.dp))
       }
       Spacer(Modifier.width(20.dp))
-      Text(text = "Advanced", color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+      Text(text = "Advanced", color = APP_TEXT_COLOR, fontSize = 22.sp, fontWeight = FontWeight.Bold)
     }
 
     Spacer(Modifier.height(28.dp))
@@ -14757,7 +14763,7 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
       colors = CardDefaults.cardColors(containerColor = Color.Black.copy(alpha = 0.05f))
     ) {
       Column(modifier = Modifier.padding(20.dp)) {
-        Text(text = "Paste as File", color = Color.Black, fontWeight = FontWeight.Medium, fontSize = 16.sp)
+        Text(text = "Paste as File", color = APP_TEXT_COLOR, fontWeight = FontWeight.Medium, fontSize = 16.sp)
         Spacer(Modifier.height(6.dp))
         Text(text = pasteAsFileModeLabel(viewModel.pasteAsFileMode), color = Color.Gray, fontSize = 13.sp)
       }
@@ -14779,7 +14785,7 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
         colors = CardDefaults.cardColors(containerColor = APP_BACKGROUND)
       ) {
         Column(modifier = Modifier.padding(24.dp)) {
-          Text("Paste as File", color = Color.Black, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+          Text("Paste as File", color = APP_TEXT_COLOR, fontSize = 24.sp, fontWeight = FontWeight.Bold)
 
           Spacer(Modifier.height(30.dp))
 
@@ -14794,7 +14800,7 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
           ) {
             RadioIcon(selected = viewModel.pasteAsFileMode == "always_ask")
             Spacer(Modifier.width(12.dp))
-            Text("Always Ask", color = Color.Black, fontSize = 19.sp)
+            Text("Always Ask", color = APP_TEXT_COLOR, fontSize = 19.sp)
           }
 
           Spacer(Modifier.height(22.dp))
@@ -14810,7 +14816,7 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
           ) {
             RadioIcon(selected = viewModel.pasteAsFileMode == "always_file")
             Spacer(Modifier.width(12.dp))
-            Text("Always Attach as File", color = Color.Black, fontSize = 19.sp)
+            Text("Always Attach as File", color = APP_TEXT_COLOR, fontSize = 19.sp)
           }
 
           Spacer(Modifier.height(22.dp))
@@ -14826,7 +14832,7 @@ private fun AdvancedScreen(viewModel: ChatViewModel) {
           ) {
             RadioIcon(selected = viewModel.pasteAsFileMode == "always_text")
             Spacer(Modifier.width(12.dp))
-            Text("Always Paste as Text", color = Color.Black, fontSize = 19.sp)
+            Text("Always Paste as Text", color = APP_TEXT_COLOR, fontSize = 19.sp)
           }
         }
       }
@@ -16241,7 +16247,7 @@ private fun MessageBubble(
         ) {
           Text(
             text = cleanContent.ifEmpty { "…" },
-            color = Color.Black,
+            color = APP_TEXT_COLOR,
             // A hair bigger than before (was 15.sp) -- small, deliberate
             // bump to chat text specifically, not app-wide.
             fontSize = 16.sp,
@@ -16570,7 +16576,7 @@ private fun MessageActionBar(
             }
           )
           DropdownMenuItem(
-            text = { Text("Delete", color = Color.Black) },
+            text = { Text("Delete", color = APP_TEXT_COLOR) },
             leadingIcon = { DeleteIcon(tint = Color.Black, modifier = Modifier.size(22.dp)) },
             onClick = { moreOpen = false; onDelete() }
           )
@@ -16669,9 +16675,9 @@ private fun ExtraOptionRowShell(title: String, subtitle: String, onClick: () -> 
     }
     Spacer(modifier = Modifier.width(14.dp))
     Column(modifier = Modifier.weight(1f)) {
-      Text(title, color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+      Text(title, color = APP_TEXT_COLOR, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
       Spacer(modifier = Modifier.height(2.dp))
-      Text(subtitle, color = Color.Black.copy(alpha = 0.55f), fontSize = 13.sp, lineHeight = 17.sp)
+      Text(subtitle, color = APP_TEXT_COLOR.copy(alpha = 0.55f), fontSize = 13.sp, lineHeight = 17.sp)
     }
     Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
   }
@@ -16687,11 +16693,11 @@ private fun ExtraOptionsSheet(onDismiss: () -> Unit, onPost: () -> Unit, onCapti
         .padding(horizontal = 24.dp)
         .padding(bottom = 36.dp, top = 4.dp)
     ) {
-      Text("Send to Quantara", color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+      Text("Send to Quantara", color = APP_TEXT_COLOR, fontSize = 21.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(6.dp))
       Text(
         "Choose how this reply goes to your Quantara profile. You'll see exactly how it looks before it's sent.",
-        color = Color.Black.copy(alpha = 0.6f),
+        color = APP_TEXT_COLOR.copy(alpha = 0.6f),
         fontSize = 14.sp,
         lineHeight = 19.sp
       )
@@ -16761,11 +16767,11 @@ private fun ExtraPostPreviewSheet(
         .padding(horizontal = 24.dp)
         .padding(bottom = 36.dp, top = 4.dp)
     ) {
-      Text("Preview", color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+      Text("Preview", color = APP_TEXT_COLOR, fontSize = 21.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(4.dp))
       Text(
         "This is how it'll look on Quantara.",
-        color = Color.Black.copy(alpha = 0.6f),
+        color = APP_TEXT_COLOR.copy(alpha = 0.6f),
         fontSize = 14.sp
       )
       Spacer(modifier = Modifier.height(18.dp))
@@ -16790,14 +16796,14 @@ private fun ExtraPostPreviewSheet(
           }
           Spacer(modifier = Modifier.width(10.dp))
           Column {
-            Text(authorName, color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-            Text("Just now", color = Color.Black.copy(alpha = 0.5f), fontSize = 12.sp)
+            Text(authorName, color = APP_TEXT_COLOR, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text("Just now", color = APP_TEXT_COLOR.copy(alpha = 0.5f), fontSize = 12.sp)
           }
         }
         Spacer(modifier = Modifier.height(12.dp))
         Text(
           if (bodyText.length > 400) bodyText.take(400) + "…" else bodyText,
-          color = Color.Black.copy(alpha = 0.9f),
+          color = APP_TEXT_COLOR.copy(alpha = 0.9f),
           fontSize = 14.sp,
           lineHeight = 20.sp
         )
@@ -16807,7 +16813,7 @@ private fun ExtraPostPreviewSheet(
           Spacer(modifier = Modifier.height(10.dp))
           Text(
             caption,
-            color = Color.Black.copy(alpha = 0.75f),
+            color = APP_TEXT_COLOR.copy(alpha = 0.75f),
             fontSize = 14.sp,
             lineHeight = 20.sp,
             fontStyle = FontStyle.Italic
@@ -16815,7 +16821,7 @@ private fun ExtraPostPreviewSheet(
         }
       }
       Spacer(modifier = Modifier.height(20.dp))
-      Text("Where should this go?", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+      Text("Where should this go?", color = APP_TEXT_COLOR, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
       Spacer(modifier = Modifier.height(10.dp))
       Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ExtraDestinationChip("History", destination == "post", Modifier.weight(1f)) { destination = "post" }
@@ -16878,11 +16884,11 @@ private fun CaptionComposerSheet(onDismiss: () -> Unit, onSubmit: (String) -> Un
         Icon(Icons.Filled.Send, contentDescription = null, tint = Color.Black, modifier = Modifier.size(24.dp))
       }
       Spacer(modifier = Modifier.height(16.dp))
-      Text("Add a caption", color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+      Text("Add a caption", color = APP_TEXT_COLOR, fontSize = 21.sp, fontWeight = FontWeight.Bold)
       Spacer(modifier = Modifier.height(6.dp))
       Text(
         "This reply becomes the post; what you write below is added underneath it on your Quantara profile.",
-        color = Color.Black.copy(alpha = 0.6f),
+        color = APP_TEXT_COLOR.copy(alpha = 0.6f),
         fontSize = 14.sp,
         lineHeight = 19.sp
       )
@@ -16902,7 +16908,7 @@ private fun CaptionComposerSheet(onDismiss: () -> Unit, onSubmit: (String) -> Un
           BasicTextField(
             value = text,
             onValueChange = { text = it },
-            textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 15.sp, lineHeight = 20.sp),
+            textStyle = androidx.compose.ui.text.TextStyle(color = APP_TEXT_COLOR, fontSize = 15.sp, lineHeight = 20.sp),
             cursorBrush = SolidColor(Color.Black),
             modifier = Modifier.fillMaxWidth()
           )
@@ -16996,7 +17002,10 @@ private fun inlineMarkdown(raw: String) = buildAnnotatedString {
         if (end == -1) {
           append(raw.substring(idx)); idx = len
         } else {
-          withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(raw.substring(idx + 2, end)) }
+          // SemiBold, not Bold -- against the Medium-weight body text
+          // around it (see MarkdownText's Paragraph/Bullet/Numbered rows),
+          // full Bold read as too heavy/thick compared to the reference.
+          withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(raw.substring(idx + 2, end)) }
           idx = end + 2
         }
       }
