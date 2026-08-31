@@ -2841,7 +2841,16 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
           // threshold starts a new chat -- releasing short of it springs
           // back.
           val pullUpOffsetPx = remember { Animatable(0f) }
-          val pullThresholdPx = with(LocalDensity.current) { 64.dp.toPx() }
+          // Was 64dp with a flat 1:1 drag-to-offset mapping -- on a short
+          // chat that fits on one screen (canScrollForward is already
+          // false from the very first message, no scrolling needed to
+          // "reach" the bottom), that meant any small, even accidental,
+          // upward touch reached the threshold almost instantly and fired
+          // New Chat. Raised to 100dp and, more importantly, given real
+          // resistance below (each pixel of drag now moves the pull less
+          // than a pixel) so it takes a deliberate, sustained pull to
+          // trigger -- not a light touch.
+          val pullThresholdPx = with(LocalDensity.current) { 100.dp.toPx() }
           var pullTriggered by remember { mutableStateOf(false) }
           val pullScope = rememberCoroutineScope()
           val pullNestedScrollConnection = remember(pullThresholdPx) {
@@ -2862,7 +2871,15 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
                 // available.y < 0 is an upward drag the list had nothing
                 // left to consume -- i.e. we're already at the very bottom.
                 if (source == NestedScrollSource.UserInput && available.y < 0f && !listState.canScrollForward) {
-                  val next = (pullUpOffsetPx.value + available.y).coerceAtLeast(-pullThresholdPx * 1.6f)
+                  // Rubber-band resistance: only a fraction of each pixel
+                  // dragged actually moves the pull, and that fraction
+                  // shrinks further the closer it gets to the cap -- the
+                  // same "gets harder to pull" feel as a real overscroll
+                  // glow, so reaching the trigger threshold needs a real,
+                  // sustained gesture instead of a flick's worth of delta.
+                  val progress = (-pullUpOffsetPx.value / pullThresholdPx).coerceIn(0f, 1f)
+                  val resistance = 0.55f * (1f - progress * 0.6f)
+                  val next = (pullUpOffsetPx.value + available.y * resistance).coerceAtLeast(-pullThresholdPx * 1.35f)
                   pullScope.launch { pullUpOffsetPx.snapTo(next) }
                   return Offset(0f, available.y)
                 }
