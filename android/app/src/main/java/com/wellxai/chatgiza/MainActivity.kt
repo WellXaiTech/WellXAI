@@ -86,6 +86,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.LocalOverscrollConfiguration
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -2881,6 +2883,16 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
             }
           }
           Box(modifier = Modifier.fillMaxSize().nestedScroll(pullNestedScrollConnection)) {
+          // The platform's default stretch/glow overscroll effect on
+          // LazyColumn competes for the exact same "dragged past the very
+          // bottom" gesture this pull is watching for, and wins first --
+          // it absorbs the leftover drag into its own stretch animation
+          // before onPostScroll above ever sees it, which is why the pull
+          // indicator was flashing and immediately springing back instead
+          // of tracking the drag. Disabling overscroll for just this list
+          // lets the full leftover delta reach the nested scroll
+          // connection instead.
+          CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
           LazyColumn(
             state = listState,
             // A colored box painted on top made it look like a background
@@ -2948,15 +2960,22 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
             // the bottom, rather than staying pinned on screen.
             if (displayedMessages.isNotEmpty()) {
               item(key = "ai-disclaimer") {
-                Text(
-                  "ChatGiZa is AI and can make mistakes. Please double-check responses.",
-                  color = APP_TEXT_COLOR.copy(alpha = 0.4f),
-                  fontSize = 11.sp,
-                  textAlign = TextAlign.Center,
-                  modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp)
-                )
+                // A compact, right-hugging two-line caption -- not a full-
+                // width centered banner -- sitting in its own corner of
+                // the list the way the reference app's disclaimer does,
+                // rather than spanning and competing with the chat itself.
+                Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp), horizontalArrangement = Arrangement.End) {
+                  Text(
+                    "ChatGiZa is AI and can make mistakes.\nPlease double-check responses.",
+                    color = APP_TEXT_COLOR.copy(alpha = 0.4f),
+                    fontSize = 11.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.widthIn(max = 190.dp).padding(end = 4.dp)
+                  )
+                }
               }
             }
+          }
           }
           val pullProgress = (-pullUpOffsetPx.value / pullThresholdPx).coerceIn(0f, 1f)
           if (pullProgress > 0f || pullTriggered) {
@@ -17195,6 +17214,7 @@ private fun CiteBadge(sources: List<VerifiedSource>, onOpenSingle: (String) -> U
   }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MarkdownText(
   text: String,
