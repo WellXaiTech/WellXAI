@@ -155,6 +155,8 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.DismissibleDrawerSheet
 import androidx.compose.material3.DismissibleNavigationDrawer
 import androidx.compose.material3.DrawerValue
@@ -2813,6 +2815,57 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
             }
           }
         } else {
+          // Pull-down-to-new-chat -- reuses Material3's PullToRefreshBox for
+          // the drag physics/threshold/spring-back it already handles
+          // correctly, with a custom "New chat" indicator (ring + label)
+          // swapped in for the usual refresh spinner, and onRefresh starting
+          // a new conversation instead of reloading data.
+          var pullTriggered by remember { mutableStateOf(false) }
+          val pullState = rememberPullToRefreshState()
+          PullToRefreshBox(
+            isRefreshing = pullTriggered,
+            onRefresh = {
+              pullTriggered = true
+              viewModel.newChat()
+              pullTriggered = false
+            },
+            state = pullState,
+            indicator = {
+              val progress = pullState.distanceFraction.coerceIn(0f, 1f)
+              if (progress > 0f || pullTriggered) {
+                Column(
+                  horizontalAlignment = Alignment.CenterHorizontally,
+                  modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = padding.calculateTopPadding() + 12.dp)
+                    .graphicsLayer { alpha = progress }
+                ) {
+                  Box(
+                    modifier = Modifier
+                      .size(32.dp)
+                      .clip(CircleShape)
+                      .background(APP_BACKGROUND)
+                      .border(1.dp, Color(0xFF0A84FF), CircleShape),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    if (pullTriggered) {
+                      CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color(0xFF0A84FF), strokeWidth = 2.dp)
+                    } else {
+                      CircularProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier.size(20.dp),
+                        color = Color(0xFF0A84FF),
+                        strokeWidth = 2.dp,
+                        trackColor = Color(0xFF0A84FF).copy(alpha = 0.15f)
+                      )
+                    }
+                  }
+                  Spacer(modifier = Modifier.height(4.dp))
+                  Text("New chat", color = APP_TEXT_COLOR.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                }
+              }
+            }
+          ) {
           LazyColumn(
             state = listState,
             // A colored box painted on top made it look like a background
@@ -2889,6 +2942,7 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
                 )
               }
             }
+          }
           }
         }
         // The composer floats on top of this Box now instead of sitting
