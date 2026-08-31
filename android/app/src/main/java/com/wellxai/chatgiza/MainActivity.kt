@@ -86,6 +86,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -2555,7 +2556,7 @@ private fun AskImagineTabs(current: String, onAsk: () -> Unit, onImagine: () -> 
   }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 private fun ChatScreenUi(viewModel: ChatViewModel) {
   val listState = rememberLazyListState()
@@ -17214,7 +17215,7 @@ private fun CiteBadge(sources: List<VerifiedSource>, onOpenSingle: (String) -> U
   }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 private fun MarkdownText(
   text: String,
