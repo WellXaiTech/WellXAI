@@ -16265,80 +16265,90 @@ private fun sourceDomain(url: String): String {
   return runCatching { Uri.parse(url).host?.removePrefix("www.") ?: url }.getOrDefault(url)
 }
 
+// A compact "Sources" pill -- overlapping favicon circles plus a count,
+// not the earlier full-width card that listed every source as its own
+// row. Matches the reference apps' bottom-of-message summary look; tap
+// opens the full list in a sheet instead of always taking up that much
+// vertical space inline. This is the same "verified, real sources" data
+// as before -- just no reliable way to place these AT each individual
+// claim for a plain (non-offset-annotated) source list like DeepSeek's,
+// so they're summarized here at the message level instead.
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SourceTrail(sources: List<VerifiedSource>) {
   val context = LocalContext.current
-  var expanded by remember(sources) { mutableStateOf(sources.size <= 3) }
-  val shown = if (expanded) sources else sources.take(3)
-  Column(
+  var sheetOpen by remember { mutableStateOf(false) }
+  Row(
+    verticalAlignment = Alignment.CenterVertically,
     modifier = Modifier
       .padding(horizontal = 12.dp, vertical = 4.dp)
-      .widthIn(max = 320.dp)
-      .clip(RoundedCornerShape(14.dp))
+      .clip(RoundedCornerShape(50))
       .background(colorScheme.onBackground.copy(alpha = 0.06f))
-      .padding(12.dp)
+      .clickable { sheetOpen = true }
+      .padding(start = 10.dp, end = 12.dp, top = 6.dp, bottom = 6.dp)
   ) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-      Icon(Icons.Outlined.Verified, contentDescription = null, tint = colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.size(14.dp))
-      Spacer(modifier = Modifier.width(6.dp))
-      Text(
-        "Verified source trail",
-        color = colorScheme.onBackground.copy(alpha = 0.85f),
-        fontSize = 12.sp,
-        fontWeight = FontWeight.Medium,
-        modifier = Modifier.weight(1f)
-      )
-      Text(
-        "${sources.size} ${if (sources.size == 1) "source" else "sources"}",
-        color = colorScheme.onBackground.copy(alpha = 0.4f),
-        fontSize = 11.sp
-      )
-    }
-    Spacer(modifier = Modifier.height(6.dp))
-    shown.forEach { source ->
-      Row(
-        verticalAlignment = Alignment.CenterVertically,
+    Text(
+      "Sources",
+      color = colorScheme.onBackground.copy(alpha = 0.6f),
+      fontSize = 12.sp,
+      fontWeight = FontWeight.Medium
+    )
+    Spacer(modifier = Modifier.width(8.dp))
+    sources.take(3).forEachIndexed { i, source ->
+      AsyncImage(
+        model = "https://www.google.com/s2/favicons?sz=32&domain=${sourceDomain(source.url)}",
+        contentDescription = null,
         modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(8.dp))
-          .clickable {
-            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(source.url))) }
-          }
-          .padding(vertical = 5.dp)
-      ) {
-        AsyncImage(
-          model = "https://www.google.com/s2/favicons?sz=32&domain=${sourceDomain(source.url)}",
-          contentDescription = null,
-          modifier = Modifier.size(16.dp).clip(RoundedCornerShape(3.dp))
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-          source.title,
-          color = colorScheme.onBackground.copy(alpha = 0.9f),
-          fontSize = 12.sp,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis,
-          modifier = Modifier.weight(1f)
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(
-          sourceDomain(source.url),
-          color = colorScheme.onBackground.copy(alpha = 0.35f),
-          fontSize = 10.sp,
-          maxLines = 1
-        )
-      }
+          .size(18.dp)
+          .clip(CircleShape)
+          .border(1.dp, APP_BACKGROUND, CircleShape)
+          .then(if (i > 0) Modifier.offset(x = (-7).dp * i) else Modifier)
+      )
     }
     if (sources.size > 3) {
       Text(
-        if (expanded) "Show fewer" else "Show all ${sources.size}",
-        color = colorScheme.onBackground.copy(alpha = 0.45f),
-        fontSize = 11.sp,
-        modifier = Modifier
-          .fillMaxWidth()
-          .clickable { expanded = !expanded }
-          .padding(top = 4.dp)
+        "+${sources.size - 3}",
+        color = colorScheme.onBackground.copy(alpha = 0.5f),
+        fontSize = 10.sp,
+        modifier = Modifier.offset(x = (-7).dp * minOf(sources.size - 1, 2))
       )
+    }
+  }
+  if (sheetOpen) {
+    ModalBottomSheet(onDismissRequest = { sheetOpen = false }) {
+      Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp).padding(bottom = 24.dp)) {
+        Text(
+          "${sources.size} ${if (sources.size == 1) "source" else "sources"}",
+          color = colorScheme.onBackground,
+          fontSize = 14.sp,
+          fontWeight = FontWeight.SemiBold,
+          modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
+        )
+        sources.forEach { source ->
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+              .fillMaxWidth()
+              .clip(RoundedCornerShape(10.dp))
+              .clickable {
+                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(source.url))) }
+                sheetOpen = false
+              }
+              .padding(horizontal = 8.dp, vertical = 10.dp)
+          ) {
+            AsyncImage(
+              model = "https://www.google.com/s2/favicons?sz=32&domain=${sourceDomain(source.url)}",
+              contentDescription = null,
+              modifier = Modifier.size(18.dp).clip(RoundedCornerShape(4.dp))
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+              Text(source.title, color = colorScheme.onBackground.copy(alpha = 0.9f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+              Text(sourceDomain(source.url), color = colorScheme.onBackground.copy(alpha = 0.4f), fontSize = 11.sp, maxLines = 1)
+            }
+          }
+        }
+      }
     }
   }
 }
