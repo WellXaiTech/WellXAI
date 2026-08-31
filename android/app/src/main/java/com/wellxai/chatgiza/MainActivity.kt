@@ -1273,6 +1273,17 @@ private val Inter = FontFamily(
   Font(R.font.inter_extrabold, FontWeight.ExtraBold)
 )
 
+// General Sans (Fontshare's ITF Free Font License, see
+// ../GENERAL_SANS_FFL.txt -- explicitly permits commercial mobile-app use
+// free of charge) -- fourth font option. No ExtraBold weight exists for
+// this family, so this FontFamily only goes up to Bold, unlike the others.
+private val GeneralSans = FontFamily(
+  Font(R.font.general_sans_regular, FontWeight.Normal),
+  Font(R.font.general_sans_medium, FontWeight.Medium),
+  Font(R.font.general_sans_semibold, FontWeight.SemiBold),
+  Font(R.font.general_sans_bold, FontWeight.Bold)
+)
+
 private data class FontOption(val id: String, val label: String, val description: String, val family: FontFamily)
 
 // "system" uses FontFamily.Default (Roboto, the platform font) rather than
@@ -1281,6 +1292,7 @@ private val FONT_OPTIONS = listOf(
   FontOption("plus_jakarta_sans", "Plus Jakarta Sans", "Rounded, geometric — the app's default", PlusJakartaSans),
   FontOption("manrope", "Manrope", "Modern, slightly more neutral", Manrope),
   FontOption("inter", "Inter", "Clean and highly legible on screens", Inter),
+  FontOption("general_sans", "General Sans", "Contemporary, grotesque-inspired", GeneralSans),
   FontOption("system", "System Default", "Your device's own font (Roboto)", FontFamily.Default)
 )
 
