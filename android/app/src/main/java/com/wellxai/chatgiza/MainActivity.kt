@@ -83,6 +83,8 @@ import androidx.compose.animation.core.StartOffset
 import androidx.compose.animation.core.StartOffsetType
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -155,8 +157,6 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.DismissibleDrawerSheet
 import androidx.compose.material3.DismissibleNavigationDrawer
 import androidx.compose.material3.DrawerValue
@@ -327,8 +327,12 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Path
@@ -2815,57 +2819,64 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
             }
           }
         } else {
-          // Pull-down-to-new-chat -- reuses Material3's PullToRefreshBox for
-          // the drag physics/threshold/spring-back it already handles
-          // correctly, with a custom "New chat" indicator (ring + label)
-          // swapped in for the usual refresh spinner, and onRefresh starting
-          // a new conversation instead of reloading data.
+          // Pull-up-to-new-chat -- fires when the user keeps dragging upward
+          // past the very bottom of the chat (where it naturally rests on
+          // the newest message), not the usual top-of-list pull-DOWN
+          // direction. Material3's PullToRefreshBox only supports that top
+          // edge (drag down while already scrolled to the start), so this
+          // hand-rolls the same nested-scroll-interception technique it
+          // uses internally, mirrored to the bottom: once the list can't
+          // scroll forward any further, additional upward drag is captured
+          // here instead of being dropped by the list, and releasing past a
+          // threshold starts a new chat -- releasing short of it springs
+          // back.
+          val pullUpOffsetPx = remember { Animatable(0f) }
+          val pullThresholdPx = with(LocalDensity.current) { 64.dp.toPx() }
           var pullTriggered by remember { mutableStateOf(false) }
-          val pullState = rememberPullToRefreshState()
-          PullToRefreshBox(
-            isRefreshing = pullTriggered,
-            onRefresh = {
-              pullTriggered = true
-              viewModel.newChat()
-              pullTriggered = false
-            },
-            state = pullState,
-            indicator = {
-              val progress = pullState.distanceFraction.coerceIn(0f, 1f)
-              if (progress > 0f || pullTriggered) {
-                Column(
-                  horizontalAlignment = Alignment.CenterHorizontally,
-                  modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = padding.calculateTopPadding() + 12.dp)
-                    .graphicsLayer { alpha = progress }
-                ) {
-                  Box(
-                    modifier = Modifier
-                      .size(32.dp)
-                      .clip(CircleShape)
-                      .background(APP_BACKGROUND)
-                      .border(1.dp, Color(0xFF0A84FF), CircleShape),
-                    contentAlignment = Alignment.Center
-                  ) {
-                    if (pullTriggered) {
-                      CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color(0xFF0A84FF), strokeWidth = 2.dp)
-                    } else {
-                      CircularProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier.size(20.dp),
-                        color = Color(0xFF0A84FF),
-                        strokeWidth = 2.dp,
-                        trackColor = Color(0xFF0A84FF).copy(alpha = 0.15f)
-                      )
-                    }
-                  }
-                  Spacer(modifier = Modifier.height(4.dp))
-                  Text("New chat", color = APP_TEXT_COLOR.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+          val pullScope = rememberCoroutineScope()
+          val pullNestedScrollConnection = remember(pullThresholdPx) {
+            object : NestedScrollConnection {
+              override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                // While already pulled out, absorb the release drag
+                // ourselves first so it collapses the pull instead of
+                // scrolling the list underneath it.
+                if (pullUpOffsetPx.value < 0f && available.y > 0f) {
+                  val consume = minOf(-pullUpOffsetPx.value, available.y)
+                  pullScope.launch { pullUpOffsetPx.snapTo(pullUpOffsetPx.value + consume) }
+                  return Offset(0f, consume)
                 }
+                return Offset.Zero
+              }
+
+              override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                // available.y < 0 is an upward drag the list had nothing
+                // left to consume -- i.e. we're already at the very bottom.
+                if (source == NestedScrollSource.UserInput && available.y < 0f && !listState.canScrollForward) {
+                  val next = (pullUpOffsetPx.value + available.y).coerceAtLeast(-pullThresholdPx * 1.6f)
+                  pullScope.launch { pullUpOffsetPx.snapTo(next) }
+                  return Offset(0f, available.y)
+                }
+                return Offset.Zero
+              }
+
+              override suspend fun onPreFling(available: Velocity): Velocity {
+                if (pullUpOffsetPx.value < 0f) {
+                  val springBack = spring<Float>(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)
+                  if (pullUpOffsetPx.value <= -pullThresholdPx && !pullTriggered) {
+                    pullTriggered = true
+                    viewModel.newChat()
+                    pullUpOffsetPx.animateTo(0f, springBack)
+                    pullTriggered = false
+                  } else {
+                    pullUpOffsetPx.animateTo(0f, springBack)
+                  }
+                  return Velocity(available.x, 0f)
+                }
+                return Velocity.Zero
               }
             }
-          ) {
+          }
+          Box(modifier = Modifier.fillMaxSize().nestedScroll(pullNestedScrollConnection)) {
           LazyColumn(
             state = listState,
             // A colored box painted on top made it look like a background
@@ -2941,6 +2952,39 @@ private fun ChatScreenUi(viewModel: ChatViewModel) {
                   modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp)
                 )
               }
+            }
+          }
+          val pullProgress = (-pullUpOffsetPx.value / pullThresholdPx).coerceIn(0f, 1f)
+          if (pullProgress > 0f || pullTriggered) {
+            Column(
+              horizontalAlignment = Alignment.CenterHorizontally,
+              modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 96.dp)
+                .graphicsLayer { alpha = pullProgress }
+            ) {
+              Box(
+                modifier = Modifier
+                  .size(32.dp)
+                  .clip(CircleShape)
+                  .background(APP_BACKGROUND)
+                  .border(1.dp, Color(0xFF0A84FF), CircleShape),
+                contentAlignment = Alignment.Center
+              ) {
+                if (pullTriggered) {
+                  CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color(0xFF0A84FF), strokeWidth = 2.dp)
+                } else {
+                  CircularProgressIndicator(
+                    progress = { pullProgress },
+                    modifier = Modifier.size(20.dp),
+                    color = Color(0xFF0A84FF),
+                    strokeWidth = 2.dp,
+                    trackColor = Color(0xFF0A84FF).copy(alpha = 0.15f)
+                  )
+                }
+              }
+              Spacer(modifier = Modifier.height(4.dp))
+              Text("New chat", color = APP_TEXT_COLOR.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
             }
           }
           }
