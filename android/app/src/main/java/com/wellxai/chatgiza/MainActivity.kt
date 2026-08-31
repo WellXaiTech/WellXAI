@@ -1300,12 +1300,23 @@ private val GeneralSans = FontFamily(
   Font(R.font.general_sans_bold, FontWeight.Bold)
 )
 
+// User-supplied Nova font -- the app's default typeface, matching the web
+// app's --font-sans. Only Light and Regular files were provided (no
+// Medium/SemiBold/Bold), so Text() calls that request a heavier weight
+// resolve to the closest weight actually declared here (Normal), same
+// gap General Sans already has for ExtraBold below.
+private val Nova = FontFamily(
+  Font(R.font.nova_light, FontWeight.Light),
+  Font(R.font.nova_regular, FontWeight.Normal)
+)
+
 private data class FontOption(val id: String, val label: String, val description: String, val family: FontFamily)
 
 // "system" uses FontFamily.Default (Roboto, the platform font) rather than
 // bundling it -- it's already always available, unlike the other two.
 private val FONT_OPTIONS = listOf(
-  FontOption("plus_jakarta_sans", "Plus Jakarta Sans", "Rounded, geometric — the app's default", PlusJakartaSans),
+  FontOption("nova", "Nova", "The app's default", Nova),
+  FontOption("plus_jakarta_sans", "Plus Jakarta Sans", "Rounded, geometric", PlusJakartaSans),
   FontOption("manrope", "Manrope", "Modern, slightly more neutral", Manrope),
   FontOption("inter", "Inter", "Clean and highly legible on screens", Inter),
   FontOption("general_sans", "General Sans", "Contemporary, grotesque-inspired", GeneralSans),
@@ -1419,7 +1430,7 @@ private fun ChatGizaTheme(themeMode: String, fontChoice: String, content: @Compo
       onPrimary = Color.White
     )
   }
-  val fontFamily = FONT_OPTIONS.find { it.id == fontChoice }?.family ?: PlusJakartaSans
+  val fontFamily = FONT_OPTIONS.find { it.id == fontChoice }?.family ?: Nova
   MaterialTheme(colorScheme = colors, typography = chatGizaTypography(fontFamily), content = content)
 }
 

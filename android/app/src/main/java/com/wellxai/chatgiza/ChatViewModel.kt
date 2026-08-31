@@ -1159,8 +1159,8 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     tokenStore.setThemeMode(value)
   }
 
-  // "plus_jakarta_sans" | "manrope" | "system" -- see ChatGizaTypography in
-  // MainActivity.kt for what each resolves to.
+  // "nova" | "plus_jakarta_sans" | "manrope" | "system" -- see
+  // ChatGizaTypography in MainActivity.kt for what each resolves to.
   var fontChoice by mutableStateOf(tokenStore.getFontChoice())
     private set
 
