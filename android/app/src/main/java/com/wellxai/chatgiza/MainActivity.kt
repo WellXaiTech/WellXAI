@@ -1259,6 +1259,20 @@ private val Manrope = FontFamily(
   Font(R.font.manrope_extrabold, FontWeight.ExtraBold)
 )
 
+// Inter (SIL Open Font License, see ../INTER_OFL.txt) -- third free option
+// in the font picker. Static per-weight files at the 24pt optical size (the
+// full family also ships 18pt/28pt instances plus a single variable file),
+// same reasoning as Plus Jakarta Sans/Manrope above: static files sidestep
+// on-device variable-font instancing, which previously broke a release
+// build (see the comment on PlusJakartaSans).
+private val Inter = FontFamily(
+  Font(R.font.inter_regular, FontWeight.Normal),
+  Font(R.font.inter_medium, FontWeight.Medium),
+  Font(R.font.inter_semibold, FontWeight.SemiBold),
+  Font(R.font.inter_bold, FontWeight.Bold),
+  Font(R.font.inter_extrabold, FontWeight.ExtraBold)
+)
+
 private data class FontOption(val id: String, val label: String, val description: String, val family: FontFamily)
 
 // "system" uses FontFamily.Default (Roboto, the platform font) rather than
@@ -1266,6 +1280,7 @@ private data class FontOption(val id: String, val label: String, val description
 private val FONT_OPTIONS = listOf(
   FontOption("plus_jakarta_sans", "Plus Jakarta Sans", "Rounded, geometric — the app's default", PlusJakartaSans),
   FontOption("manrope", "Manrope", "Modern, slightly more neutral", Manrope),
+  FontOption("inter", "Inter", "Clean and highly legible on screens", Inter),
   FontOption("system", "System Default", "Your device's own font (Roboto)", FontFamily.Default)
 )
 
