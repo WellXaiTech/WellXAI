@@ -1247,80 +1247,18 @@ private fun WizardSkipRow(label: String, onSkip: () -> Unit) {
 //
 // These are proper static single-weight files (fetched from Google Fonts'
 // own CSS2 API, which instances a static TTF per weight even for families
-// whose source is a variable font), not the variable file itself. Two
-// earlier attempts both had real problems: build #964 registered one
-// variable file five times via FontVariation and that broke the release
-// build outright; the plain single-entry fallback that followed it
-// compiled fine but rendered with visibly warped/curved letterforms
-// ("zimepinda") since nothing was telling Android which named instance of
-// the variable font's weight axis to actually draw. Static per-weight
-// files sidestep variable-font instancing on-device entirely.
-private val PlusJakartaSans = FontFamily(
-  Font(R.font.plus_jakarta_sans_regular, FontWeight.Normal),
-  Font(R.font.plus_jakarta_sans_medium, FontWeight.Medium),
-  Font(R.font.plus_jakarta_sans_semibold, FontWeight.SemiBold),
-  Font(R.font.plus_jakarta_sans_bold, FontWeight.Bold),
-  Font(R.font.plus_jakarta_sans_extrabold, FontWeight.ExtraBold)
-)
-
-// Manrope (SIL Open Font License, see MANROPE_OFL.txt) -- second free
-// option in the font picker (User Center > General > Font), same static
-// per-weight approach as Plus Jakarta Sans above. A bit more neutral/less
-// rounded than Plus Jakarta Sans, for anyone who wants a plainer look.
-private val Manrope = FontFamily(
-  Font(R.font.manrope_regular, FontWeight.Normal),
-  Font(R.font.manrope_medium, FontWeight.Medium),
-  Font(R.font.manrope_semibold, FontWeight.SemiBold),
-  Font(R.font.manrope_bold, FontWeight.Bold),
-  Font(R.font.manrope_extrabold, FontWeight.ExtraBold)
-)
-
-// Inter (SIL Open Font License, see ../INTER_OFL.txt) -- third free option
-// in the font picker. Static per-weight files at the 24pt optical size (the
-// full family also ships 18pt/28pt instances plus a single variable file),
-// same reasoning as Plus Jakarta Sans/Manrope above: static files sidestep
-// on-device variable-font instancing, which previously broke a release
-// build (see the comment on PlusJakartaSans).
-private val Inter = FontFamily(
-  Font(R.font.inter_regular, FontWeight.Normal),
-  Font(R.font.inter_medium, FontWeight.Medium),
-  Font(R.font.inter_semibold, FontWeight.SemiBold),
-  Font(R.font.inter_bold, FontWeight.Bold),
-  Font(R.font.inter_extrabold, FontWeight.ExtraBold)
-)
-
-// General Sans (Fontshare's ITF Free Font License, see
-// ../GENERAL_SANS_FFL.txt -- explicitly permits commercial mobile-app use
-// free of charge) -- fourth font option. No ExtraBold weight exists for
-// this family, so this FontFamily only goes up to Bold, unlike the others.
-private val GeneralSans = FontFamily(
-  Font(R.font.general_sans_regular, FontWeight.Normal),
-  Font(R.font.general_sans_medium, FontWeight.Medium),
-  Font(R.font.general_sans_semibold, FontWeight.SemiBold),
-  Font(R.font.general_sans_bold, FontWeight.Bold)
-)
-
-// User-supplied Nova font -- the app's default typeface, matching the web
-// app's --font-sans. Only Light and Regular files were provided (no
-// Medium/SemiBold/Bold), so Text() calls that request a heavier weight
-// resolve to the closest weight actually declared here (Normal), same
-// gap General Sans already has for ExtraBold below.
-private val Nova = FontFamily(
-  Font(R.font.nova_light, FontWeight.Light),
-  Font(R.font.nova_regular, FontWeight.Normal)
-)
+// The app's only two typefaces now: Nova Regular (the default) and Nova
+// Light, each a single static face -- every other font picker option that
+// used to live here (Plus Jakarta Sans, Manrope, Inter, General Sans,
+// System Default) was removed rather than left unused.
+private val NovaRegular = FontFamily(Font(R.font.nova_regular, FontWeight.Normal))
+private val NovaLight = FontFamily(Font(R.font.nova_light, FontWeight.Light))
 
 private data class FontOption(val id: String, val label: String, val description: String, val family: FontFamily)
 
-// "system" uses FontFamily.Default (Roboto, the platform font) rather than
-// bundling it -- it's already always available, unlike the other two.
 private val FONT_OPTIONS = listOf(
-  FontOption("nova", "Nova", "The app's default", Nova),
-  FontOption("plus_jakarta_sans", "Plus Jakarta Sans", "Rounded, geometric", PlusJakartaSans),
-  FontOption("manrope", "Manrope", "Modern, slightly more neutral", Manrope),
-  FontOption("inter", "Inter", "Clean and highly legible on screens", Inter),
-  FontOption("general_sans", "General Sans", "Contemporary, grotesque-inspired", GeneralSans),
-  FontOption("system", "System Default", "Your device's own font (Roboto)", FontFamily.Default)
+  FontOption("nova_regular", "Nova Regular", "The app's default", NovaRegular),
+  FontOption("nova_light", "Nova Light", "A lighter weight", NovaLight)
 )
 
 // Every Material3 Typography slot rebound to the chosen font -- Text()
@@ -1430,7 +1368,7 @@ private fun ChatGizaTheme(themeMode: String, fontChoice: String, content: @Compo
       onPrimary = Color.White
     )
   }
-  val fontFamily = FONT_OPTIONS.find { it.id == fontChoice }?.family ?: Nova
+  val fontFamily = FONT_OPTIONS.find { it.id == fontChoice }?.family ?: NovaRegular
   MaterialTheme(colorScheme = colors, typography = chatGizaTypography(fontFamily), content = content)
 }
 
