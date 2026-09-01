@@ -206,10 +206,10 @@ class TokenStore(context: Context) {
     prefs.edit().putString(KEY_THEME_MODE, value).apply()
   }
 
-  // "nova" | "plus_jakarta_sans" | "manrope" | "system" — see
-  // ChatGizaTypography in MainActivity.kt for what each maps to.
-  // Device-level like theme, not account data.
-  fun getFontChoice(): String = prefs.getString(KEY_FONT_CHOICE, "nova") ?: "nova"
+  // "nova_regular" | "nova_light" — see ChatGizaTypography in
+  // MainActivity.kt for what each maps to. Device-level like theme, not
+  // account data.
+  fun getFontChoice(): String = prefs.getString(KEY_FONT_CHOICE, "nova_regular") ?: "nova_regular"
   fun setFontChoice(value: String) {
     prefs.edit().putString(KEY_FONT_CHOICE, value).apply()
   }
