@@ -1256,8 +1256,8 @@ private val Nova = FontFamily(
 private data class FontOption(val id: String, val label: String, val description: String, val weight: FontWeight)
 
 private val FONT_OPTIONS = listOf(
-  FontOption("nova_light", "Nova Light", "The app's default", FontWeight.Light),
-  FontOption("nova_regular", "Nova Regular", "A heavier weight", FontWeight.Normal)
+  FontOption("nova_regular", "Nova Regular", "The app's default", FontWeight.Normal),
+  FontOption("nova_light", "Nova Light", "A lighter weight", FontWeight.Light)
 )
 
 // Every Material3 Typography slot rebound to the chosen font -- Text()
@@ -1370,7 +1370,7 @@ private fun ChatGizaTheme(themeMode: String, fontChoice: String, content: @Compo
       onPrimary = Color.White
     )
   }
-  val fontWeight = FONT_OPTIONS.find { it.id == fontChoice }?.weight ?: FontWeight.Light
+  val fontWeight = FONT_OPTIONS.find { it.id == fontChoice }?.weight ?: FontWeight.Normal
   MaterialTheme(colorScheme = colors, typography = chatGizaTypography(Nova, fontWeight), content = content)
 }
 
