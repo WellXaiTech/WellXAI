@@ -1240,50 +1240,52 @@ private fun WizardSkipRow(label: String, onSkip: () -> Unit) {
   }
 }
 
-// Plus Jakarta Sans (SIL Open Font License, see PLUS_JAKARTA_SANS_OFL.txt) --
-// a free geometric/rounded sans, the closest good-quality open alternative
-// to commercial rounded fonts like Circular or Google Sans that this app's
-// UI text was compared against.
-//
-// These are proper static single-weight files (fetched from Google Fonts'
-// own CSS2 API, which instances a static TTF per weight even for families
-// The app's only two typefaces now: Nova Regular (the default) and Nova
-// Light, each a single static face -- every other font picker option that
-// used to live here (Plus Jakarta Sans, Manrope, Inter, General Sans,
-// System Default) was removed rather than left unused.
-private val NovaRegular = FontFamily(Font(R.font.nova_regular, FontWeight.Normal))
-private val NovaLight = FontFamily(Font(R.font.nova_light, FontWeight.Light))
+// Combined family (both weights) -- used for the actual Typography.family
+// binding below regardless of which option is picked, so Text() calls that
+// explicitly request a heavier weight (fontWeight = FontWeight.Bold/
+// SemiBold/Medium, or a Typography slot that itself defaults to Medium,
+// e.g. labelLarge) resolve to Nova's own real Regular face instead of the
+// platform faking a bold by fattening the Light strokes -- a single-weight
+// family has no heavier face to snap to, so that fake-bold is what made
+// text look heavy even after the default moved to Light.
+private val Nova = FontFamily(
+  Font(R.font.nova_light, FontWeight.Light),
+  Font(R.font.nova_regular, FontWeight.Normal)
+)
 
-private data class FontOption(val id: String, val label: String, val description: String, val family: FontFamily)
+private data class FontOption(val id: String, val label: String, val description: String, val weight: FontWeight)
 
 private val FONT_OPTIONS = listOf(
-  FontOption("nova_light", "Nova Light", "The app's default", NovaLight),
-  FontOption("nova_regular", "Nova Regular", "A heavier weight", NovaRegular)
+  FontOption("nova_light", "Nova Light", "The app's default", FontWeight.Light),
+  FontOption("nova_regular", "Nova Regular", "A heavier weight", FontWeight.Normal)
 )
 
 // Every Material3 Typography slot rebound to the chosen font -- Text()
 // calls that don't set their own fontFamily explicitly (the vast majority
 // in this file) inherit it from whichever of these slots LocalTextStyle
 // resolves to, so this alone changes the font app-wide without needing to
-// touch each individual Text() call.
-private fun chatGizaTypography(family: FontFamily): Typography {
+// touch each individual Text() call. `weight` becomes each slot's own
+// default (Light or Regular per the Font picker choice); a Text() call
+// that sets its own explicit fontWeight still overrides it, same as any
+// other TextStyle field.
+private fun chatGizaTypography(family: FontFamily, weight: FontWeight): Typography {
   val base = Typography()
   return Typography(
-    displayLarge = base.displayLarge.copy(fontFamily = family),
-    displayMedium = base.displayMedium.copy(fontFamily = family),
-    displaySmall = base.displaySmall.copy(fontFamily = family),
-    headlineLarge = base.headlineLarge.copy(fontFamily = family),
-    headlineMedium = base.headlineMedium.copy(fontFamily = family),
-    headlineSmall = base.headlineSmall.copy(fontFamily = family),
-    titleLarge = base.titleLarge.copy(fontFamily = family),
-    titleMedium = base.titleMedium.copy(fontFamily = family),
-    titleSmall = base.titleSmall.copy(fontFamily = family),
-    bodyLarge = base.bodyLarge.copy(fontFamily = family),
-    bodyMedium = base.bodyMedium.copy(fontFamily = family),
-    bodySmall = base.bodySmall.copy(fontFamily = family),
-    labelLarge = base.labelLarge.copy(fontFamily = family),
-    labelMedium = base.labelMedium.copy(fontFamily = family),
-    labelSmall = base.labelSmall.copy(fontFamily = family)
+    displayLarge = base.displayLarge.copy(fontFamily = family, fontWeight = weight),
+    displayMedium = base.displayMedium.copy(fontFamily = family, fontWeight = weight),
+    displaySmall = base.displaySmall.copy(fontFamily = family, fontWeight = weight),
+    headlineLarge = base.headlineLarge.copy(fontFamily = family, fontWeight = weight),
+    headlineMedium = base.headlineMedium.copy(fontFamily = family, fontWeight = weight),
+    headlineSmall = base.headlineSmall.copy(fontFamily = family, fontWeight = weight),
+    titleLarge = base.titleLarge.copy(fontFamily = family, fontWeight = weight),
+    titleMedium = base.titleMedium.copy(fontFamily = family, fontWeight = weight),
+    titleSmall = base.titleSmall.copy(fontFamily = family, fontWeight = weight),
+    bodyLarge = base.bodyLarge.copy(fontFamily = family, fontWeight = weight),
+    bodyMedium = base.bodyMedium.copy(fontFamily = family, fontWeight = weight),
+    bodySmall = base.bodySmall.copy(fontFamily = family, fontWeight = weight),
+    labelLarge = base.labelLarge.copy(fontFamily = family, fontWeight = weight),
+    labelMedium = base.labelMedium.copy(fontFamily = family, fontWeight = weight),
+    labelSmall = base.labelSmall.copy(fontFamily = family, fontWeight = weight)
   )
 }
 
@@ -1368,8 +1370,8 @@ private fun ChatGizaTheme(themeMode: String, fontChoice: String, content: @Compo
       onPrimary = Color.White
     )
   }
-  val fontFamily = FONT_OPTIONS.find { it.id == fontChoice }?.family ?: NovaLight
-  MaterialTheme(colorScheme = colors, typography = chatGizaTypography(fontFamily), content = content)
+  val fontWeight = FONT_OPTIONS.find { it.id == fontChoice }?.weight ?: FontWeight.Light
+  MaterialTheme(colorScheme = colors, typography = chatGizaTypography(Nova, fontWeight), content = content)
 }
 
 // A Dialog(...) opens its own separate Android Window, so the
@@ -10154,9 +10156,9 @@ private fun FontCard(option: FontOption, selected: Boolean, onClick: () -> Unit)
       // Preview text rendered IN the option's own font -- the whole point
       // of this card is to show what each one actually looks like, not
       // just name it.
-      Text(option.label, color = APP_TEXT_COLOR, fontSize = 18.sp, fontWeight = FontWeight.Bold, fontFamily = option.family)
+      Text(option.label, color = APP_TEXT_COLOR, fontSize = 18.sp, fontWeight = FontWeight.Bold, fontFamily = Nova)
       Spacer(modifier = Modifier.height(2.dp))
-      Text(option.description, color = Color(0xFFA8A8A8), fontSize = 14.sp, fontWeight = FontWeight.Normal, fontFamily = option.family)
+      Text(option.description, color = Color(0xFFA8A8A8), fontSize = 14.sp, fontWeight = option.weight, fontFamily = Nova)
     }
     if (checkAlpha > 0f) {
       Icon(
