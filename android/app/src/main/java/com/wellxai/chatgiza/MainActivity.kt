@@ -1257,8 +1257,8 @@ private val NovaLight = FontFamily(Font(R.font.nova_light, FontWeight.Light))
 private data class FontOption(val id: String, val label: String, val description: String, val family: FontFamily)
 
 private val FONT_OPTIONS = listOf(
-  FontOption("nova_regular", "Nova Regular", "The app's default", NovaRegular),
-  FontOption("nova_light", "Nova Light", "A lighter weight", NovaLight)
+  FontOption("nova_light", "Nova Light", "The app's default", NovaLight),
+  FontOption("nova_regular", "Nova Regular", "A heavier weight", NovaRegular)
 )
 
 // Every Material3 Typography slot rebound to the chosen font -- Text()
@@ -1368,7 +1368,7 @@ private fun ChatGizaTheme(themeMode: String, fontChoice: String, content: @Compo
       onPrimary = Color.White
     )
   }
-  val fontFamily = FONT_OPTIONS.find { it.id == fontChoice }?.family ?: NovaRegular
+  val fontFamily = FONT_OPTIONS.find { it.id == fontChoice }?.family ?: NovaLight
   MaterialTheme(colorScheme = colors, typography = chatGizaTypography(fontFamily), content = content)
 }
 
