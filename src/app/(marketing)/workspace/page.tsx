@@ -64,7 +64,15 @@ export default function WorkspacePage() {
         setWorkspace(data.workspace ?? null);
         setInstructions(data.workspace?.customInstructions ?? "");
       })
-      .catch(() => setError("Couldn't load your workspace"));
+      .catch(() => {
+        // workspace was left at its initial `undefined` here, and the
+        // render guard below treats `undefined` as "still loading" -- a
+        // failed fetch left the page stuck on a permanently blank screen
+        // (the loading guard's div has no visible content) instead of
+        // ever showing the error below.
+        setError("Couldn't load your workspace");
+        setWorkspace(null);
+      });
   }, [status]);
 
   useEffect(() => {
@@ -205,7 +213,11 @@ export default function WorkspacePage() {
   }
 
   if (status === "loading" || workspace === undefined) {
-    return <div className="mx-auto max-w-2xl px-4 py-16 w-full" />;
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-16 w-full">
+        <p className="text-sm text-muted">Loading…</p>
+      </div>
+    );
   }
 
   if (status !== "authenticated") {
