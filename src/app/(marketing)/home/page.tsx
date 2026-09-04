@@ -95,8 +95,11 @@ export default function HomePage() {
       <section className="mx-auto max-w-5xl px-4 pb-20">
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {sections.map((s) =>
-            // Help Center is its own site (support.wellxai.world) -- a new
-            // tab keeps this page open, same as the ChatGiZa banner above.
+            // Every "Learn more" card opens in a new tab -- both the
+            // external one (Help Center, its own site at
+            // support.wellxai.world) and the internal ones (Research,
+            // Products, etc.), so clicking through never navigates this
+            // page away.
             s.href.startsWith("https://") ? (
               <a
                 key={s.href}
@@ -115,6 +118,8 @@ export default function HomePage() {
               <Link
                 key={s.href}
                 href={s.href}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="card group rounded-2xl p-6 transition-colors hover:border-foreground/40"
               >
                 <h2 className="text-lg font-semibold">{s.title}</h2>
