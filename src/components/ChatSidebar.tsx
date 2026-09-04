@@ -1017,7 +1017,16 @@ export default function ChatSidebar({
 
         <div
           ref={historyAnchorRef}
-          className={pinnedConversations.length > 0 || recentConversations.length > 0 ? "mt-3 pt-1" : ""}
+          // Raised card (same rounded/bg-surface/shadow treatment the
+          // dropdown menus already use elsewhere in this file) so the
+          // Pinned/Recents list visually separates itself from the nav
+          // items above and the account row below, instead of blending
+          // straight into the sidebar's own background.
+          className={
+            pinnedConversations.length > 0 || recentConversations.length > 0
+              ? "mt-3 rounded-2xl bg-surface px-1.5 py-2 shadow-sm"
+              : ""
+          }
         >
           {pinnedConversations.length > 0 && (
             <>
