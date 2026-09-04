@@ -25,20 +25,41 @@ export default function ProductsPage() {
         ChatGiZa — the chat app and the API behind it, in one place.
       </p>
       <div className="mt-10 grid gap-6 sm:grid-cols-2">
-        {products.map((p) => (
-          <Link
-            key={p.href}
-            href={p.href}
-            className="card group rounded-2xl p-6 hover:border-foreground/40 transition-colors"
-          >
-            <span className="text-xs uppercase tracking-wide text-muted">{p.tag}</span>
-            <h2 className="mt-2 text-xl font-semibold">{p.title}</h2>
-            <p className="mt-3 text-sm text-muted">{p.description}</p>
-            <span className="mt-4 inline-block text-sm font-medium group-hover:underline">
-              Learn more →
-            </span>
-          </Link>
-        ))}
+        {products.map((p) => {
+          const card = (
+            <>
+              <span className="text-xs uppercase tracking-wide text-muted">{p.tag}</span>
+              <h2 className="mt-2 text-xl font-semibold">{p.title}</h2>
+              <p className="mt-3 text-sm text-muted">{p.description}</p>
+              <span className="mt-4 inline-block text-sm font-medium group-hover:underline">
+                Learn more →
+              </span>
+            </>
+          );
+          // The ChatGiZa card leaves this site entirely (proxy.ts redirects
+          // /chatgiza on this host over to the real chat app) -- a new tab
+          // keeps wellxai.world open, matching how Navbar/Footer already
+          // handle this exact same jump elsewhere.
+          return p.href === "/chatgiza" ? (
+            <a
+              key={p.href}
+              href="https://chatgiza.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="card group rounded-2xl p-6 hover:border-foreground/40 transition-colors"
+            >
+              {card}
+            </a>
+          ) : (
+            <Link
+              key={p.href}
+              href={p.href}
+              className="card group rounded-2xl p-6 hover:border-foreground/40 transition-colors"
+            >
+              {card}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
