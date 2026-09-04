@@ -1237,6 +1237,7 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
     private set
 
   fun updateAvatarPreset(id: String?, emoji: String? = null) {
+    val previousPresetId = avatarPresetId
     avatarPresetId = id
     tokenStore.setAvatarPresetId(id)
     if (emoji == null) return
@@ -1248,7 +1249,18 @@ class ChatViewModel(private val tokenStore: TokenStore) : ViewModel() {
           userImage = result.value
           tokenStore.setUserImage(result.value)
         }
-        is ApiResult.Failure -> {}
+        is ApiResult.Failure -> {
+          // Was silently swallowed -- the preset appeared selected locally
+          // even though the server never saved it, drifting from every
+          // other place userImage is read (ChatGiZa Media posts/profile
+          // included) with no indication anything went wrong. Rolling the
+          // local pick back and reusing profilePhotoError (the same avatar-
+          // update-failed toast EditProfileScreen/AvatarPickerDialog/the
+          // Media profile screen already show) fixes both.
+          avatarPresetId = previousPresetId
+          tokenStore.setAvatarPresetId(previousPresetId)
+          profilePhotoError = result.message
+        }
       }
     }
   }

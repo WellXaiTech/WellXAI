@@ -7163,7 +7163,19 @@ private fun AccountTabsDialog(viewModel: ChatViewModel) {
           MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_id_lines), iconSize = 24.dp, label = "Nickname", onClick = { viewModel.leaveAccountTabsFor { viewModel.openNickname() } }) {
             Text(viewModel.userName?.takeIf { it.isNotBlank() } ?: "-", color = APP_TEXT_COLOR.copy(alpha = 0.5f), fontSize = 14.sp)
           }
-          MyInfoRow(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_id_rounded), iconSize = 26.dp, label = "UID", showChevron = false, onClick = {}) {
+          MyInfoRow(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_id_rounded),
+            iconSize = 26.dp,
+            label = "UID",
+            showChevron = false,
+            // Used to be a no-op -- only the small copy icon inside worked,
+            // so tapping the row itself (its much bigger, more obvious
+            // target) did nothing. Now it does the same copy.
+            onClick = {
+              clipboard.setText(AnnotatedString(uid))
+              Toast.makeText(context, "UID copied", Toast.LENGTH_SHORT).show()
+            }
+          ) {
             Text(uid, color = APP_TEXT_COLOR.copy(alpha = 0.5f), fontSize = 14.sp, fontFamily = FontFamily.Monospace)
             Spacer(modifier = Modifier.width(6.dp))
             Icon(
@@ -8192,6 +8204,9 @@ private fun AvatarPickerDialog(viewModel: ChatViewModel) {
   var cropPhotoUri by remember { mutableStateOf<Uri?>(null) }
   val galleryPhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
     if (uri != null) cropPhotoUri = uri
+  }
+  LaunchedEffect(viewModel.profilePhotoError) {
+    viewModel.profilePhotoError?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
   }
   cropPhotoUri?.let { pickedUri ->
     ProfilePhotoCropDialog(
@@ -9770,6 +9785,13 @@ private fun XAccountCard(icon: ImageVector, title: String, onClick: () -> Unit) 
 private fun EditProfileScreen(viewModel: ChatViewModel) {
   BackHandler { viewModel.closeEditProfile() }
   var xNote by remember { mutableStateOf(false) }
+
+  // profilePhotoError was set on a failed upload but never read anywhere --
+  // the spinner just stopped with no explanation the photo didn't save.
+  val context = LocalContext.current
+  LaunchedEffect(viewModel.profilePhotoError) {
+    viewModel.profilePhotoError?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+  }
 
   var cropPhotoUri by remember { mutableStateOf<Uri?>(null) }
   val profilePhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->

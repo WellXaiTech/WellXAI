@@ -1005,7 +1005,9 @@ private fun MediaPostActionsRow(post: ApiMediaPost, isDark: Boolean, onLikeClick
         painter = androidx.compose.ui.res.painterResource(com.wellxai.chatgiza.R.drawable.ic_lucide_thumbs_down),
         contentDescription = "Dislike",
         tint = fg,
-        modifier = Modifier.size(18.dp).clickable {}
+        modifier = Modifier.size(18.dp).clickable {
+          Toast.makeText(context, "Dislike — coming soon", Toast.LENGTH_SHORT).show()
+        }
       )
     }
 
@@ -1037,7 +1039,7 @@ private fun MediaPostActionsRow(post: ApiMediaPost, isDark: Boolean, onLikeClick
         .size(32.dp)
         .clip(CircleShape)
         .background(pillBg)
-        .clickable {},
+        .clickable { Toast.makeText(context, "Repost — coming soon", Toast.LENGTH_SHORT).show() },
       contentAlignment = Alignment.Center
     ) {
       Icon(
@@ -1087,6 +1089,7 @@ private fun MediaPostFullscreenViewer(
   onDismiss: () -> Unit
 ) {
   BackHandler(onBack = onDismiss)
+  val context = LocalContext.current
   val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { post.imageUrls.size })
   val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
   val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -1114,7 +1117,10 @@ private fun MediaPostFullscreenViewer(
       Spacer(modifier = Modifier.weight(1f))
       Text(post.authorName, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
       Spacer(modifier = Modifier.weight(1f))
-      IconButton(modifier = Modifier.size(36.dp), onClick = {}) {
+      IconButton(
+        modifier = Modifier.size(36.dp),
+        onClick = { Toast.makeText(context, "More options — coming soon", Toast.LENGTH_SHORT).show() }
+      ) {
         Icon(Icons.Filled.MoreVert, contentDescription = "More", tint = Color.White)
       }
     }
@@ -1297,6 +1303,11 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
   var cropPhotoUri by remember { mutableStateOf<Uri?>(null) }
   val profilePhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
     if (uri != null) cropPhotoUri = uri
+  }
+  // Was set on a failed upload but never read anywhere -- the badge's
+  // spinner just stopped with no explanation the photo didn't save.
+  LaunchedEffect(viewModel.profilePhotoError) {
+    viewModel.profilePhotoError?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
   }
   cropPhotoUri?.let { pickedUri ->
     ProfilePhotoCropDialog(
@@ -1586,7 +1597,13 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
               horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
               OutlinedButton(
-                onClick = { viewModel.openCustomize() },
+                // Used to call openCustomize(), which opens the unrelated
+                // "Your Agents" screen -- openEditProfile() is the real
+                // profile editor, and (unlike the Quantara Settings case a
+                // few screens over) nothing local gets reset on return here,
+                // so the back-button issue that ruled it out there doesn't
+                // apply to this screen.
+                onClick = { viewModel.openEditProfile() },
                 colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = onBg),
                 border = androidx.compose.foundation.BorderStroke(1.dp, onBgDim.copy(alpha = 0.4f)),
                 modifier = Modifier.weight(1f)
@@ -1616,7 +1633,7 @@ internal fun MediaProfileScreen(viewModel: ChatViewModel, target: ProfileTarget,
               horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
               OutlinedButton(
-                onClick = {},
+                onClick = { Toast.makeText(context, "Messaging — coming soon", Toast.LENGTH_SHORT).show() },
                 colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = onBg),
                 border = androidx.compose.foundation.BorderStroke(1.dp, onBgDim.copy(alpha = 0.4f)),
                 modifier = Modifier.weight(1f)
