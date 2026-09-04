@@ -38,8 +38,11 @@ const EditIcon = (
     />
   </svg>
 );
-// Placeholder for now -- there's no conversation history backend yet. Same
-// glyph as ChatSidebar's "Automations" (AutomationIcon) on chatgiza.com.
+// There's no conversation history backend yet -- rendered disabled below
+// (same "not wired up yet" treatment BuildWorkspace's toolbar uses for its
+// own not-yet-real buttons) rather than looking clickable and doing
+// nothing. Same glyph as ChatSidebar's "Automations" (AutomationIcon) on
+// chatgiza.com.
 const HistoryIcon = (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M3 12a9 9 0 1 1 2.64 6.36" />
@@ -130,7 +133,7 @@ export default function SupportChatWidget() {
 
   return (
     <div className="fixed bottom-2 right-4 z-50">
-      <div className="flex h-[600px] w-[420px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-2xl">
+      <div className="flex h-[600px] max-h-[calc(100dvh-4rem)] w-[420px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-2xl">
         <div className="flex items-center justify-end gap-3 px-4 py-3 text-muted">
           <button
             onClick={() => setMessages([])}
@@ -139,7 +142,7 @@ export default function SupportChatWidget() {
           >
             {EditIcon}
           </button>
-          <button aria-label="History" className="hover:text-foreground">
+          <button disabled aria-label="History" title="Conversation history — coming soon" className="cursor-default opacity-40">
             {HistoryIcon}
           </button>
           <button onClick={() => setOpen(false)} aria-label="Close" className="hover:text-foreground">

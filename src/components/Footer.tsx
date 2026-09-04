@@ -13,37 +13,32 @@ const COMPANY_BRANDED_PATHS = ["/terms", "/privacy", "/wx-6f44c8d2a535", "/compa
 // hostname check catches that case too. See Navbar.tsx for the same fix.
 const COMPANY_HOSTS = new Set(["wellxai.world", "www.wellxai.world"]);
 
+// Each column used to list several distinctly-worded links (e.g. "GiZA-5.6",
+// "GiZA-5.5", "GiZA-5.4") that all pointed at the same single page --
+// /research, /products, /developers, and /company are each one flat page
+// with no per-topic sections to deep-link to, so those extra labels were
+// promising destinations that don't exist. Collapsed to one link per real
+// destination instead of inventing sub-pages.
 const columns: { heading: string; links: { label: string; href: string }[] }[] = [
   {
     heading: "Research",
-    links: [
-      { label: "Research Overview", href: "/research" },
-      { label: "Safety Approach", href: "/research" },
-      { label: "Trust & Transparency", href: "/research" },
-    ],
+    links: [{ label: "Overview", href: "/research" }],
   },
   {
     heading: "Products",
     links: [
       { label: "ChatGiZa", href: "/chatgiza" },
-      { label: "GiZA-5.6", href: "/products" },
-      { label: "GiZA-5.5", href: "/products" },
-      { label: "GiZA-5.4", href: "/products" },
+      { label: "GiZA Models", href: "/products" },
     ],
   },
   {
     heading: "Developers",
-    links: [
-      { label: "API Platform", href: "/developers" },
-      { label: "Docs", href: "/developers" },
-      { label: "Release Notes", href: "/developers" },
-    ],
+    links: [{ label: "Overview", href: "/developers" }],
   },
   {
     heading: "Company",
     links: [
       { label: "About Us", href: "/company" },
-      { label: "Careers", href: "/company" },
       { label: "Business", href: "/business" },
       { label: "Foundation", href: "/foundation" },
     ],
