@@ -54,6 +54,8 @@ export default function ProductsPage() {
             <Link
               key={p.href}
               href={p.href}
+              target="_blank"
+              rel="noopener noreferrer"
               className="card group rounded-2xl p-6 hover:border-foreground/40 transition-colors"
             >
               {card}
