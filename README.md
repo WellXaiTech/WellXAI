@@ -1,12 +1,12 @@
 # ChatGiZa
 
-Next.js app for **ChatGiZa** (a ChatGPT-style assistant). This README is written for a new developer or team picking up the project — it covers what exists, how to run it, and how it's put together.
+Next.js app for **ChatGiZa**, WellX AI's own chat assistant. This README is written for a new developer or team picking up the project — it covers what exists, how to run it, and how it's put together.
 
 ## Tech stack
 
 - **Next.js 16** (App Router) + **TypeScript**, **Tailwind CSS v4**
 - **NextAuth (Auth.js v5 beta)** — Google sign-in only
-- **OpenAI API** (primary) with an **Anthropic** fallback path, or canned mock replies if neither key is set
+- A configurable AI backend — primary provider key with a fallback provider key, set via environment variables — or canned mock replies if neither key is set
 - **Stripe** — subscription checkout for paid plans
 - **Vercel KV** — optional account-synced chat history (only active when deployed on Vercel with a KV store linked; conversations otherwise persist per-browser in `localStorage`)
 
@@ -26,8 +26,8 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Variable | Required? | Purpose |
 |---|---|---|
-| `OPENAI_API_KEY` | Recommended | Powers real chat replies, image generation (`gpt-image-1`), video generation (Sora), and web search / deep research modes. Checked first. |
-| `ANTHROPIC_API_KEY` | Optional | Fallback text-chat provider if OpenAI isn't set. Image/video/web-search only work on the OpenAI path. |
+| `OPENAI_API_KEY` | Recommended | Primary provider key. Powers real chat replies, image generation, video generation, and web search / deep research modes. Checked first. |
+| `ANTHROPIC_API_KEY` | Optional | Fallback text-chat provider key if the primary key isn't set. Image/video/web-search only work on the primary provider's path. |
 | `AUTH_SECRET` | Required for sign-in | Any random string (`openssl rand -base64 32`). |
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Required for sign-in | Google OAuth "Web application" client — needs `http://localhost:3000/api/auth/callback/google` (and the production equivalent) as an authorized redirect URI. |
 | `STRIPE_SECRET_KEY` | Optional | Powers the "Upgrade plan" checkout flow (`/api/checkout`). Not set → the Upgrade panel will fail to start checkout. |
@@ -53,12 +53,12 @@ src/
 
 ## Features
 
-**Marketing site** (`(marketing)` route group) — monochrome, English-only, modeled loosely on openai.com's layout conventions. Standard Navbar/Footer shared across its pages.
+**Marketing site** (`(marketing)` route group) — monochrome, English-only, modeled loosely on clean, minimal SaaS marketing layout conventions. Standard Navbar/Footer shared across its pages.
 
-**ChatGiZa** (`/chatgiza`) — the actual product, a full ChatGPT-style app:
+**ChatGiZa** (`/chatgiza`) — the actual product, a full AI chat app:
 
 - Streaming chat replies, markdown rendering, PDF export of any reply, edit-and-resend on user messages
-- Real image generation (logos/art) and short video generation (Sora), both auto-detected from plain-language requests or explicitly picked from the composer's "+" menu
+- Real image generation (logos/art) and short video generation, both auto-detected from plain-language requests or explicitly picked from the composer's "+" menu
 - Web search and "deep research" (structured, cited reports) modes
 - File/image/PDF attachments, including OCR-style fallback for scanned/image-only PDFs
 - Sidebar: Projects, a media Library, KYC placeholders, per-conversation pin/archive/share/rename/delete, a fixed-position "..." menu

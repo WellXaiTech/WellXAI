@@ -41,3 +41,6 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# Local Claude Code tool config -- never shared to the repo
+.claude/
