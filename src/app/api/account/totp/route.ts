@@ -3,6 +3,7 @@ import { kv } from "@vercel/kv";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getRequestUser } from "@/lib/requestUser";
 import { generateTotpSecret, generateTotpUri, verifyTotp } from "@/lib/totp";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 function pendingTotpSetupKey(userId: string) {
   return `chatgiza:totp-setup:${userId}`;
@@ -62,6 +63,11 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Enter the code from your authenticator app" }, { status: 400 });
   }
 
+  const rate = await checkRateLimit(`totp-setup:${user.id}`, 10, 900);
+  if (!rate.allowed) {
+    return NextResponse.json({ error: "Too many attempts -- try again in a few minutes" }, { status: 429 });
+  }
+
   try {
     const pending = await kv.get<{ secret: string }>(pendingTotpSetupKey(user.id));
     if (!pending?.secret || !verifyTotp(pending.secret, code)) {
@@ -91,6 +97,11 @@ export async function DELETE(req: NextRequest) {
   const code = typeof body?.code === "string" ? body.code.trim() : "";
   if (!code) {
     return NextResponse.json({ error: "Enter your current authenticator code" }, { status: 400 });
+  }
+
+  const rate = await checkRateLimit(`totp-disable:${user.id}`, 10, 900);
+  if (!rate.allowed) {
+    return NextResponse.json({ error: "Too many attempts -- try again in a few minutes" }, { status: 429 });
   }
 
   try {

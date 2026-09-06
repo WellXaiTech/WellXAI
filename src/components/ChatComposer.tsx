@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Attachment } from "@/lib/attachments";
 import TypingPlaceholder from "@/components/TypingPlaceholder";
+import { openExternalQuery } from "@/lib/addressBar";
 
 export type ComposerTool =
   | "web_search"
@@ -63,6 +64,14 @@ const VideoIcon = (
   </svg>
 );
 
+const ExternalSearchIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    <path d="M15 3h6v6" />
+    <path d="M10 14 21 3" />
+  </svg>
+);
+
 const GlobeIcon = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <circle cx="12" cy="12" r="9" />
@@ -80,8 +89,14 @@ const ResearchIcon = (
 
 const BrainIcon = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9.5 3a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3.5 3.5 0 0 0 1 6.5 3 3 0 0 0 3 3.5V6a3 3 0 0 0-1-3Z" />
-    <path d="M14.5 3a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3.5 3.5 0 0 1-1 6.5 3 3 0 0 1-3 3.5V6a3 3 0 0 1 1-3Z" />
+    <path d="M12 18V5" />
+    <path d="M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4" />
+    <path d="M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5" />
+    <path d="M17.997 5.125a4 4 0 0 1 2.526 5.77" />
+    <path d="M18 18a4 4 0 0 0 2-7.464" />
+    <path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517" />
+    <path d="M6 18a4 4 0 0 1-2-7.464" />
+    <path d="M6.003 5.125a4 4 0 0 0-2.526 5.77" />
   </svg>
 );
 
@@ -91,16 +106,36 @@ const ChevronDownIcon = (
   </svg>
 );
 
+// Model-selector sheet: current pick gets this instead of the row's own icon.
+const ModelCheckIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 6 9 17l-5-5" />
+  </svg>
+);
+const ModelCloseIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 6 6 18" />
+    <path d="m6 6 12 12" />
+  </svg>
+);
+
 const ArrowUpIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-    <path d="M12 19V5" />
-    <path d="M5 12l7-7 7 7" />
+  <svg width="16" height="16" viewBox="0 0 24 24">
+    <path d="M0 0h24v24H0z" fill="none" />
+    <g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
+      <path strokeDasharray="20" d="M12 21l0 -17.5">
+        <animate fill="freeze" attributeName="stroke-dashoffset" dur="0.3s" values="20;0" />
+      </path>
+      <path strokeDasharray="12" strokeDashoffset="12" d="M12 3l7 7M12 3l-7 7">
+        <animate fill="freeze" attributeName="stroke-dashoffset" begin="0.3s" dur="0.2s" to="0" />
+      </path>
+    </g>
   </svg>
 );
 
 const StopIcon = (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-    <rect x="5" y="5" width="14" height="14" rx="2" />
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="18" height="18" x="3" y="3" rx="2" />
   </svg>
 );
 
@@ -122,8 +157,12 @@ const WaveformIcon = (
 );
 
 const LightningIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" />
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M13 16a3 3 0 0 1 2.24 5" />
+    <path d="M18 12h.01" />
+    <path d="M18 21h-8a4 4 0 0 1-4-4 7 7 0 0 1 7-7h.2L9.6 6.4a1 1 0 1 1 2.8-2.8L15.8 7h.2c3.3 0 6 2.7 6 6v1a2 2 0 0 1-2 2h-1a3 3 0 0 0-3 3" />
+    <path d="M20 8.54V4a2 2 0 1 0-4 0v3" />
+    <path d="M7.612 12.524a3 3 0 1 0-1.6 4.3" />
   </svg>
 );
 
@@ -214,6 +253,8 @@ export default function ChatComposer({
   error,
   disabled,
   onStop,
+  temporaryMode,
+  onToggleTemporary,
   onSubmit,
 }: {
   variant: "hero" | "bar";
@@ -228,6 +269,11 @@ export default function ChatComposer({
   error: string | null;
   disabled: boolean;
   onStop?: () => void;
+  // Temporary Chat toggle -- optional since not every composer instance
+  // needs to expose it (e.g. a share-preview render); both real call
+  // sites (hero + bar) pass it.
+  temporaryMode?: boolean;
+  onToggleTemporary?: () => void;
   onSubmit: (e: React.FormEvent) => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -248,6 +294,12 @@ export default function ChatComposer({
   const [toolMenuCoords, setToolMenuCoords] = useState<DropdownCoords | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
+  // Real navigation, not a chat message -- kept as its own tiny prompt
+  // instead of hijacking the main input, since most URL-looking text
+  // someone types there is meant to be discussed with the AI (e.g. "sum up
+  // https://..."), not visited directly.
+  const [externalSearchOpen, setExternalSearchOpen] = useState(false);
+  const [externalSearchInput, setExternalSearchInput] = useState("");
 
   const isHero = variant === "hero";
 
@@ -379,6 +431,12 @@ export default function ChatComposer({
       tool: "web_search",
     },
     {
+      title: "Open a website",
+      description: "Search Google or go straight to a URL",
+      icon: ExternalSearchIcon,
+      onClick: () => setExternalSearchOpen(true),
+    },
+    {
       title: "Deep research",
       description: "Get a detailed, cited report",
       icon: ResearchIcon,
@@ -461,7 +519,7 @@ export default function ChatComposer({
             return next;
           });
         }}
-        className={`flex items-center justify-center rounded-full border border-white/10 bg-white/5 text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent ${
+        className={`flex items-center justify-center rounded-full border border-white/10 bg-white/5 text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent ${
           isHero ? "h-10 w-10" : "h-8 w-8"
         }`}
       >
@@ -522,6 +580,7 @@ export default function ChatComposer({
         }`}
       >
         {!activeTool && LightningIcon}
+        {activeTool === "deep_think" && BrainIcon}
         {activeTool ? TOOL_LABELS[activeTool] : "GiZa 5.6"}
         {ChevronDownIcon}
       </button>
@@ -538,43 +597,73 @@ export default function ChatComposer({
                 ? { top: toolMenuCoords.top }
                 : { bottom: toolMenuCoords.bottom }),
             }}
-            className="z-50 w-72 rounded-2xl border border-border bg-surface p-1.5 shadow-lg"
+            className="z-50 w-80 overflow-hidden rounded-2xl border border-border bg-surface shadow-lg"
           >
-            <button
-              type="button"
-              onClick={() => {
-                onSelectTool(null);
-                setToolMenuOpen(false);
-              }}
-              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-2 ${
-                !activeTool ? "bg-surface-2" : ""
-              }`}
-            >
-              <span className="text-muted">{LightningIcon}</span>
-              <span className="flex-1">
-                <span className="block text-sm font-medium">GiZa 5.6</span>
-                <span className="block text-xs text-muted">Reliable, efficient performance for daily business tasks</span>
-              </span>
-            </button>
-            {modelOnlyItems.map((item) => (
+            <div className="relative flex items-center justify-center border-b border-border px-3 py-3">
               <button
-                key={item.title}
                 type="button"
-                onClick={() => {
-                  onSelectTool(item.tool === activeTool ? null : (item.tool as ComposerTool));
-                  setToolMenuOpen(false);
-                }}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-2 ${
-                  item.tool === activeTool ? "bg-surface-2" : ""
-                }`}
+                aria-label="Close"
+                onClick={() => setToolMenuOpen(false)}
+                className="absolute left-2 flex h-7 w-7 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
               >
-                <span className="text-muted">{item.icon}</span>
-                <span className="flex-1">
-                  <span className="block text-sm font-medium">{item.title}</span>
-                  <span className="block text-xs text-muted">{item.description}</span>
+                {ModelCloseIcon}
+              </button>
+              <span className="text-sm font-semibold">Select model</span>
+            </div>
+
+            <div className="p-1.5">
+              {/* Not wired to anything real yet -- billing/upgrade flow is
+                  being rebuilt elsewhere; this is just the entry point so
+                  it has a home in the redesigned sheet, matching the rest
+                  of this list's style instead of a bare "Coming soon" line. */}
+              <button
+                type="button"
+                onClick={() => setToolMenuOpen(false)}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-2"
+              >
+                <span className="flex-1 min-w-0">
+                  <span className="flex items-center gap-2">
+                    <span className="text-sm font-medium">GiZa Pro</span>
+                    <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-medium text-muted">
+                      Coming soon
+                    </span>
+                  </span>
+                  <span className="block text-xs text-muted">For your toughest challenges</span>
                 </span>
               </button>
-            ))}
+
+              <button
+                type="button"
+                onClick={() => {
+                  onSelectTool(null);
+                  setToolMenuOpen(false);
+                }}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-2"
+              >
+                <span className="flex-1">
+                  <span className="block text-sm font-medium">GiZa 5.6</span>
+                  <span className="block text-xs text-muted">Reliable, efficient performance for daily business tasks</span>
+                </span>
+                {!activeTool && <span className="text-foreground">{ModelCheckIcon}</span>}
+              </button>
+              {modelOnlyItems.map((item) => (
+                <button
+                  key={item.title}
+                  type="button"
+                  onClick={() => {
+                    onSelectTool(item.tool === activeTool ? null : (item.tool as ComposerTool));
+                    setToolMenuOpen(false);
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-2"
+                >
+                  <span className="flex-1">
+                    <span className="block text-sm font-medium">{item.title}</span>
+                    <span className="block text-xs text-muted">{item.description}</span>
+                  </span>
+                  {item.tool === activeTool && <span className="text-foreground">{ModelCheckIcon}</span>}
+                </button>
+              ))}
+            </div>
           </div>,
           document.body
         )}
@@ -590,7 +679,7 @@ export default function ChatComposer({
       onPointerLeave={stopListening}
       onPointerCancel={stopListening}
       disabled={disabled}
-      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-500 disabled:opacity-40 ${
         isListening ? "ring-2 ring-blue-300" : ""
       }`}
     >
@@ -609,7 +698,7 @@ export default function ChatComposer({
       onPointerLeave={stopListening}
       onPointerCancel={stopListening}
       disabled={disabled}
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-40"
     >
       {MicIcon}
     </button>
@@ -631,7 +720,7 @@ export default function ChatComposer({
       type="button"
       aria-label="Stop generating"
       onClick={onStop}
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-500"
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-blue-600 transition-colors hover:text-blue-500"
     >
       {StopIcon}
     </button>
@@ -646,10 +735,9 @@ export default function ChatComposer({
           ref={messageInputRef}
           value={value}
           onChange={(e) => onValueChange(e.target.value)}
-          disabled={disabled}
           placeholder={isHero ? undefined : disabled ? "ChatGiZa is typing…" : "Ask anything"}
           autoComplete="off"
-          className={`w-full bg-transparent px-1 py-1 text-sm outline-none disabled:cursor-not-allowed ${isHero ? "text-pure-black" : ""}`}
+          className="w-full bg-transparent px-1 py-1 text-sm text-foreground outline-none"
         />
         {isHero && !value && (
           <div className="pointer-events-none absolute inset-0 flex items-center px-1 text-sm font-bold text-muted">
@@ -673,21 +761,8 @@ export default function ChatComposer({
       ref={composerWrapperRef}
       className={isHero ? "w-full" : "mx-auto mb-6 w-full max-w-[var(--max-w-chat)] px-4"}
     >
-      {(attachments.length > 0 || activeTool) && (
+      {attachments.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">
-          {activeTool && (
-            <div className="flex items-center gap-2 rounded-lg border border-foreground/30 bg-surface-2 px-2 py-1 text-xs">
-              <span>{TOOL_LABELS[activeTool]}</span>
-              <button
-                type="button"
-                onClick={() => onSelectTool(null)}
-                aria-label={`Remove ${TOOL_LABELS[activeTool]}`}
-                className="text-muted hover:text-foreground"
-              >
-                ×
-              </button>
-            </div>
-          )}
           {attachments.map((a) => (
             <div
               key={a.id}
@@ -719,9 +794,51 @@ export default function ChatComposer({
 
       <div className="box mx-auto">{formEl}</div>
 
-      {!isHero && (
-        <p className="mt-2 text-center text-xs text-muted">ChatGiZa is AI and can make mistakes.</p>
-      )}
+      {externalSearchOpen &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+            onClick={() => setExternalSearchOpen(false)}
+          >
+            <form
+              onClick={(e) => e.stopPropagation()}
+              onSubmit={(e) => {
+                e.preventDefault();
+                openExternalQuery(externalSearchInput);
+                setExternalSearchOpen(false);
+                setExternalSearchInput("");
+              }}
+              className="w-full max-w-md rounded-2xl border border-border bg-surface p-4 shadow-lg"
+            >
+              <p className="mb-2 text-sm font-medium">Search Google or open a website</p>
+              <p className="mb-3 text-xs text-muted">Opens in a new tab -- leaves ChatGiZa, since the real page can&apos;t be shown inside it.</p>
+              <input
+                autoFocus
+                value={externalSearchInput}
+                onChange={(e) => setExternalSearchInput(e.target.value)}
+                placeholder="Search or enter a URL"
+                className="w-full rounded-full border border-border bg-background px-4 py-2 text-sm outline-none"
+              />
+              <div className="mt-3 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setExternalSearchOpen(false)}
+                  className="rounded-full px-4 py-2 text-sm text-muted hover:text-foreground"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!externalSearchInput.trim()}
+                  className="rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

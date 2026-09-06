@@ -88,7 +88,7 @@ export default function SupportModal({
             <button
               type="submit"
               disabled={sending || !message.trim() || !email.trim()}
-              className="btn-primary mb-2 w-full rounded-full py-2.5 text-sm font-medium hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-60"
+              className="btn-primary mb-2 w-full rounded-full py-2.5 text-sm font-medium hover:opacity-85 disabled:opacity-60"
             >
               {sending ? "Inatuma…" : "Tuma ujumbe"}
             </button>

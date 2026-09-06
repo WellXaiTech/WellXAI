@@ -26,7 +26,12 @@ function revokedKey(userId: string) {
   return `chatgiza:revoked-sessions:${userId}`;
 }
 
-const MAX_SESSIONS = 8;
+// Was 8 -- too low in practice: a heavy web user signing in repeatedly
+// evicted their own rarer Android sign-ins out of this shared, cross-
+// platform list entirely, making the admin "Android devices" count silently
+// wrong for exactly the accounts most worth checking. 25 gives real
+// multi-device/multi-platform history room without growing unbounded.
+const MAX_SESSIONS = 25;
 
 /** Very small user-agent read — enough to label a device in a list, not a full parser. */
 export function labelDevice(userAgent: string | null): { device: string; os: string } {

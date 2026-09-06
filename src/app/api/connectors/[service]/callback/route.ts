@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CONNECTOR_CONFIGS, type ConnectorId, getConnectorToken, saveConnectorToken, verifyConnectorState } from "@/lib/connectors";
+import { CONNECTOR_CONFIGS, type ConnectorId, getConnectorToken, saveConnectorToken, verifyConnectorState, requestToken } from "@/lib/connectors";
 
 function resultPage(title: string, message: string) {
   return new NextResponse(
@@ -48,48 +48,28 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ serv
 
   const redirectUri = `${url.origin}/api/connectors/${id}/callback`;
   try {
-    // Notion (tokenAuthStyle "basic") wants client credentials as an HTTP
-    // Basic Authorization header and a JSON body -- sending them as
-    // regular form fields like every other provider here gets a 401.
-    // Everyone else uses the standard OAuth2 form-encoded body.
-    const useBasicAuth = cfg.tokenAuthStyle === "basic";
-    const headers: Record<string, string> = { Accept: "application/json" };
-    let requestBody: string;
-    if (useBasicAuth) {
-      headers["Content-Type"] = "application/json";
-      headers["Authorization"] = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`;
-      requestBody = JSON.stringify({
-        grant_type: "authorization_code",
-        code,
-        redirect_uri: redirectUri,
-        ...(cfg.tokenBodyExtra ?? {}),
-      });
-    } else {
-      headers["Content-Type"] = "application/x-www-form-urlencoded";
-      requestBody = new URLSearchParams({
-        client_id: clientId,
-        client_secret: clientSecret,
-        code,
-        redirect_uri: redirectUri,
-        grant_type: "authorization_code",
-        ...(cfg.tokenBodyExtra ?? {}),
-      }).toString();
-    }
-    const tokenRes = await fetch(cfg.tokenUrl, {
-      method: "POST",
-      headers,
-      body: requestBody,
+    const result = await requestToken(cfg, clientId, clientSecret, {
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: redirectUri,
+      // Vercel-only: the PKCE verifier generated at /start time, carried
+      // through in the signed state. Harmless no-op field for providers
+      // that don't require PKCE.
+      ...(decoded.codeVerifier ? { code_verifier: decoded.codeVerifier } : {}),
     });
-    if (!tokenRes.ok) {
-      const errorBody = await tokenRes.text();
-      console.error(`Connector ${id} token exchange failed:`, tokenRes.status, errorBody);
+
+    if (!result.ok) {
+      console.error(`Connector ${id} token exchange failed:`, result.status, result.body);
       // Authorization codes are single-use -- some browsers fire the
       // redirect to this callback twice in quick succession (a retried
       // page load, a duplicate tab), and the second one always fails
       // this way since the first already redeemed the code. If a token
       // already exists for this user, that first request succeeded, so
-      // this isn't really a failure from the user's point of view.
-      if (errorBody.includes("invalid_grant")) {
+      // this isn't really a failure from the user's point of view. This
+      // also covers GitHub's quirk of returning HTTP 200 with the error
+      // in the JSON body (bad_verification_code/incorrect_client_credentials)
+      // -- requestToken() normalizes that into the same !ok shape.
+      if (result.body.includes("invalid_grant") || result.body.includes("bad_verification_code") || result.body.includes("incorrect_client_credentials")) {
         const existing = await getConnectorToken(decoded.userId, id);
         if (existing) {
           return resultPage(`${cfg.name} connected`, "You can close this tab and return to ChatGiZa.");
@@ -97,33 +77,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ serv
       }
       return resultPage("Connection failed", "The provider rejected the connection. Please try again.");
     }
-    const data = await tokenRes.json();
-    // GitHub's OAuth Apps token endpoint is the odd one out here: it
-    // returns HTTP 200 even when the exchange failed (bad/reused code,
-    // wrong client secret, etc.), putting the failure in the JSON body
-    // instead (e.g. {"error":"bad_verification_code",...}) rather than
-    // the HTTP status. Every other provider here uses a real 4xx, which
-    // the !tokenRes.ok branch above already catches.
-    if (data.error) {
-      console.error(`Connector ${id} token exchange returned an error body:`, data);
-      if (data.error === "bad_verification_code" || data.error === "incorrect_client_credentials") {
-        const existing = await getConnectorToken(decoded.userId, id);
-        if (existing) {
-          return resultPage(`${cfg.name} connected`, "You can close this tab and return to ChatGiZa.");
-        }
-      }
-      return resultPage("Connection failed", "The provider rejected the connection. Please try again.");
-    }
-    const accessToken = data.access_token as string | undefined;
+
+    const accessToken = result.data.access_token as string | undefined;
     if (!accessToken) {
-      console.error(`Connector ${id} token response missing access_token:`, data);
+      console.error(`Connector ${id} token response missing access_token:`, result.data);
       return resultPage("Connection failed", "The provider didn't return an access token.");
     }
 
     await saveConnectorToken(decoded.userId, id, {
       accessToken,
-      refreshToken: data.refresh_token,
-      expiresAt: data.expires_in ? Date.now() + data.expires_in * 1000 : undefined,
+      refreshToken: result.data.refresh_token as string | undefined,
+      expiresAt: result.data.expires_in ? Date.now() + (result.data.expires_in as number) * 1000 : undefined,
       connectedAt: Date.now(),
     });
 

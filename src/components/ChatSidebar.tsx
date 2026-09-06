@@ -1,41 +1,31 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import AccountMenu, { type SettingsTab } from "@/components/AccountMenu";
-import type { PlanTier } from "@/lib/plans";
+import CreateProjectModal from "@/components/CreateProjectModal";
 
 export type ConversationSummary = {
   id: string;
   title: string;
   pinned?: boolean;
   updatedAt?: number;
+  projectId?: string;
 };
 
 const COLLAPSED_KEY = "chatgiza:sidebar-collapsed";
 
-// Today shows a time, this week shows the weekday, this year shows "26 Jul",
-// anything older shows "15 Jul 25" — same convention as most chat apps' history lists.
-function formatConversationDate(ts?: number): string {
-  if (!ts) return "";
-  const date = new Date(ts);
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const diffDays = Math.round((startOfToday.getTime() - startOfDate.getTime()) / 86400000);
-
-  if (diffDays === 0) return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays > 1 && diffDays < 7) return date.toLocaleDateString([], { weekday: "long" });
-  if (date.getFullYear() === now.getFullYear()) return date.toLocaleDateString([], { day: "numeric", month: "short" });
-  return date.toLocaleDateString([], { day: "numeric", month: "short", year: "2-digit" });
-}
 
 const PencilIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5" />
-    <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z" />
+  <svg width="20" height="20" viewBox="0 0 24 24">
+    <path
+      fill="currentColor"
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M11.943 1.25H13.5a.75.75 0 0 1 0 1.5H12c-2.378 0-4.086.002-5.386.176c-1.279.172-2.05.5-2.62 1.069c-.569.57-.896 1.34-1.068 2.619c-.174 1.3-.176 3.008-.176 5.386s.002 4.086.176 5.386c.172 1.279.5 2.05 1.069 2.62c.57.569 1.34.896 2.619 1.068c1.3.174 3.008.176 5.386.176s4.086-.002 5.386-.176c1.279-.172 2.05-.5 2.62-1.069c.569-.57.896-1.34 1.068-2.619c.174-1.3.176-3.008.176-5.386v-1.5a.75.75 0 0 1 1.5 0v1.557c0 2.309 0 4.118-.19 5.53c-.194 1.444-.6 2.584-1.494 3.479c-.895.895-2.035 1.3-3.48 1.494c-1.411.19-3.22.19-5.529.19h-.114c-2.309 0-4.118 0-5.53-.19c-1.444-.194-2.584-.6-3.479-1.494c-.895-.895-1.3-2.035-1.494-3.48c-.19-1.411-.19-3.22-.19-5.529v-.114c0-2.309 0-4.118.19-5.53c.194-1.444.6-2.584 1.494-3.479c.895-.895 2.035-1.3 3.48-1.494c1.411-.19 3.22-.19 5.529-.19m4.827 1.026a3.503 3.503 0 0 1 4.954 4.953l-6.648 6.649c-.371.37-.604.604-.863.806a5.3 5.3 0 0 1-.987.61c-.297.141-.61.245-1.107.411l-2.905.968a1.492 1.492 0 0 1-1.887-1.887l.968-2.905c.166-.498.27-.81.411-1.107q.252-.526.61-.987c.202-.26.435-.492.806-.863zm3.893 1.06a2.003 2.003 0 0 0-2.832 0l-.376.377q.032.145.098.338c.143.413.415.957.927 1.469a3.9 3.9 0 0 0 1.807 1.025l.376-.376a2.003 2.003 0 0 0 0-2.832m-1.558 4.391a5.4 5.4 0 0 1-1.686-1.146a5.4 5.4 0 0 1-1.146-1.686L11.218 9.95c-.417.417-.58.582-.72.76a4 4 0 0 0-.437.71c-.098.203-.172.423-.359.982l-.431 1.295l1.032 1.033l1.295-.432c.56-.187.779-.261.983-.358q.378-.18.71-.439c.177-.139.342-.302.759-.718z"
+    />
   </svg>
 );
 
@@ -54,12 +44,18 @@ const AutomationIcon = (
   </svg>
 );
 
-// Matches ARRANGED_PATH in the native Android app (MainActivity.kt) --
-// same "Arranged" feature, same icon on both.
-const ArrangedIcon = (
+const QuantaraIcon = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M2 9.667C2 6.26 4.686 3.5 8 3.5h8c3.314 0 6 2.76 6 6.167v6.166C22 19.24 19.314 22 16 22H8c-3.314 0-6-2.76-6-6.167z" />
-    <path d="M8 5L7 2m9 3l1-3m4.5 7h-19" />
+    <path d="M9 17H7A5 5 0 0 1 7 7h2" />
+    <path d="M15 7h2a5 5 0 1 1 0 10h-2" />
+    <line x1="8" x2="16" y1="12" y2="12" />
+  </svg>
+);
+
+const BookIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
   </svg>
 );
 
@@ -107,26 +103,119 @@ const ProjectsIcon = (
   </svg>
 );
 
+const PlusIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);
+
+// Shown next to the empty-state hint under "Projects" ("Pin projects to
+// keep them here").
+const PinIcon = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 17v5" />
+    <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />
+  </svg>
+);
+
+// Small icons for the project row's "..." menu (Unpin / Edit details /
+// Archive / Delete), matching the reference's icon-per-row layout.
+const PinOffIcon = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 17v5" />
+    <path d="M15 9.34V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H7.89" />
+    <path d="m2 2 20 20" />
+    <path d="M9 9v1.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h11" />
+  </svg>
+);
+
+const SmallPencilIcon = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+    <path d="m15 5 4 4" />
+  </svg>
+);
+
+const ArchiveIcon = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="20" height="5" x="2" y="3" rx="1" />
+    <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+    <path d="M10 12h4" />
+  </svg>
+);
+
+const SmallTrashIcon = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 11v6" />
+    <path d="M14 11v6" />
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+    <path d="M3 6h18" />
+    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+  </svg>
+);
+
+// Right side of the "Chats and tasks" header -- sort, matching the
+// reference layout (currently opens the same "coming soon" toast every
+// other not-yet-built control in this sidebar uses, e.g. Search chats'
+// neighbors -- no sort order to switch between yet).
+const SortIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m21 16-4 4-4-4" />
+    <path d="M17 20V4" />
+    <path d="m3 8 4-4 4 4" />
+    <path d="M7 4v16" />
+  </svg>
+);
+
+// App-mode toolbar icons (only shown when hideWordmark -- the installed
+// PWA or the Electron desktop app -- replacing the "ChatGiZa" wordmark).
+const AppToolbarMenuIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 6h18M3 12h18M3 18h18" />
+  </svg>
+);
+const AppToolbarSidebarIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M9 4v16" />
+  </svg>
+);
+const AppToolbarSearchIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="7" />
+    <path d="m21 21-4.35-4.35" />
+  </svg>
+);
+const AppToolbarBackIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M19 12H5M12 19l-7-7 7-7" />
+  </svg>
+);
+const AppToolbarForwardIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 12h14M12 5l7 7-7 7" />
+  </svg>
+);
+
 const CodeIcon = (
   <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="m7 8l-4 4l4 4m10-8l4 4l-2.5 2.5M14 4l-1.201 4.805m-.802 3.207l-2 7.988M3 3l18 18" />
   </svg>
 );
 
-const DesignIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 2C6.5 2 2 6 2 11c0 3 2 4 4 4h1.5a1.5 1.5 0 0 1 1.5 1.5V18c0 2 2 4 4 4 5.5 0 9-4.5 9-10S17.5 2 12 2Z" />
-    <circle cx="7.5" cy="10" r="1.3" fill="currentColor" stroke="none" />
-    <circle cx="11" cy="6.5" r="1.3" fill="currentColor" stroke="none" />
-    <circle cx="15.5" cy="7.5" r="1.3" fill="currentColor" stroke="none" />
-    <circle cx="16.5" cy="12" r="1.3" fill="currentColor" stroke="none" />
+const CodePillIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24">
+    <path
+      fill="currentColor"
+      d="m7.375 16.781l1.25-1.562L4.601 12l4.024-3.219l-1.25-1.562l-5 4a1 1 0 0 0 0 1.562zm9.25-9.562l-1.25 1.562L19.399 12l-4.024 3.219l1.25 1.562l5-4a1 1 0 0 0 0-1.562zm-1.649-4.003l-4 18l-1.953-.434l4-18z"
+    />
   </svg>
 );
 
-const StockIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M3 3v18h18" />
-    <path d="M7 15l4-5 3 3 5-7" />
+const AskPillIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 9c0 3.87-3.36 7-7.5 7l-.93 1.12l-.55.66c-.47.56-1.37.44-1.68-.23L5 14.6C3.18 13.32 2 11.29 2 9c0-3.87 3.36-7 7.5-7c3.02 0 5.63 1.67 6.8 4.07c.45.89.7 1.88.7 2.93" />
+    <path d="M22 12.86c0 2.29-1.18 4.32-3 5.6l-1.34 2.95c-.31.67-1.21.8-1.68.23l-1.48-1.78c-2.42 0-4.58-1.07-5.93-2.74L9.5 16c4.14 0 7.5-3.13 7.5-7c0-1.05-.25-2.04-.7-2.93c3.27.75 5.7 3.51 5.7 6.79M7 9h5" />
   </svg>
 );
 
@@ -148,6 +237,15 @@ const ChevronDownIcon = (
 const ChevronRightIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M9 18l6-6-6-6" />
+  </svg>
+);
+
+// Hover-only shortcut next to "Projects" -- opens the same full Projects
+// overview as clicking the "Projects" label itself.
+const OpenProjectsIcon = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M7 7h10v10" />
+    <path d="M7 17 17 7" />
   </svg>
 );
 
@@ -181,65 +279,11 @@ const LiveVisionIcon = (
   </svg>
 );
 
-const PluginIcon = (
-  <svg width="20" height="20" viewBox="0 0 100 100" fill="currentColor">
-    <path d="M50.006,5.041c-0.029,0-0.059,0-0.088,0.001c-0.561,0.014-13.853,0.414-23.205,6.41c-1.637,1.05-2.114,3.228-1.064,4.865   c1.05,1.637,3.228,2.113,4.865,1.064c7.469-4.788,18.836-5.272,19.547-5.297c20.897,0.029,37.888,17.039,37.888,37.943   c0,20.921-17.021,37.942-37.942,37.942c-10.406,0-20.467-4.191-27.601-11.499c-6.906-7.073-10.579-16.434-10.343-26.331   c0.222-6.954,3.798-13.155,8.696-15.08c3.498-1.375,7.408-0.489,11.459,2.547c-4.586,7.064-3.787,16.63,2.401,22.819l5.644,5.644   c0.661,0.66,1.556,1.031,2.49,1.031s1.829-0.371,2.49-1.031l2.324-2.324l5.644,5.644c0.688,0.687,1.589,1.031,2.49,1.031   s1.802-0.344,2.49-1.031c1.375-1.376,1.375-3.605,0-4.98l-5.644-5.644l6.197-6.197l5.644,5.644c0.688,0.687,1.589,1.031,2.49,1.031   c0.901,0,1.802-0.344,2.49-1.031c1.375-1.376,1.375-3.605,0-4.98l-5.644-5.644l2.324-2.324c1.375-1.376,1.375-3.605,0-4.98   l-5.644-5.645c-3.444-3.443-8.023-5.34-12.892-5.34c-3.754,0-7.332,1.131-10.353,3.224c-8.311-6.604-15.315-5.457-18.977-4.018   c-7.556,2.97-12.844,11.574-13.159,21.438C4.739,61.78,9.123,72.949,17.365,81.39c8.452,8.656,20.349,13.621,32.64,13.621   c24.805,0,44.985-20.18,44.985-44.985S74.811,5.041,50.006,5.041z" />
-  </svg>
-);
-
 const MoreDotsIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-    <circle cx="5" cy="12" r="1.6" />
+    <circle cx="12" cy="5" r="1.6" />
     <circle cx="12" cy="12" r="1.6" />
-    <circle cx="19" cy="12" r="1.6" />
-  </svg>
-);
-
-const ShareIcon = (
-  // The shared ".icon" wrapper class forces fill:none/stroke:currentColor
-  // for the site's stroke-based icon set -- this path is filled, not
-  // stroked, so it needs an inline override to survive that wrapper.
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" style={{ fill: "currentColor", stroke: "none" }}>
-    <path d="M2.668 12.666V12.5a.665.665 0 0 1 1.33 0v.166c0 .711.001 1.205.033 1.588.03.376.087.587.167.745l.07.127c.177.288.43.522.732.676l.13.056c.144.051.333.089.615.112.384.031.877.031 1.588.031h5.333c.711 0 1.205 0 1.588-.031.376-.03.587-.088.745-.168l.127-.071c.288-.176.522-.43.676-.732l.056-.13c.051-.143.089-.333.112-.615.031-.383.031-.877.031-1.588V12.5a.665.665 0 0 1 1.33 0v.166c0 .69 0 1.246-.036 1.697-.033.4-.098.762-.242 1.098l-.066.143c-.266.52-.67.957-1.165 1.26l-.218.123c-.377.192-.783.27-1.241.308-.45.037-1.008.036-1.697.036H7.333c-.689 0-1.246.001-1.696-.036-.4-.033-.761-.097-1.098-.241l-.142-.067a3.17 3.17 0 0 1-1.262-1.165l-.122-.218c-.192-.377-.271-.783-.309-1.241-.036-.45-.036-1.008-.036-1.697m6.667-.166V4.94L7.137 7.137a.665.665 0 0 1-.94-.94L9.53 2.863l.101-.083a.666.666 0 0 1 .839.083l3.334 3.334a.666.666 0 0 1-.941.94L10.665 4.94v7.56a.666.666 0 0 1-1.33 0" />
-  </svg>
-);
-
-const PinIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <g transform="rotate(45 12 12)">
-      <path d="M12 17v5" />
-      <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />
-    </g>
-  </svg>
-);
-
-const PinFilledIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <g transform="rotate(45 12 12)">
-      <path d="M12 17v5" />
-      <path
-        d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"
-        fill="currentColor"
-      />
-    </g>
-  </svg>
-);
-
-const ArchiveIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <rect x="3" y="4" width="18" height="4" rx="1" />
-    <path d="M4 8v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V8" />
-    <path d="M10 13h4" />
-  </svg>
-);
-
-const TrashIcon = (
-  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M7 3.5h6" />
-    <path d="M5 5h10" />
-    <path d="M7 5v10a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1V5" />
-    <path d="M8.5 8v5" />
-    <path d="M11.5 8v5" />
+    <circle cx="12" cy="19" r="1.6" />
   </svg>
 );
 
@@ -257,17 +301,13 @@ function NavItem({
   return (
     <button
       onClick={onClick}
-      className="flex h-10 w-full items-center gap-2.5 rounded-xl px-2 text-xs font-medium text-foreground transition-colors hover:bg-surface-2"
+      className="flex h-10 w-full items-center gap-2.5 rounded-xl px-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-2"
     >
       <span className="flex h-5 w-5 shrink-0 items-center justify-center text-muted">{icon}</span>
       {label}
       {trailing && <span className="ml-auto">{trailing}</span>}
     </button>
   );
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <div className="px-2.5 pb-1 pt-3 text-xs text-muted">{children}</div>;
 }
 
 function SubItem({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick?: () => void }) {
@@ -284,8 +324,7 @@ function SubItem({ icon, label, onClick }: { icon: React.ReactNode; label: strin
 
 type MenuCoords = { left: number; top?: number; bottom?: number };
 
-function computeMenuCoords(rect: DOMRect, estimatedHeight: number): MenuCoords {
-  const menuWidth = 240;
+function computeMenuCoords(rect: DOMRect, estimatedHeight: number, menuWidth = 240): MenuCoords {
   const left = Math.min(rect.right + 4, window.innerWidth - menuWidth - 8);
   const spaceBelow = window.innerHeight - rect.top;
   // Flip the menu to open upward when there isn't enough room below the
@@ -298,6 +337,7 @@ function computeMenuCoords(rect: DOMRect, estimatedHeight: number): MenuCoords {
 }
 
 function ConversationMenu({
+  id,
   pinned,
   projects,
   open,
@@ -308,8 +348,10 @@ function ConversationMenu({
   onArchive,
   onDelete,
   onMoveToProject,
+  onOpenComingSoon,
   getAnchor,
 }: {
+  id: string;
   pinned?: boolean;
   projects: { id: string; name: string }[];
   open: boolean;
@@ -320,16 +362,21 @@ function ConversationMenu({
   onArchive: () => void;
   onDelete: () => void;
   onMoveToProject: (projectId: string) => void;
+  onOpenComingSoon: (title: string) => void;
   getAnchor: () => DOMRect | null;
 }) {
   const [coords, setCoords] = useState<MenuCoords | null>(null);
   const [moveOpen, setMoveOpen] = useState(false);
+  const [openInOpen, setOpenInOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const moveTriggerRef = useRef<HTMLButtonElement>(null);
   const moveMenuRef = useRef<HTMLDivElement>(null);
   const [moveCoords, setMoveCoords] = useState<MenuCoords | null>(null);
+  const openInTriggerRef = useRef<HTMLButtonElement>(null);
+  const openInMenuRef = useRef<HTMLDivElement>(null);
+  const [openInCoords, setOpenInCoords] = useState<MenuCoords | null>(null);
   const [prevOpen, setPrevOpen] = useState(open);
 
   // Adjusted during render (rather than an effect) since it's a pure reset
@@ -338,6 +385,7 @@ function ConversationMenu({
     setPrevOpen(open);
     if (!open) {
       setMoveOpen(false);
+      setOpenInOpen(false);
       setConfirmDelete(false);
     }
   }
@@ -351,10 +399,8 @@ function ConversationMenu({
     // must stay an effect rather than a render-time computation.
     const anchor = getAnchor();
     if (anchor) {
-      const menuWidth = 240;
-      const left = Math.min(anchor.right + 4, window.innerWidth - menuWidth - 8);
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setCoords({ top: anchor.top, left });
+      setCoords(computeMenuCoords(anchor, 300, 176));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -365,6 +411,7 @@ function ConversationMenu({
     function close() {
       onOpenChange(false);
       setMoveOpen(false);
+      setOpenInOpen(false);
     }
 
     function handleClickOutside(e: MouseEvent) {
@@ -375,7 +422,9 @@ function ConversationMenu({
         menuRef.current &&
         !menuRef.current.contains(target) &&
         moveMenuRef.current &&
-        !moveMenuRef.current.contains(target)
+        !moveMenuRef.current.contains(target) &&
+        openInMenuRef.current &&
+        !openInMenuRef.current.contains(target)
       ) {
         close();
       }
@@ -439,19 +488,19 @@ function ConversationMenu({
                 left: coords.left,
                 ...(coords.top !== undefined ? { top: coords.top } : { bottom: coords.bottom }),
               }}
-              className="z-50 w-60 rounded-2xl border border-border bg-surface p-1.5 shadow-lg"
+              className="z-50 w-44 rounded-2xl border border-border bg-surface p-1.5 shadow-lg"
             >
             {confirmDelete ? (
-              <div className="p-2">
-                <p className="px-1 pb-1 text-sm font-medium text-foreground">Delete this chat?</p>
-                <p className="px-1 pb-3 text-xs text-muted">This can&apos;t be undone.</p>
-                <div className="flex gap-2">
+              <div className="p-1">
+                <p className="px-1 pb-0.5 text-xs font-medium text-foreground">Delete this chat?</p>
+                <p className="px-1 pb-1.5 text-[11px] text-muted">This can&apos;t be undone.</p>
+                <div className="flex gap-1.5">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setConfirmDelete(false);
                     }}
-                    className="flex-1 rounded-lg border border-border px-3 py-1.5 text-sm transition-colors hover:bg-surface-2"
+                    className="flex-1 rounded-lg border border-border px-2 py-1 text-xs transition-colors hover:bg-surface-2"
                   >
                     Cancel
                   </button>
@@ -461,7 +510,7 @@ function ConversationMenu({
                       onDelete();
                       onOpenChange(false);
                     }}
-                    className="flex-1 rounded-lg bg-[#b3413e] px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                    className="flex-1 rounded-lg bg-[#b3413e] px-2 py-1 text-xs font-medium text-white transition-opacity hover:opacity-90"
                   >
                     Delete
                   </button>
@@ -470,14 +519,33 @@ function ConversationMenu({
             ) : (
               <>
                 <button
+                  ref={openInTriggerRef}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setConfirmDelete(true);
+                    if (!openInOpen && openInTriggerRef.current) {
+                      const rect = openInTriggerRef.current.getBoundingClientRect();
+                      setOpenInCoords(computeMenuCoords(rect, 160, 176));
+                    }
+                    setOpenInOpen((v) => !v);
                   }}
-                  className="menu-item delete"
+                  className="menu-item"
                 >
-                  <span className="icon">{TrashIcon}</span>
-                  <span>Delete</span>
+                  <span className="flex-1 truncate">Open in</span>
+                  <span className="text-muted">{ChevronRightIcon}</span>
+                </button>
+
+                <div className="my-1 border-t border-border" />
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTogglePin();
+                    onOpenChange(false);
+                  }}
+                  className="menu-item"
+                >
+                  <span className="flex-1 truncate">{pinned ? "Unpin chat" : "Pin chat"}</span>
+                  <span className="text-xs text-muted">P</span>
                 </button>
 
                 <button
@@ -488,20 +556,8 @@ function ConversationMenu({
                   }}
                   className="menu-item"
                 >
-                  <span className="icon">{PencilIcon}</span>
-                  <span>Rename</span>
-                </button>
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onTogglePin();
-                    onOpenChange(false);
-                  }}
-                  className="menu-item"
-                >
-                  <span className="icon">{pinned ? PinFilledIcon : PinIcon}</span>
-                  <span>{pinned ? "Unpin chat" : "Pin chat"}</span>
+                  <span className="flex-1 truncate">Rename</span>
+                  <span className="text-xs text-muted">R</span>
                 </button>
 
                 <button
@@ -512,9 +568,11 @@ function ConversationMenu({
                   }}
                   className="menu-item"
                 >
-                  <span className="icon">{ShareIcon}</span>
-                  <span>Share</span>
+                  <span className="flex-1 truncate">Share</span>
+                  <span className="text-xs text-muted">S</span>
                 </button>
+
+                <div className="my-1 border-t border-border" />
 
                 <button
                   ref={moveTriggerRef}
@@ -528,10 +586,11 @@ function ConversationMenu({
                   }}
                   className="menu-item"
                 >
-                  <span className="icon">{ProjectsIcon}</span>
-                  <span className="flex-1">Move to project</span>
+                  <span className="flex-1 truncate">Move to project</span>
                   <span className="text-muted">{ChevronRightIcon}</span>
                 </button>
+
+                <div className="my-1 border-t border-border" />
 
                 <button
                   onClick={(e) => {
@@ -541,8 +600,19 @@ function ConversationMenu({
                   }}
                   className="menu-item"
                 >
-                  <span className="icon">{ArchiveIcon}</span>
-                  <span>Archive</span>
+                  <span className="flex-1 truncate">Archive</span>
+                  <span className="text-xs text-muted">A</span>
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setConfirmDelete(true);
+                  }}
+                  className="menu-item delete"
+                >
+                  <span className="flex-1 truncate">Delete</span>
+                  <span className="text-xs opacity-70">D</span>
                 </button>
               </>
             )}
@@ -590,6 +660,60 @@ function ConversationMenu({
           </>,
           document.body
         )}
+      {openInOpen &&
+        openInCoords &&
+        createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setOpenInOpen(false)}
+            />
+            <div
+              ref={openInMenuRef}
+              style={{
+                position: "fixed",
+                left: openInCoords.left,
+                ...(openInCoords.top !== undefined ? { top: openInCoords.top } : { bottom: openInCoords.bottom }),
+              }}
+              className="z-50 w-44 rounded-2xl border border-border bg-surface p-1.5 shadow-lg"
+            >
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(`${window.location.origin}${window.location.pathname}?c=${id}`, "_blank");
+                  setOpenInOpen(false);
+                  onOpenChange(false);
+                }}
+                className="menu-item"
+              >
+                <span className="flex-1 truncate">New Window</span>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenComingSoon("VS Code");
+                  setOpenInOpen(false);
+                  onOpenChange(false);
+                }}
+                className="menu-item"
+              >
+                <span className="flex-1 truncate">VS Code</span>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenComingSoon("Explorer");
+                  setOpenInOpen(false);
+                  onOpenChange(false);
+                }}
+                className="menu-item"
+              >
+                <span className="flex-1 truncate">Explorer</span>
+              </button>
+            </div>
+          </>,
+          document.body
+        )}
     </>
   );
 }
@@ -597,6 +721,7 @@ function ConversationMenu({
 function ConversationRow({
   c,
   active,
+  generating,
   editing,
   editValue,
   onEditValueChange,
@@ -610,12 +735,13 @@ function ConversationRow({
   onDelete,
   projects,
   onMoveToProject,
+  onOpenComingSoon,
   menuOpen,
   onMenuOpenChange,
-  getAnchor,
 }: {
   c: ConversationSummary;
   active: boolean;
+  generating: boolean;
   editing: boolean;
   editValue: string;
   onEditValueChange: (v: string) => void;
@@ -629,12 +755,13 @@ function ConversationRow({
   onDelete: () => void;
   projects: { id: string; name: string }[];
   onMoveToProject: (projectId: string) => void;
+  onOpenComingSoon: (title: string) => void;
   menuOpen: boolean;
   onMenuOpenChange: (open: boolean) => void;
-  getAnchor: () => DOMRect | null;
 }) {
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressFired = useRef(false);
+  const rowRef = useRef<HTMLLIElement>(null);
 
   function clearPressTimer() {
     if (pressTimer.current) {
@@ -682,7 +809,7 @@ function ConversationRow({
   }
 
   return (
-    <li className="group relative">
+    <li ref={rowRef} className="group relative">
       <button
         onClick={onSelect}
         onTouchStart={handleTouchStart}
@@ -693,23 +820,19 @@ function ConversationRow({
           active ? "bg-surface-2" : "hover:bg-surface-2"
         }`}
       >
-        <span className="min-w-0 truncate text-sm font-medium text-foreground">{c.title}</span>
-        {c.updatedAt && <span className="min-w-0 truncate text-xs text-muted">{formatConversationDate(c.updatedAt)}</span>}
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="relative flex h-1.5 w-1.5 shrink-0">
+            {generating && (
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-foreground opacity-75" />
+            )}
+            <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${generating ? "bg-foreground" : "bg-muted"}`} />
+          </span>
+          <span className="min-w-0 truncate text-sm font-medium text-foreground">{c.title}</span>
+        </span>
       </button>
       <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onTogglePin();
-          }}
-          aria-label={c.pinned ? "Unpin chat" : "Pin chat"}
-          className={`rounded-md p-1.5 text-muted transition-colors hover:text-foreground ${
-            c.pinned ? "flex" : "hidden group-hover:flex"
-          }`}
-        >
-          {c.pinned ? PinFilledIcon : PinIcon}
-        </button>
         <ConversationMenu
+          id={c.id}
           pinned={c.pinned}
           projects={projects}
           open={menuOpen}
@@ -720,7 +843,273 @@ function ConversationRow({
           onArchive={onArchive}
           onDelete={onDelete}
           onMoveToProject={onMoveToProject}
-          getAnchor={getAnchor}
+          onOpenComingSoon={onOpenComingSoon}
+          getAnchor={() => rowRef.current?.getBoundingClientRect() ?? null}
+        />
+      </div>
+    </li>
+  );
+}
+
+// Trimmed version of ConversationMenu -- Unpin / Edit details / Archive /
+// Delete, matching the reference's project-row menu (rows shown here are
+// always pinned already, since only pinned projects appear in this list, so
+// there's no separate "Pin" state to branch on).
+function ProjectRowMenu({
+  open,
+  onOpenChange,
+  onUnpin,
+  onRename,
+  onArchive,
+  onDelete,
+  getAnchor,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onUnpin: () => void;
+  onRename: () => void;
+  onArchive: () => void;
+  onDelete: () => void;
+  getAnchor: () => DOMRect | null;
+}) {
+  const [coords, setCoords] = useState<MenuCoords | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [prevOpen, setPrevOpen] = useState(open);
+
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (!open) setConfirmDelete(false);
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    const anchor = getAnchor();
+    if (anchor) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCoords(computeMenuCoords(anchor, 170, 128));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function close() {
+      onOpenChange(false);
+    }
+
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as Node;
+      if (triggerRef.current && !triggerRef.current.contains(target) && menuRef.current && !menuRef.current.contains(target)) {
+        close();
+      }
+    }
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") close();
+    }
+
+    function handleScrollOrResize() {
+      close();
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("scroll", handleScrollOrResize, true);
+    window.addEventListener("resize", handleScrollOrResize);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("scroll", handleScrollOrResize, true);
+      window.removeEventListener("resize", handleScrollOrResize);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        onClick={(e) => {
+          e.stopPropagation();
+          onOpenChange(!open);
+        }}
+        aria-label="Project options"
+        className={`rounded-md p-1.5 text-muted transition-colors hover:text-foreground ${
+          open ? "block" : "hidden group-hover:block"
+        }`}
+      >
+        {MoreDotsIcon}
+      </button>
+      {open &&
+        coords &&
+        createPortal(
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => onOpenChange(false)} />
+            <div
+              ref={menuRef}
+              style={{
+                position: "fixed",
+                left: coords.left,
+                ...(coords.top !== undefined ? { top: coords.top } : { bottom: coords.bottom }),
+              }}
+              className="z-50 w-32 rounded-xl border border-border bg-surface p-1 shadow-lg"
+            >
+              {confirmDelete ? (
+                <div className="p-1">
+                  <p className="px-1 pb-0.5 text-xs font-medium text-foreground">Delete this project?</p>
+                  <p className="px-1 pb-1.5 text-[11px] text-muted">This can&apos;t be undone.</p>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setConfirmDelete(false);
+                      }}
+                      className="flex-1 rounded-lg border border-border px-2 py-1 text-xs transition-colors hover:bg-surface-2"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete();
+                        onOpenChange(false);
+                      }}
+                      className="flex-1 rounded-lg bg-[#b3413e] px-2 py-1 text-xs font-medium text-white transition-opacity hover:opacity-90"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onUnpin();
+                      onOpenChange(false);
+                    }}
+                    className="menu-item compact"
+                  >
+                    <span className="icon">{PinOffIcon}</span>
+                    <span className="flex-1 truncate">Unpin</span>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRename();
+                      onOpenChange(false);
+                    }}
+                    className="menu-item compact"
+                  >
+                    <span className="icon">{SmallPencilIcon}</span>
+                    <span className="flex-1 truncate">Edit details</span>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onArchive();
+                      onOpenChange(false);
+                    }}
+                    className="menu-item compact"
+                  >
+                    <span className="icon">{ArchiveIcon}</span>
+                    <span className="flex-1 truncate">Archive</span>
+                  </button>
+                  <div className="my-1 border-t border-border" />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConfirmDelete(true);
+                    }}
+                    className="menu-item delete compact"
+                  >
+                    <span className="icon">{SmallTrashIcon}</span>
+                    <span className="flex-1 truncate">Delete</span>
+                  </button>
+                </>
+              )}
+            </div>
+          </>,
+          document.body
+        )}
+    </>
+  );
+}
+
+function ProjectRow({
+  project,
+  editing,
+  editValue,
+  onEditValueChange,
+  onCommitEdit,
+  onCancelEdit,
+  onOpen,
+  onUnpin,
+  onRename,
+  onArchive,
+  onDelete,
+  menuOpen,
+  onMenuOpenChange,
+}: {
+  project: { id: string; name: string };
+  editing: boolean;
+  editValue: string;
+  onEditValueChange: (v: string) => void;
+  onCommitEdit: () => void;
+  onCancelEdit: () => void;
+  onOpen: () => void;
+  onUnpin: () => void;
+  onRename: () => void;
+  onArchive: () => void;
+  onDelete: () => void;
+  menuOpen: boolean;
+  onMenuOpenChange: (open: boolean) => void;
+}) {
+  const rowRef = useRef<HTMLLIElement>(null);
+
+  if (editing) {
+    return (
+      <li>
+        <input
+          autoFocus
+          onFocus={(e) => e.target.select()}
+          value={editValue}
+          onChange={(e) => onEditValueChange(e.target.value)}
+          onBlur={onCommitEdit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              onCommitEdit();
+            }
+            if (e.key === "Escape") onCancelEdit();
+          }}
+          className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-sm outline-none"
+        />
+      </li>
+    );
+  }
+
+  return (
+    <li ref={rowRef} className="group relative">
+      <button
+        onClick={onOpen}
+        className="flex h-9 w-full items-center gap-2 rounded-xl px-2.5 pr-9 text-left text-sm font-medium text-foreground transition-colors hover:bg-surface-2"
+      >
+        <span className="flex h-4 w-4 shrink-0 items-center justify-center text-muted">{ProjectsIcon}</span>
+        <span className="truncate">{project.name}</span>
+      </button>
+      <div className="absolute right-1 top-1/2 -translate-y-1/2">
+        <ProjectRowMenu
+          open={menuOpen}
+          onOpenChange={onMenuOpenChange}
+          onUnpin={onUnpin}
+          onRename={onRename}
+          onArchive={onArchive}
+          onDelete={onDelete}
+          getAnchor={() => rowRef.current?.getBoundingClientRect() ?? null}
         />
       </div>
     </li>
@@ -728,26 +1117,32 @@ function ConversationRow({
 }
 
 export default function ChatSidebar({
+  hideWordmark,
   conversations,
   activeId,
+  streamingId,
+  currentProjectId,
   onSelect,
   onNewChat,
   onRename,
   onOpenLibrary,
   onOpenMedia,
+  onOpenEbook,
   onOpenLiveVision,
-  onOpenPlugins,
-  onOpenProjects,
   onOpenCode,
   onOpenSearch,
   onOpenComingSoon,
   onOpenSettingsTab,
   onOpenCompanyDashboard,
   onOpenLanguage,
-  onOpenUpgradePlan,
   onOpenSupport,
   onOpenScheduled,
-  userPlan,
+  onOpenProjects,
+  onOpenProject,
+  onCreateProject,
+  onRenameProject,
+  onDeleteProject,
+  onTogglePinProject,
   onTogglePin,
   onArchive,
   onDelete,
@@ -755,38 +1150,61 @@ export default function ChatSidebar({
   projects,
   onMoveToProject,
 }: {
+  // Hides the "ChatGiZa" wordmark in the sidebar header when running
+  // inside the installed app (PWA or the Electron desktop app) -- the OS
+  // window/taskbar already shows the app's identity there, so repeating
+  // it in-content just duplicates it.
+  hideWordmark?: boolean;
   conversations: ConversationSummary[];
   activeId: string | null;
+  // Non-null while the active conversation's assistant reply is still
+  // streaming -- used to pulse that row's dot in the sidebar so a
+  // still-running generation stays visible even if you scroll away.
+  streamingId?: string | null;
+  // The project whose nested chat list should show expanded -- either the
+  // one whose own page is open, or the one owning the active chat.
+  currentProjectId?: string | null;
   onSelect: (id: string) => void;
   onNewChat: () => void;
   onRename: (id: string, title: string) => void;
   onOpenLibrary: () => void;
   onOpenMedia: () => void;
+  onOpenEbook: () => void;
   onOpenLiveVision: () => void;
-  onOpenPlugins: () => void;
-  onOpenProjects: () => void;
   onOpenCode: () => void;
   onOpenSearch: () => void;
   onOpenComingSoon: (title: string) => void;
   onOpenSettingsTab: (tab: SettingsTab) => void;
   onOpenCompanyDashboard: () => void;
   onOpenLanguage: () => void;
-  onOpenUpgradePlan: () => void;
   onOpenSupport: () => void;
   onOpenScheduled: () => void;
-  userPlan: PlanTier | null;
+  onOpenProjects: () => void;
+  onOpenProject: (id: string) => void;
+  onCreateProject: (id: string, name: string, description?: string) => void;
+  onRenameProject: (id: string, name: string) => void;
+  onDeleteProject: (id: string) => void;
+  onTogglePinProject: (id: string) => void;
   onTogglePin: (id: string) => void;
   onArchive: (id: string) => void;
   onDelete: (id: string) => void;
   onShare: (id: string) => void;
-  projects: { id: string; name: string }[];
+  projects: { id: string; name: string; pinned?: boolean }[];
   onMoveToProject: (conversationId: string, projectId: string) => void;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const historyAnchorRef = useRef<HTMLDivElement>(null);
-  const getMenuAnchor = () => historyAnchorRef.current?.getBoundingClientRect() ?? null;
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [editingProjectValue, setEditingProjectValue] = useState("");
+  const [openProjectMenuId, setOpenProjectMenuId] = useState<string | null>(null);
+  const [createProjectOpen, setCreateProjectOpen] = useState(false);
+  // The "Projects" and "Chats and tasks" section headers each fold their
+  // own list away independently -- separate from any per-project chat
+  // nesting (that one auto-follows the current project; these two are
+  // plain manual show/hide for the whole section).
+  const [projectsSectionOpen, setProjectsSectionOpen] = useState(true);
+  const [chatsSectionOpen, setChatsSectionOpen] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
   const [kycOpen, setKycOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -868,6 +1286,15 @@ export default function ChatSidebar({
     });
   }
 
+  // Lets the app-mode toolbar (rendered outside this component, in
+  // chatgiza/page.tsx's standalone top bar) trigger the same
+  // collapse/expand this component already owns, without lifting the
+  // state up -- a plain window event is enough for this one action.
+  useEffect(() => {
+    window.addEventListener("chatgiza:toggle-sidebar", toggleCollapsed);
+    return () => window.removeEventListener("chatgiza:toggle-sidebar", toggleCollapsed);
+  }, []);
+
   function startEditing(c: ConversationSummary) {
     setEditingId(c.id);
     setEditValue(c.title);
@@ -880,10 +1307,25 @@ export default function ChatSidebar({
     setEditingId(null);
   }
 
+  function startEditingProject(p: { id: string; name: string }) {
+    setEditingProjectId(p.id);
+    setEditingProjectValue(p.name);
+  }
+
+  function commitProjectEdit() {
+    if (editingProjectId && editingProjectValue.trim()) {
+      onRenameProject(editingProjectId, editingProjectValue.trim());
+    }
+    setEditingProjectId(null);
+  }
+
   const { data: session, status } = useSession();
   const signedIn = status === "authenticated";
-  const pinnedConversations = signedIn ? conversations.filter((c) => c.pinned) : [];
-  const recentConversations = signedIn ? conversations.filter((c) => !c.pinned) : [];
+  // Chats that belong to a project show nested under that project's own row
+  // instead -- keeping them here too would show every project chat twice.
+  const pinnedConversations = signedIn ? conversations.filter((c) => c.pinned && !c.projectId) : [];
+  const recentConversations = signedIn ? conversations.filter((c) => !c.pinned && !c.projectId) : [];
+  const pinnedProjects = projects.filter((p) => p.pinned);
 
   const mobileHeaderAvatar = session?.user?.image ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -927,14 +1369,14 @@ export default function ChatSidebar({
 
       <div className="flex-1" />
 
-      <AccountMenu variant="collapsed" onOpenSettings={onOpenSettingsTab} onOpenLanguage={onOpenLanguage} onOpenUpgradePlan={onOpenUpgradePlan} onOpenSupport={onOpenSupport} />
+      <AccountMenu variant="collapsed" onOpenSettings={onOpenSettingsTab} onOpenLanguage={onOpenLanguage} onOpenSupport={onOpenSupport} />
     </>
   );
 
   function renderExpandedBody(onHeaderClose: () => void, headerCloseLabel: string) {
     return (
       <>
-        <div className="flex items-center justify-between px-3 py-4">
+        <div className={`flex items-center justify-between px-3 ${hideWordmark ? "pb-4 pt-2" : "py-4"}`}>
           <button
             onClick={closeMobileThen(() => onOpenSettingsTab("Account"))}
             className="flex min-w-0 flex-1 items-center gap-2.5 text-left sm:hidden"
@@ -944,19 +1386,65 @@ export default function ChatSidebar({
               {session?.user?.name ?? session?.user?.email}
             </span>
           </button>
-          <button onClick={onNewChat} className="hidden items-center gap-2 text-lg font-extrabold sm:flex">
-            <span className="glow-badge rounded-full px-2 py-0.5">ChatGiZa</span>
-          </button>
-          <div className="flex items-center gap-1">
-            <span className="flex items-center justify-center text-muted">{StreakBadgeIcon}</span>
-            <button
-              onClick={onHeaderClose}
-              aria-label={headerCloseLabel}
-              className="hidden h-9 w-9 items-center justify-center rounded-xl text-muted transition-colors hover:bg-surface-2 hover:text-foreground sm:flex"
-            >
-              {PanelIcon}
+          {hideWordmark ? (
+            // Spread across the sidebar's full width (up to its right
+            // border) instead of bunching at the left with dead space
+            // after -- and sit close to the top of the window/titlebar,
+            // not with a large gap above it.
+            <div className="hidden w-full items-center justify-between text-muted sm:flex">
+              <button
+                onClick={toggleCollapsed}
+                aria-label="Menu"
+                className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
+              >
+                {AppToolbarMenuIcon}
+              </button>
+              <button
+                onClick={toggleCollapsed}
+                aria-label="Toggle sidebar"
+                className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
+              >
+                {AppToolbarSidebarIcon}
+              </button>
+              <button
+                onClick={closeMobileThen(onOpenSearch)}
+                aria-label="Search chats"
+                className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
+              >
+                {AppToolbarSearchIcon}
+              </button>
+              <button
+                onClick={() => window.history.back()}
+                aria-label="Back"
+                className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
+              >
+                {AppToolbarBackIcon}
+              </button>
+              <button
+                onClick={() => window.history.forward()}
+                aria-label="Forward"
+                className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
+              >
+                {AppToolbarForwardIcon}
+              </button>
+            </div>
+          ) : (
+            <button onClick={onNewChat} className="hidden items-center gap-2 text-sm font-bold sm:flex">
+              <span className="glow-badge rounded-full px-1.5 py-0.5">ChatGiZa</span>
             </button>
-          </div>
+          )}
+          {!hideWordmark && (
+            <div className="flex items-center gap-1">
+              <span className="flex items-center justify-center text-muted">{StreakBadgeIcon}</span>
+              <button
+                onClick={onHeaderClose}
+                aria-label={headerCloseLabel}
+                className="hidden h-9 w-9 items-center justify-center rounded-xl text-muted transition-colors hover:bg-surface-2 hover:text-foreground sm:flex"
+              >
+                {PanelIcon}
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="sidebar-scroll flex-1 overflow-y-auto px-2">
@@ -968,124 +1456,256 @@ export default function ChatSidebar({
             Automations
           </button>
 
-          {!userPlan && (
-            <button
-              onClick={closeMobileThen(onOpenUpgradePlan)}
-              className="mb-3 flex h-12 w-full items-center gap-3 rounded-xl bg-blue-600 px-4 text-left text-white transition-colors hover:bg-blue-500 sm:hidden"
+
+          {/* Was only shown in standalone/installed-app mode -- now
+              always shown, replacing the separate "Code" row further
+              down in the nav list with this pill instead. */}
+          <div className="mb-2 hidden items-center gap-1 rounded-xl bg-[#212121] p-1 sm:flex">
+            <span className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-surface px-2 py-1 text-center text-sm font-medium text-foreground shadow-sm">
+              {AskPillIcon}
+              Ask
+            </span>
+            <Link
+              href="/chatgiza/build"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1 text-center text-sm font-medium text-muted transition-colors hover:text-foreground"
             >
-              <span className="min-w-0 flex-1 truncate text-base font-semibold">GiZa Pro Offer</span>
-              <span className="shrink-0 rounded-full bg-white/20 px-3 py-1 text-sm font-semibold">Save 20%</span>
-            </button>
-          )}
+              {CodePillIcon}
+              Code
+            </Link>
+          </div>
 
           <button
             onClick={closeMobileThen(onNewChat)}
-            className="mb-2 hidden h-10 w-full items-center gap-2 rounded-xl border border-border px-2 text-xs font-medium shadow-sm transition-all hover:bg-surface-2 hover:shadow-md sm:flex"
+            className="mb-2 hidden h-10 w-full items-center gap-2 rounded-xl border border-border px-2 text-sm font-medium shadow-sm transition-all hover:bg-surface-2 hover:shadow-md sm:flex"
           >
             <span className="flex h-5 w-5 shrink-0 items-center justify-center">{PencilIcon}</span>
             New chat
           </button>
           <div className="hidden sm:block">
             <NavItem icon={SearchIcon} label="Search chats" onClick={closeMobileThen(onOpenSearch)} />
-            <NavItem icon={ArrangedIcon} label="Arranged" onClick={closeMobileThen(onOpenScheduled)} />
-            <NavItem icon={ProjectsIcon} label="Projects" onClick={closeMobileThen(onOpenProjects)} />
-            <NavItem icon={PluginIcon} label="Plugins" onClick={closeMobileThen(onOpenPlugins)} />
-            <NavItem icon={LibraryIcon} label="Library" onClick={closeMobileThen(onOpenLibrary)} />
-            <NavItem icon={MediaFeedIcon} label="ChatGiZa Media" onClick={closeMobileThen(onOpenMedia)} />
-            <NavItem icon={LiveVisionIcon} label="Live Voice" onClick={closeMobileThen(onOpenLiveVision)} />
-
-            <NavItem
-              icon={KycIcon}
-              label="KYC"
-              onClick={() => setKycOpen((v) => !v)}
-              trailing={
-                <span className={`transition-transform ${kycOpen ? "rotate-180" : ""}`}>{ChevronDownIcon}</span>
-              }
-            />
-            {kycOpen && (
-              <div className="ml-4 space-y-0.5 border-l border-border pl-2">
-                <SubItem icon={PersonIcon} label="Personal KYC" onClick={closeMobileThen(() => onOpenComingSoon("Personal KYC"))} />
-                <SubItem icon={BuildingIcon} label="Company KYC" onClick={closeMobileThen(onOpenCompanyDashboard)} />
-              </div>
-            )}
-
-            <SectionLabel>Products</SectionLabel>
-            <NavItem icon={DesignIcon} label="Design" onClick={closeMobileThen(() => onOpenComingSoon("Design"))} />
-            <NavItem icon={StockIcon} label="Stock" onClick={closeMobileThen(() => onOpenComingSoon("Stock"))} />
-            <NavItem icon={CodeIcon} label="Code" onClick={closeMobileThen(onOpenCode)} />
+            <NavItem icon={AutomationIcon} label="Automations" onClick={closeMobileThen(onOpenScheduled)} />
+            <NavItem icon={BookIcon} label="E-book" onClick={closeMobileThen(onOpenEbook)} />
+            <NavItem icon={QuantaraIcon} label="Quantara" onClick={closeMobileThen(onOpenMedia)} />
           </div>
 
-        <div
-          ref={historyAnchorRef}
-          className={pinnedConversations.length > 0 || recentConversations.length > 0 ? "mt-3 pt-1" : ""}
-        >
-          {pinnedConversations.length > 0 && (
-            <>
-              <div className="px-2.5 py-1 text-xs text-muted">Pinned</div>
-              <ul className="mb-2 space-y-0">
-                {pinnedConversations.map((c) => (
-                  <ConversationRow
-                    key={c.id}
-                    c={c}
-                    active={c.id === activeId}
-                    editing={editingId === c.id}
-                    editValue={editValue}
-                    onEditValueChange={setEditValue}
-                    onCommitEdit={commitEdit}
-                    onCancelEdit={() => setEditingId(null)}
-                    onSelect={closeMobileThen(() => onSelect(c.id))}
-                    onShare={() => onShare(c.id)}
-                    onRename={() => startEditing(c)}
-                    onTogglePin={() => onTogglePin(c.id)}
-                    onArchive={() => onArchive(c.id)}
-                    onDelete={() => onDelete(c.id)}
-                    projects={projects}
-                    onMoveToProject={(projectId) => onMoveToProject(c.id, projectId)}
-                    menuOpen={openMenuId === c.id}
-                    onMenuOpenChange={(open) => setOpenMenuId(open ? c.id : null)}
-                    getAnchor={getMenuAnchor}
-                  />
-                ))}
-              </ul>
-            </>
+        <div className="mt-3 pt-1">
+          {/* Own section, always visible (not gated on having any pinned
+              projects yet) -- the "+" opens CreateProjectModal to ask for
+              a real name/goal up front, rather than ProjectsPanel's own
+              "New project" button, which creates the project immediately
+              under that literal placeholder name. The empty state below
+              tells you this is where pinned projects would show up, same
+              shape as the Chats section below it. */}
+          <div className="group flex items-center justify-between px-2.5 py-1">
+            <div className="flex items-center gap-1">
+              <button
+                onClick={closeMobileThen(onOpenProjects)}
+                className="text-xs text-muted transition-colors hover:text-foreground"
+              >
+                Projects
+              </button>
+              <button
+                onClick={() => setProjectsSectionOpen((v) => !v)}
+                aria-label={projectsSectionOpen ? "Collapse projects" : "Expand projects"}
+                className={`flex h-4 w-4 items-center justify-center text-muted transition-transform hover:text-foreground ${
+                  projectsSectionOpen ? "rotate-90" : ""
+                }`}
+              >
+                {ChevronRightIcon}
+              </button>
+            </div>
+            <div className="flex items-center gap-0.5">
+              {/* Only shows on hover of this row -- same destination as
+                  clicking the "Projects" label itself. */}
+              <button
+                onClick={closeMobileThen(onOpenProjects)}
+                aria-label="Open Projects"
+                className="hidden h-5 w-5 items-center justify-center rounded-md text-muted opacity-0 transition-colors hover:bg-surface-2 hover:text-foreground group-hover:flex group-hover:opacity-100"
+              >
+                {OpenProjectsIcon}
+              </button>
+              <button
+                onClick={closeMobileThen(() => setCreateProjectOpen(true))}
+                aria-label="New project"
+                className="flex h-5 w-5 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+              >
+                {PlusIcon}
+              </button>
+            </div>
+          </div>
+          {/* Only pinned projects show here -- a project that merely
+              exists (e.g. an old "New project" nobody ever pinned)
+              shouldn't crowd this out. New projects created via
+              CreateProjectModal default to pinned, so they show up here
+              right away without an extra step. */}
+          {projectsSectionOpen && (
+          <>
+          {pinnedProjects.length === 0 ? (
+            <div className="flex items-center gap-2 px-2.5 py-2 text-xs text-muted">
+              <span className="shrink-0">{PinIcon}</span>
+              <span>Pin projects to keep them here</span>
+            </div>
+          ) : (
+            <ul className="mb-2 space-y-0">
+              {pinnedProjects.map((p) => {
+                const projectChats = conversations.filter((c) => c.projectId === p.id);
+                const isCurrent = currentProjectId === p.id;
+                return (
+                  <li key={p.id}>
+                    <ProjectRow
+                      project={p}
+                      editing={editingProjectId === p.id}
+                      editValue={editingProjectValue}
+                      onEditValueChange={setEditingProjectValue}
+                      onCommitEdit={commitProjectEdit}
+                      onCancelEdit={() => setEditingProjectId(null)}
+                      onOpen={closeMobileThen(() => onOpenProject(p.id))}
+                      onUnpin={() => onTogglePinProject(p.id)}
+                      onRename={() => startEditingProject(p)}
+                      onArchive={() => onOpenComingSoon("Archive project")}
+                      onDelete={() => onDeleteProject(p.id)}
+                      menuOpen={openProjectMenuId === p.id}
+                      onMenuOpenChange={(open) => setOpenProjectMenuId(open ? p.id : null)}
+                    />
+                    {/* Chats created inside this project nest directly
+                        underneath it (matching the reference's own sidebar)
+                        instead of also appearing in "Chats and tasks" below,
+                        which already excludes anything with a projectId.
+                        Clicking the project row itself opens the project's
+                        own page (Instructions/Memory/Context) -- clicking a
+                        chat here opens that chat instead. Only the
+                        "current" project shows its list; leaving it folds
+                        this back up automatically -- no separate toggle. */}
+                    {projectChats.length > 0 && (
+                      <div
+                        className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
+                          isCurrent ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                        }`}
+                      >
+                        <ul className="space-y-0 overflow-hidden pl-4">
+                          {projectChats.map((c) => (
+                            <ConversationRow
+                              key={c.id}
+                              c={c}
+                              active={c.id === activeId}
+                              generating={c.id === activeId && Boolean(streamingId)}
+                              editing={editingId === c.id}
+                              editValue={editValue}
+                              onEditValueChange={setEditValue}
+                              onCommitEdit={commitEdit}
+                              onCancelEdit={() => setEditingId(null)}
+                              onSelect={closeMobileThen(() => onSelect(c.id))}
+                              onShare={() => onShare(c.id)}
+                              onRename={() => startEditing(c)}
+                              onTogglePin={() => onTogglePin(c.id)}
+                              onArchive={() => onArchive(c.id)}
+                              onDelete={() => onDelete(c.id)}
+                              projects={projects}
+                              onMoveToProject={(projectId) => onMoveToProject(c.id, projectId)}
+                              onOpenComingSoon={onOpenComingSoon}
+                              menuOpen={openMenuId === c.id}
+                              onMenuOpenChange={(open) => setOpenMenuId(open ? c.id : null)}
+                            />
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          </>
           )}
 
-          {recentConversations.length > 0 && (
-            <>
-              <div className="px-2.5 py-1 text-xs text-muted">Recents</div>
-              <ul className="space-y-0">
-                {recentConversations.map((c) => (
-                  <ConversationRow
-                    key={c.id}
-                    c={c}
-                    active={c.id === activeId}
-                    editing={editingId === c.id}
-                    editValue={editValue}
-                    onEditValueChange={setEditValue}
-                    onCommitEdit={commitEdit}
-                    onCancelEdit={() => setEditingId(null)}
-                    onSelect={closeMobileThen(() => onSelect(c.id))}
-                    onShare={() => onShare(c.id)}
-                    onRename={() => startEditing(c)}
-                    onTogglePin={() => onTogglePin(c.id)}
-                    onArchive={() => onArchive(c.id)}
-                    onDelete={() => onDelete(c.id)}
-                    projects={projects}
-                    onMoveToProject={(projectId) => onMoveToProject(c.id, projectId)}
-                    menuOpen={openMenuId === c.id}
-                    onMenuOpenChange={(open) => setOpenMenuId(open ? c.id : null)}
-                    getAnchor={getMenuAnchor}
-                  />
-                ))}
-              </ul>
-            </>
-          )}
+          {(pinnedConversations.length > 0 || recentConversations.length > 0) && (
+            <div className="mt-3">
+              <div className="flex items-center justify-between px-2.5 py-1">
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted">Chats and tasks</span>
+                  <button
+                    onClick={() => setChatsSectionOpen((v) => !v)}
+                    aria-label={chatsSectionOpen ? "Collapse chats" : "Expand chats"}
+                    className={`flex h-4 w-4 items-center justify-center text-muted transition-transform hover:text-foreground ${
+                      chatsSectionOpen ? "rotate-90" : ""
+                    }`}
+                  >
+                    {ChevronRightIcon}
+                  </button>
+                </div>
+                <button
+                  onClick={closeMobileThen(() => onOpenComingSoon("Sort"))}
+                  aria-label="Sort"
+                  className="flex h-5 w-5 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                >
+                  {SortIcon}
+                </button>
+              </div>
 
+              {chatsSectionOpen && pinnedConversations.length > 0 && (
+                <ul className="mb-2 space-y-0">
+                  {pinnedConversations.map((c) => (
+                    <ConversationRow
+                      key={c.id}
+                      c={c}
+                      active={c.id === activeId}
+                      generating={c.id === activeId && Boolean(streamingId)}
+                      editing={editingId === c.id}
+                      editValue={editValue}
+                      onEditValueChange={setEditValue}
+                      onCommitEdit={commitEdit}
+                      onCancelEdit={() => setEditingId(null)}
+                      onSelect={closeMobileThen(() => onSelect(c.id))}
+                      onShare={() => onShare(c.id)}
+                      onRename={() => startEditing(c)}
+                      onTogglePin={() => onTogglePin(c.id)}
+                      onArchive={() => onArchive(c.id)}
+                      onDelete={() => onDelete(c.id)}
+                      projects={projects}
+                      onMoveToProject={(projectId) => onMoveToProject(c.id, projectId)}
+                      onOpenComingSoon={onOpenComingSoon}
+                      menuOpen={openMenuId === c.id}
+                      onMenuOpenChange={(open) => setOpenMenuId(open ? c.id : null)}
+                    />
+                  ))}
+                </ul>
+              )}
+
+              {chatsSectionOpen && recentConversations.length > 0 && (
+                <ul className="space-y-0">
+                  {recentConversations.map((c) => (
+                    <ConversationRow
+                      key={c.id}
+                      c={c}
+                      active={c.id === activeId}
+                      generating={c.id === activeId && Boolean(streamingId)}
+                      editing={editingId === c.id}
+                      editValue={editValue}
+                      onEditValueChange={setEditValue}
+                      onCommitEdit={commitEdit}
+                      onCancelEdit={() => setEditingId(null)}
+                      onSelect={closeMobileThen(() => onSelect(c.id))}
+                      onShare={() => onShare(c.id)}
+                      onRename={() => startEditing(c)}
+                      onTogglePin={() => onTogglePin(c.id)}
+                      onArchive={() => onArchive(c.id)}
+                      onDelete={() => onDelete(c.id)}
+                      projects={projects}
+                      onMoveToProject={(projectId) => onMoveToProject(c.id, projectId)}
+                      onOpenComingSoon={onOpenComingSoon}
+                      menuOpen={openMenuId === c.id}
+                      onMenuOpenChange={(open) => setOpenMenuId(open ? c.id : null)}
+                    />
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
         </div>
 
-        <div className="hidden items-center px-3 py-3 sm:flex">
-          <AccountMenu variant="expanded" onOpenSettings={onOpenSettingsTab} onOpenLanguage={onOpenLanguage} onOpenUpgradePlan={onOpenUpgradePlan} onOpenSupport={onOpenSupport} />
+        <div className="hidden items-center border-t border-border px-3 py-3 sm:flex">
+          <AccountMenu variant="expanded" onOpenSettings={onOpenSettingsTab} onOpenLanguage={onOpenLanguage} onOpenSupport={onOpenSupport} />
         </div>
 
         <div className="flex items-center gap-3 border-t border-border px-3 py-3 sm:hidden">
@@ -1117,6 +1737,14 @@ export default function ChatSidebar({
 
   return (
     <>
+      {createProjectOpen && (
+        <CreateProjectModal
+          onClose={() => setCreateProjectOpen(false)}
+          onCreate={(name, description) => onCreateProject(crypto.randomUUID(), name, description)}
+          onOpenComingSoon={onOpenComingSoon}
+        />
+      )}
+
       {mounted &&
         createPortal(
           <button

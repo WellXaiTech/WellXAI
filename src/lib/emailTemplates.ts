@@ -6,19 +6,29 @@ const HEADING_STYLE = "font-size: 20px; font-weight: 700; margin: 0 0 16px;";
 
 const BODY_STYLE = "font-size: 15px; line-height: 1.6; color: #333333; margin: 0 0 16px;";
 
+const BOX_STYLE = "background: #f7f7f8; border-radius: 8px; padding: 20px; margin: 0 0 16px;";
+
+const CODE_STYLE = "font-size: 32px; font-weight: 500; letter-spacing: 6px; margin: 0; text-align: center;";
+
 const FOOTER_STYLE = "font-size: 12px; color: #888888; margin-top: 32px; border-top: 1px solid #eeeeee; padding-top: 16px;";
 
-function wrap(content: string): string {
+// Verification-code emails (sign-in, password change, email change) are
+// framed as coming from WellXAI, the company -- not ChatGiZa, the product --
+// the same way OpenAI's own account-security emails say "OpenAI", not
+// "ChatGPT". Everything else (welcome, payment) stays ChatGiZa-branded since
+// those are genuinely about the product.
+function wrap(content: string, brand: "ChatGiZa" | "WellXAI" = "ChatGiZa"): string {
   return `
     <div style="${WRAPPER_STYLE}">
-      <div style="font-size: 18px; font-weight: 800; margin-bottom: 24px;">ChatGiZa</div>
+      <div style="font-size: 22px; font-weight: 600; margin-bottom: 24px;">${brand}</div>
       ${content}
-      <div style="${FOOTER_STYLE}">ChatGiZa<br />You're receiving this because it relates to your ChatGiZa account.</div>
+      <p style="${BODY_STYLE}">Best,<br />${brand}</p>
+      <div style="${FOOTER_STYLE}">If you have any questions please contact us through our <a href="https://support.wellxai.world" style="color: #888888;">help center</a>.</div>
     </div>
   `;
 }
 
-export function welcomeEmail(name: string): { subject: string; html: string } {
+export function welcomeEmail(name: string): { subject: string; html: string; from?: string } {
   const greeting = name?.trim() ? name.trim() : "there";
   return {
     subject: "Welcome to ChatGiZa",
@@ -30,19 +40,55 @@ export function welcomeEmail(name: string): { subject: string; html: string } {
   };
 }
 
-export function passwordChangeCodeEmail(code: string): { subject: string; html: string } {
+export function passwordChangeCodeEmail(code: string): { subject: string; html: string; from?: string } {
   return {
-    subject: `${code} is your ChatGiZa verification code`,
-    html: wrap(`
-      <p style="${HEADING_STYLE}">Confirm your password change</p>
-      <p style="${BODY_STYLE}">Enter this code in ChatGiZa to finish changing your password:</p>
-      <p style="font-size: 32px; font-weight: 800; letter-spacing: 6px; margin: 0 0 16px; text-align: center;">${code}</p>
-      <p style="${BODY_STYLE}">This code expires in 10 minutes. If you didn't request this, you can ignore this email — your password won't be changed.</p>
-    `),
+    subject: "Your authentication code",
+    from: "WellXAI <noreply@tm.wellxai.world>",
+    html: wrap(
+      `
+      <p style="${HEADING_STYLE}">Your authentication code</p>
+      <p style="${BODY_STYLE}">Please use the following code to confirm your password change:</p>
+      <div style="${BOX_STYLE}"><p style="${CODE_STYLE}">${code}</p></div>
+      <div style="${BOX_STYLE}"><p style="${BODY_STYLE} margin: 0;">This code expires in 5 minutes. If you didn't request this, you can ignore this email — your password won't be changed.</p></div>
+    `,
+      "WellXAI"
+    ),
   };
 }
 
-export function paymentConfirmationEmail(planName: string, amount: string): { subject: string; html: string } {
+export function emailChangeCodeEmail(code: string): { subject: string; html: string; from?: string } {
+  return {
+    subject: "Your authentication code",
+    from: "WellXAI <noreply@tm.wellxai.world>",
+    html: wrap(
+      `
+      <p style="${HEADING_STYLE}">Your authentication code</p>
+      <p style="${BODY_STYLE}">Please use the following code to confirm this as your account's new contact email:</p>
+      <div style="${BOX_STYLE}"><p style="${CODE_STYLE}">${code}</p></div>
+      <div style="${BOX_STYLE}"><p style="${BODY_STYLE} margin: 0;">This code expires in 5 minutes. If you didn't request this, you can ignore this email — your account's email won't change.</p></div>
+    `,
+      "WellXAI"
+    ),
+  };
+}
+
+export function signInCodeEmail(code: string): { subject: string; html: string; from?: string } {
+  return {
+    subject: "Your authentication code",
+    from: "WellXAI <noreply@tm.wellxai.world>",
+    html: wrap(
+      `
+      <p style="${HEADING_STYLE}">Your authentication code</p>
+      <p style="${BODY_STYLE}">Please use the following code to confirm it's you signing in on this device:</p>
+      <div style="${BOX_STYLE}"><p style="${CODE_STYLE}">${code}</p></div>
+      <div style="${BOX_STYLE}"><p style="${BODY_STYLE} margin: 0;">This code expires in 5 minutes. If you didn't try to sign in, you can ignore this email.</p></div>
+    `,
+      "WellXAI"
+    ),
+  };
+}
+
+export function paymentConfirmationEmail(planName: string, amount: string): { subject: string; html: string; from?: string } {
   return {
     subject: `You're on the ${planName} plan`,
     html: wrap(`

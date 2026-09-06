@@ -80,6 +80,17 @@ type StorageItem = {
 
 type DeviceSession = { id: string; device: string; os: string; signedInAt: number; ip?: string; location?: string };
 
+type AccountOverview = {
+  id: string;
+  uid: string;
+  createdAt: number | null;
+  lastSeenAt: number | null;
+  lastLogoutAt: number | null;
+  platforms: string[];
+  tokensUsed: number;
+  deletedConversationsCount: number;
+};
+
 type BillingSummary = {
   subscription: { tier: string | null; planName: string; currentPeriodEnd: number | null; cancelAtPeriodEnd: boolean } | null;
   invoices: { id: string; date: number; amount: number; currency: string; status: string; hostedUrl: string | null }[];
@@ -87,11 +98,12 @@ type BillingSummary = {
   billingInfo: { email: string | null; name: string | null; address: { city: string | null; country: string | null; line1: string | null; state: string | null; postal_code: string | null } | null } | null;
 };
 
-const TABS_GROUP_1 = ["General", "Data controls", "Security"] as const;
+const TABS_GROUP_1 = ["Overview", "General", "Data controls", "Security"] as const;
 const TABS_GROUP_2 = ["Account", "Memory", "Dashboard", "Storage", "Billing"] as const;
 export type Tab = (typeof TABS_GROUP_1)[number] | (typeof TABS_GROUP_2)[number];
 
 const TAB_DESCRIPTIONS: Record<Tab, string> = {
+  Overview: "A quick summary of your account",
   General: "Appearance, language, and behavior",
   "Data controls": "Manage your data and privacy",
   Security: "Password, sessions, and login",
@@ -102,41 +114,62 @@ const TAB_DESCRIPTIONS: Record<Tab, string> = {
   Billing: "Plan, invoices, and payment methods",
 };
 
+const OverviewIcon = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 22V7a1 1 0 0 0-1-1H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5a1 1 0 0 0-1-1H2" />
+    <rect x="14" y="2" width="8" height="8" rx="1" />
+  </svg>
+);
+
 const DataControlsIcon = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3Z" />
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 16h.01" />
+    <path d="M2.212 11.577a2 2 0 0 0-.212.896V18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5.527a2 2 0 0 0-.212-.896L18.55 5.11A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+    <path d="M21.946 12.013H2.054" />
+    <path d="M6 16h.01" />
   </svg>
 );
 
 const SecurityLockIcon = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <rect x="5" y="11" width="14" height="9" rx="2" />
-    <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z" />
+    <path d="m7 16.5-4.74-2.85" />
+    <path d="m7 16.5 5-3" />
+    <path d="M7 16.5v5.17" />
+    <path d="M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z" />
+    <path d="m17 16.5-5-3" />
+    <path d="m17 16.5 4.74-2.85" />
+    <path d="M17 16.5v5.17" />
+    <path d="M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z" />
+    <path d="M12 8 7.26 5.15" />
+    <path d="m12 8 4.74-2.85" />
+    <path d="M12 13.5V8" />
   </svg>
 );
 
 const AccountIcon = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="12" cy="8" r="4" />
-    <path d="M4 20c0-4 4-6 8-6s8 2 8 6" />
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17.925 20.056a6 6 0 0 0-11.851.001" />
+    <circle cx="12" cy="11" r="4" />
+    <circle cx="12" cy="12" r="10" />
   </svg>
 );
 
 const MemoryIcon = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="8" />
     <path d="M12 8v4l3 2" />
   </svg>
 );
 
 const StorageIcon = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
   </svg>
 );
 
 const BillingIcon = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <rect x="2" y="5" width="20" height="14" rx="2" />
     <line x1="2" y1="10" x2="22" y2="10" />
   </svg>
@@ -145,7 +178,7 @@ const BillingIcon = (
 // Idea #10: a personal data dashboard -- three bars, not a generic
 // gear/chart glyph, so it reads distinctly as "your stats" in the tab list.
 const DashboardIcon = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <rect x="4" y="12" width="4" height="8" rx="1" />
     <rect x="10" y="7" width="4" height="13" rx="1" />
     <rect x="16" y="3" width="4" height="17" rx="1" />
@@ -166,13 +199,14 @@ const SearchIcon = (
 );
 
 const GearIcon = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="12" cy="12" r="3" />
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+    <circle cx="12" cy="12" r="4" />
   </svg>
 );
 
 const TAB_ICONS: Record<Tab, React.ReactNode> = {
+  Overview: OverviewIcon,
   General: GearIcon,
   "Data controls": DataControlsIcon,
   Security: SecurityLockIcon,
@@ -203,11 +237,250 @@ const MoonIcon = (
   </svg>
 );
 
+const ContrastIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 18a6 6 0 0 0 0-12v12z" />
+  </svg>
+);
+const TypeIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 4v16" />
+    <path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2" />
+    <path d="M9 20h6" />
+  </svg>
+);
+const PaletteIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z" />
+    <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+    <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+    <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+    <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+  </svg>
+);
+const LetterTextIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M15 5h6" />
+    <path d="M15 12h6" />
+    <path d="M3 19h18" />
+    <path d="m3 12 3.553-7.724a.5.5 0 0 1 .894 0L11 12" />
+    <path d="M3.92 10h6.16" />
+  </svg>
+);
+const WavesIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 12q2.5 2 5 0t5 0 5 0 5 0" />
+    <path d="M2 19q2.5 2 5 0t5 0 5 0 5 0" />
+    <path d="M2 5q2.5 2 5 0t5 0 5 0 5 0" />
+  </svg>
+);
+const BellIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+    <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />
+  </svg>
+);
+const ActivityIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2" />
+  </svg>
+);
+const ImageGenIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+    <circle cx="9" cy="9" r="2" />
+    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+  </svg>
+);
+
+function EditIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16">
+      <path d="M0 0h16v16H0z" fill="none" />
+      <path
+        fill="currentColor"
+        d="M14.452 1.548a1.865 1.865 0 0 0-2.644 0L6.979 6.377a2.2 2.2 0 0 0-.578 1.021l-.374 1.498a.89.89 0 0 0 1.079 1.079l1.498-.374a2.2 2.2 0 0 0 1.021-.578l4.829-4.829c.73-.73.73-1.914 0-2.645zm-.707 1.937L8.916 8.314a1.2 1.2 0 0 1-.556.315l-1.32.333l.331-1.322c.053-.21.161-.403.315-.556l4.83-4.829a.866.866 0 0 1 1.23 0a.87.87 0 0 1 0 1.231zM13 7.768l1-1V11.5c0 1.378-1.121 2.5-2.5 2.5h-7A2.503 2.503 0 0 1 2 11.5v-7C2 3.122 3.121 2 4.5 2h4.736l-1 1H4.5C3.673 3 3 3.673 3 4.5v7c0 .827.673 1.5 1.5 1.5h7c.827 0 1.5-.673 1.5-1.5z"
+      />
+    </svg>
+  );
+}
+
+const PencilIcon = (
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+    <path d="m15 5 4 4" />
+  </svg>
+);
+
+const PLATFORM_LABELS: Record<string, string> = {
+  web: "Website",
+  desktop: "Desktop app",
+  android: "Android app",
+  vscode: "VS Code",
+};
+
+function maskEmail(email: string): string {
+  const [local] = email.split("@");
+  if (!local) return email;
+  return `${local.slice(0, 3)}***@****`;
+}
+
+const MonitorIcon = (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="20" height="14" x="2" y="3" rx="2" />
+    <line x1="8" x2="16" y1="21" y2="21" />
+    <line x1="12" x2="12" y1="17" y2="21" />
+  </svg>
+);
+const ClockIcon = (
+  <svg width="13" height="13" viewBox="0 0 1024 1024">
+    <path
+      fill="currentColor"
+      d="M536.1 273H488c-4.4 0-8 3.6-8 8v275.3c0 2.6 1.2 5 3.3 6.5l165.3 120.7c3.6 2.6 8.6 1.9 11.2-1.7l28.6-39c2.7-3.7 1.9-8.7-1.7-11.2L544.1 528.5V281c0-4.4-3.6-8-8-8m219.8 75.2l156.8 38.3c5 1.2 9.9-2.6 9.9-7.7l.8-161.5c0-6.7-7.7-10.5-12.9-6.3L752.9 334.1a8 8 0 0 0 3 14.1m167.7 301.1l-56.7-19.5a8 8 0 0 0-10.1 4.8c-1.9 5.1-3.9 10.1-6 15.1c-17.8 42.1-43.3 80-75.9 112.5a353 353 0 0 1-112.5 75.9a352.2 352.2 0 0 1-137.7 27.8c-47.8 0-94.1-9.3-137.7-27.8a353 353 0 0 1-112.5-75.9c-32.5-32.5-58-70.4-75.9-112.5A353.4 353.4 0 0 1 171 512c0-47.8 9.3-94.2 27.8-137.8c17.8-42.1 43.3-80 75.9-112.5a353 353 0 0 1 112.5-75.9C430.6 167.3 477 158 524.8 158s94.1 9.3 137.7 27.8A353 353 0 0 1 775 261.7c10.2 10.3 19.8 21 28.6 32.3l59.8-46.8C784.7 146.6 662.2 81.9 524.6 82C285 82.1 92.6 276.7 95 516.4C97.4 751.9 288.9 942 524.8 942c185.5 0 343.5-117.6 403.7-282.3c1.5-4.2-.7-8.9-4.9-10.4"
+    />
+  </svg>
+);
+
+function LoginTimeValue({ value }: { value: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {MonitorIcon}
+      {value}
+      {ClockIcon}
+    </span>
+  );
+}
+
+const CopyIcon = (
+  // Same glyph used for Copy on chat message bubbles (ChatMessageBubble.tsx),
+  // so the copy affordance looks identical everywhere in the app.
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style={{ fill: "currentColor", stroke: "none" }}>
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="m10.8624 1.99989c.0452.00003.0911.00005.1376.00005h5.2413c.805-.00001 1.4693-.00002 2.0105.0442.5621.04592 1.0788.14449 1.5642.39178.7526.38349 1.3645.99541 1.748 1.74806.2473.48534.3459 1.00204.3918 1.56414.0442.54119.0442 1.20554.0442 2.0105v5.24128c0 .0466 0 .0924.0001.1376.0004.7954.0007 1.3861-.1364 1.8977-.3699 1.3804-1.4481 2.4586-2.8284 2.8284-.3096.083-.648.1156-1.0433.1284-.0127.3952-.0454.7337-.1283 1.0432-.3699 1.3804-1.4481 2.4586-2.8284 2.8284-.5117.1371-1.1023.1368-1.8977.1364-.0452 0-.0911-.0001-.1376-.0001h-5.24132c-.80496.0001-1.46932.0001-2.01051-.0441-.56209-.046-1.0788-.1445-1.56413-.3918-.75265-.3835-1.36457-.9954-1.74807-1.7481-.24729-.4853-.34585-1.002-.39178-1.5641-.04421-.5412-.0442-1.2056-.04419-2.0106v-5.2413c0-.0465-.00002-.0923-.00005-.1375-.00043-.7954-.00075-1.38608.13635-1.89773.36987-1.38037 1.44806-2.45856 2.82842-2.82843.30955-.08294.64801-.11559 1.04323-.12834.01276-.39522.0454-.73369.12835-1.04323.36987-1.38037 1.44806-2.45856 2.82842-2.82843.51165-.1371 1.10228-.13678 1.89768-.13635zm-2.85254 4.00005h4.23144c.805-.00001 1.4693-.00002 2.0105.0442.5621.04592 1.0788.14449 1.5642.39178.7526.38349 1.3645.99541 1.748 1.74806.2473.48534.3459 1.00204.3918 1.56414.0442.54118.0442 1.20558.0442 2.01058v4.2314c.2576-.0092.3988-.0265.5176-.0583.6902-.1849 1.2293-.724 1.4143-1.4142.0595-.2223.0681-.5233.0681-1.5177v-5.19996c0-.85658-.0008-1.43887-.0376-1.88896-.0358-.43841-.1007-.66262-.1804-.81902-.1917-.37632-.4977-.68228-.874-.87403-.1564-.07969-.3806-.14461-.819-.18043-.4501-.03678-1.0324-.03756-1.889-.03756h-5.2c-.9944 0-1.29536.00859-1.51764.06815-.69018.18494-1.22928.72403-1.41421 1.41422-.03183.11879-.0491.26006-.05829.51763zm-1.00986 2c-.99435 0-1.29536.00859-1.51764.06815-.69018.18494-1.22928.72403-1.41421 1.41422-.05956.22227-.06815.52329-.06815 1.51759v5.2c0 .8566.00078 1.4389.03755 1.889.03582.4384.10075.6626.18044.819.19174.3763.4977.6823.87403.8741.1564.0796.3806.1446.81902.1804.45009.0368 1.03238.0375 1.88896.0375h5.2c.9944 0 1.2954-.0085 1.5176-.0681.6902-.1849 1.2293-.724 1.4143-1.4142.0595-.2223.0681-.5233.0681-1.5177v-5.2c0-.8565-.0008-1.4388-.0376-1.88892-.0358-.43841-.1007-.66262-.1804-.81902-.1917-.37632-.4977-.68228-.874-.87403-.1564-.07969-.3806-.14461-.819-.18043-.4501-.03678-1.0324-.03756-1.889-.03756z"
+    />
+  </svg>
+);
+
+function RowIcon({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-muted">
+      {children}
+    </span>
+  );
+}
+
+const CheckIcon = (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 6 9 17l-5-5" />
+  </svg>
+);
+
+function OverviewRow({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: React.ReactNode;
+  hint?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+      <div className="min-w-0">
+        <p className="text-sm font-medium">{label}</p>
+        {hint && <p className="mt-0.5 text-xs font-light text-muted">{hint}</p>}
+      </div>
+      <span className="shrink-0 text-sm text-muted">{value}</span>
+    </div>
+  );
+}
+
+function SettingTile({
+  icon,
+  label,
+  children,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-border p-3.5 transition-colors hover:bg-surface-2/40">
+      <div className="mb-2.5 flex items-center gap-2">
+        <RowIcon>{icon}</RowIcon>
+        <h3 className="text-sm font-medium">{label}</h3>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function ThemePreviewCard({
+  label,
+  icon,
+  selected,
+  onSelect,
+  variant,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  selected: boolean;
+  onSelect: () => void;
+  variant: "light" | "dark" | "split";
+}) {
+  const barClass = variant === "light" ? "bg-black/10" : "bg-white/20";
+  const bubbleClass = variant === "light" ? "bg-black" : "bg-white";
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className={`overflow-hidden rounded-2xl border-2 text-left transition-colors ${
+        selected ? "border-foreground" : "border-border hover:border-foreground/40"
+      }`}
+    >
+      <div
+        className={`relative h-16 w-full overflow-hidden ${
+          variant === "dark" ? "bg-[#0a0a0a]" : variant === "split" ? "bg-gradient-to-br from-white from-45% to-[#0a0a0a] to-55%" : "bg-white"
+        }`}
+      >
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: "linear-gradient(165deg, rgba(99,102,241,0.85), rgba(59,130,246,0.55) 55%, transparent 95%)",
+          }}
+        />
+        <div className="absolute inset-0 flex flex-col gap-1 p-2.5">
+          <div className={`h-1.5 w-7 rounded-full ${variant === "split" ? "bg-black/15" : barClass}`} />
+          <div className={`h-1.5 w-10 rounded-full ${variant === "split" ? "bg-white/25" : barClass}`} />
+          <div className="mt-auto flex justify-end">
+            <div className={`h-4 w-9 rounded-full ${variant === "split" ? "bg-[#0a0a0a]" : bubbleClass}`} />
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-2 px-3 py-2.5">
+        <span className="flex items-center gap-1.5 text-xs font-medium">
+          {icon}
+          {label}
+        </span>
+        {selected && (
+          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-foreground text-background">
+            {CheckIcon}
+          </span>
+        )}
+      </div>
+    </button>
+  );
+}
+
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-border p-3">
       <p className="text-lg font-semibold">{value}</p>
-      <p className="text-xs text-muted">{label}</p>
+      <p className="text-xs font-light text-foreground">{label}</p>
     </div>
   );
 }
@@ -348,7 +621,7 @@ function Row({
     <div className={`flex items-center justify-between gap-4 py-3.5 ${border ? "border-b border-border" : ""}`}>
       <div className="min-w-0">
         <p className="text-sm font-medium">{title}</p>
-        {description && <p className="mt-0.5 max-w-sm text-xs text-muted">{description}</p>}
+        {description && <p className="mt-0.5 max-w-sm text-xs font-light text-foreground">{description}</p>}
       </div>
       <div className="shrink-0">{control}</div>
     </div>
@@ -357,7 +630,7 @@ function Row({
 
 function ComingSoonNote({ text }: { text?: string }) {
   return (
-    <p className="mt-1 text-xs text-muted">
+    <p className="mt-1 text-xs font-light text-foreground">
       {text ?? "This isn't built yet — coming soon."}
     </p>
   );
@@ -488,7 +761,7 @@ export default function SettingsPanel({
   initialTab?: Tab;
 }) {
   const { data: session, status } = useSession();
-  const [tab, setTab] = useState<Tab>(initialTab ?? "General");
+  const [tab, setTab] = useState<Tab>(initialTab ?? "Overview");
   const [mobileShowContent, setMobileShowContent] = useState(false);
 
   function selectTab(t: Tab) {
@@ -511,9 +784,8 @@ export default function SettingsPanel({
   const [dataView, setDataView] = useState<"root" | "shared" | "archived">("root");
   const [storageView, setStorageView] = useState<"root" | "files" | "images">("root");
   const [tabSearch, setTabSearch] = useState("");
-  const tabQuery = tabSearch.trim().toLowerCase();
-  const visibleTabsGroup1 = TABS_GROUP_1.filter((t) => t.toLowerCase().includes(tabQuery));
-  const visibleTabsGroup2 = TABS_GROUP_2.filter((t) => t.toLowerCase().includes(tabQuery));
+  const visibleTabsGroup1 = TABS_GROUP_1;
+  const visibleTabsGroup2 = TABS_GROUP_2;
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [voiceURI, setVoiceURI] = useState("");
   const [voiceSpeed, setVoiceSpeed] = useState<VoiceSpeed>("normal");
@@ -528,6 +800,34 @@ export default function SettingsPanel({
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [sessionsError, setSessionsError] = useState<string | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);
+
+  const [totpEnabled, setTotpEnabled] = useState<boolean | null>(null);
+  const [totpLoading, setTotpLoading] = useState(false);
+  const [totpStep, setTotpStep] = useState<"closed" | "link" | "verify" | "disable">("closed");
+  const [totpSecret, setTotpSecret] = useState<string | null>(null);
+  const [totpUri, setTotpUri] = useState<string | null>(null);
+  const [totpCode, setTotpCode] = useState("");
+  const [totpDisableCode, setTotpDisableCode] = useState("");
+  const [totpBusy, setTotpBusy] = useState(false);
+  const [totpError, setTotpError] = useState<string | null>(null);
+  const [totpCopied, setTotpCopied] = useState(false);
+
+  // Whether this account has ever set an in-app password (Google-only
+  // accounts haven't) -- determines whether "old password" is asked for.
+  const [hasPassword, setHasPassword] = useState<boolean | null>(null);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordStep, setPasswordStep] = useState<"closed" | "form" | "code">("closed");
+  const [oldPasswordInput, setOldPasswordInput] = useState("");
+  const [newPasswordInput, setNewPasswordInput] = useState("");
+  const [passwordCode, setPasswordCode] = useState("");
+  const [passwordBusy, setPasswordBusy] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordDone, setPasswordDone] = useState(false);
+
+  const [accountOverview, setAccountOverview] = useState<AccountOverview | null>(null);
+  const [accountOverviewLoading, setAccountOverviewLoading] = useState(false);
+  const [uidCopied, setUidCopied] = useState(false);
+  const [editingOverviewName, setEditingOverviewName] = useState(false);
 
   const [billing, setBilling] = useState<BillingSummary | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
@@ -626,6 +926,167 @@ export default function SettingsPanel({
       .catch(() => setSessionsError("Couldn't load your sessions."))
       .finally(() => setSessionsLoading(false));
   }, [tab, session?.user, sessions]);
+
+  useEffect(() => {
+    if (tab !== "Security" || !session?.user || totpEnabled !== null) return;
+    setTotpLoading(true);
+    fetch("/api/account/totp")
+      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+      .then((data: { enabled: boolean }) => setTotpEnabled(!!data.enabled))
+      .catch(() => setTotpEnabled(false))
+      .finally(() => setTotpLoading(false));
+  }, [tab, session?.user, totpEnabled]);
+
+  useEffect(() => {
+    if (tab !== "Security" || !session?.user || hasPassword !== null) return;
+    setPasswordLoading(true);
+    fetch("/api/account/password")
+      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+      .then((data: { hasPassword: boolean }) => setHasPassword(!!data.hasPassword))
+      .catch(() => setHasPassword(false))
+      .finally(() => setPasswordLoading(false));
+  }, [tab, session?.user, hasPassword]);
+
+  function closePasswordFlow() {
+    setPasswordStep("closed");
+    setOldPasswordInput("");
+    setNewPasswordInput("");
+    setPasswordCode("");
+    setPasswordError(null);
+    setPasswordDone(false);
+  }
+
+  async function submitPasswordForm() {
+    setPasswordBusy(true);
+    setPasswordError(null);
+    try {
+      const res = await fetch("/api/account/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          oldPassword: hasPassword ? oldPasswordInput : undefined,
+          newPassword: newPasswordInput,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Couldn't send the verification code");
+      setPasswordStep("code");
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : "Couldn't send the verification code");
+    } finally {
+      setPasswordBusy(false);
+    }
+  }
+
+  async function confirmPasswordCode() {
+    setPasswordBusy(true);
+    setPasswordError(null);
+    try {
+      const res = await fetch("/api/account/password", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: passwordCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Couldn't confirm the code");
+      setHasPassword(true);
+      setPasswordDone(true);
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : "Couldn't confirm the code");
+    } finally {
+      setPasswordBusy(false);
+    }
+  }
+
+  function closeTotpFlow() {
+    setTotpStep("closed");
+    setTotpSecret(null);
+    setTotpUri(null);
+    setTotpCode("");
+    setTotpDisableCode("");
+    setTotpError(null);
+    setTotpCopied(false);
+  }
+
+  async function startTotpSetup() {
+    setTotpBusy(true);
+    setTotpError(null);
+    try {
+      const res = await fetch("/api/account/totp", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Couldn't start 2FA setup -- try again");
+      setTotpSecret(data.secret);
+      setTotpUri(data.otpauthUri);
+      setTotpStep("link");
+    } catch (err) {
+      setTotpError(err instanceof Error ? err.message : "Couldn't start 2FA setup -- try again");
+    } finally {
+      setTotpBusy(false);
+    }
+  }
+
+  function goToTotpVerifyStep() {
+    setTotpError(null);
+    setTotpStep("verify");
+  }
+
+  function backToTotpLinkStep() {
+    setTotpError(null);
+    setTotpCode("");
+    setTotpStep("link");
+  }
+
+  async function confirmTotpSetup() {
+    if (totpCode.trim().length !== 6) return;
+    setTotpBusy(true);
+    setTotpError(null);
+    try {
+      const res = await fetch("/api/account/totp", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: totpCode.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "That code is incorrect or has expired");
+      setTotpEnabled(true);
+      closeTotpFlow();
+    } catch (err) {
+      setTotpError(err instanceof Error ? err.message : "That code is incorrect or has expired");
+    } finally {
+      setTotpBusy(false);
+    }
+  }
+
+  async function disableTotp() {
+    if (totpDisableCode.trim().length !== 6) return;
+    setTotpBusy(true);
+    setTotpError(null);
+    try {
+      const res = await fetch("/api/account/totp", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: totpDisableCode.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "That code is incorrect");
+      setTotpEnabled(false);
+      closeTotpFlow();
+    } catch (err) {
+      setTotpError(err instanceof Error ? err.message : "That code is incorrect");
+    } finally {
+      setTotpBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    if (tab !== "Overview" || !session?.user || accountOverview !== null) return;
+    setAccountOverviewLoading(true);
+    fetch("/api/account/overview")
+      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+      .then((data: AccountOverview) => setAccountOverview(data))
+      .catch(() => {})
+      .finally(() => setAccountOverviewLoading(false));
+  }, [tab, session?.user, accountOverview]);
 
   useEffect(() => {
     if (tab !== "Billing" || !session?.user || billing !== null) return;
@@ -777,15 +1238,30 @@ export default function SettingsPanel({
   const firstMessageAt = timestamps.length ? Math.min(...timestamps) : null;
   const lastMessageAt = timestamps.length ? Math.max(...timestamps) : null;
   const activeDayCount = new Set(timestamps.map((t) => new Date(t).toDateString())).size;
+  const imagesGenerated = allMessages.filter((m) => m.imageUrl).length;
+  const videosGenerated = allMessages.filter((m) => m.videoUrl).length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-0 sm:p-10" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-0 sm:items-center sm:p-6" onClick={onClose}>
       <div
-        className="card flex h-full max-h-full w-full max-w-3xl overflow-hidden rounded-none sm:h-auto sm:rounded-2xl"
+        className="card flex h-full max-h-full w-full flex-col overflow-hidden rounded-none sm:h-[92vh] sm:max-h-[92vh] sm:w-[96vw] sm:max-w-[1600px] sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
+        <div className="relative hidden shrink-0 px-5 pb-3 pt-4 sm:block">
+          <span className="pointer-events-none absolute left-8 top-1/2 -translate-y-1/2 text-muted">
+            {SearchIcon}
+          </span>
+          <input
+            value={tabSearch}
+            onChange={(e) => setTabSearch(e.target.value)}
+            placeholder="Search settings"
+            className="w-full max-w-xs rounded-full border border-border bg-surface-2 py-1.5 pl-10 pr-3 text-sm outline-none transition-colors focus:border-foreground/40 focus:bg-background"
+          />
+        </div>
+
+        <div className="flex min-h-0 flex-1">
         <div
-          className={`no-scrollbar w-full overflow-y-auto p-3 sm:block sm:w-48 sm:shrink-0 sm:border-r sm:border-border ${
+          className={`no-scrollbar w-full overflow-y-auto p-3 sm:block sm:w-48 sm:shrink-0 ${
             mobileShowContent ? "hidden" : "block"
           }`}
         >
@@ -820,20 +1296,6 @@ export default function SettingsPanel({
             </button>
           )}
 
-          <div className="relative mb-3 hidden sm:block">
-            <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted">
-              {SearchIcon}
-            </span>
-            <input
-              value={tabSearch}
-              onChange={(e) => setTabSearch(e.target.value)}
-              placeholder="Search"
-              className="w-full rounded-lg border border-border bg-background py-1.5 pl-8 pr-2 text-sm outline-none focus:border-foreground/40"
-            />
-          </div>
-          <div className="mb-1 px-1 sm:block hidden">
-            <span className="text-xs text-muted">Settings</span>
-          </div>
           <ul className="divide-y divide-border/60 rounded-2xl bg-surface-2 p-1 sm:space-y-0.5 sm:divide-y-0 sm:rounded-none sm:bg-transparent sm:p-0">
             {visibleTabsGroup1.map((t) => (
               <li key={t}>
@@ -843,12 +1305,10 @@ export default function SettingsPanel({
                     tab === t ? "bg-surface-2 sm:bg-surface-2" : "hover:bg-surface sm:hover:bg-surface-2"
                   }`}
                 >
-                  <span className="text-muted">{TAB_ICONS[t]}</span>
+                  <span className="text-foreground">{TAB_ICONS[t]}</span>
                   <span className="min-w-0 flex-1">
                     <span
-                      className={`block text-base sm:text-sm ${
-                        tab === t ? "font-medium text-foreground" : "font-medium text-foreground sm:font-normal sm:text-muted"
-                      }`}
+                      className="block text-base font-medium text-foreground sm:text-sm"
                     >
                       {t}
                     </span>
@@ -871,13 +1331,9 @@ export default function SettingsPanel({
                         tab === t ? "bg-surface-2" : "hover:bg-surface sm:hover:bg-surface-2"
                       }`}
                     >
-                      <span className="text-muted">{TAB_ICONS[t]}</span>
+                      <span className="text-foreground">{TAB_ICONS[t]}</span>
                       <span className="min-w-0 flex-1">
-                        <span
-                          className={`block text-base sm:text-sm ${
-                            tab === t ? "font-medium text-foreground" : "font-medium text-foreground sm:font-normal sm:text-muted"
-                          }`}
-                        >
+                        <span className="block text-base font-medium text-foreground sm:text-sm">
                           {t}
                         </span>
                         <span className="block text-sm text-muted sm:hidden">{TAB_DESCRIPTIONS[t]}</span>
@@ -889,14 +1345,6 @@ export default function SettingsPanel({
             </>
           )}
 
-          {session?.user && (
-            <button
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              className="mt-4 w-full rounded-2xl bg-surface-2 px-3 py-3 text-center text-base font-medium text-red-500 transition-colors hover:bg-surface sm:hidden"
-            >
-              Sign out
-            </button>
-          )}
         </div>
 
         <div
@@ -911,29 +1359,182 @@ export default function SettingsPanel({
             {ChevronLeftIcon} Settings
           </button>
 
+          {tab === "Overview" && (
+            <div>
+              {accountOverviewLoading && !accountOverview ? (
+                <p className="py-6 text-center text-xs font-light text-foreground">Loading…</p>
+              ) : (
+                <>
+                  <p className="mb-2 px-1 text-base font-semibold text-foreground">Account Info</p>
+                  <div className="rounded-2xl border border-border p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="relative shrink-0">
+                        {session?.user?.image ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={session.user.image} alt="" className="h-14 w-14 rounded-full" />
+                        ) : (
+                          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-surface-2 text-lg font-medium">
+                            {session?.user?.name?.[0] ?? "?"}
+                          </div>
+                        )}
+                        <span
+                          aria-hidden
+                          className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-border bg-surface text-muted"
+                        >
+                          <EditIcon size={8} />
+                        </span>
+                      </div>
+                      <div>
+                        {editingOverviewName ? (
+                          <input
+                            autoFocus
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                            onBlur={() => {
+                              saveProfile();
+                              setEditingOverviewName(false);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                            }}
+                            className="rounded-lg border border-border bg-background px-2 py-1 text-sm font-semibold outline-none focus:border-foreground/40"
+                          />
+                        ) : (
+                          <button
+                            onClick={() => setEditingOverviewName(true)}
+                            className="flex items-center gap-2 text-sm font-semibold"
+                          >
+                            <span>{fullName || session?.user?.name || "Add your name"}</span>
+                            <span className="text-muted">
+                              <EditIcon size={16} />
+                            </span>
+                          </button>
+                        )}
+                        {session?.user?.email && (
+                          <p className="mt-0.5 font-mono text-xs text-muted">{maskEmail(session.user.email)}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-6 flex flex-wrap gap-x-10 gap-y-4 border-t border-border pt-5">
+                      <div>
+                        <p className="mb-1 text-xs text-muted">UID</p>
+                        {accountOverview?.uid && (
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(accountOverview.uid).then(() => {
+                                setUidCopied(true);
+                                setTimeout(() => setUidCopied(false), 1500);
+                              });
+                            }}
+                            className="flex items-center gap-1.5 text-sm font-semibold transition-colors hover:text-muted"
+                          >
+                            <span className="font-mono">{accountOverview.uid}</span>
+                            {CopyIcon}
+                            {uidCopied && <span className="text-xs font-normal text-muted">Copied</span>}
+                          </button>
+                        )}
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs text-muted">Last login time:</p>
+                        <p className="text-sm font-semibold">
+                          <LoginTimeValue
+                            value={accountOverview?.lastSeenAt ? formatDateTime(accountOverview.lastSeenAt) : "—"}
+                          />
+                        </p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs text-muted">Member since</p>
+                        <p className="text-sm font-semibold">
+                          {accountOverview?.createdAt ? formatDate(accountOverview.createdAt) : "—"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 divide-y divide-border rounded-2xl border border-border">
+                    <OverviewRow
+                      label="Connected platforms"
+                      value={
+                        accountOverview?.platforms?.length
+                          ? accountOverview.platforms.map((p) => PLATFORM_LABELS[p] ?? p).join(", ")
+                          : "None yet"
+                      }
+                      hint="One Gmail can sign in from several phones/devices — they're still this same account, just more platforms connected."
+                    />
+                  </div>
+
+                  <p className="mb-2 mt-6 px-1 text-xs font-medium uppercase tracking-wide text-muted">Usage</p>
+                  <div className="divide-y divide-border rounded-2xl border border-border">
+                    <OverviewRow
+                      label="Tokens used"
+                      value={(accountOverview?.tokensUsed ?? 0).toLocaleString()}
+                      hint="Build tool usage only, for now"
+                    />
+                    <OverviewRow label="Messages sent" value={userMessages.length.toLocaleString()} />
+                    <OverviewRow
+                      label="Conversations deleted"
+                      value={(accountOverview?.deletedConversationsCount ?? 0).toLocaleString()}
+                    />
+                    <OverviewRow label="Images generated" value={imagesGenerated.toLocaleString()} />
+                    <OverviewRow label="Videos generated" value={videosGenerated.toLocaleString()} />
+                  </div>
+
+                  <p className="mb-2 mt-6 px-1 text-xs font-medium uppercase tracking-wide text-muted">Plan</p>
+                  <div className="rounded-2xl border border-border">
+                    <OverviewRow label="Free plan" value="" hint="Paid plans and billing history aren't available yet." />
+                  </div>
+
+                  <p className="mb-2 mt-6 px-1 text-xs font-medium uppercase tracking-wide text-muted">Quantara</p>
+                  <div className="rounded-2xl border border-border">
+                    <OverviewRow label="Available" value="" hint="Same account as the app — open it from Quantara in the sidebar." />
+                  </div>
+
+                  {session?.user && (
+                    <button
+                      onClick={() => signOut({ callbackUrl: "/login" })}
+                      className="mt-6 w-full rounded-2xl border border-border px-4 py-3 text-center text-sm font-medium text-red-500 transition-colors hover:bg-surface-2"
+                    >
+                      Sign out
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
           {tab === "General" && (
             <div>
               <h2 className="mb-4 text-base font-semibold">General</h2>
 
-              <div className="flex items-center justify-between gap-4 py-3 border-b border-border">
-                <h3 className="text-sm font-semibold">Appearance</h3>
-                <SegmentedControl
-                  value={theme}
-                  onChange={onThemeChange}
-                  options={[
-                    { value: "system" as Theme, icon: SystemIcon, ariaLabel: "System" },
-                    { value: "light" as Theme, icon: SunIcon, ariaLabel: "Light" },
-                    { value: "dark" as Theme, icon: MoonIcon, ariaLabel: "Dark" },
-                  ]}
+              <p className="mb-2 px-1 text-xs font-medium uppercase tracking-wide text-muted">Theme</p>
+              <div className="grid grid-cols-3 gap-3">
+                <ThemePreviewCard
+                  variant="split"
+                  label="System"
+                  icon={SystemIcon}
+                  selected={theme === "system"}
+                  onSelect={() => onThemeChange("system" as Theme)}
+                />
+                <ThemePreviewCard
+                  variant="light"
+                  label="Light"
+                  icon={SunIcon}
+                  selected={theme === "light"}
+                  onSelect={() => onThemeChange("light" as Theme)}
+                />
+                <ThemePreviewCard
+                  variant="dark"
+                  label="Dark"
+                  icon={MoonIcon}
+                  selected={theme === "dark"}
+                  onSelect={() => onThemeChange("dark" as Theme)}
                 />
               </div>
 
-              <div className="flex items-center justify-between gap-4 border-b border-border py-3">
-                <div>
-                  <h3 className="text-sm font-semibold">Contrast</h3>
-                  <p className="text-xs text-muted">How strongly borders and secondary text stand out.</p>
-                </div>
-                <div className="w-40 shrink-0">
+              <p className="mb-2 mt-6 px-1 text-xs font-medium uppercase tracking-wide text-muted">Appearance</p>
+              <div className="grid grid-cols-2 gap-3">
+                <SettingTile icon={ContrastIcon} label="Contrast">
                   <SettingsSelect
                     value={contrast}
                     onChange={onContrastChange}
@@ -943,15 +1544,9 @@ export default function SettingsPanel({
                       { value: "increased" as Contrast, label: "Increased" },
                     ]}
                   />
-                </div>
-              </div>
+                </SettingTile>
 
-              <div className="flex items-center justify-between gap-4 border-b border-border py-3">
-                <div>
-                  <h3 className="text-sm font-semibold">Text size</h3>
-                  <p className="text-xs text-muted">Adjust how big chat messages appear.</p>
-                </div>
-                <div className="w-40 shrink-0">
+                <SettingTile icon={TypeIcon} label="Text size">
                   <SettingsSelect
                     value={fontSize}
                     onChange={onFontSizeChange}
@@ -962,15 +1557,9 @@ export default function SettingsPanel({
                       { value: "xlarge" as ChatFontSize, label: "Extra large" },
                     ]}
                   />
-                </div>
-              </div>
+                </SettingTile>
 
-              <div className="flex items-center justify-between gap-4 border-b border-border py-3">
-                <div>
-                  <h3 className="text-sm font-semibold">Reply text color</h3>
-                  <p className="text-xs text-muted">&quot;Warm&quot; only changes anything in Dark mode.</p>
-                </div>
-                <div className="w-40 shrink-0">
+                <SettingTile icon={PaletteIcon} label="Reply text color">
                   <SettingsSelect
                     value={assistantColor}
                     onChange={onAssistantColorChange}
@@ -979,92 +1568,94 @@ export default function SettingsPanel({
                       { value: "warm" as AssistantColor, label: "Warm" },
                     ]}
                   />
-                </div>
-              </div>
+                </SettingTile>
 
-              <div className="flex items-center justify-between gap-4 border-b border-border py-3">
-                <h3 className="text-sm font-semibold">Chat font</h3>
-                <div className="w-48 shrink-0">
+                <SettingTile icon={LetterTextIcon} label="Chat font">
                   <SettingsSelect
                     value={chatFont}
                     onChange={onChatFontChange}
                     options={[
-                      { value: "plus_jakarta_sans" as ChatFont, label: "Plus Jakarta Sans" },
-                      { value: "manrope" as ChatFont, label: "Manrope" },
-                      { value: "system" as ChatFont, label: "System Default" },
+                      { value: "nova_light" as ChatFont, label: "Nova Light (Default)" },
+                      { value: "nova_regular" as ChatFont, label: "Nova Regular" },
                     ]}
                   />
-                </div>
+                </SettingTile>
+
+                <SettingTile icon={WavesIcon} label="Motion">
+                  <SegmentedControl
+                    value={reduceMotion}
+                    onChange={onReduceMotionChange}
+                    options={[
+                      { value: "system" as ReduceMotion, label: "System" },
+                      { value: "reduced" as ReduceMotion, label: "Reduced" },
+                    ]}
+                  />
+                </SettingTile>
               </div>
 
-              <div className="flex items-center justify-between gap-4 py-3">
-                <div>
-                  <h3 className="text-sm font-semibold">Motion</h3>
-                  <p className="text-xs text-muted">
-                    Reduce animation in streaming responses and other interface elements.
-                  </p>
-                </div>
-                <SegmentedControl
-                  value={reduceMotion}
-                  onChange={onReduceMotionChange}
-                  options={[
-                    { value: "system" as ReduceMotion, label: "System" },
-                    { value: "reduced" as ReduceMotion, label: "Reduced" },
-                  ]}
-                />
-              </div>
-
-              <div className="my-6 border-t border-border" />
-              <h2 className="mb-1 text-base font-semibold">All Notifications</h2>
-              <p className="mb-3 text-xs text-muted">
-                ChatGiZa will notify you of critical security alerts that need your attention, regardless of this
-                setting.
-              </p>
-              <div className="flex items-center justify-between gap-4 border-b border-border py-3">
-                <p className="text-sm font-medium">Allow notifications</p>
-                <Toggle checked={allNotificationsEnabled} onChange={onToggleAllNotifications} />
-              </div>
-
-              {allNotificationsEnabled && (
-                <>
-                  <h3 className="mb-1 mt-4 text-sm font-semibold">In-app notifications</h3>
-                  <div className="flex items-center justify-between gap-4 border-b border-border py-3">
+              <p className="mb-2 mt-6 px-1 text-xs font-medium uppercase tracking-wide text-muted">Notifications</p>
+              <div className="rounded-3xl border border-border shadow-sm">
+                <div className="flex items-center justify-between gap-4 px-4 py-4 transition-colors hover:bg-surface-2/40">
+                  <div className="flex items-center gap-3">
+                    <RowIcon>{BellIcon}</RowIcon>
                     <div>
-                      <p className="text-sm font-medium">Activity &amp; Tasks</p>
-                      <p className="text-xs text-muted">Get notified when ChatGiZa finishes a response.</p>
+                      <p className="text-sm font-medium">Allow notifications</p>
+                      <p className="mt-0.5 text-xs font-light text-muted">
+                        Critical security alerts are always sent, regardless of this setting.
+                      </p>
                     </div>
-                    <Toggle
-                      checked={notifyOnComplete}
-                      onChange={() => {
-                        if (
-                          !notifyOnComplete &&
-                          typeof Notification !== "undefined" &&
-                          Notification.permission === "default"
-                        ) {
-                          Notification.requestPermission();
-                        }
-                        onToggleNotifyOnComplete();
-                      }}
-                    />
                   </div>
-                  <div className="flex items-center justify-between gap-4 py-3">
-                    <p className="text-sm font-medium">Image generation</p>
-                    <Toggle
-                      checked={notifyImageGen}
-                      onChange={() => {
-                        if (
-                          !notifyImageGen &&
-                          typeof Notification !== "undefined" &&
-                          Notification.permission === "default"
-                        ) {
-                          Notification.requestPermission();
-                        }
-                        onToggleNotifyImageGen();
-                      }}
-                    />
+                  <Toggle checked={allNotificationsEnabled} onChange={onToggleAllNotifications} />
+                </div>
+
+                {allNotificationsEnabled && (
+                  <div className="divide-y divide-border border-t border-border">
+                    <div className="flex items-center justify-between gap-4 px-4 py-4 transition-colors hover:bg-surface-2/40">
+                      <div className="flex items-center gap-3">
+                        <RowIcon>{ActivityIcon}</RowIcon>
+                        <div>
+                          <p className="text-sm font-medium">Activity &amp; Tasks</p>
+                          <p className="mt-0.5 text-xs font-light text-muted">
+                            Get notified when ChatGiZa finishes a response.
+                          </p>
+                        </div>
+                      </div>
+                      <Toggle
+                        checked={notifyOnComplete}
+                        onChange={() => {
+                          if (
+                            !notifyOnComplete &&
+                            typeof Notification !== "undefined" &&
+                            Notification.permission === "default"
+                          ) {
+                            Notification.requestPermission();
+                          }
+                          onToggleNotifyOnComplete();
+                        }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-4 px-4 py-4 transition-colors hover:bg-surface-2/40">
+                      <div className="flex items-center gap-3">
+                        <RowIcon>{ImageGenIcon}</RowIcon>
+                        <p className="text-sm font-medium">Image generation</p>
+                      </div>
+                      <Toggle
+                        checked={notifyImageGen}
+                        onChange={() => {
+                          if (
+                            !notifyImageGen &&
+                            typeof Notification !== "undefined" &&
+                            Notification.permission === "default"
+                          ) {
+                            Notification.requestPermission();
+                          }
+                          onToggleNotifyImageGen();
+                        }}
+                      />
+                    </div>
                   </div>
-                </>
-              )}
+                )}
+              </div>
             </div>
           )}
 
@@ -1073,7 +1664,7 @@ export default function SettingsPanel({
               <div className="mb-3 flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-semibold">Memory</h3>
-                  <p className="text-xs text-muted">Facts ChatGiZa remembers about you across chats.</p>
+                  <p className="text-xs font-light text-foreground">Facts ChatGiZa remembers about you across chats.</p>
                 </div>
                 <Toggle checked={memoryEnabled} onChange={onToggleMemoryEnabled} />
               </div>
@@ -1103,7 +1694,7 @@ export default function SettingsPanel({
               </form>
 
               {memory.length === 0 ? (
-                <p className="py-6 text-center text-xs text-muted">Nothing saved yet.</p>
+                <p className="py-6 text-center text-xs font-light text-foreground">Nothing saved yet.</p>
               ) : (
                 <ul className="space-y-1.5">
                   {memory.map((fact, i) => (
@@ -1128,7 +1719,7 @@ export default function SettingsPanel({
                 <div className="mb-2 flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-semibold">Digital Twin</h3>
-                    <p className="text-xs text-muted">
+                    <p className="text-xs font-light text-foreground">
                       A synthesized profile of your voice, interests, and values — used by &quot;Digital Twin&quot; mode to
                       answer as you.
                     </p>
@@ -1142,7 +1733,7 @@ export default function SettingsPanel({
                   className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
                 />
                 <div className="mt-2 flex items-center justify-between">
-                  <span className="text-xs text-muted">
+                  <span className="text-xs font-light text-foreground">
                     {digitalTwinUpdatedAt > 0
                       ? `Last updated ${new Date(digitalTwinUpdatedAt).toLocaleDateString()}`
                       : "Never generated"}
@@ -1175,14 +1766,14 @@ export default function SettingsPanel({
                 control={<Toggle checked={privacyPrefs.improveModel} onChange={() => updatePrivacy({ improveModel: !privacyPrefs.improveModel })} />}
               />
               <div className="border-b border-border pb-3.5">
-                <button onClick={onOpenSupport} className="text-xs text-muted underline hover:text-foreground">
+                <button onClick={onOpenSupport} className="text-xs font-light text-foreground underline hover:text-foreground">
                   Go to Help Center
                 </button>
               </div>
 
               <div className="border-b border-border py-3.5">
                 <h4 className="mb-1 text-sm font-semibold">Voice</h4>
-                <p className="mb-2 text-xs text-muted">
+                <p className="mb-2 text-xs font-light text-foreground">
                   ChatGiZa doesn&apos;t have a live Voice Mode (real-time audio/video conversation) yet — these
                   controls will apply once it does.
                 </p>
@@ -1342,12 +1933,12 @@ export default function SettingsPanel({
                 {ChevronLeftIcon}
                 Shared links
               </button>
-              <p className="mb-3 text-xs text-muted">
+              <p className="mb-3 text-xs font-light text-foreground">
                 Conversations you&apos;ve shared. ChatGiZa shares by sending the transcript through your
                 device&apos;s share sheet or copying it to your clipboard — no public link is hosted.
               </p>
               {sharedConversations.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted">
+                <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs font-light text-foreground">
                   You haven&apos;t shared any chats yet.
                 </p>
               ) : (
@@ -1388,9 +1979,9 @@ export default function SettingsPanel({
                 {ChevronLeftIcon}
                 Archived chats
               </button>
-              <p className="mb-3 text-xs text-muted">Chats you&apos;ve archived out of Recents.</p>
+              <p className="mb-3 text-xs font-light text-foreground">Chats you&apos;ve archived out of Recents.</p>
               {archivedConversations.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted">
+                <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs font-light text-foreground">
                   No archived chats.
                 </p>
               ) : (
@@ -1429,15 +2020,255 @@ export default function SettingsPanel({
 
               <div className="border-b border-border py-3.5">
                 <p className="text-sm font-medium">Security keys &amp; passkeys</p>
-                <p className="mt-0.5 text-xs text-muted">See all the active security keys and passkeys.</p>
+                <p className="mt-0.5 text-xs font-light text-foreground">See all the active security keys and passkeys.</p>
                 <ComingSoonNote />
               </div>
 
               <Row
+                title="Password"
+                description={
+                  passwordLoading
+                    ? "Loading…"
+                    : hasPassword
+                      ? "Change the password used to sign in with email."
+                      : "Set a password so you can also sign in with email, not just Google."
+                }
+                border={passwordStep === "closed"}
+                control={
+                  <button
+                    onClick={() => {
+                      setPasswordError(null);
+                      setPasswordStep("form");
+                    }}
+                    disabled={passwordLoading}
+                    className="rounded-full border border-border px-4 py-1.5 text-xs hover:bg-surface-2 transition-colors disabled:opacity-50"
+                  >
+                    {hasPassword ? "Change" : "Set password"}
+                  </button>
+                }
+              />
+              {passwordStep === "form" && (
+                <div className="space-y-3 border-b border-border py-3.5">
+                  <p className="text-sm font-medium">{hasPassword ? "Change your password" : "Set a password"}</p>
+                  {hasPassword && (
+                    <input
+                      type="password"
+                      value={oldPasswordInput}
+                      onChange={(e) => setOldPasswordInput(e.target.value)}
+                      placeholder="Current password"
+                      autoFocus
+                      className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm"
+                    />
+                  )}
+                  <input
+                    type="password"
+                    value={newPasswordInput}
+                    onChange={(e) => setNewPasswordInput(e.target.value)}
+                    placeholder="New password (6-16 characters)"
+                    autoFocus={!hasPassword}
+                    className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm"
+                  />
+                  {passwordError && <p className="text-xs text-red-500">{passwordError}</p>}
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={closePasswordFlow}
+                      className="rounded-full border border-border px-4 py-2 text-xs hover:bg-surface-2 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={submitPasswordForm}
+                      disabled={
+                        passwordBusy ||
+                        newPasswordInput.length < 6 ||
+                        newPasswordInput.length > 16 ||
+                        (hasPassword ? oldPasswordInput.length === 0 : false)
+                      }
+                      className="rounded-full bg-[#0a84ff] px-4 py-2 text-xs font-medium text-white disabled:opacity-40"
+                    >
+                      {passwordBusy ? "Sending…" : "Send code"}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {passwordStep === "code" && !passwordDone && (
+                <div className="space-y-3 border-b border-border py-3.5">
+                  <p className="text-sm font-medium">Enter the 6-digit code</p>
+                  <p className="text-xs font-light text-foreground">Check your email for the verification code.</p>
+                  <input
+                    value={passwordCode}
+                    onChange={(e) => setPasswordCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    inputMode="numeric"
+                    maxLength={6}
+                    autoFocus
+                    className="w-32 rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm tracking-widest"
+                    placeholder="000000"
+                  />
+                  {passwordError && <p className="text-xs text-red-500">{passwordError}</p>}
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => setPasswordStep("form")}
+                      className="rounded-full border border-border px-4 py-2 text-xs hover:bg-surface-2 transition-colors"
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={confirmPasswordCode}
+                      disabled={passwordBusy || passwordCode.length !== 6}
+                      className="rounded-full bg-[#0a84ff] px-4 py-2 text-xs font-medium text-white disabled:opacity-40"
+                    >
+                      {passwordBusy ? "Confirming…" : "Confirm"}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {passwordStep === "code" && passwordDone && (
+                <div className="space-y-3 border-b border-border py-3.5">
+                  <p className="text-sm font-medium">Password updated</p>
+                  <p className="text-xs font-light text-foreground">
+                    You can now sign in with email using this password.
+                  </p>
+                  <button
+                    onClick={closePasswordFlow}
+                    className="rounded-full border border-border px-4 py-2 text-xs hover:bg-surface-2 transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
+              )}
+
+              <Row
                 title="Authenticator app"
                 description="Use one-time codes from an authenticator app."
-                control={<Toggle checked={false} disabled onChange={() => {}} />}
+                border={totpStep === "closed"}
+                control={
+                  <Toggle
+                    checked={!!totpEnabled}
+                    disabled={totpLoading || totpBusy}
+                    onChange={() => {
+                      if (totpEnabled) {
+                        setTotpError(null);
+                        setTotpDisableCode("");
+                        setTotpStep("disable");
+                      } else {
+                        startTotpSetup();
+                      }
+                    }}
+                  />
+                }
               />
+              {totpStep === "closed" && totpError && (
+                <p className="border-b border-border pb-3 text-xs text-red-500">{totpError}</p>
+              )}
+              {totpStep === "link" && totpSecret && (
+                <div className="space-y-3 border-b border-border py-3.5">
+                  <p className="text-sm font-medium">Link an authenticator app</p>
+                  <p className="text-xs font-light text-foreground">
+                    Open your authenticator app (Google Authenticator, Authy, etc.) and add a new entry using this key.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 truncate rounded-lg border border-border bg-surface-2 px-3 py-2 text-xs">
+                      {totpSecret}
+                    </code>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(totpSecret).then(() => {
+                          setTotpCopied(true);
+                          setTimeout(() => setTotpCopied(false), 2000);
+                        });
+                      }}
+                      className="shrink-0 rounded-full border border-border px-3 py-1.5 text-xs hover:bg-surface-2 transition-colors"
+                    >
+                      {totpCopied ? "Copied" : "Copy"}
+                    </button>
+                  </div>
+                  {totpUri && (
+                    <a
+                      href={totpUri}
+                      className="block truncate text-xs font-light text-foreground underline decoration-dotted"
+                      title={totpUri}
+                    >
+                      Open in authenticator app
+                    </a>
+                  )}
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={closeTotpFlow}
+                      className="rounded-full border border-border px-4 py-2 text-xs hover:bg-surface-2 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={goToTotpVerifyStep}
+                      className="rounded-full bg-[#0a84ff] px-4 py-2 text-xs font-medium text-white"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+              {totpStep === "verify" && (
+                <div className="space-y-3 border-b border-border py-3.5">
+                  <p className="text-sm font-medium">Enter the 6-digit code</p>
+                  <p className="text-xs font-light text-foreground">Enter the code your authenticator app is now showing for ChatGiZa.</p>
+                  <input
+                    value={totpCode}
+                    onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    inputMode="numeric"
+                    maxLength={6}
+                    autoFocus
+                    className="w-32 rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm tracking-widest"
+                    placeholder="000000"
+                  />
+                  {totpError && <p className="text-xs text-red-500">{totpError}</p>}
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={backToTotpLinkStep}
+                      className="rounded-full border border-border px-4 py-2 text-xs hover:bg-surface-2 transition-colors"
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={confirmTotpSetup}
+                      disabled={totpBusy || totpCode.length !== 6}
+                      className="rounded-full bg-[#0a84ff] px-4 py-2 text-xs font-medium text-white disabled:opacity-40"
+                    >
+                      {totpBusy ? "Verifying…" : "Enable 2FA"}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {totpStep === "disable" && (
+                <div className="space-y-3 border-b border-border py-3.5">
+                  <p className="text-sm font-medium">Turn off authenticator app 2FA</p>
+                  <p className="text-xs font-light text-foreground">Enter your current 6-digit code to confirm.</p>
+                  <input
+                    value={totpDisableCode}
+                    onChange={(e) => setTotpDisableCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    inputMode="numeric"
+                    maxLength={6}
+                    autoFocus
+                    className="w-32 rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm tracking-widest"
+                    placeholder="000000"
+                  />
+                  {totpError && <p className="text-xs text-red-500">{totpError}</p>}
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={closeTotpFlow}
+                      className="rounded-full border border-border px-4 py-2 text-xs hover:bg-surface-2 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={disableTotp}
+                      disabled={totpBusy || totpDisableCode.length !== 6}
+                      className="rounded-full bg-red-600 px-4 py-2 text-xs font-medium text-white disabled:opacity-40"
+                    >
+                      {totpBusy ? "Turning off…" : "Turn off"}
+                    </button>
+                  </div>
+                </div>
+              )}
               <Row
                 title="Text message"
                 description="Get 6-digit verification codes by SMS or WhatsApp."
@@ -1445,14 +2276,14 @@ export default function SettingsPanel({
               />
 
               <h3 className="mb-1 mt-5 text-base font-semibold">Sessions</h3>
-              <p className="mb-3 text-xs text-muted">
+              <p className="mb-3 text-xs font-light text-foreground">
                 Devices signed into your account. Log out any you don&apos;t recognize.
               </p>
 
-              {sessionsLoading && <p className="py-4 text-center text-xs text-muted">Loading…</p>}
+              {sessionsLoading && <p className="py-4 text-center text-xs font-light text-foreground">Loading…</p>}
               {sessionsError && <p className="py-2 text-xs text-red-500">{sessionsError}</p>}
               {!sessionsLoading && sessions && sessions.length === 0 && (
-                <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted">
+                <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs font-light text-foreground">
                   No recorded sessions yet — this only tracks sign-ins from now on.
                 </p>
               )}
@@ -1465,9 +2296,9 @@ export default function SettingsPanel({
                           <p className="truncate text-sm font-medium">
                             {s.device} · {s.os}
                           </p>
-                          <p className="text-xs text-muted">{formatDateTime(s.signedInAt)}</p>
+                          <p className="text-xs font-light text-foreground">{formatDateTime(s.signedInAt)}</p>
                           {(s.location || s.ip) && (
-                            <p className="text-xs text-muted">
+                            <p className="text-xs font-light text-foreground">
                               {s.location ? s.location : null}
                               {s.location && s.ip ? " · " : null}
                               {s.ip ? s.ip : null}
@@ -1496,7 +2327,7 @@ export default function SettingsPanel({
 
               <div className="mt-5 border-t border-border pt-4">
                 <h4 className="mb-1 text-sm font-semibold">Log out of all sessions</h4>
-                <p className="mb-2 text-xs text-muted">
+                <p className="mb-2 text-xs font-light text-foreground">
                   Log out of all active sessions across all devices, including your current session.
                 </p>
                 {confirmLogoutAll ? (
@@ -1528,275 +2359,269 @@ export default function SettingsPanel({
 
           {tab === "Account" && (
             <div>
-              <h2 className="mb-4 text-base font-semibold">Account</h2>
-
-              {status === "loading" ? (
-                <p className="mb-4 text-xs text-muted">Loading…</p>
-              ) : session?.user ? (
-                <div className="mb-5 flex items-center gap-3 rounded-xl border border-border p-3">
-                  {session.user.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={session.user.image} alt="" className="h-10 w-10 rounded-full" />
-                  ) : (
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-sm">
-                      {session.user.name?.[0] ?? "?"}
-                    </span>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{session.user.name}</p>
-                    <p className="truncate text-xs text-muted">{session.user.email}</p>
-                  </div>
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-base font-semibold">Account</h2>
+                {status !== "loading" && !session?.user && (
                   <button
-                    onClick={() => signOut({ callbackUrl: "/login" })}
-                    className="shrink-0 rounded-full border border-border px-3 py-1.5 text-xs hover:bg-surface-2 transition-colors"
+                    onClick={() => signIn("google", undefined, { prompt: "select_account" })}
+                    className="rounded-full border border-border px-3 py-1.5 text-xs hover:bg-surface-2 transition-colors"
                   >
-                    Sign out
+                    Sign in with Google
                   </button>
+                )}
+              </div>
+
+              <p className="mb-2 px-1 text-xs font-medium uppercase tracking-wide text-muted">Personal info</p>
+              <div className="divide-y divide-border rounded-2xl border border-border p-4">
+                <div className="pb-3.5">
+                  <label className="mb-1.5 block text-xs font-light text-muted">Full name</label>
+                  <input
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    onBlur={saveProfile}
+                    placeholder="Full name"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+                  />
                 </div>
-              ) : (
-                <button
-                  onClick={() => signIn("google", undefined, { prompt: "select_account" })}
-                  className="mb-5 rounded-full border border-border px-4 py-2 text-xs hover:bg-surface-2 transition-colors"
-                >
-                  Sign in with Google
-                </button>
-              )}
 
-              <label className="mb-1 block text-xs text-muted">Full name</label>
-              <input
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                onBlur={saveProfile}
-                placeholder="Full name"
-                className="mb-4 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
-              />
+                <div className="py-3.5">
+                  <label className="mb-1.5 block text-xs font-light text-muted">Date of birth</label>
+                  <input
+                    type="date"
+                    value={birthDate}
+                    onChange={(e) => setBirthDate(e.target.value)}
+                    onBlur={saveProfile}
+                    max={getMaxBirthDate()}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+                  />
+                  {!birthDateCheck.ok && <p className="mt-1 text-xs text-red-500">{birthDateCheck.reason}</p>}
+                </div>
 
-              <label className="mb-1 block text-xs text-muted">Date of birth</label>
-              <div className="mb-4">
-                <input
-                  type="date"
-                  value={birthDate}
-                  onChange={(e) => setBirthDate(e.target.value)}
-                  onBlur={saveProfile}
-                  max={getMaxBirthDate()}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
-                />
-                {!birthDateCheck.ok && <p className="mt-1 text-xs text-red-500">{birthDateCheck.reason}</p>}
-              </div>
-
-              <label className="mb-1 block text-xs text-muted">Country</label>
-              <div className="mb-4">
-                <SettingsSelect
-                  value={country}
-                  onChange={(c) => {
-                    setCountry(c);
-                    if (birthDateCheck.ok) onProfileChange({ nickname, about, role, fullName, birthDate, country: c, link });
-                  }}
-                  options={[
-                    { value: "", label: "Select…" },
-                    ...COUNTRIES.map((c) => ({ value: c, label: c })),
-                  ]}
-                />
-              </div>
-
-              <label className="mb-1 block text-xs text-muted">What should GiZa call you?</label>
-              <input
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                onBlur={saveProfile}
-                placeholder="Nickname"
-                className="mb-4 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
-              />
-
-              <label className="mb-1 block text-xs text-muted">What best describes your work?</label>
-              <div className="mb-4">
-                <SettingsSelect
-                  value={role}
-                  onChange={(v) => {
-                    setRole(v);
-                    if (birthDateCheck.ok) onProfileChange({ nickname, about, role: v, fullName, birthDate, country, link });
-                  }}
-                  options={[
-                    { value: "", label: "Select…" },
-                    { value: "Student", label: "Student" },
-                    { value: "Software / Engineering", label: "Software / Engineering" },
-                    { value: "Business / Management", label: "Business / Management" },
-                    { value: "Marketing / Sales", label: "Marketing / Sales" },
-                    { value: "Design / Creative", label: "Design / Creative" },
-                    { value: "Education", label: "Education" },
-                    { value: "Healthcare", label: "Healthcare" },
-                    { value: "Finance", label: "Finance" },
-                    { value: "Other", label: "Other" },
-                  ]}
-                />
-              </div>
-
-              <label className="mb-1 block text-xs text-muted">Link (shown on your ChatGiZa Media profile)</label>
-              <input
-                value={link}
-                onChange={(e) => setLink(e.target.value)}
-                onBlur={saveProfile}
-                placeholder="yoursite.com"
-                className="mb-4 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
-              />
-
-              <h3 className="mb-1 text-sm font-semibold">Instructions for GiZa</h3>
-              <p className="mb-3 text-xs text-muted">GiZa will keep these in mind across every conversation.</p>
-              <textarea
-                value={about}
-                onChange={(e) => setAbout(e.target.value)}
-                onBlur={saveProfile}
-                rows={4}
-                placeholder="e.g. I run a bakery called Sunrise Bread and prefer short, direct answers."
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
-              />
-
-              <div className="my-6 border-t border-border" />
-              <h2 className="mb-4 text-base font-semibold">Voice</h2>
-
-              <div className="flex items-center justify-between gap-4 py-2">
-                <h3 className="text-sm font-semibold">Voice language</h3>
-                <div className="w-40 shrink-0">
+                <div className="py-3.5">
+                  <label className="mb-1.5 block text-xs font-light text-muted">Country</label>
                   <SettingsSelect
-                    value={voiceLang}
-                    onChange={(lang) => {
-                      setVoiceLang(lang);
-                      setStoredVoiceLang(lang);
+                    value={country}
+                    onChange={(c) => {
+                      setCountry(c);
+                      if (birthDateCheck.ok) onProfileChange({ nickname, about, role, fullName, birthDate, country: c, link });
                     }}
                     options={[
-                      { value: "", label: "Auto Detect" },
-                      ...voiceLanguages.map((lang) => ({ value: lang, label: lang })),
+                      { value: "", label: "Select…" },
+                      ...COUNTRIES.map((c) => ({ value: c, label: c })),
                     ]}
+                  />
+                </div>
+
+                <div className="py-3.5">
+                  <label className="mb-1.5 block text-xs font-light text-muted">What should GiZa call you?</label>
+                  <input
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value)}
+                    onBlur={saveProfile}
+                    placeholder="Nickname"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+                  />
+                </div>
+
+                <div className="py-3.5">
+                  <label className="mb-1.5 block text-xs font-light text-muted">What best describes your work?</label>
+                  <SettingsSelect
+                    value={role}
+                    onChange={(v) => {
+                      setRole(v);
+                      if (birthDateCheck.ok) onProfileChange({ nickname, about, role: v, fullName, birthDate, country, link });
+                    }}
+                    options={[
+                      { value: "", label: "Select…" },
+                      { value: "Student", label: "Student" },
+                      { value: "Software / Engineering", label: "Software / Engineering" },
+                      { value: "Business / Management", label: "Business / Management" },
+                      { value: "Marketing / Sales", label: "Marketing / Sales" },
+                      { value: "Design / Creative", label: "Design / Creative" },
+                      { value: "Education", label: "Education" },
+                      { value: "Healthcare", label: "Healthcare" },
+                      { value: "Finance", label: "Finance" },
+                      { value: "Other", label: "Other" },
+                    ]}
+                  />
+                </div>
+
+                <div className="pt-3.5">
+                  <label className="mb-1.5 block text-xs font-light text-muted">Link (shown on your Quantara profile)</label>
+                  <input
+                    value={link}
+                    onChange={(e) => setLink(e.target.value)}
+                    onBlur={saveProfile}
+                    placeholder="yoursite.com"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-between gap-4 border-t border-border py-3">
-                <div>
-                  <h3 className="text-sm font-semibold">Premium Voice</h3>
-                  <p className="text-xs text-muted">Real AI-generated speech instead of your browser&apos;s built-in voice.</p>
-                </div>
-                <Toggle
-                  checked={premiumVoice}
-                  onChange={() => {
-                    const next = !premiumVoice;
-                    setPremiumVoice(next);
-                    setPremiumVoiceEnabled(next);
-                  }}
+              <p className="mb-2 mt-6 px-1 text-xs font-medium uppercase tracking-wide text-muted">Instructions for GiZa</p>
+              <div className="rounded-2xl border border-border p-4">
+                <p className="mb-3 text-xs font-light text-foreground">GiZa will keep these in mind across every conversation.</p>
+                <textarea
+                  value={about}
+                  onChange={(e) => setAbout(e.target.value)}
+                  onBlur={saveProfile}
+                  rows={4}
+                  placeholder="e.g. I run a bakery called Sunrise Bread and prefer short, direct answers."
+                  className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
                 />
               </div>
 
-              {premiumVoice && (
-                <div className="flex items-center justify-between gap-4 border-t border-border py-3">
-                  <h3 className="text-sm font-semibold">Premium voice</h3>
+              <p className="mb-2 mt-6 px-1 text-xs font-medium uppercase tracking-wide text-muted">Voice</p>
+              <div className="divide-y divide-border rounded-2xl border border-border">
+                <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+                  <h3 className="text-sm font-medium">Voice language</h3>
                   <div className="w-40 shrink-0">
                     <SettingsSelect
-                      value={premiumVoiceName}
-                      onChange={(name) => {
-                        setPremiumVoiceName(name);
-                        setStoredPremiumVoiceName(name);
+                      value={voiceLang}
+                      onChange={(lang) => {
+                        setVoiceLang(lang);
+                        setStoredVoiceLang(lang);
                       }}
-                      options={PREMIUM_VOICE_NAMES.map((name) => ({
-                        value: name,
-                        label: name.charAt(0).toUpperCase() + name.slice(1),
-                      }))}
+                      options={[
+                        { value: "", label: "Auto Detect" },
+                        ...voiceLanguages.map((lang) => ({ value: lang, label: lang })),
+                      ]}
                     />
                   </div>
                 </div>
-              )}
 
-              <div className="flex items-center justify-between gap-4 border-t border-border py-3">
-                <h3 className="text-sm font-semibold">Voice</h3>
-                <div className="w-52 shrink-0">
-                  {filteredVoices.length === 0 ? (
-                    <p className="text-right text-xs text-muted">No voices found</p>
-                  ) : (
-                    <SettingsSelect
-                      value={voiceURI}
-                      onChange={(uri) => {
-                        setVoiceURI(uri);
-                        setStoredVoiceURI(uri);
-                      }}
-                      options={[
-                        { value: "", label: "Browser default" },
-                        ...filteredVoices.map((v) => ({ value: v.voiceURI, label: v.name })),
-                      ]}
-                    />
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 border-t border-border py-3">
-                <h3 className="text-sm font-semibold">Speed</h3>
-                <div className="w-40 shrink-0">
-                  <SettingsSelect
-                    value={voiceSpeed}
-                    onChange={(speed) => {
-                      setVoiceSpeed(speed);
-                      setStoredVoiceSpeed(speed);
+                <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+                  <div>
+                    <h3 className="text-sm font-medium">Premium Voice</h3>
+                    <p className="mt-0.5 text-xs font-light text-muted">Real AI-generated speech instead of your browser&apos;s built-in voice.</p>
+                  </div>
+                  <Toggle
+                    checked={premiumVoice}
+                    onChange={() => {
+                      const next = !premiumVoice;
+                      setPremiumVoice(next);
+                      setPremiumVoiceEnabled(next);
                     }}
-                    options={[
-                      { value: "slow" as VoiceSpeed, label: "Slow" },
-                      { value: "normal" as VoiceSpeed, label: "Normal" },
-                      { value: "fast" as VoiceSpeed, label: "Fast" },
-                    ]}
                   />
                 </div>
+
+                {premiumVoice && (
+                  <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+                    <h3 className="text-sm font-medium">Premium voice</h3>
+                    <div className="w-40 shrink-0">
+                      <SettingsSelect
+                        value={premiumVoiceName}
+                        onChange={(name) => {
+                          setPremiumVoiceName(name);
+                          setStoredPremiumVoiceName(name);
+                        }}
+                        options={PREMIUM_VOICE_NAMES.map((name) => ({
+                          value: name,
+                          label: name.charAt(0).toUpperCase() + name.slice(1),
+                        }))}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+                  <h3 className="text-sm font-medium">Voice</h3>
+                  <div className="w-52 shrink-0">
+                    {filteredVoices.length === 0 ? (
+                      <p className="text-right text-xs font-light text-foreground">No voices found</p>
+                    ) : (
+                      <SettingsSelect
+                        value={voiceURI}
+                        onChange={(uri) => {
+                          setVoiceURI(uri);
+                          setStoredVoiceURI(uri);
+                        }}
+                        options={[
+                          { value: "", label: "Browser default" },
+                          ...filteredVoices.map((v) => ({ value: v.voiceURI, label: v.name })),
+                        ]}
+                      />
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+                  <h3 className="text-sm font-medium">Speed</h3>
+                  <div className="w-40 shrink-0">
+                    <SettingsSelect
+                      value={voiceSpeed}
+                      onChange={(speed) => {
+                        setVoiceSpeed(speed);
+                        setStoredVoiceSpeed(speed);
+                      }}
+                      options={[
+                        { value: "slow" as VoiceSpeed, label: "Slow" },
+                        { value: "normal" as VoiceSpeed, label: "Normal" },
+                        { value: "fast" as VoiceSpeed, label: "Fast" },
+                      ]}
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="my-6 border-t border-border" />
-              <h2 className="mb-1 text-base font-semibold">GiZa Builder Profile</h2>
-              <p className="mb-2 text-xs text-muted">
-                Personalize your builder profile to connect with users of your GiZas. These settings apply to
-                publicly shared GiZas.
-              </p>
-              <ComingSoonNote text="ChatGiZa doesn't have a public GiZa builder/marketplace yet — coming soon." />
+              <p className="mb-2 mt-6 px-1 text-xs font-medium uppercase tracking-wide text-muted">GiZa Builder Profile</p>
+              <div className="rounded-2xl border border-border p-4">
+                <p className="mb-2 text-xs font-light text-foreground">
+                  Personalize your builder profile to connect with users of your GiZas. These settings apply to
+                  publicly shared GiZas.
+                </p>
+                <ComingSoonNote text="ChatGiZa doesn't have a public GiZa builder/marketplace yet — coming soon." />
+              </div>
 
-              <div className="my-6 border-t border-border" />
-              <Row
-                title="Receive feedback emails"
-                description="Occasional emails asking how ChatGiZa is working for you."
-                border={false}
-                control={<Toggle checked={feedbackEmailsOptIn} onChange={onToggleFeedbackEmailsOptIn} />}
-              />
+              <p className="mb-2 mt-6 px-1 text-xs font-medium uppercase tracking-wide text-muted">Preferences</p>
+              <div className="rounded-2xl border border-border">
+                <Row
+                  title="Receive feedback emails"
+                  description="Occasional emails asking how ChatGiZa is working for you."
+                  border={false}
+                  control={<Toggle checked={feedbackEmailsOptIn} onChange={onToggleFeedbackEmailsOptIn} />}
+                />
+              </div>
 
-              <div className="my-6 border-t border-border" />
-              <h3 className="mb-1 text-sm font-semibold text-[#b3413e]">Delete account</h3>
-              <p className="mb-2 text-xs text-muted">
-                Permanently deletes your ChatGiZa account data. Chat history stored only in this browser is not
-                affected until you also clear it.
-              </p>
-              {confirmDeleteAccount ? (
-                <div className="flex gap-2">
+              <p className="mb-2 mt-6 px-1 text-xs font-medium uppercase tracking-wide text-[#b3413e]">Danger zone</p>
+              <div className="rounded-2xl border border-[#b3413e]/30 p-4">
+                <h3 className="mb-1 text-sm font-semibold text-[#b3413e]">Delete account</h3>
+                <p className="mb-2 text-xs font-light text-foreground">
+                  Permanently deletes your ChatGiZa account data. Chat history stored only in this browser is not
+                  affected until you also clear it.
+                </p>
+                {confirmDeleteAccount ? (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setConfirmDeleteAccount(false)}
+                      className="rounded-full border border-border px-4 py-1.5 text-sm hover:bg-surface-2 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={onDeleteAccount}
+                      className="rounded-full border border-[#b3413e] px-4 py-1.5 text-sm font-medium text-[#b3413e] hover:bg-[#b3413e]/10 transition-colors"
+                    >
+                      Confirm delete
+                    </button>
+                  </div>
+                ) : (
                   <button
-                    onClick={() => setConfirmDeleteAccount(false)}
-                    className="rounded-full border border-border px-4 py-1.5 text-sm hover:bg-surface-2 transition-colors"
+                    onClick={() => setConfirmDeleteAccount(true)}
+                    disabled={!session?.user}
+                    className="rounded-full border border-[#b3413e] px-4 py-1.5 text-sm text-[#b3413e] hover:bg-[#b3413e]/10 transition-colors disabled:opacity-40"
                   >
-                    Cancel
+                    Delete account
                   </button>
-                  <button
-                    onClick={onDeleteAccount}
-                    className="rounded-full border border-[#b3413e] px-4 py-1.5 text-sm font-medium text-[#b3413e] hover:bg-[#b3413e]/10 transition-colors"
-                  >
-                    Confirm delete
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setConfirmDeleteAccount(true)}
-                  disabled={!session?.user}
-                  className="rounded-full border border-[#b3413e] px-4 py-1.5 text-sm text-[#b3413e] hover:bg-[#b3413e]/10 transition-colors disabled:opacity-40"
-                >
-                  Delete account
-                </button>
-              )}
+                )}
+              </div>
             </div>
           )}
 
           {tab === "Dashboard" && (
             <div>
               <h3 className="mb-1 border-b border-border pb-3 text-sm font-semibold">Your data dashboard</h3>
-              <p className="mb-4 mt-3 text-xs text-muted">
+              <p className="mb-4 mt-3 text-xs font-light text-foreground">
                 A transparent look at what ChatGiZa actually holds about you — computed from your own account, not sent anywhere else.
               </p>
 
@@ -1858,7 +2683,7 @@ export default function SettingsPanel({
               </div>
 
               <h4 className="text-sm font-semibold">Manage storage</h4>
-              <p className="mb-2 text-xs text-muted">Manage your library to free up storage.</p>
+              <p className="mb-2 text-xs font-light text-foreground">Manage your library to free up storage.</p>
 
               <button
                 onClick={() => setStorageView("files")}
@@ -1866,7 +2691,7 @@ export default function SettingsPanel({
               >
                 <div>
                   <p className="text-sm font-medium">Files</p>
-                  <p className="text-xs text-muted">
+                  <p className="text-xs font-light text-foreground">
                     {formatBytes(fileBytes)} • {fileCount} file{fileCount === 1 ? "" : "s"}
                   </p>
                 </div>
@@ -1879,7 +2704,7 @@ export default function SettingsPanel({
               >
                 <div>
                   <p className="text-sm font-medium">Images</p>
-                  <p className="text-xs text-muted">
+                  <p className="text-xs font-light text-foreground">
                     {formatBytes(imageBytes)} • {imageCount} image{imageCount === 1 ? "" : "s"}
                   </p>
                 </div>
@@ -1898,7 +2723,7 @@ export default function SettingsPanel({
                 Files
               </button>
               {fileItems.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted">
+                <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs font-light text-foreground">
                   No files uploaded yet — PDFs and text files you attach in chat will show up here.
                 </p>
               ) : (
@@ -1906,7 +2731,7 @@ export default function SettingsPanel({
                   {fileItems.map((item) => (
                     <li key={item.id} className="rounded-xl border border-border p-2.5">
                       <p className="truncate text-sm">{item.label}</p>
-                      <p className="truncate text-xs text-muted">
+                      <p className="truncate text-xs font-light text-foreground">
                         {item.conversationTitle}
                         {item.bytes ? ` · ${formatBytes(item.bytes)}` : ""}
                       </p>
@@ -1927,7 +2752,7 @@ export default function SettingsPanel({
                 Images
               </button>
               {imageItems.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted">
+                <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs font-light text-foreground">
                   No images or videos yet — uploads and anything ChatGiZa generates will show up here.
                 </p>
               ) : (
@@ -1938,7 +2763,7 @@ export default function SettingsPanel({
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={item.thumbnailUrl} alt={item.label} className="h-20 w-full object-cover" />
                       ) : (
-                        <div className="flex h-20 w-full items-center justify-center bg-surface-2 text-xs text-muted">
+                        <div className="flex h-20 w-full items-center justify-center bg-surface-2 text-xs font-light text-foreground">
                           Video
                         </div>
                       )}
@@ -1955,9 +2780,9 @@ export default function SettingsPanel({
               <h3 className="mb-3 border-b border-border pb-3 text-lg font-semibold">Billing</h3>
 
               {!session?.user ? (
-                <p className="text-xs text-muted">Sign in to view billing.</p>
+                <p className="text-xs font-light text-foreground">Sign in to view billing.</p>
               ) : billingLoading ? (
-                <p className="py-4 text-center text-xs text-muted">Loading…</p>
+                <p className="py-4 text-center text-xs font-light text-foreground">Loading…</p>
               ) : billingError ? (
                 <p className="text-xs text-red-500">{billingError}</p>
               ) : (
@@ -1967,7 +2792,7 @@ export default function SettingsPanel({
                       <h2 className="text-base font-semibold">
                         ChatGiZa {billing?.subscription ? billing.subscription.planName : "Plan"}
                       </h2>
-                      <p className="mt-1 text-xs text-muted">
+                      <p className="mt-1 text-xs font-light text-foreground">
                         {billing?.subscription?.cancelAtPeriodEnd ? "Your plan ends on " : "Your plan auto-renews on "}
                         {formatDate(billing?.subscription?.currentPeriodEnd ?? Date.now())}
                       </p>
@@ -1984,7 +2809,7 @@ export default function SettingsPanel({
 
                   <h4 className="mb-2 mt-4 text-sm font-semibold">Billing history</h4>
                   {!billing || billing.invoices.length === 0 ? (
-                    <p className="mb-4 rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted">
+                    <p className="mb-4 rounded-xl border border-dashed border-border p-4 text-center text-xs font-light text-foreground">
                       No invoices yet.
                     </p>
                   ) : (
@@ -2018,17 +2843,17 @@ export default function SettingsPanel({
                     </button>
                   </div>
                   <div className="border-b border-border py-3 text-sm">
-                    <p className="text-xs text-muted">Billing email</p>
+                    <p className="text-xs font-light text-foreground">Billing email</p>
                     <p className="mb-2">{billing?.billingInfo?.email ?? session.user.email}</p>
                     {billing?.billingInfo?.name && (
                       <>
-                        <p className="text-xs text-muted">Name</p>
+                        <p className="text-xs font-light text-foreground">Name</p>
                         <p className="mb-2">{billing.billingInfo.name}</p>
                       </>
                     )}
                     {billing?.billingInfo?.address?.line1 && (
                       <>
-                        <p className="text-xs text-muted">Address</p>
+                        <p className="text-xs font-light text-foreground">Address</p>
                         <p>
                           {billing.billingInfo.address.line1}, {billing.billingInfo.address.city}
                           {billing.billingInfo.address.postal_code ? `, ${billing.billingInfo.address.postal_code}` : ""}
@@ -2049,7 +2874,7 @@ export default function SettingsPanel({
                     </button>
                   </div>
                   {!billing || billing.paymentMethods.length === 0 ? (
-                    <p className="border-b border-border py-3 text-xs text-muted">No cards on file.</p>
+                    <p className="border-b border-border py-3 text-xs font-light text-foreground">No cards on file.</p>
                   ) : (
                     <ul className="space-y-1.5 border-b border-border py-3">
                       {billing.paymentMethods.map((pm) => (
@@ -2057,7 +2882,7 @@ export default function SettingsPanel({
                           <span className="capitalize">
                             {pm.brand} •••• {pm.last4}
                           </span>
-                          {pm.isDefault && <span className="text-xs text-muted">Default</span>}
+                          {pm.isDefault && <span className="text-xs font-light text-foreground">Default</span>}
                         </li>
                       ))}
                     </ul>
@@ -2066,7 +2891,7 @@ export default function SettingsPanel({
                   {billing?.subscription && !billing.subscription.cancelAtPeriodEnd && (
                     <div className="pt-4">
                       <h4 className="mb-1 text-sm font-semibold">Cancel plan</h4>
-                      <p className="mb-2 text-xs text-muted">
+                      <p className="mb-2 text-xs font-light text-foreground">
                         If you cancel, you&apos;ll keep full access to your plan features until the end of your
                         billing period.
                       </p>
@@ -2112,7 +2937,7 @@ export default function SettingsPanel({
               </button>
 
               <form onSubmit={saveBillingInfo}>
-                <label className="mb-1 block text-xs text-muted">Billing email</label>
+                <label className="mb-1 block text-xs font-light text-foreground">Billing email</label>
                 <input
                   type="email"
                   value={editEmail}
@@ -2120,14 +2945,14 @@ export default function SettingsPanel({
                   className="mb-4 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
                 />
 
-                <label className="mb-1 block text-xs text-muted">Full name</label>
+                <label className="mb-1 block text-xs font-light text-foreground">Full name</label>
                 <input
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   className="mb-4 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
                 />
 
-                <label className="mb-1 block text-xs text-muted">Country or region</label>
+                <label className="mb-1 block text-xs font-light text-foreground">Country or region</label>
                 <div className="mb-4">
                   <SettingsSelect
                     value={editCountry}
@@ -2136,14 +2961,14 @@ export default function SettingsPanel({
                   />
                 </div>
 
-                <label className="mb-1 block text-xs text-muted">Address line 1</label>
+                <label className="mb-1 block text-xs font-light text-foreground">Address line 1</label>
                 <input
                   value={editLine1}
                   onChange={(e) => setEditLine1(e.target.value)}
                   className="mb-4 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
                 />
 
-                <label className="mb-1 block text-xs text-muted">Address line 2</label>
+                <label className="mb-1 block text-xs font-light text-foreground">Address line 2</label>
                 <input
                   value={editLine2}
                   onChange={(e) => setEditLine2(e.target.value)}
@@ -2152,7 +2977,7 @@ export default function SettingsPanel({
 
                 <div className="mb-4 grid grid-cols-2 gap-3">
                   <div>
-                    <label className="mb-1 block text-xs text-muted">Postal code</label>
+                    <label className="mb-1 block text-xs font-light text-foreground">Postal code</label>
                     <input
                       value={editPostalCode}
                       onChange={(e) => setEditPostalCode(e.target.value)}
@@ -2160,7 +2985,7 @@ export default function SettingsPanel({
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs text-muted">City</label>
+                    <label className="mb-1 block text-xs font-light text-foreground">City</label>
                     <input
                       value={editCity}
                       onChange={(e) => setEditCity(e.target.value)}
@@ -2182,7 +3007,7 @@ export default function SettingsPanel({
                 {editAddTaxId && (
                   <div className="mb-4 grid grid-cols-2 gap-3">
                     <div>
-                      <label className="mb-1 block text-xs text-muted">Tax ID type</label>
+                      <label className="mb-1 block text-xs font-light text-foreground">Tax ID type</label>
                       <SettingsSelect
                         value={editTaxIdType}
                         onChange={setEditTaxIdType}
@@ -2199,7 +3024,7 @@ export default function SettingsPanel({
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs text-muted">Tax ID value</label>
+                      <label className="mb-1 block text-xs font-light text-foreground">Tax ID value</label>
                       <input
                         value={editTaxIdValue}
                         onChange={(e) => setEditTaxIdValue(e.target.value)}
@@ -2230,6 +3055,7 @@ export default function SettingsPanel({
               </form>
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>

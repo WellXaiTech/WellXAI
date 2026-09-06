@@ -1,0 +1,22 @@
+{
+  "name": "ChatGiZa Build",
+  "short_name": "Build",
+  "description": "Build real websites and apps with ChatGiZa, with a live preview, GitHub push, and one-click Vercel deploy.",
+  "start_url": "/chatgiza/build",
+  "id": "/chatgiza/build",
+  "scope": "/chatgiza",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["productivity", "developer"],
+  "launch_handler": { "client_mode": "auto" },
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-192-maskable.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

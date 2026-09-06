@@ -42,6 +42,77 @@ const BackIcon = (
     <path d="M15 18l-6-6 6-6" />
   </svg>
 );
+const SettingsGearIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+const ProfileIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17.925 20.056a6 6 0 0 0-11.851.001" />
+    <circle cx="12" cy="11" r="4" />
+    <circle cx="12" cy="12" r="10" />
+  </svg>
+);
+const PremiumIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z" />
+    <path d="M5 21h14" />
+  </svg>
+);
+const CommunitiesIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+    <path d="M16 3.128a4 4 0 0 1 0 7.744" />
+    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+    <circle cx="9" cy="7" r="4" />
+  </svg>
+);
+const BookmarksIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z" />
+  </svg>
+);
+const ListsIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 5h.01" />
+    <path d="M3 12h.01" />
+    <path d="M3 19h.01" />
+    <path d="M8 5h13" />
+    <path d="M8 12h13" />
+    <path d="M8 19h13" />
+  </svg>
+);
+const CreatorStudioIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m12.296 3.464 3.02 3.956" />
+    <path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3z" />
+    <path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <path d="m6.18 5.276 3.1 3.899" />
+  </svg>
+);
+const MoonIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
+  </svg>
+);
+const ExpandIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M15 3h6v6" />
+    <path d="M9 21H3v-6" />
+    <path d="M21 3l-7 7" />
+    <path d="M3 21l7-7" />
+  </svg>
+);
+const CollapseIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 3H3v6" />
+    <path d="M15 21h6v-6" />
+    <path d="M3 3l7 7" />
+    <path d="M21 21l-7-7" />
+  </svg>
+);
 const ImageIcon = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -90,8 +161,8 @@ const CloseSmallIcon = (
   </svg>
 );
 const TrashIcon = (
-  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M7 3.5h6M5 5h10M7 5v10a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1V5M8.5 8v5M11.5 8v5" />
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <path d="m19.5 5.5l-.62 10.025c-.158 2.561-.237 3.842-.88 4.763a4 4 0 0 1-1.2 1.128c-.957.584-2.24.584-4.806.584c-2.57 0-3.855 0-4.814-.585a4 4 0 0 1-1.2-1.13c-.642-.922-.72-2.205-.874-4.77L4.5 5.5M3 5.5h18m-4.944 0l-.683-1.408c-.453-.936-.68-1.403-1.071-1.695a2 2 0 0 0-.275-.172C13.594 2 13.074 2 12.035 2c-1.066 0-1.599 0-2.04.234a2 2 0 0 0-.278.18c-.395.303-.616.788-1.058 1.757L8.053 5.5m1.447 11v-6m5 6v-6" />
   </svg>
 );
 const ChevronLeftIcon = (
@@ -328,7 +399,13 @@ function PostCard({ post, myId, onLike, onDelete }: {
 
       <MediaCarousel imageUrls={post.imageUrls} />
       {post.videoUrl && (
-        <video src={post.videoUrl} controls className="mt-3 aspect-[4/5] w-full rounded-xl bg-black object-cover" />
+        // preload="metadata" -- without it, every video in the feed (not
+        // just the one actually being watched) starts fetching its full
+        // file the moment it's rendered, so scrolling past several posts
+        // means several full videos competing for bandwidth at once. That
+        // reads as "spinning a lot" regardless of how fast the connection
+        // is, since it's simultaneous-download contention, not throughput.
+        <video src={post.videoUrl} controls preload="metadata" className="mt-3 aspect-[4/5] w-full rounded-xl bg-black object-cover" />
       )}
 
       <div className="mt-3 flex items-center gap-4 border-t border-border pt-3">
@@ -358,6 +435,16 @@ function PostCard({ post, myId, onLike, onDelete }: {
 
 export default function ChatGizaMediaFeed({ onClose }: { onClose: () => void }) {
   const { data: session } = useSession();
+  // Opens docked to the side by default so Ask stays usable and visible
+  // alongside it -- expanded is an explicit opt-in, not persisted, so it
+  // always starts back in the side-panel mode next time it's opened.
+  const [expanded, setExpanded] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  // Quantara's own light/dark toggle, independent of the main site's theme
+  // -- mirrors the Android app's ExtraDarkMode preference (also on by
+  // default, also stored per-device rather than synced to the account).
+  const [quantaraDark, setQuantaraDark] = useState(true);
+  const [toast, setToast] = useState<string | null>(null);
   const [posts, setPosts] = useState<MediaPost[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -376,12 +463,27 @@ export default function ChatGizaMediaFeed({ onClose }: { onClose: () => void }) 
     fetch("/api/media/posts")
       .then((r) => r.json())
       .then((data) => setPosts(data.posts ?? []))
-      .catch(() => setError("Couldn't load ChatGiZa Media"));
+      .catch(() => setError("Couldn't load Quantara"));
   }
 
   useEffect(() => {
     loadFeed();
   }, []);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("chatgiza:quantara-dark");
+    if (stored !== null) setQuantaraDark(stored === "true");
+  }, []);
+
+  function toggleQuantaraDark(next: boolean) {
+    setQuantaraDark(next);
+    localStorage.setItem("chatgiza:quantara-dark", String(next));
+  }
+
+  function showComingSoon(label: string) {
+    setToast(`${label} — coming soon`);
+    setTimeout(() => setToast(null), 2000);
+  }
 
   async function handlePickImages(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []).slice(0, MAX_IMAGES_PER_POST - imagePreviews.length);
@@ -515,34 +617,113 @@ export default function ChatGizaMediaFeed({ onClose }: { onClose: () => void }) 
     // bg-background/text-muted/border-border/etc. Tailwind class used
     // throughout this file and its child components for free.
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-background"
-      style={{
-        "--background": "#10141f",
-        "--foreground": "#e5ebfa",
-        "--surface": "#171d2f",
-        "--surface-2": "#1c2333",
-        "--border": "#262e3f",
-        "--muted": "#9aa3b2",
-      } as React.CSSProperties}
+      className={
+        expanded
+          ? "fixed inset-0 z-50 flex flex-col bg-background"
+          // Side-panel mode only kicks in once the viewport is wide enough
+          // for a docked panel to leave the chat genuinely usable next to
+          // it (see the matching xl:/2xl: margin on the chat column in
+          // page.tsx) -- below that it falls through to the same full-width
+          // "w-full" as expanded mode, since there's no room to dock.
+          : "fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border bg-background shadow-2xl xl:w-[600px] 2xl:w-[720px]"
+      }
+      style={
+        quantaraDark
+          ? ({
+              "--background": "#10141f",
+              "--foreground": "#e5ebfa",
+              "--surface": "#171d2f",
+              "--surface-2": "#1c2333",
+              "--border": "#262e3f",
+              "--muted": "#9aa3b2",
+            } as React.CSSProperties)
+          : ({
+              "--background": "#ffffff",
+              "--foreground": "#0f1420",
+              "--surface": "#f4f5f8",
+              "--surface-2": "#eaecf1",
+              "--border": "#dde0e8",
+              "--muted": "#6b7280",
+            } as React.CSSProperties)
+      }
     >
-      <div className="flex items-center gap-3 border-b border-border px-6 py-4 sm:px-10">
+      <div className={`flex items-center gap-3 border-b border-border py-4 ${expanded ? "px-6 sm:px-10" : "px-4"}`}>
         <button
-          onClick={onClose}
-          aria-label="Close ChatGiZa Media"
+          onClick={settingsOpen ? () => setSettingsOpen(false) : onClose}
+          aria-label={settingsOpen ? "Back to Quantara" : "Close Quantara"}
           className="rounded-full p-2 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
         >
           {BackIcon}
         </button>
-        <h1 className="font-serif text-2xl">ChatGiZa Media</h1>
+        <h1 className="flex-1 font-serif text-2xl">{settingsOpen ? "Quantara Settings" : "Quantara"}</h1>
+        {!settingsOpen && (
+          <button
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Quantara settings"
+            className="rounded-full p-2 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+          >
+            {SettingsGearIcon}
+          </button>
+        )}
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          aria-label={expanded ? "Dock to side" : "Expand to full screen"}
+          className="rounded-full p-2 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+        >
+          {expanded ? CollapseIcon : ExpandIcon}
+        </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-6 sm:px-10">
+      {settingsOpen ? (
+        <div className={`flex-1 overflow-y-auto py-4 ${expanded ? "px-6 sm:px-10" : "px-4"}`}>
+          <div className="mx-auto max-w-2xl">
+            {[
+              { icon: ProfileIcon, label: "Profile" },
+              { icon: PremiumIcon, label: "Premium" },
+              { icon: CommunitiesIcon, label: "Communities" },
+              { icon: BookmarksIcon, label: "Bookmarks" },
+              { icon: ListsIcon, label: "Lists" },
+              { icon: CreatorStudioIcon, label: "Creator Studio" },
+            ].map((row) => (
+              <button
+                key={row.label}
+                onClick={() => showComingSoon(row.label)}
+                className="flex w-full items-center gap-4 rounded-xl px-2 py-3.5 text-left transition-colors hover:bg-surface-2"
+              >
+                <span className="text-foreground">{row.icon}</span>
+                <span className="text-[15px] font-medium">{row.label}</span>
+              </button>
+            ))}
+
+            <div className="my-2 border-t border-border" />
+
+            <div className="flex w-full items-center gap-4 px-2 py-3.5">
+              <span className="text-foreground">{MoonIcon}</span>
+              <span className="flex-1 text-[15px] font-medium">Dark Mode</span>
+              <button
+                onClick={() => toggleQuantaraDark(!quantaraDark)}
+                role="switch"
+                aria-checked={quantaraDark}
+                aria-label="Toggle Quantara dark mode"
+                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${quantaraDark ? "bg-foreground" : "bg-surface-2"}`}
+              >
+                <span
+                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-background transition-transform ${
+                    quantaraDark ? "translate-x-[22px]" : "translate-x-0.5"
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+      <div className={`flex-1 overflow-y-auto py-6 ${expanded ? "px-6 sm:px-10" : "px-4"}`}>
         <div className="mx-auto max-w-2xl space-y-4">
           <div className="rounded-2xl border border-border p-4">
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Share something with ChatGiZa Media…"
+              placeholder="Share something with Quantara…"
               rows={3}
               className="w-full resize-none bg-transparent text-[15px] outline-none placeholder:text-muted"
             />
@@ -644,6 +825,13 @@ export default function ChatGizaMediaFeed({ onClose }: { onClose: () => void }) 
           )}
         </div>
       </div>
+      )}
+
+      {toast && (
+        <div className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-surface-2 px-4 py-2 text-sm shadow-lg">
+          {toast}
+        </div>
+      )}
     </div>
   );
 }

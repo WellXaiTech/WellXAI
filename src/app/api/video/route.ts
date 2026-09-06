@@ -3,6 +3,11 @@ import { auth } from "@/auth";
 import { getMobileUserId } from "@/lib/mobileAuth";
 import { recordVideoOwner } from "@/lib/videoOwnership";
 
+// Video generation (Sora) is the slowest single call in the app --
+// without this, Vercel's platform default kills it long before it's
+// actually done.
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
   const session = await auth();
   const userId = session?.user?.id ?? (await getMobileUserId(request));

@@ -41,6 +41,13 @@ const PRODUCT_HOSTS = new Set(["chatgiza.com", "www.chatgiza.com"]);
 const SUPPORT_HOSTS = new Set(["support.wellxai.world"]);
 const SUPPORT_HOSTNAME = "support.wellxai.world";
 const SUPPORT_PREFIX = "/support";
+// ChackAll -- the storefront-link-aggregator product, starting life as a
+// free subdomain (no separate domain purchase yet) the same way support
+// and admin already do. "/" only for now (one page, the link-paste
+// prototype); grows the same way SUPPORT_HOSTS would if more pages get
+// added later.
+const STORE_HOSTS = new Set(["store.wellxai.world"]);
+const STORE_PREFIX = "/store";
 // Deliberately not "admin.wellxai.world" -- an obvious name defeats the
 // point of the admin panel already living behind an unguessable path;
 // reusing that same secret string as the subdomain keeps it consistent.
@@ -96,6 +103,17 @@ export function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  if (STORE_HOSTS.has(host)) {
+    // Blanket-prefixed (like ADMIN_HOSTS below), not just "/" -- ChackAll
+    // has grown multiple pages (the shop-creation flow, a public shop
+    // page per seller, a private seller dashboard) all living under
+    // src/app/store/, not just the one landing page support.wellxai.world
+    // still has.
+    const url = new URL(req.url);
+    url.pathname = STORE_PREFIX + (pathname === "/" ? "" : pathname);
+    return NextResponse.rewrite(url);
+  }
+
   if (ADMIN_HOSTS.has(host)) {
     if (pathname === "/" || matchesAny(pathname, ADMIN_SUBROUTES)) {
       const url = new URL(req.url);
@@ -115,6 +133,7 @@ export function proxy(req: NextRequest) {
 
   if (matchesAny(pathname, [SUPPORT_PREFIX])) return redirectToSubdomain(req, SUPPORT_HOSTNAME, SUPPORT_PREFIX);
   if (matchesAny(pathname, [ADMIN_PREFIX])) return redirectToSubdomain(req, ADMIN_HOSTNAME, ADMIN_PREFIX);
+  if (matchesAny(pathname, [STORE_PREFIX])) return redirectToSubdomain(req, [...STORE_HOSTS][0], STORE_PREFIX);
 
   if (COMPANY_HOSTS.has(host)) {
     if (pathname === "/") return NextResponse.rewrite(new URL("/home", req.url));

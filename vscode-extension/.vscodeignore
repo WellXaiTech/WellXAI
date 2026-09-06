@@ -4,4 +4,9 @@ src/**
 tsconfig.json
 **/*.map
 **/.eslintrc.json
-node_modules/**
+**/*.ts
+**/test/**
+**/tests/**
+**/*.md
+!README.md
+!LICENSE.md

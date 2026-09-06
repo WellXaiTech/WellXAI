@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { PLAN_DETAILS } from "@/lib/plans";
-import type { PlanTier } from "@/lib/plans";
 
 export type CompanyProfile = { name: string; description: string; employees: { name: string; role: string }[] };
 export type CompanyRequest = {
@@ -23,10 +21,8 @@ const BackIcon = (
 );
 
 const TrashIcon = (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M3 6h18" />
-    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <path d="m19.5 5.5l-.62 10.025c-.158 2.561-.237 3.842-.88 4.763a4 4 0 0 1-1.2 1.128c-.957.584-2.24.584-4.806.584c-2.57 0-3.855 0-4.814-.585a4 4 0 0 1-1.2-1.13c-.642-.922-.72-2.205-.874-4.77L4.5 5.5M3 5.5h18m-4.944 0l-.683-1.408c-.453-.936-.68-1.403-1.071-1.695a2 2 0 0 0-.275-.172C13.594 2 13.074 2 12.035 2c-1.066 0-1.599 0-2.04.234a2 2 0 0 0-.278.18c-.395.303-.616.788-1.058 1.757L8.053 5.5m1.447 11v-6m5 6v-6" />
   </svg>
 );
 
@@ -172,8 +168,6 @@ export default function CompanyDashboard({
   onClose,
   company,
   onCompanyChange,
-  plan,
-  onOpenUpgradePlan,
   companyRequests,
   onAddCompanyRequest,
   onUpdateCompanyRequestStatus,
@@ -182,8 +176,6 @@ export default function CompanyDashboard({
   onClose: () => void;
   company: CompanyProfile;
   onCompanyChange: (c: CompanyProfile) => void;
-  plan: PlanTier | null;
-  onOpenUpgradePlan: () => void;
   companyRequests: CompanyRequest[];
   onAddCompanyRequest: (customerName: string, note: string) => void;
   onUpdateCompanyRequestStatus: (id: string, status: CompanyRequest["status"]) => void;
@@ -261,25 +253,9 @@ export default function CompanyDashboard({
           </button>
           <h1 className="font-serif text-2xl">Company KYC</h1>
         </div>
-        {plan && (
-          <span className="text-xs text-muted">
-            Plan: <span className="font-medium text-foreground">{PLAN_DETAILS[plan].name}</span>
-          </span>
-        )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-8 sm:px-10">
-        {!plan ? (
-          <div className="mx-auto max-w-md py-16 text-center">
-            <h2 className="mb-1 text-sm font-semibold">Upgrade to unlock Company KYC</h2>
-            <p className="mb-4 text-xs text-muted">
-              Company KYC — profile, customer requests, and analytics — is included with any ChatGiZa plan.
-            </p>
-            <button onClick={onOpenUpgradePlan} className="btn-primary rounded-full px-4 py-2 text-sm font-medium">
-              View plans
-            </button>
-          </div>
-        ) : (
           <div className="mx-auto max-w-5xl">
             <div className="mb-6 flex w-fit gap-1 rounded-full border border-border p-1">
               {SUB_TABS.map((t) => (
@@ -587,7 +563,6 @@ export default function CompanyDashboard({
             )}
 
           </div>
-        )}
       </div>
     </div>
   );

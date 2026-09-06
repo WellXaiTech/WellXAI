@@ -17,6 +17,15 @@ export function stripPdfMarkers(text: string): string {
   return text.replace(/\[\[PDF_START\]\]\n?/g, "").replace(/\n?\[\[PDF_END\]\]/g, "");
 }
 
+// The model occasionally emits a wide/non-breaking space (e.g. U+00A0,
+// U+3000) or a run of two-plus plain spaces mid-sentence — invisible in the
+// raw string but a visibly oversized gap once rendered, since browsers only
+// collapse consecutive *plain* spaces automatically. Never touches \n, so
+// markdown paragraph/list breaks are untouched.
+export function normalizeSpacing(text: string): string {
+  return text.replace(/[ -   　 ]/g, " ").replace(/[ \t]{2,}/g, " ");
+}
+
 // The document's first line becomes the PDF title (rendered once, bold, at
 // the top) — it must not also stay in the body, or it prints twice.
 export function splitTitleAndBody(text: string, fallbackTitle: string): { title: string; body: string } {

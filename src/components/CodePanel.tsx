@@ -17,6 +17,14 @@ export default function CodePanel({ onClose }: { onClose: () => void }) {
   const [prompt, setPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
+  // Real conversational memory for follow-ups ("now add error handling"),
+  // and -- just as important -- the CURRENT editor content (which may
+  // include manual edits made after the last generation) is sent fresh
+  // every time rather than trusted from history, so a follow-up edits
+  // what's actually in the box, not a stale AI-only memory of it.
+  const [history, setHistory] = useState<{ prompt: string; code: string }[]>([]);
+  const codeRef = useRef(code);
+  codeRef.current = code;
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   async function generate(e: React.FormEvent) {
@@ -24,15 +32,17 @@ export default function CodePanel({ onClose }: { onClose: () => void }) {
     if (!prompt.trim() || generating) return;
     setGenerating(true);
     setGenError(null);
+    const sentPrompt = prompt.trim();
     try {
       const res = await fetch("/api/code/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim() }),
+        body: JSON.stringify({ prompt: sentPrompt, currentCode: codeRef.current, history }),
       });
       const data = await res.json();
       if (!res.ok || !data.code) throw new Error(data.error ?? "Failed to generate code");
       setCode(data.code);
+      setHistory((prev) => [...prev, { prompt: sentPrompt, code: data.code }].slice(-6));
       setLogs([]);
     } catch (err) {
       setGenError(err instanceof Error ? err.message : "Failed to generate code");
@@ -107,7 +117,7 @@ export default function CodePanel({ onClose }: { onClose: () => void }) {
           <button
             type="submit"
             disabled={!prompt.trim() || generating}
-            className="btn-primary shrink-0 rounded-lg px-4 py-2 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-40"
+            className="btn-primary shrink-0 rounded-lg px-4 py-2 text-xs font-medium disabled:opacity-40"
           >
             {generating ? "Generating…" : "Generate with ChatGiZa"}
           </button>

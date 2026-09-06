@@ -1,17 +1,17 @@
 // "default"/"serif"/"mono" are the original values -- kept in the union
 // (not removed) purely so the currently-deployed page.tsx's own
 // `useState<ChatFont>("default")` literal keeps type-checking; no UI has
-// ever actually offered serif/mono as a choice (SettingsPanel never
-// rendered a control for this until the plus_jakarta_sans/manrope/system
-// picker below), so no real user has one of those persisted.
-export type ChatFont = "default" | "serif" | "mono" | "plus_jakarta_sans" | "manrope" | "system";
+// ever actually offered serif/mono as a choice.
+export type ChatFont = "default" | "serif" | "mono" | "nova_regular" | "nova_light";
 
 const CHAT_FONT_KEY = "chatgiza:chat-font";
 
+const VALID_FONTS: ChatFont[] = ["nova_regular", "nova_light"];
+
 export function getStoredChatFont(): ChatFont {
-  if (typeof window === "undefined") return "plus_jakarta_sans";
+  if (typeof window === "undefined") return "nova_light";
   const raw = localStorage.getItem(CHAT_FONT_KEY);
-  return raw === "manrope" || raw === "system" || raw === "plus_jakarta_sans" ? raw : "plus_jakarta_sans";
+  return (VALID_FONTS as string[]).includes(raw ?? "") ? (raw as ChatFont) : "nova_light";
 }
 
 export function applyChatFont(font: ChatFont) {

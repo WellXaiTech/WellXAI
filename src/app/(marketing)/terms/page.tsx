@@ -9,14 +9,14 @@ export default function TermsPage() {
       <p className="mt-6 text-muted">
         These Terms of Service (&quot;Terms&quot;) govern your access to and use of ChatGiZa, including our
         website, mobile app, and any related features (collectively, the &quot;Service&quot;), operated by
-        WellX AI (&quot;WellX AI&quot;, &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;). By creating an
+        WellXAI (&quot;WellXAI&quot;, &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;). By creating an
         account, signing in, or otherwise using the Service, you agree to these Terms. If you do not agree,
         please don&apos;t use the Service.
       </p>
 
       <h2 className="mt-10 text-lg font-medium">Who We Are</h2>
       <p className="mt-3 text-muted">
-        WellX AI builds ChatGiZa, a conversational AI assistant for chat, image and video generation, web
+        WellXAI builds ChatGiZa, a conversational AI assistant for chat, image and video generation, web
         search, and deep research, alongside supporting tools for developers who want to build on it.
       </p>
 
@@ -77,7 +77,7 @@ export default function TermsPage() {
         or experimental feature, is at your own risk.
       </p>
 
-      <h2 className="mt-10 text-lg font-medium">WellX AI&apos;s Intellectual Property Rights</h2>
+      <h2 className="mt-10 text-lg font-medium">WellXAI&apos;s Intellectual Property Rights</h2>
       <p className="mt-3 text-muted">
         We and our licensors own all rights, title, and interest in the Service itself, including its software,
         design, and branding. These Terms don&apos;t grant you any rights to our trademarks or branding outside
@@ -119,7 +119,7 @@ export default function TermsPage() {
 
       <h2 className="mt-10 text-lg font-medium">Limitation of Liability</h2>
       <p className="mt-3 text-muted">
-        To the fullest extent permitted by law, WellX AI is not liable for any indirect, incidental, special,
+        To the fullest extent permitted by law, WellXAI is not liable for any indirect, incidental, special,
         consequential, or punitive damages, or any loss of data, profits, or goodwill, arising from your use of
         the Service. Our total liability for any claim relating to the Service is limited to the amount you
         paid us, if any, in the 12 months before the claim arose.
@@ -127,7 +127,7 @@ export default function TermsPage() {
 
       <h2 className="mt-10 text-lg font-medium">Indemnity</h2>
       <p className="mt-3 text-muted">
-        You agree to defend and indemnify WellX AI against claims, losses, and expenses (including reasonable
+        You agree to defend and indemnify WellXAI against claims, losses, and expenses (including reasonable
         legal fees) arising from your use of the Service, your User Content, or your violation of these Terms,
         to the extent permitted by law.
       </p>
@@ -148,7 +148,7 @@ export default function TermsPage() {
       <h2 className="mt-10 text-lg font-medium">General Provisions</h2>
       <p className="mt-3 text-muted">
         If any part of these Terms is found unenforceable, the rest remains in effect. These Terms, along with
-        our Privacy Policy, make up the entire agreement between you and WellX AI regarding the Service. We may
+        our Privacy Policy, make up the entire agreement between you and WellXAI regarding the Service. We may
         update these Terms from time to time; continued use of the Service after a change means you accept the
         updated Terms.
       </p>
@@ -156,8 +156,8 @@ export default function TermsPage() {
       <h2 className="mt-10 text-lg font-medium">Contact Us</h2>
       <p className="mt-3 text-muted">
         Questions about these Terms? Use &quot;Wasiliana nasi&quot; inside ChatGiZa, or email{" "}
-        <a href="mailto:nicoloustz@gmail.com" className="text-foreground underline">
-          nicoloustz@gmail.com
+        <a href="mailto:support@wellxai.world" className="text-foreground underline">
+          support@wellxai.world
         </a>
         .
       </p>

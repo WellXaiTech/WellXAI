@@ -63,7 +63,7 @@ export default function OnboardingModal({
         <button
           onClick={() => onSave(fullName.trim(), birthDate, country)}
           disabled={!birthDateCheck.ok}
-          className="btn-primary mb-2 w-full rounded-full py-2.5 text-sm font-medium hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40"
+          className="btn-primary mb-2 w-full rounded-full py-2.5 text-sm font-medium hover:opacity-85 disabled:opacity-40"
         >
           Continue
         </button>

@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Attachment } from "@/lib/attachments";
 import { textToPdfBlob } from "@/lib/generatePdf";
-import { extractPdfSection, stripPdfMarkers, splitAroundPdfSection, splitTitleAndBody } from "@/lib/pdfMarkers";
+import { extractPdfSection, stripPdfMarkers, normalizeSpacing, splitAroundPdfSection, splitTitleAndBody } from "@/lib/pdfMarkers";
 import { extractSources, stripSourceMarkers, sourceDomain, type VerifiedSource } from "@/lib/sourceMarkers";
 import { stripReminderMarkers } from "@/lib/reminderMarkers";
 import { speakText, stopSpeaking } from "@/lib/speak";
@@ -18,25 +18,34 @@ const FileIcon = (
 );
 
 const PencilIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M12 20h9" />
-    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+    <path d="m15 5 4 4" />
   </svg>
 );
 
 const CopyIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <rect x="9" y="9" width="13" height="13" rx="2" />
-    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  // Same glyph as the Android app's ic_copy.xml, so Copy looks identical on
+  // both platforms -- filled, not stroked, so it needs the same
+  // fill/stroke override as ShareUpIcon to survive the .icon wrapper.
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ fill: "currentColor", stroke: "none" }}>
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="m10.8624 1.99989c.0452.00003.0911.00005.1376.00005h5.2413c.805-.00001 1.4693-.00002 2.0105.0442.5621.04592 1.0788.14449 1.5642.39178.7526.38349 1.3645.99541 1.748 1.74806.2473.48534.3459 1.00204.3918 1.56414.0442.54119.0442 1.20554.0442 2.0105v5.24128c0 .0466 0 .0924.0001.1376.0004.7954.0007 1.3861-.1364 1.8977-.3699 1.3804-1.4481 2.4586-2.8284 2.8284-.3096.083-.648.1156-1.0433.1284-.0127.3952-.0454.7337-.1283 1.0432-.3699 1.3804-1.4481 2.4586-2.8284 2.8284-.5117.1371-1.1023.1368-1.8977.1364-.0452 0-.0911-.0001-.1376-.0001h-5.24132c-.80496.0001-1.46932.0001-2.01051-.0441-.56209-.046-1.0788-.1445-1.56413-.3918-.75265-.3835-1.36457-.9954-1.74807-1.7481-.24729-.4853-.34585-1.002-.39178-1.5641-.04421-.5412-.0442-1.2056-.04419-2.0106v-5.2413c0-.0465-.00002-.0923-.00005-.1375-.00043-.7954-.00075-1.38608.13635-1.89773.36987-1.38037 1.44806-2.45856 2.82842-2.82843.30955-.08294.64801-.11559 1.04323-.12834.01276-.39522.0454-.73369.12835-1.04323.36987-1.38037 1.44806-2.45856 2.82842-2.82843.51165-.1371 1.10228-.13678 1.89768-.13635zm-2.85254 4.00005h4.23144c.805-.00001 1.4693-.00002 2.0105.0442.5621.04592 1.0788.14449 1.5642.39178.7526.38349 1.3645.99541 1.748 1.74806.2473.48534.3459 1.00204.3918 1.56414.0442.54118.0442 1.20558.0442 2.01058v4.2314c.2576-.0092.3988-.0265.5176-.0583.6902-.1849 1.2293-.724 1.4143-1.4142.0595-.2223.0681-.5233.0681-1.5177v-5.19996c0-.85658-.0008-1.43887-.0376-1.88896-.0358-.43841-.1007-.66262-.1804-.81902-.1917-.37632-.4977-.68228-.874-.87403-.1564-.07969-.3806-.14461-.819-.18043-.4501-.03678-1.0324-.03756-1.889-.03756h-5.2c-.9944 0-1.29536.00859-1.51764.06815-.69018.18494-1.22928.72403-1.41421 1.41422-.03183.11879-.0491.26006-.05829.51763zm-1.00986 2c-.99435 0-1.29536.00859-1.51764.06815-.69018.18494-1.22928.72403-1.41421 1.41422-.05956.22227-.06815.52329-.06815 1.51759v5.2c0 .8566.00078 1.4389.03755 1.889.03582.4384.10075.6626.18044.819.19174.3763.4977.6823.87403.8741.1564.0796.3806.1446.81902.1804.45009.0368 1.03238.0375 1.88896.0375h5.2c.9944 0 1.2954-.0085 1.5176-.0681.6902-.1849 1.2293-.724 1.4143-1.4142.0595-.2223.0681-.5233.0681-1.5177v-5.2c0-.8565-.0008-1.4388-.0376-1.88892-.0358-.43841-.1007-.66262-.1804-.81902-.1917-.37632-.4977-.68228-.874-.87403-.1564-.07969-.3806-.14461-.819-.18043-.4501-.03678-1.0324-.03756-1.889-.03756z"
+    />
   </svg>
 );
 
 const ShareUpIcon = (
   // The shared ".icon" wrapper class forces fill:none/stroke:currentColor
   // for the site's stroke-based icon set -- this path is filled, not
-  // stroked, so it needs an inline override to survive that wrapper.
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" style={{ fill: "currentColor", stroke: "none" }}>
-    <path d="M2.668 12.666V12.5a.665.665 0 0 1 1.33 0v.166c0 .711.001 1.205.033 1.588.03.376.087.587.167.745l.07.127c.177.288.43.522.732.676l.13.056c.144.051.333.089.615.112.384.031.877.031 1.588.031h5.333c.711 0 1.205 0 1.588-.031.376-.03.587-.088.745-.168l.127-.071c.288-.176.522-.43.676-.732l.056-.13c.051-.143.089-.333.112-.615.031-.383.031-.877.031-1.588V12.5a.665.665 0 0 1 1.33 0v.166c0 .69 0 1.246-.036 1.697-.033.4-.098.762-.242 1.098l-.066.143c-.266.52-.67.957-1.165 1.26l-.218.123c-.377.192-.783.27-1.241.308-.45.037-1.008.036-1.697.036H7.333c-.689 0-1.246.001-1.696-.036-.4-.033-.761-.097-1.098-.241l-.142-.067a3.17 3.17 0 0 1-1.262-1.165l-.122-.218c-.192-.377-.271-.783-.309-1.241-.036-.45-.036-1.008-.036-1.697m6.667-.166V4.94L7.137 7.137a.665.665 0 0 1-.94-.94L9.53 2.863l.101-.083a.666.666 0 0 1 .839.083l3.334 3.334a.666.666 0 0 1-.941.94L10.665 4.94v7.56a.666.666 0 0 1-1.33 0" />
+  // stroked, so it needs an inline override to survive that wrapper. Sized
+  // a couple px above the toolbar's 15px default -- it read visibly
+  // smaller than its neighbors at that size.
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ fill: "currentColor", stroke: "none", width: "17px", height: "17px" }}>
+    <path d="M0 0h24v24H0z" fill="none" />
+    <path fill="currentColor" d="M18.414 9L12 2.586L5.586 9H11v7h2V9zM3 14v4a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-4h-2v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-4z" />
   </svg>
 );
 
@@ -50,19 +59,31 @@ const DownloadIcon = (
 
 const PdfIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
-    <path d="M14 2v6h6" />
-    <path d="M12 11v6" />
-    <path d="M9 14.5 12 17.5 15 14.5" />
+    <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+    <path d="M12 11h4" />
+    <path d="M12 16h4" />
+    <path d="M8 11h.01" />
+    <path d="M8 16h.01" />
+  </svg>
+);
+
+const ShareIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5">
+    <path d="M6.015 15.809a3.265 3.265 0 1 0 0-6.53a3.265 3.265 0 0 0 0 6.53m11.97-6.529a3.265 3.265 0 1 0 0-6.53a3.265 3.265 0 0 0 0 6.53m0 11.97a3.265 3.265 0 1 0 0-6.53a3.265 3.265 0 0 0 0 6.53m-2.971-4.614l-6.028-2.742m6.126-6.312l-6.224 3.395" />
   </svg>
 );
 
 const RegenerateIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
-    <path d="M21 3v5h-5" />
-    <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
-    <path d="M8 16H3v5" />
+  // A few px below the toolbar's 18px default -- this glyph fills more of
+  // its own box than its neighbors, so at the same box size it reads
+  // visibly larger/bolder than the rest of the row.
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style={{ fill: "currentColor", stroke: "none", width: "14px", height: "14px" }}>
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M7.32.029a8 8 0 0 1 7.18 3.307V1.75a.75.75 0 0 1 1.5 0V6h-4.25a.75.75 0 0 1 0-1.5h1.727A6.5 6.5 0 0 0 1.694 6.424A.75.75 0 1 1 .239 6.06A8 8 0 0 1 7.319.03Zm-3.4 14.852A8 8 0 0 0 15.76 9.94a.75.75 0 0 0-1.455-.364A6.5 6.5 0 0 1 2.523 11.5H4.25a.75.75 0 0 0 0-1.5H0v4.25a.75.75 0 0 0 1.5 0v-1.586a8 8 0 0 0 2.42 2.217"
+    />
   </svg>
 );
 
@@ -75,10 +96,8 @@ const MoreDotsIcon = (
 );
 
 const SpeakerIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M11 5 6 9H2v6h4l5 4Z" />
-    <path d="M15.5 8.5a5 5 0 0 1 0 7" />
-    <path d="M18.5 5.5a9 9 0 0 1 0 13" />
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
+    <path d="M2 14.959V9.04C2 8.466 2.448 8 3 8h3.586a.98.98 0 0 0 .707-.305l3-3.388c.63-.656 1.707-.191 1.707.736v13.914c0 .934-1.09 1.395-1.716.726l-2.99-3.369A.98.98 0 0 0 6.578 16H3c-.552 0-1-.466-1-1.041M16 8.5c1.333 1.778 1.333 5.222 0 7M19 5c3.988 3.808 4.012 10.217 0 14" />
   </svg>
 );
 
@@ -103,14 +122,34 @@ const TrashIcon = (
 );
 
 const ThumbsUpIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z" />
+    <path d="M7 10v12" />
   </svg>
 );
 
 const ThumbsDownIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17" />
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z" />
+    <path d="M17 14V2" />
+  </svg>
+);
+
+// The combined-thumbs trigger for the rating popup -- a single glyph
+// instead of switching between ThumbsUpIcon/ThumbsDownIcon depending on
+// which way (if either) the user already rated.
+const ThumbsUpDownIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path
+      strokeMiterlimit="10"
+      d="m4.92 20.28 1.77 1.37c.23.23.74.34 1.09.34h2.17c.69 0 1.43-.51 1.6-1.2l1.37-4.17c.29-.8-.23-1.49-1.09-1.49H9.54a.58.58 0 0 1-.57-.69l.29-1.83c.11-.51-.23-1.09-.74-1.26c-.46-.17-1.03.06-1.26.4l-2.34 3.49"
+    />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M2 20.28v-5.6c0-.8.34-1.09 1.14-1.09h.57c.8 0 1.14.29 1.14 1.09v5.6c0 .8-.34 1.09-1.14 1.09h-.57c-.8 0-1.14-.28-1.14-1.09" />
+    <path
+      strokeMiterlimit="10"
+      d="m19.08 3.72-1.77-1.37c-.23-.23-.74-.34-1.09-.34h-2.17c-.69 0-1.43.51-1.6 1.2l-1.37 4.17c-.29.8.23 1.49 1.09 1.49h2.29c.34 0 .63.29.57.69l-.29 1.83c-.11.51.23 1.09.74 1.26c.46.17 1.03-.06 1.26-.4l2.34-3.49"
+    />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M22 3.72v5.6c0 .8-.34 1.09-1.14 1.09h-.57c-.8 0-1.14-.29-1.14-1.09v-5.6c0-.8.34-1.09 1.14-1.09h.57c.8 0 1.14.28 1.14 1.09" />
   </svg>
 );
 
@@ -275,6 +314,107 @@ function SourceTrail({ sources }: { sources: VerifiedSource[] }) {
   );
 }
 
+// The backend splices [[CITE:i]] (or [[CITE:i,j]] when several sources land
+// at the same point) markers into the raw text right after the claim they
+// back -- ai.ts's streamOpenAi does this using the real end_index offsets
+// OpenAI's url_citation annotations carry. react-markdown has no concept of
+// that token, so it's rewritten into an ordinary markdown link pointing at
+// a `#cite:` fragment first; the `a` component override below recognizes
+// that scheme and swaps in the actual citation badge instead of a link.
+function citeTokensToMarkdownLinks(text: string): string {
+  return text.replace(/\[\[CITE:([0-9]+(?:,[0-9]+)*)\]\]/g, (_, ids: string) => `[cite](#cite:${ids})`);
+}
+
+function CiteBadge({ ids, sources }: { ids: number[]; sources: VerifiedSource[] }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+  const matched = ids.map((i) => sources[i]).filter((s): s is VerifiedSource => !!s);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDocClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [open]);
+
+  if (matched.length === 0) return null;
+
+  return (
+    <span ref={ref} className="relative inline-flex align-middle not-prose">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          if (matched.length === 1) {
+            window.open(matched[0].url, "_blank", "noopener,noreferrer");
+          } else {
+            setOpen((v) => !v);
+          }
+        }}
+        className="mx-0.5 inline-flex items-center gap-0.5 rounded-full bg-surface-2 px-1 py-0.5 align-middle hover:bg-border"
+        aria-label={matched.length === 1 ? `Open source: ${matched[0].title}` : `${matched.length} sources -- choose one`}
+      >
+        {matched.slice(0, 2).map((s, i) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={`${s.url}-${i}`}
+            src={`https://www.google.com/s2/favicons?sz=32&domain=${sourceDomain(s.url)}`}
+            alt=""
+            className="h-3.5 w-3.5 rounded-full ring-1 ring-background"
+            style={i > 0 ? { marginLeft: "-6px" } : undefined}
+          />
+        ))}
+        {matched.length > 2 && <span className="pl-0.5 text-[9px] text-muted">+{matched.length - 2}</span>}
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-20 mt-1 w-56 rounded-lg border border-border bg-background p-1 shadow-lg">
+          {matched.map((s, i) => (
+            <a
+              key={`${s.url}-${i}`}
+              href={s.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-foreground hover:bg-surface-2"
+              onClick={() => setOpen(false)}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`https://www.google.com/s2/favicons?sz=32&domain=${sourceDomain(s.url)}`}
+                alt=""
+                className="h-3.5 w-3.5 shrink-0 rounded-sm"
+              />
+              <span className="min-w-0 flex-1 truncate">{s.title}</span>
+            </a>
+          ))}
+        </div>
+      )}
+    </span>
+  );
+}
+
+function MarkdownCiteOrLink({
+  href,
+  children,
+  sources,
+  ...rest
+}: { href?: string; children?: React.ReactNode; sources: VerifiedSource[] } & React.AnchorHTMLAttributes<HTMLAnchorElement>) {
+  if (href?.startsWith("#cite:")) {
+    const ids = href
+      .slice("#cite:".length)
+      .split(",")
+      .map((n) => parseInt(n, 10))
+      .filter((n) => !Number.isNaN(n));
+    return <CiteBadge ids={ids} sources={sources} />;
+  }
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" {...rest}>
+      {children}
+    </a>
+  );
+}
+
 function slugifyFilename(title: string): string {
   const slug = title
     .toLowerCase()
@@ -407,6 +547,7 @@ export default function ChatMessageBubble({
   const [isSpeaking, setIsSpeaking] = useState(false);
 
   const sources = extractSources(content);
+  const markdownComponents = { a: (props: React.AnchorHTMLAttributes<HTMLAnchorElement>) => <MarkdownCiteOrLink {...props} sources={sources} /> };
   // Reminder markers are pure plumbing (the actual reminder gets created
   // as a side effect elsewhere, in page.tsx, the moment a reply finishes
   // streaming) -- they must never render here as literal `[[REMINDER_...`
@@ -462,6 +603,18 @@ export default function ChatMessageBubble({
     setTimeout(() => setCopied(false), 1500);
   }
 
+  async function handleShare() {
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: stripPdfMarkers(contentSansSources) });
+        return;
+      } catch {
+        // user cancelled or share failed; fall through to clipboard copy
+      }
+    }
+    handleCopy();
+  }
+
   function handleSpeak() {
     if (isSpeaking) {
       stopSpeaking();
@@ -484,18 +637,6 @@ export default function ChatMessageBubble({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  async function handleShare() {
-    if (navigator.share) {
-      try {
-        await navigator.share({ text: stripPdfMarkers(contentSansSources) });
-        return;
-      } catch {
-        // user cancelled or share failed; fall through to clipboard copy
-      }
-    }
-    handleCopy();
-  }
 
   function downloadUrl(url: string, filename: string) {
     const a = document.createElement("a");
@@ -617,10 +758,10 @@ export default function ChatMessageBubble({
                   setEditValue(content);
                   setIsEditing(true);
                 }}
-                className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted hover:text-foreground transition-colors"
+                aria-label="Edit"
+                className="flex items-center justify-center rounded-md p-1.5 text-muted hover:text-foreground transition-colors"
               >
                 {PencilIcon}
-                Edit
               </button>
             )}
           </div>
@@ -758,7 +899,9 @@ export default function ChatMessageBubble({
           {hasPdfSection ? (
             <>
               {beforePdfText.trim() && (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{stripPdfMarkers(beforePdfText)}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                  {citeTokensToMarkdownLinks(normalizeSpacing(stripPdfMarkers(beforePdfText)))}
+                </ReactMarkdown>
               )}
               {pdfFile ? (
                 <PdfFileCard title={pdfFile.title} onDownload={() => downloadUrl(pdfFile.url, pdfFile.filename)} />
@@ -766,11 +909,15 @@ export default function ChatMessageBubble({
                 <PdfFileCardPending />
               )}
               {afterPdfText.trim() && (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{stripPdfMarkers(afterPdfText)}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                  {citeTokensToMarkdownLinks(normalizeSpacing(stripPdfMarkers(afterPdfText)))}
+                </ReactMarkdown>
               )}
             </>
           ) : (
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{stripPdfMarkers(contentSansSources)}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+              {citeTokensToMarkdownLinks(normalizeSpacing(stripPdfMarkers(contentSansSources)))}
+            </ReactMarkdown>
           )}
         </div>
       )}
@@ -788,13 +935,15 @@ export default function ChatMessageBubble({
           <button onClick={handleCopy} aria-label="Copy" className="tool-btn">
             <span className="icon">{copied ? CheckIcon : CopyIcon}</span>
           </button>
-          <ReactionButtons />
-          <button onClick={handleShare} aria-label="Share" className="tool-btn">
-            <span className="icon">{ShareUpIcon}</span>
-          </button>
           <button onClick={handleDownloadPdf} aria-label="Download as PDF" className="tool-btn">
             <span className="icon">{PdfIcon}</span>
           </button>
+          <ReactionButtons />
+          {onRegenerate && (
+            <button onClick={onRegenerate} aria-label="Regenerate" className="tool-btn">
+              <span className="icon">{RegenerateIcon}</span>
+            </button>
+          )}
           <button
             onClick={handleSpeak}
             aria-label={isSpeaking ? "Stop reading aloud" : "Read aloud"}
@@ -802,13 +951,13 @@ export default function ChatMessageBubble({
           >
             <span className="icon">{isSpeaking ? SpeakerOffIcon : SpeakerIcon}</span>
           </button>
-          {onRegenerate && (
-            <button onClick={onRegenerate} aria-label="Regenerate" className="tool-btn">
-              <span className="icon">{RegenerateIcon}</span>
-            </button>
-          )}
           {onDelete && (
-            <MoreMenu items={[{ label: "Delete", icon: TrashIcon, onClick: onDelete, danger: true }]} />
+            <MoreMenu
+              items={[
+                { label: "Share", icon: ShareIcon, onClick: handleShare },
+                { label: "Delete", icon: TrashIcon, onClick: onDelete, danger: true },
+              ]}
+            />
           )}
         </div>
       )}
@@ -818,22 +967,35 @@ export default function ChatMessageBubble({
 
 function ReactionButtons() {
   const [reaction, setReaction] = useState<"up" | "down" | null>(null);
+  const [open, setOpen] = useState(false);
+  const ref = useOutsideClose(open, () => setOpen(false));
+
+  function choose(value: "up" | "down") {
+    setReaction((r) => (r === value ? null : value));
+    setOpen(false);
+  }
+
   return (
-    <>
+    <div className="relative" ref={ref}>
       <button
-        onClick={() => setReaction((r) => (r === "up" ? null : "up"))}
-        aria-label="Good response"
-        className={`tool-btn ${reaction === "up" ? "is-active" : ""}`}
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Rate this response"
+        className={`tool-btn ${reaction ? "is-active" : ""}`}
       >
-        <span className="icon">{ThumbsUpIcon}</span>
+        <span className="icon">{ThumbsUpDownIcon}</span>
       </button>
-      <button
-        onClick={() => setReaction((r) => (r === "down" ? null : "down"))}
-        aria-label="Bad response"
-        className={`tool-btn ${reaction === "down" ? "is-active" : ""}`}
-      >
-        <span className="icon">{ThumbsDownIcon}</span>
-      </button>
-    </>
+      {open && (
+        <div className="absolute bottom-full left-0 z-50 mb-1 w-max min-w-40 rounded-xl border border-border bg-surface p-1 shadow-lg">
+          <button onClick={() => choose("up")} className="menu-item whitespace-nowrap">
+            <span className="icon">{ThumbsUpIcon}</span>
+            <span>Good response</span>
+          </button>
+          <button onClick={() => choose("down")} className="menu-item whitespace-nowrap">
+            <span className="icon">{ThumbsDownIcon}</span>
+            <span>Bad response</span>
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getMobileUserId } from "@/lib/mobileAuth";
-import { getAllAds, saveAllAds, isValidDurationSeconds, priceForDurationSeconds, type Ad } from "@/lib/ads";
+import { getAllAds, mutateAds, isValidDurationSeconds, priceForDurationSeconds, type Ad } from "@/lib/ads";
 import { getStripe, getOrCreateCustomer } from "@/lib/stripe";
 import { LANGUAGES } from "@/components/LanguagePanel";
 
@@ -67,9 +67,7 @@ export async function POST(req: NextRequest) {
   };
 
   try {
-    const ads = await getAllAds();
-    ads.unshift(ad);
-    await saveAllAds(ads);
+    await mutateAds((ads) => [ad, ...ads]);
 
     const stripe = getStripe();
     const origin = req.headers.get("origin") ?? req.nextUrl.origin;

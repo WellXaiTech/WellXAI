@@ -47,6 +47,12 @@ export async function POST(req: NextRequest) {
 
     await kv.set(pendingPasskeyRegKey(user.id), { challenge: options.challenge }, { ex: 300 });
 
+    // Temporary -- confirming exactly what rp/origin values a real request
+    // actually receives, since Android keeps reporting "[50152] RP ID
+    // cannot be validated" even though Google's own Digital Asset Links API
+    // confirms the domain-side statement resolves correctly.
+    console.log("passkey register-options rp:", JSON.stringify(options.rp));
+
     return NextResponse.json({ options });
   } catch (err) {
     console.error("Passkey register-options error:", err);

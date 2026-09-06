@@ -1,3 +1,6 @@
+import { kv } from "@vercel/kv";
+import { LANGUAGE_MATCH_PROMPT, NO_PLACEHOLDER_CODE_PROMPT, CHATGIZA_VOICE_PROMPT, COMPANY_IDENTITY_PROMPT, MODELS } from "./promptShared";
+
 export type ChatContentPart =
   | { type: "text"; text: string }
   | { type: "image_url"; image_url: { url: string } };
@@ -64,12 +67,69 @@ export type Personalization = {
   localDateTime?: string;
 };
 
-type Provider = "openai" | "anthropic" | "mock";
+type Provider = "openai" | "deepseek" | "anthropic" | "mock";
 
 function getProvider(): Provider {
   if (process.env.OPENAI_API_KEY) return "openai";
+  if (process.env.DEEPSEEK_API_KEY) return "deepseek";
   if (process.env.ANTHROPIC_API_KEY) return "anthropic";
   return "mock";
+}
+
+// Circuit breaker for OpenAI, shared across every serverless instance via
+// KV. Without this, every single request pays for a slow, guaranteed-to-
+// fail OpenAI round trip before falling back to DeepSeek whenever OpenAI
+// is out of quota/credits or down -- noticeably heavier/slower than just
+// answering with DeepSeek directly. Once OpenAI fails with a billing/auth
+// error, skip trying it again for a cooldown window and go straight to
+// DeepSeek; self-heals automatically once the cooldown lapses and OpenAI
+// works again (e.g. credits topped up), no restart needed.
+//
+// This used to be a plain in-memory variable, which barely worked on
+// Vercel: each concurrent lambda instance has its own copy, it resets on
+// every cold start, and a healthy instance's markOpenAiUp() could never
+// reach a different instance still holding a stale "down" flag -- so one
+// instance could keep silently serving DeepSeek for the full cooldown
+// after OpenAI had already recovered. KV makes the state actually shared.
+// Fails open (treats OpenAI as up) on a KV error, same reasoning as
+// rateLimit.ts/usageLimit.ts -- a broken breaker shouldn't be worse than
+// no breaker at all.
+const OPENAI_COOLDOWN_MS = 5 * 60 * 1000;
+const OPENAI_DOWN_KV_KEY = "chatgiza:openai-down-until";
+
+export async function openAiLikelyDown(): Promise<boolean> {
+  try {
+    const until = await kv.get<number>(OPENAI_DOWN_KV_KEY);
+    return typeof until === "number" && Date.now() < until;
+  } catch (err) {
+    console.error("OpenAI breaker read failed, assuming OpenAI is up:", err);
+    return false;
+  }
+}
+
+export async function markOpenAiDown(error: unknown): Promise<void> {
+  const status = (error as { status?: number })?.status;
+  const code = (error as { code?: string })?.code;
+  // Only trip the breaker for errors that mean OpenAI itself is actually
+  // unusable (no credit, revoked/invalid key) -- a bare 429 is often just
+  // "you're sending too fast, retry shortly" rate limiting, not an
+  // outage, and shouldn't take OpenAI out of rotation for minutes for
+  // every other request in flight.
+  if (status === 401 || status === 403 || code === "insufficient_quota") {
+    try {
+      await kv.set(OPENAI_DOWN_KV_KEY, Date.now() + OPENAI_COOLDOWN_MS, { px: OPENAI_COOLDOWN_MS });
+    } catch (err) {
+      console.error("OpenAI breaker write failed:", err);
+    }
+  }
+}
+
+export async function markOpenAiUp(): Promise<void> {
+  try {
+    await kv.del(OPENAI_DOWN_KV_KEY);
+  } catch (err) {
+    console.error("OpenAI breaker clear failed:", err);
+  }
 }
 
 export function isRealAiConfigured() {
@@ -80,16 +140,7 @@ const CAPABILITIES_PROMPT =
   "You are ChatGiZa, a conversational assistant. Reply in the language the user writes in (or their preferred " +
   "language if one is set below). You have real, working capabilities beyond plain text — know them and offer them proactively " +
   "when relevant, don't just say you can't help:\n\n" +
-  "Kiswahili and Sheng: this is a core strength, not an afterthought. When the user writes in Kiswahili, Sheng, or " +
-  "code-switches between Kiswahili/Sheng/English mid-sentence (very common in everyday East African conversation), " +
-  "respond the way a genuinely fluent, native speaker would — never a stiff, word-for-word translation from English. " +
-  "Mirror the user's actual register: casual Sheng gets a casual, idiomatic reply using real Sheng vocabulary and " +
-  "rhythm, not textbook Kiswahili Sanifu; formal or business Kiswahili gets a properly formal one. When the user " +
-  "mixes languages, it's fine to mirror that mixing back rather than forcing everything into one language — e.g. " +
-  "keep an English technical term they used rather than awkwardly translating it, if that reads more naturally. " +
-  "Get slang, proverbs, idioms, and regional expressions right, and don't over-explain them unless asked. The bar: " +
-  "a Kiswahili or Sheng speaker should immediately feel this understands them better and more naturally than any " +
-  "other AI they've used — not that they're talking to a translation layer.\n\n" +
+  LANGUAGE_MATCH_PROMPT + "\n\n" +
   "- For any question that isn't trivial small talk, think it through carefully before answering: consider what the user actually " +
   "needs (not just the literal words), weigh more than one angle when the topic has any nuance, check your own reasoning for " +
   "mistakes, and prefer a correct, well-considered answer over the fastest surface-level one. For genuinely complex or ambiguous " +
@@ -170,14 +221,35 @@ const CAPABILITIES_PROMPT =
   "Identity questions: if the user just asks your name or who you are (e.g. \"who are you\", \"what's your name\", \"jina lako " +
   "nani\"), answer with just that — a short \"I'm ChatGiZa.\" (translated into their language if needed). Don't list your " +
   "capabilities and don't ask a follow-up question in that reply — only describe what you can do when the user actually asks " +
-  "about that separately.\n\n" +
-  "Writing style: don't default to the same structure every time (e.g. always a numbered list). Vary your formatting to fit the " +
-  "content and keep responses engaging — sometimes flowing prose, sometimes short paragraphs with a bold lead-in, sometimes a " +
-  "table, sometimes a quote or a vivid example, sometimes a mix. Use numbered/bulleted lists only when the content is genuinely " +
-  "sequential or enumerable, not as a default crutch. Write with personality and clarity, not like a form being filled out. " +
-  "Write in connected paragraphs, not one sentence per line separated by blank lines -- that reads as a wall of isolated, " +
-  "disconnected fragments instead of someone actually explaining something. Related sentences belong in the same paragraph; " +
-  "start a new paragraph only when the topic genuinely shifts.\n\n" +
+  "about that separately. " + COMPANY_IDENTITY_PROMPT + "\n\n" +
+  CHATGIZA_VOICE_PROMPT + "\n\n" +
+  "Writing style: the voice above stays constant — what varies is STRUCTURE, chosen to fit the content, not chosen " +
+  "at random for variety's own sake. Don't default to the same shape every time (e.g. always a numbered list): " +
+  "sometimes flowing prose, sometimes short paragraphs with a bold lead-in, sometimes a table, sometimes a quote " +
+  "or a vivid example, sometimes a mix — whichever actually fits what's being said. Use numbered/bulleted lists " +
+  "only when the content is genuinely sequential or enumerable, not as a default crutch. Write with personality " +
+  "and clarity, not like a form being filled out.\n\n" +
+  "Keep every unit short, whichever shape you chose: a paragraph is 1-3 sentences, a bullet is one line, never " +
+  "several unrelated facts crammed into one dense block. When the content genuinely has several categories, " +
+  "options, or steps (e.g. \"what are the visa types and their requirements\", \"compare X vs Y\"), give each its " +
+  "own bold lead-in line followed by a short line or two under it — not one paragraph that mentions all of them " +
+  "run together, and not a single bullet stuffed with every fact about that category at once. Break to a new " +
+  "paragraph or bullet the moment the topic shifts, even slightly, rather than continuing the same block. A wall " +
+  "of dense, unbroken text is a failure of structure even if the content itself is accurate — a reader should be " +
+  "able to scan the reply in a few seconds and see its shape before reading a word of it.\n\n" +
+  "Concrete shape to match for multi-category factual content (structure only -- write in the user's actual " +
+  "language and topic, this is only to show how SHORT and separated each part should be):\n" +
+  "**Category A** -- what it is, in one short line.\n" +
+  "- key requirement or fact, one line\n" +
+  "- another key requirement or fact, one line\n\n" +
+  "**Category B** -- what it is, in one short line.\n" +
+  "- key requirement or fact, one line\n" +
+  "- another key requirement or fact, one line\n\n" +
+  "That is the target density -- roughly one short line per fact, a blank line between categories. NOT this " +
+  "(too dense, this is the failure mode to avoid): \"Category A is defined by several requirements including " +
+  "requirement one and requirement two and also depends on requirement three, while Category B on the other " +
+  "hand requires...\" -- one long paragraph running every category and every fact together is wrong even if " +
+  "every fact in it is correct.\n\n" +
   "Understanding before answering: read past the literal wording to what the person actually means — their real goal, the " +
   "situation behind the question, what they'd be disappointed not to get. The same words can call for very different replies " +
   "depending on tone (frustrated vs. curious vs. joking), what was said earlier in the conversation, and what's left unsaid but " +
@@ -186,11 +258,22 @@ const CAPABILITIES_PROMPT =
   "Never echo the user back at them: don't open a reply by restating or rephrasing their question (\"So you're asking about " +
   "X...\"), don't reuse their exact sentence structure or phrasing as your own, and don't pad a reply with filler that just " +
   "repeats what they already said. Every reply should read like it came from actually thinking about the specific message in " +
-  "front of you, not from slotting it into a template. Draw on the full range of ways a thoughtful, well-read person might " +
-  "respond — direct and to the point, a short story or analogy, a comparison, a question back, a worked example, playful, warm, " +
-  "blunt, a table, a mix — and pick whichever genuinely fits this message and this moment, not whichever you used last time. " +
-  "Two similar-sounding questions asked at different times should not read like they got the same answer copy-pasted with the " +
-  "nouns swapped.";
+  "front of you, not from slotting it into a template. Two similar-sounding questions asked at different times should not read " +
+  "like they got the same answer copy-pasted with the nouns swapped.\n\n" +
+  "How the above fit together, when they seem to pull in different directions: they apply in order, not all at once. First " +
+  "understand what's actually being asked (Understanding before answering). Then, if it's genuinely complex, reason it through " +
+  "(the step-by-step guidance above). That gives you the substance of the answer — its depth, specificity, and correctness " +
+  "(Depth and quality) are decided at this point and are never sacrificed for the sake of a punchier shape. Only once the " +
+  "substance is settled do you choose how to present it (ChatGiZa's voice, Writing style) — structure is chosen to fit the " +
+  "content you already have, never the reverse, and never as a way to pad a thin answer into something that merely looks " +
+  "complete. Voice stays constant throughout; only structure and depth genuinely vary, and only in response to the content and " +
+  "the question, not at random.\n\n" +
+  "One more priority rule, since this same base prompt is shared across every mode: anything below this point that describes a " +
+  "specific mode (SQL Helper, Document Writer, Python Helper, and so on) always wins over the general guidance above when the " +
+  "two genuinely conflict — e.g. SQL Helper's code-block-plus-explanation shape overrides 'don't default to the same " +
+  "structure', Document Writer's formal document structure overrides it the same way. The general guidance above is the " +
+  "default for ordinary conversation; a mode's own explicit format is a deliberate, narrower choice for that mode's actual " +
+  "purpose, not an oversight to be second-guessed against the general rule.";
 
 const SYSTEM_PROMPT = CAPABILITIES_PROMPT;
 
@@ -410,10 +493,13 @@ async function performAgentWebSearch(
   query: string
 ): Promise<{ text: string; citations: SourceCitation[] }> {
   try {
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o-search-preview",
-      web_search_options: {},
-      messages: [
+    // gpt-4o-search-preview (Chat Completions' web_search_options) is
+    // deprecated by OpenAI -- the Responses API's web_search tool on a
+    // regular model is the current replacement.
+    const response = await client.responses.create({
+      model: MODELS.primary,
+      tools: [{ type: "web_search" }],
+      input: [
         {
           role: "system",
           content:
@@ -424,19 +510,32 @@ async function performAgentWebSearch(
         { role: "user", content: query },
       ],
     });
-    const message = completion.choices[0]?.message;
-    const rawAnnotations = (message as { annotations?: Array<{ type?: string; url_citation?: { url?: string; title?: string } }> } | undefined)
-      ?.annotations;
     const citations: SourceCitation[] = [];
-    for (const ann of rawAnnotations ?? []) {
-      const url = ann.url_citation?.url;
-      if (ann.type === "url_citation" && url) citations.push({ url, title: ann.url_citation?.title || url });
+    for (const item of response.output ?? []) {
+      if (item.type !== "message") continue;
+      for (const part of item.content ?? []) {
+        if (part.type !== "output_text") continue;
+        for (const ann of part.annotations ?? []) {
+          if (ann.type === "url_citation") citations.push({ url: ann.url, title: ann.title || ann.url });
+        }
+      }
     }
-    return { text: message?.content?.trim() || "No results found.", citations };
+    return { text: response.output_text?.trim() || "No results found.", citations };
   } catch (err) {
     console.error("Agent web_search tool error:", err);
     return { text: "Search failed -- try a different query or answer from what you already know.", citations: [] };
   }
+}
+
+// Standalone entry point for the Build preview's address-bar search --
+// same underlying search call as AI Agent's web_search tool, just exposed
+// directly instead of only reachable from inside a tool-calling loop. Lets
+// that address bar show real search results inline (title + link, like a
+// results page) instead of either faking it or leaving chatgiza.com
+// entirely just to run a search.
+export async function performWebSearch(query: string): Promise<{ text: string; citations: SourceCitation[] }> {
+  const client = await getOpenAiClient();
+  return performAgentWebSearch(client, query);
 }
 
 function encodeSourcesBlock(citations: Map<string, string>): string | null {
@@ -481,7 +580,7 @@ async function runAiAgent(
 
   for (let step = 0; step < MAX_AGENT_STEPS; step++) {
     const completion = await client.chat.completions.create({
-      model: "gpt-5.5",
+      model: MODELS.primary,
       messages: conversation as Parameters<typeof client.chat.completions.create>[0]["messages"],
       tools: [WEB_SEARCH_TOOL],
       tool_choice: "auto",
@@ -522,7 +621,7 @@ async function runAiAgent(
   // Hit the step cap without a final answer -- ask once more, without
   // tools, so the user still gets something instead of silence.
   const wrapUp = await client.chat.completions.create({
-    model: "gpt-5.5",
+    model: MODELS.primary,
     messages: [
       ...(conversation as Parameters<typeof client.chat.completions.create>[0]["messages"]),
       { role: "user", content: "Give your best final answer now based on the research so far." },
@@ -562,7 +661,7 @@ async function runAgentTeam(
   let plan: AgentPlanStep[] = [];
   try {
     const planCompletion = await client.chat.completions.create({
-      model: "gpt-5.5",
+      model: MODELS.primary,
       messages: [
         {
           role: "system",
@@ -618,7 +717,7 @@ async function runAgentTeam(
     try {
       if (looksLikeResearch) {
         const first = await client.chat.completions.create({
-          model: "gpt-5.5",
+          model: MODELS.primary,
           messages: [
             {
               role: "system",
@@ -645,7 +744,7 @@ async function runAgentTeam(
           );
           for (const r of toolResults) for (const c of r.citations) teamCitations.set(c.url, c.title);
           const second = await client.chat.completions.create({
-            model: "gpt-5.5",
+            model: MODELS.primary,
             messages: [
               { role: "system", content: `You are the ${step.role}. Sub-task: ${step.task}` },
               { role: "assistant", content: msg.content, tool_calls: msg.tool_calls },
@@ -662,7 +761,7 @@ async function runAgentTeam(
         }
       } else {
         const completion = await client.chat.completions.create({
-          model: "gpt-5.5",
+          model: MODELS.primary,
           messages: [
             {
               role: "system",
@@ -682,12 +781,12 @@ async function runAgentTeam(
   // the user like a normal answer.
   const teamOutput = results.map((r) => `[${r.role} -- ${r.task}]\n${r.output}`).join("\n\n");
   const finalStream = await client.chat.completions.create({
-    model: "gpt-5.5",
+    model: MODELS.primary,
     stream: true,
     messages: [
       {
         role: "system",
-        content: `${system}\n\nYou are the team coordinator. Your teammates did the work below -- write ONE cohesive final answer to the user's original request from it. Don't mention "the team" or paste their raw output; just give the polished answer as if you produced it yourself, using proper markdown formatting.`,
+        content: `${system}\n\nYou are the team coordinator. The team output below is raw material -- dense working notes each teammate wrote for you specifically, not draft prose, and likely inconsistent with each other in tone and shape since each was written in isolation. Your job is not to lightly edit or stitch that material together; it's to actually write the final answer yourself, from scratch, in ChatGiZa's voice (as defined in the base instructions above) as if no team existed -- the user should never be able to tell this answer came from synthesizing several separate outputs rather than one person answering directly. Use the material for its substance -- facts, findings, analysis -- not for its phrasing. Don't mention "the team" or any teammate/role by name, and don't preserve any one teammate's individual style over another's; every part of the final answer must read as the same single voice, using proper markdown formatting.`,
       },
       { role: "user", content: `Original request: ${userRequest}\n\nTeam output:\n${teamOutput}` },
     ],
@@ -725,43 +824,231 @@ async function streamOpenAi(
     return;
   }
 
+  const chatMessages = messages.map((m) =>
+    m.role === "user"
+      ? { role: "user" as const, content: m.content }
+      : { role: "assistant" as const, content: contentToText(m.content) }
+  );
+
+  if (usesSearch) {
+    // gpt-4o-search-preview (Chat Completions' web_search_options) is
+    // deprecated by OpenAI -- the Responses API's web_search tool on a
+    // regular model is the current replacement. Its content-part shape for
+    // multi-modal input differs from Chat Completions', so this flattens
+    // each message down to plain text (contentToText already does this
+    // for assistant turns above; images just become a placeholder here,
+    // same as web_search/deep_research's own gpt-4o-search-preview path
+    // never supported image input either).
+    const searchInput = messages.map((m) => ({
+      role: m.role,
+      content: contentToText(m.content),
+    }));
+    const stream = await client.responses.create({
+      model: MODELS.primary,
+      stream: true,
+      tools: [{ type: "web_search" }],
+      // Without this, the model treats web_search as available rather than
+      // mandatory -- for a question it's confident answering from its own
+      // training data (e.g. "list some well-known X sites"), it can and
+      // does skip the tool entirely and just type links into its own
+      // prose, which is exactly the un-verified case this whole citation
+      // system exists to distinguish from. The user picked "Web search"
+      // deliberately; every turn in that mode should be a real search.
+      tool_choice: "required",
+      input: [{ role: "system", content: system }, ...searchInput],
+    });
+
+    // Idea #8: real, verifiable sources -- not the model typing links into
+    // its own prose (which it can get wrong or invent), but the actual
+    // url_citation annotations the web_search tool attaches to its own
+    // output, each carrying the exact character range (end_index) of the
+    // claim it backs. Rather than only listing everything in one block at
+    // the end, an inline [[CITE:i]] (or [[CITE:i,j]] when several sources
+    // land at the same point) marker is spliced into the text right after
+    // that span, so the client can render a small tappable source badge
+    // exactly where the model placed the citation -- opening straight to
+    // the article for one source, or a picker when several apply -- with
+    // the flat [[SOURCES_START]]...[[SOURCES_END]] block (same convention
+    // as PDF export's [[PDF_START]]/[[PDF_END]]) still appended at the end
+    // for clients that only want the plain list.
+    // Splicing requires the exact offsets, which only exist once an
+    // annotation event has fired -- and it can fire after its span's text
+    // delta was already flushed downstream, too late to edit. Buffering
+    // the full response here (instead of forwarding deltas live) trades a
+    // small latency hit, only on this search path, for correct marker
+    // placement instead of guessed/misaligned ones.
+    let fullText = "";
+    const rawAnnotations: { url: string; title: string; endIndex: number }[] = [];
+    for await (const event of stream) {
+      if (event.type === "response.output_text.delta") {
+        fullText += event.delta;
+      } else if (event.type === "response.output_text.annotation.added") {
+        const ann = event.annotation as
+          | { type?: string; url?: string; title?: string; end_index?: number }
+          | undefined;
+        if (ann?.type === "url_citation" && ann.url && typeof ann.end_index === "number") {
+          rawAnnotations.push({ url: ann.url, title: ann.title || ann.url, endIndex: ann.end_index });
+        }
+      }
+    }
+
+    const orderedUrls: string[] = [];
+    const titleByUrl = new Map<string, string>();
+    for (const a of rawAnnotations) {
+      if (!titleByUrl.has(a.url)) {
+        titleByUrl.set(a.url, a.title);
+        orderedUrls.push(a.url);
+      }
+    }
+    const indexByUrl = new Map(orderedUrls.map((u, i) => [u, i]));
+
+    // Group citations that land at the same offset into one combined
+    // marker (e.g. [[CITE:0,2]]) so the client shows one badge -- with a
+    // picker on tap -- instead of several badges stacked back-to-back.
+    const groupsByEndIndex = new Map<number, number[]>();
+    for (const a of rawAnnotations) {
+      const idx = indexByUrl.get(a.url);
+      if (idx === undefined) continue;
+      const group = groupsByEndIndex.get(a.endIndex) ?? [];
+      if (!group.includes(idx)) group.push(idx);
+      groupsByEndIndex.set(a.endIndex, group);
+    }
+    // Insert from the highest offset down so earlier offsets stay valid as
+    // the string grows.
+    const insertionsDesc = Array.from(groupsByEndIndex.entries()).sort((a, b) => b[0] - a[0]);
+    for (const [endIndex, indices] of insertionsDesc) {
+      const pos = Math.min(endIndex, fullText.length);
+      fullText = `${fullText.slice(0, pos)}[[CITE:${indices.join(",")}]]${fullText.slice(pos)}`;
+    }
+
+    controller.enqueue(encoder.encode(fullText));
+    if (orderedUrls.length > 0) {
+      const sources = orderedUrls.map((url) => ({ url, title: titleByUrl.get(url) || url }));
+      controller.enqueue(encoder.encode(`\n[[SOURCES_START]]${JSON.stringify(sources)}[[SOURCES_END]]`));
+    }
+    return;
+  }
+
+  // The plain conversational path (default, deep_think, document_writer,
+  // sql_helper, python_helper, business_assistant, digital_twin): real
+  // token-by-token streaming, straight through to the client.
   const completion = await client.chat.completions.create({
-    model: usesSearch ? "gpt-4o-search-preview" : "gpt-5.5",
+    model: MODELS.primary,
     stream: true,
-    ...(usesSearch ? { web_search_options: {} } : {}),
     ...(deepThink ? { reasoning_effort: "high" as const } : { reasoning_effort: "medium" as const }),
+    messages: [{ role: "system", content: system }, ...chatMessages],
+  });
+
+  for await (const chunk of completion) {
+    const delta = chunk.choices[0]?.delta;
+    if (delta?.content) controller.enqueue(encoder.encode(delta.content));
+  }
+}
+
+// DeepSeek's API is OpenAI-SDK-compatible (same client, just a different
+// baseURL/model), so this reuses the "openai" package rather than a
+// separate SDK. Kept intentionally simpler than streamOpenAi -- no
+// web_search/ai_agent/agent_team tool-calling loops here, since those lean
+// on OpenAI-only endpoints (gpt-4o-search-preview, etc.) that don't have a
+// DeepSeek equivalent; plain conversational replies (the vast majority of
+// traffic) are what actually needs a second working provider. Image
+// content parts are flattened to text first since DeepSeek's chat models
+// aren't vision-capable.
+export type SearchHit = { title: string; url: string; content: string };
+
+// DeepSeek's developer API (unlike OpenAI's Responses API) has no built-in
+// hosted web_search tool -- the search feature visible in DeepSeek's own
+// consumer app is internal to that product and isn't exposed over the
+// public Chat Completions endpoint this app calls. Their own docs point to
+// "caller-executed" search instead: the caller fetches real results itself
+// and hands them to the model as context. Tavily fills that role here.
+export async function tavilySearch(query: string): Promise<SearchHit[]> {
+  if (!process.env.TAVILY_API_KEY || !query.trim()) return [];
+  try {
+    const res = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.TAVILY_API_KEY}` },
+      body: JSON.stringify({ query, max_results: 6 }),
+    });
+    if (!res.ok) {
+      console.error("Tavily search failed:", res.status, await res.text().catch(() => ""));
+      return [];
+    }
+    const data: unknown = await res.json();
+    const results: unknown[] = Array.isArray((data as { results?: unknown })?.results)
+      ? (data as { results: unknown[] }).results
+      : [];
+    return results
+      .map((r) => (r && typeof r === "object" ? (r as Record<string, unknown>) : null))
+      .filter((r): r is Record<string, unknown> => !!r && typeof r.url === "string" && typeof r.title === "string")
+      .map((r) => ({ title: r.title as string, url: r.url as string, content: typeof r.content === "string" ? r.content : "" }));
+  } catch (err) {
+    console.error("Tavily search error:", err);
+    return [];
+  }
+}
+
+async function streamDeepSeek(
+  messages: ChatMessage[],
+  tool: ChatTool,
+  controller: ReadableStreamDefaultController<Uint8Array>,
+  personalization?: Personalization
+) {
+  const encoder = new TextEncoder();
+  const { default: OpenAI } = await import("openai");
+  const client = new OpenAI({
+    apiKey: process.env.DEEPSEEK_API_KEY,
+    baseURL: MODELS.fallbackBaseUrl,
+  });
+
+  const deepThink = tool === "deep_think";
+  let system = buildSystemPrompt(TOOL_PROMPTS[tool ?? "default"] ?? SYSTEM_PROMPT, personalization);
+
+  // Real search results, fetched directly rather than left to the model --
+  // same reasoning as OpenAI's verified url_citation data (Idea #8): the
+  // model should ground its answer in actual pages it's shown, not links
+  // typed from memory. Without this block, a search-mode request that
+  // lands on this fallback path (OpenAI down/out of quota) would answer
+  // from training data alone while still talking as if it can search --
+  // this grounds it in real results instead, or is silently skipped if
+  // nothing relevant was found (no TAVILY_API_KEY, or an empty result set).
+  const usesSearch = tool === "web_search" || tool === "deep_research";
+  let searchResults: SearchHit[] = [];
+  if (usesSearch) {
+    const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
+    const query = lastUserMessage ? contentToText(lastUserMessage.content) : "";
+    searchResults = await tavilySearch(query);
+    if (searchResults.length > 0) {
+      const context = searchResults.map((r, i) => `[${i + 1}] ${r.title} -- ${r.url}\n${r.content}`).join("\n\n");
+      system +=
+        "\n\nReal, live web search results for the user's latest message, fetched just now -- ground your answer in " +
+        "these (cite/reference the ones you actually use in your own words, don't just relist them) rather than " +
+        "typing your own guessed links, and don't claim you're unable to search -- you already have real results " +
+        `below:\n\n${context}`;
+    }
+  }
+
+  const completion = await client.chat.completions.create({
+    model: deepThink ? "deepseek-reasoner" : MODELS.fallback,
+    stream: true,
     messages: [
       { role: "system", content: system },
-      ...messages.map((m) =>
-        m.role === "user"
-          ? { role: "user" as const, content: m.content }
-          : { role: "assistant" as const, content: contentToText(m.content) }
-      ),
+      ...messages.map((m) => ({ role: m.role, content: contentToText(m.content) })),
     ],
   });
 
-  // Idea #8: real, verifiable sources -- not the model typing links into
-  // its own prose (which it can get wrong or invent), but the actual
-  // url_citation annotations OpenAI's search-preview models attach to
-  // their own output when web_search_options is on. Collected silently
-  // while streaming and appended as a marker block the app parses out
-  // and renders as a real source list, the same trick already used for
-  // PDF export's [[PDF_START]]/[[PDF_END]] markers.
-  const citations = new Map<string, string>();
   for await (const chunk of completion) {
-    const delta = chunk.choices[0]?.delta as
-      | { content?: string; annotations?: Array<{ type?: string; url_citation?: { url?: string; title?: string } }> }
-      | undefined;
-    if (delta?.content) controller.enqueue(encoder.encode(delta.content));
-    for (const ann of delta?.annotations ?? []) {
-      const url = ann.url_citation?.url;
-      if (ann.type === "url_citation" && url && !citations.has(url)) {
-        citations.set(url, ann.url_citation?.title || url);
-      }
-    }
+    const delta = chunk.choices[0]?.delta?.content;
+    if (delta) controller.enqueue(encoder.encode(delta));
   }
-  if (citations.size > 0) {
-    const sources = Array.from(citations.entries()).map(([url, title]) => ({ url, title }));
+
+  // Flat list only (no inline [[CITE:i]] splicing like the OpenAI path) --
+  // DeepSeek's plain completion doesn't hand back per-claim offsets the
+  // way OpenAI's url_citation annotations do, so there's no reliable way
+  // to know which sentence used which source. SourceTrail still renders
+  // this as a real, verified source list either way.
+  if (searchResults.length > 0) {
+    const sources = searchResults.map((r) => ({ url: r.url, title: r.title }));
     controller.enqueue(encoder.encode(`\n[[SOURCES_START]]${JSON.stringify(sources)}[[SOURCES_END]]`));
   }
 }
@@ -820,7 +1107,28 @@ export function streamChatReply(
   return new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
-        if (provider === "openai") await streamOpenAi(messages, tool, controller, personalization);
+        if (provider === "openai") {
+          if ((await openAiLikelyDown()) && process.env.DEEPSEEK_API_KEY) {
+            await streamDeepSeek(messages, tool, controller, personalization);
+          } else {
+            try {
+              await streamOpenAi(messages, tool, controller, personalization);
+              await markOpenAiUp();
+            } catch (error) {
+              // Both providers configured and both should work (not one
+              // replacing the other) -- if OpenAI itself fails (quota,
+              // outage, bad key), DeepSeek keeps replies flowing instead of
+              // the user just seeing an error.
+              if (process.env.DEEPSEEK_API_KEY) {
+                console.error("OpenAI stream failed, falling back to DeepSeek:", error);
+                await markOpenAiDown(error);
+                await streamDeepSeek(messages, tool, controller, personalization);
+              } else {
+                throw error;
+              }
+            }
+          }
+        } else if (provider === "deepseek") await streamDeepSeek(messages, tool, controller, personalization);
         else if (provider === "anthropic") await streamAnthropic(messages, controller, personalization);
         else await streamMock(messages, controller);
       } catch (error) {
@@ -885,32 +1193,320 @@ export async function editImage(sourceDataUrl: string, instruction: string): Pro
 const CODE_GEN_SYSTEM_PROMPT =
   "You write JavaScript for a sandboxed browser environment (a plain <script> tag — no imports/require, no DOM, no Node.js APIs, " +
   "no fetch/network access). Output ONLY runnable JavaScript code, nothing else — no markdown code fences, no explanation text " +
-  "before or after. Use console.log/console.warn/console.error for any output, since that is the only way results are visible.";
+  "before or after. Use console.log/console.warn/console.error for any output, since that is the only way results are visible.\n\n" +
+  NO_PLACEHOLDER_CODE_PROMPT + "\n\n" +
+  "Some requests are a follow-up on code that already exists (you'll see the editor's current, real content right before " +
+  "the request, and possibly earlier prompts before that). When that's the case, treat the current code as the source of " +
+  "truth — it may include manual edits made after anything you wrote earlier, which you were never told about — and make " +
+  "only the change the new request actually asks for, keeping everything else in it exactly as it is. Do not regenerate " +
+  "the file from scratch, from memory, or from what an earlier prompt asked for; that silently discards working code and " +
+  "any hand edits, which is the one failure mode to avoid above all others here. Return the complete file either way " +
+  "(this is a full-file output, not a diff) — just make sure that full file is the current one with the requested change " +
+  "applied, not a fresh reconstruction. A full rewrite is only appropriate when the request itself clearly asks to start over.";
 
+// Not fully anchored to the string's start/end -- a model reply with any
+// leading/trailing whitespace, or a fence with no language tag at all,
+// used to fail this match and get returned as literal, unrunnable
+// ```-wrapped text straight into the sandbox.
 function stripCodeFences(text: string): string {
-  const fenced = text.match(/^```(?:javascript|js)?\n([\s\S]*?)\n```$/);
-  return fenced ? fenced[1] : text;
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/^```[a-zA-Z]*\n?([\s\S]*?)\n?```$/);
+  return fenced ? fenced[1] : trimmed;
 }
 
-export async function generateCode(prompt: string): Promise<string> {
-  if (getProvider() !== "openai") {
-    throw new Error("Code generation needs an OpenAI API key configured.");
+export type CodeGenTurn = { prompt: string; code: string };
+
+export async function generateCode(prompt: string, currentCode?: string, history?: CodeGenTurn[]): Promise<string> {
+  if (!process.env.OPENAI_API_KEY && !process.env.DEEPSEEK_API_KEY) {
+    throw new Error("Code generation needs an OpenAI or DeepSeek API key configured.");
   }
 
   const { default: OpenAI } = await import("openai");
-  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  // Earlier turns give the model real conversational context (what was
+  // already asked for), but the code inside them can be stale the moment
+  // the user edits the textarea by hand -- so the *current* editor
+  // content is always injected fresh in the final turn below, the same
+  // "don't trust history for live state" fix already applied to the
+  // Build agent's file map.
+  const historyMessages = (history ?? []).flatMap((turn) => [
+    { role: "user" as const, content: turn.prompt },
+    { role: "assistant" as const, content: turn.code },
+  ]);
+  const finalUserContent = currentCode?.trim()
+    ? `Current code in the editor:\n\n${currentCode}\n\n---\n\nRequest: ${prompt}`
+    : prompt;
+  const genMessages = [
+    { role: "system" as const, content: CODE_GEN_SYSTEM_PROMPT },
+    ...historyMessages,
+    { role: "user" as const, content: finalUserContent },
+  ];
 
-  const completion = await client.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      { role: "system", content: CODE_GEN_SYSTEM_PROMPT },
-      { role: "user", content: prompt },
-    ],
-  });
+  // OpenAI stays primary; DeepSeek steps in if OpenAI itself fails (quota,
+  // outage, bad key) so the Code panel keeps working either way -- same
+  // fallback pattern as the main chat provider and the Build agent.
+  let text = "";
+  if (process.env.OPENAI_API_KEY && !((await openAiLikelyDown()) && process.env.DEEPSEEK_API_KEY)) {
+    try {
+      const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const completion = await client.chat.completions.create({ model: MODELS.primary, messages: genMessages });
+      text = completion.choices[0]?.message?.content?.trim() ?? "";
+      await markOpenAiUp();
+    } catch (err) {
+      if (!process.env.DEEPSEEK_API_KEY) throw err;
+      console.error("Code generation: OpenAI failed, falling back to DeepSeek:", err);
+      await markOpenAiDown(err);
+    }
+  }
+  if (!text && process.env.DEEPSEEK_API_KEY) {
+    const client = new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY, baseURL: MODELS.fallbackBaseUrl });
+    const completion = await client.chat.completions.create({ model: MODELS.fallback, messages: genMessages });
+    text = completion.choices[0]?.message?.content?.trim() ?? "";
+  }
 
-  const text = completion.choices[0]?.message?.content?.trim() ?? "";
   if (!text) throw new Error("No code was returned.");
   return stripCodeFences(text);
+}
+
+const EBOOK_PAGE_SYSTEM_PROMPT = `You are a professional author, writing one page at a time inside a page-by-page book editor. You're given the book's title, an optional brief, the content of every earlier page (for continuity), and what THIS page should cover.
+
+Rules:
+- Write only THIS page's content in Markdown -- not the whole book, not a recap of earlier pages.
+- Use "##" for a page/section heading if one fits naturally, **bold** for key terms, "-" bullet lists where they help.
+- Write real, substantive content -- explanations, examples, practical detail -- not filler or placeholder text.
+- Stay consistent with earlier pages (tone, terminology, where the narrative/argument left off) without repeating them.
+- Output ONLY the Markdown for this page -- no commentary, no code fences, no "Here is page N" preamble.`;
+
+// Powers the /ebook/[id] editor's "Write with AI" action on a single page --
+// unlike a one-shot whole-book generator, this only ever writes the page
+// currently open, using every earlier page as context, so a book can be
+// built one page at a time and hand-edited in between (see ebook_pages).
+// Same OpenAI-primary/DeepSeek-fallback pattern as generateCode above.
+export async function generateEbookPage(
+  title: string,
+  brief: string,
+  previousPages: string[],
+  instruction: string
+): Promise<string> {
+  if (!process.env.OPENAI_API_KEY && !process.env.DEEPSEEK_API_KEY) {
+    throw new Error("E-book generation needs an OpenAI or DeepSeek API key configured.");
+  }
+
+  const { default: OpenAI } = await import("openai");
+  // Only the most recent few pages are sent as context (each capped in
+  // length) -- enough for continuity without letting a long book blow past
+  // the model's context window on every single page write.
+  const recentPages = previousPages.slice(-6);
+  const startIndex = previousPages.length - recentPages.length;
+  const context = [
+    `Book title: ${title}`,
+    brief.trim() && `Brief: ${brief.trim()}`,
+    recentPages.length > 0
+      ? `Earlier pages so far:\n\n${recentPages.map((p, i) => `--- Page ${startIndex + i + 1} ---\n${p.slice(0, 2000)}`).join("\n\n")}`
+      : "This is the first page of the book.",
+    `What this next page should cover: ${instruction.trim() || "Continue the book naturally from where it left off."}`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+  const genMessages = [
+    { role: "system" as const, content: EBOOK_PAGE_SYSTEM_PROMPT },
+    { role: "user" as const, content: context },
+  ];
+
+  let text = "";
+  if (process.env.OPENAI_API_KEY && !((await openAiLikelyDown()) && process.env.DEEPSEEK_API_KEY)) {
+    try {
+      const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const completion = await client.chat.completions.create({ model: MODELS.primary, messages: genMessages, max_tokens: 1600 });
+      text = completion.choices[0]?.message?.content?.trim() ?? "";
+      await markOpenAiUp();
+    } catch (err) {
+      if (!process.env.DEEPSEEK_API_KEY) throw err;
+      console.error("E-book page generation: OpenAI failed, falling back to DeepSeek:", err);
+      await markOpenAiDown(err);
+    }
+  }
+  if (!text && process.env.DEEPSEEK_API_KEY) {
+    const client = new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY, baseURL: MODELS.fallbackBaseUrl });
+    const completion = await client.chat.completions.create({ model: MODELS.fallback, messages: genMessages, max_tokens: 1600 });
+    text = completion.choices[0]?.message?.content?.trim() ?? "";
+  }
+
+  if (!text) throw new Error("No page content was returned.");
+  return stripCodeFences(text);
+}
+
+const WRITING_REVIEW_SYSTEM_PROMPT = `You are a writing reviewer -- similar in spirit to Grammarly, but you have no separate grammar engine, only your own judgment of the text. Given a piece of plain text, find real, concrete issues and return a JSON review.
+
+Respond with ONLY valid JSON, no markdown code fences, no text before or after, matching exactly this shape:
+{"score": number, "suggestions": [{"category": "correctness" | "clarity" | "engagement" | "delivery", "title": string, "original": string, "replacement": string, "explanation": string}]}
+
+- score: an honest overall writing-quality score from 0 to 100.
+- suggestions: up to 8 real issues. Each "original" must be an EXACT short substring copied verbatim from the input text (a word or short phrase, never a whole paragraph) -- the caller finds and replaces this exact text, so it must match character-for-character. "replacement" is the corrected/improved version of just that substring.
+- category: "correctness" for grammar/spelling/punctuation errors, "clarity" for wordy or confusing phrasing, "engagement" for dull or weak word choices, "delivery" for tone/formality issues.
+- title: a short label, e.g. "Correct the punctuation", "Verb problem", "Correct word choice".
+- If the text genuinely has no issues, return an empty suggestions array and a high score. Never invent a problem just to have something to say.`;
+
+export type WritingSuggestion = {
+  id: string;
+  category: "correctness" | "clarity" | "engagement" | "delivery";
+  title: string;
+  original: string;
+  replacement: string;
+  explanation: string;
+};
+export type WritingReview = { score: number; suggestions: WritingSuggestion[] };
+
+function parseWritingReview(raw: string): WritingReview {
+  const trimmed = raw.trim();
+  const fenced = trimmed.match(/^```[a-zA-Z]*\n?([\s\S]*?)\n?```$/);
+  const parsed = JSON.parse(fenced ? fenced[1] : trimmed);
+  const categories = new Set(["correctness", "clarity", "engagement", "delivery"]);
+  const score = typeof parsed.score === "number" ? Math.max(0, Math.min(100, Math.round(parsed.score))) : 0;
+  const rawSuggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions : [];
+  const suggestions: WritingSuggestion[] = rawSuggestions
+    .filter((s: unknown): s is Record<string, unknown> => typeof s === "object" && s !== null)
+    .map((s: Record<string, unknown>, i: number) => ({
+      id: `s${i}`,
+      category: categories.has(s.category as string) ? (s.category as WritingSuggestion["category"]) : "correctness",
+      title: typeof s.title === "string" ? s.title : "Suggestion",
+      original: typeof s.original === "string" ? s.original : "",
+      replacement: typeof s.replacement === "string" ? s.replacement : "",
+      explanation: typeof s.explanation === "string" ? s.explanation : "",
+    }))
+    .filter((s: WritingSuggestion) => s.original)
+    .slice(0, 8);
+  return { score, suggestions };
+}
+
+// Powers the /ebook editor's "Review suggestions" panel -- a real AI read of
+// the page's plain text (not a dedicated grammar engine, which we don't
+// have), returning a score plus concrete find-and-replace suggestions the
+// client applies by locating each "original" substring in the live Tiptap
+// document. Same JSON-mode / OpenAI-primary-DeepSeek-fallback pattern as
+// generateBusinessAdvice.
+export async function reviewWriting(text: string): Promise<WritingReview> {
+  if (!process.env.OPENAI_API_KEY && !process.env.DEEPSEEK_API_KEY) {
+    throw new Error("Writing review needs an OpenAI or DeepSeek API key configured.");
+  }
+
+  const { default: OpenAI } = await import("openai");
+  const genMessages = [
+    { role: "system" as const, content: WRITING_REVIEW_SYSTEM_PROMPT },
+    { role: "user" as const, content: text.slice(0, 8000) },
+  ];
+
+  let raw = "";
+  if (process.env.OPENAI_API_KEY && !((await openAiLikelyDown()) && process.env.DEEPSEEK_API_KEY)) {
+    try {
+      const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const completion = await client.chat.completions.create({
+        model: MODELS.primary,
+        messages: genMessages,
+        response_format: { type: "json_object" },
+      });
+      raw = completion.choices[0]?.message?.content?.trim() ?? "";
+      await markOpenAiUp();
+    } catch (err) {
+      if (!process.env.DEEPSEEK_API_KEY) throw err;
+      console.error("Writing review: OpenAI failed, falling back to DeepSeek:", err);
+      await markOpenAiDown(err);
+    }
+  }
+  if (!raw && process.env.DEEPSEEK_API_KEY) {
+    const client = new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY, baseURL: MODELS.fallbackBaseUrl });
+    const completion = await client.chat.completions.create({ model: MODELS.fallback, messages: genMessages });
+    raw = completion.choices[0]?.message?.content?.trim() ?? "";
+  }
+
+  if (!raw) throw new Error("No review was returned.");
+  return parseWritingReview(raw);
+}
+
+const BUSINESS_ADVICE_SYSTEM_PROMPT = `You are a business consultant helping a small business owner (in Tanzania/East Africa) who just added a product to their ChackAll storefront. Given the product's title, description, and source site, give brief, practical, actionable advice.
+
+Respond with ONLY valid JSON, no markdown code fences, no text before or after, matching exactly this shape:
+{"price": string, "audience": string, "caption": string, "angle": string, "complementaryProduct": string}
+
+- price: a pricing/margin idea
+- audience: the likely target customer
+- caption: one ready-to-post marketing caption
+- angle: one marketing angle/hook idea, different from the caption
+- complementaryProduct: one specific complementary product they could also sell alongside this one
+
+Every value must be in Swahili, a short practical sentence (under 20 words each). If the product details are too thin to say anything specific, give general advice for that product category instead of refusing.`;
+
+export type BusinessAdvice = {
+  price: string;
+  audience: string;
+  caption: string;
+  angle: string;
+  complementaryProduct: string;
+};
+
+function parseBusinessAdvice(raw: string): BusinessAdvice {
+  const trimmed = raw.trim();
+  const fenced = trimmed.match(/^```[a-zA-Z]*\n?([\s\S]*?)\n?```$/);
+  const parsed = JSON.parse(fenced ? fenced[1] : trimmed);
+  const fields: (keyof BusinessAdvice)[] = ["price", "audience", "caption", "angle", "complementaryProduct"];
+  for (const field of fields) {
+    if (typeof parsed[field] !== "string") throw new Error(`missing field: ${field}`);
+  }
+  return parsed;
+}
+
+// Powers the ChackAll storefront's "business advice" panel -- a one-shot,
+// non-streaming call (this is a short burst of categorized advice shown
+// right after a link is unfurled, not a back-and-forth chat), reusing the
+// same OpenAI-primary/DeepSeek-fallback pattern as generateCode above.
+export async function generateBusinessAdvice(product: {
+  title: string | null;
+  description: string | null;
+  siteName: string | null;
+  url: string;
+}): Promise<BusinessAdvice> {
+  if (!process.env.OPENAI_API_KEY && !process.env.DEEPSEEK_API_KEY) {
+    throw new Error("Business advice needs an OpenAI or DeepSeek API key configured.");
+  }
+
+  const { default: OpenAI } = await import("openai");
+  const productSummary = [
+    product.title && `Title: ${product.title}`,
+    product.siteName && `Source: ${product.siteName}`,
+    product.description && `Description: ${product.description}`,
+    `URL: ${product.url}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const genMessages = [
+    { role: "system" as const, content: BUSINESS_ADVICE_SYSTEM_PROMPT },
+    { role: "user" as const, content: productSummary },
+  ];
+
+  let text = "";
+  if (process.env.OPENAI_API_KEY && !((await openAiLikelyDown()) && process.env.DEEPSEEK_API_KEY)) {
+    try {
+      const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const completion = await client.chat.completions.create({
+        model: MODELS.primary,
+        messages: genMessages,
+        response_format: { type: "json_object" },
+      });
+      text = completion.choices[0]?.message?.content?.trim() ?? "";
+      await markOpenAiUp();
+    } catch (err) {
+      if (!process.env.DEEPSEEK_API_KEY) throw err;
+      console.error("Business advice: OpenAI failed, falling back to DeepSeek:", err);
+      await markOpenAiDown(err);
+    }
+  }
+  if (!text && process.env.DEEPSEEK_API_KEY) {
+    const client = new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY, baseURL: MODELS.fallbackBaseUrl });
+    const completion = await client.chat.completions.create({ model: MODELS.fallback, messages: genMessages });
+    text = completion.choices[0]?.message?.content?.trim() ?? "";
+  }
+
+  if (!text) throw new Error("No advice was returned.");
+  return parseBusinessAdvice(text);
 }
 
 const MEMORY_EXTRACT_SYSTEM_PROMPT = `You extract durable, useful facts about the USER from a conversation, for a personal AI assistant's long-term memory.
@@ -1008,7 +1604,7 @@ export async function synthesizeDigitalTwin(messages: ChatMessage[], existingTwi
     const { default: OpenAI } = await import("openai");
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const completion = await client.chat.completions.create({
-      model: "gpt-5.5",
+      model: MODELS.primary,
       messages: [
         { role: "system", content: DIGITAL_TWIN_SYNTHESIS_PROMPT },
         {

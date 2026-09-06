@@ -12,10 +12,26 @@ interface BeforeInstallPromptEvent extends Event {
 // published most recently, so this link never goes stale as new builds ship.
 export const CHATGIZA_APK_URL = "https://github.com/WellXaiTech/WellXAI/releases/latest/download/app-release.apk";
 
+// Windows desktop app (electron-app/) installer. Not yet on an automated
+// release pipeline like the Android APK above -- update this manually
+// (rebuild electron-app, re-push the desktop-releases branch) each time a
+// new version ships, until that's worth automating.
+export const CHATGIZA_DESKTOP_URL =
+  "https://raw.githubusercontent.com/WellXaiTech/WellXAI/desktop-releases/ChatGiZa-Setup-0.1.0.exe";
+
 export function isStandaloneApp() {
   if (typeof window === "undefined") return false;
   const nav = window.navigator as Navigator & { standalone?: boolean };
-  return window.matchMedia("(display-mode: standalone)").matches || nav.standalone === true;
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    nav.standalone === true ||
+    // Set by the Electron desktop wrapper (electron-app/src/main.ts) via
+    // webContents.setUserAgent -- a plain BrowserWindow never matches
+    // display-mode: standalone (that's PWA-manifest-driven), so this is
+    // how the desktop app identifies itself to get the same "app mode"
+    // UI (Home/Code toggle, Build page unlocked) as the installed PWA.
+    nav.userAgent.includes("ChatGiZaDesktop/")
+  );
 }
 
 // Capacitor injects this global even when loading a remote server.url, so it

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { mintMobileToken } from "@/lib/mobileAuth";
 import { recordSession, clientIpFromHeaders } from "@/lib/sessions";
+import { ensureUserExists } from "@/lib/userIndex";
 import { headers } from "next/headers";
 
 // Session-only (web login) -- this page is where a signed-in user gets a
@@ -23,6 +24,18 @@ export async function POST() {
     await recordSession(session.user.id, sessionId, "ChatGiZa for VS Code", ip, "mobile", "VS Code");
   } catch (err) {
     console.error("recordSession (vscode) failed:", err);
+  }
+
+  try {
+    await ensureUserExists(
+      session.user.id,
+      session.user.email ?? "",
+      session.user.name ?? "",
+      session.user.image ?? "",
+      "vscode"
+    );
+  } catch (err) {
+    console.error("ensureUserExists (vscode) failed:", err);
   }
 
   const token = await mintMobileToken({

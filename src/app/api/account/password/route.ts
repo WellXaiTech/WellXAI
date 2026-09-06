@@ -6,6 +6,7 @@ import { getRequestUser } from "@/lib/requestUser";
 import { sendMail } from "@/lib/mailer";
 import { passwordChangeCodeEmail } from "@/lib/emailTemplates";
 import { hashPassword, verifyPassword } from "@/lib/password";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export function pendingPasswordKey(userId: string) {
   return `chatgiza:password-otp:${userId}`;
@@ -46,6 +47,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Password must be 6-16 characters" }, { status: 400 });
   }
 
+  const rate = await checkRateLimit(`pwd-verify:${user.id}`, 10, 900);
+  if (!rate.allowed) {
+    return NextResponse.json({ error: "Too many attempts -- try again in a few minutes" }, { status: 429 });
+  }
+
   try {
     const { data } = await supabaseAdmin.from("users").select("email, password_hash").eq("id", user.id).maybeSingle();
     const email = data?.email as string | null | undefined;
@@ -63,11 +69,11 @@ export async function POST(req: NextRequest) {
     await kv.set(
       pendingPasswordKey(user.id),
       { code, newPasswordHash: hashPassword(newPassword) },
-      { ex: 600 }
+      { ex: 300 }
     );
 
-    const { subject, html } = passwordChangeCodeEmail(code);
-    await sendMail(email, subject, html);
+    const { subject, html, from } = passwordChangeCodeEmail(code);
+    await sendMail(email, subject, html, from);
 
     return NextResponse.json({ ok: true, codeSent: true });
   } catch (err) {
@@ -88,6 +94,11 @@ export async function PUT(req: NextRequest) {
   const code = typeof body?.code === "string" ? body.code.trim() : "";
   if (!code) {
     return NextResponse.json({ error: "Enter the code from your email" }, { status: 400 });
+  }
+
+  const rate = await checkRateLimit(`pwd-otp:${user.id}`, 10, 900);
+  if (!rate.allowed) {
+    return NextResponse.json({ error: "Too many attempts -- try again in a few minutes" }, { status: 429 });
   }
 
   try {

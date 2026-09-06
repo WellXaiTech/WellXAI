@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import InstallAppPrompt from "@/components/InstallAppPrompt";
+import ChatGizaShell from "@/components/ChatGizaShell";
 
 const TITLE = "ChatGiZa";
 const DESCRIPTION =
@@ -15,6 +16,10 @@ export const metadata: Metadata = {
   openGraph: {
     title: TITLE,
     description: DESCRIPTION,
+    // Next.js replaces the root layout's whole `openGraph` object rather
+    // than merging it per-field, so siteName has to be repeated here too --
+    // otherwise this route's page ships with no og:site_name at all.
+    siteName: TITLE,
     url: "https://chatgiza.com/chatgiza",
     type: "website",
   },
@@ -42,13 +47,13 @@ export default function ChatGizaLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="flex h-screen w-full overflow-hidden">
+    <div className="flex h-dvh w-full overflow-hidden">
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }}
       />
-      {children}
+      <ChatGizaShell>{children}</ChatGizaShell>
       <InstallAppPrompt />
     </div>
   );

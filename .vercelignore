@@ -1,0 +1,7 @@
+# Sub-projects that live in this repo but are NOT part of the Next.js
+# deployment -- without this, Vercel CLI uploads their node_modules/build
+# output too (electron-app/node_modules alone contains the >100MB Electron
+# binary, which broke deploys with "File size limit exceeded (100 MB)").
+electron-app/
+vscode-extension/
+android/

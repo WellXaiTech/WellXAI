@@ -4,6 +4,7 @@ import { isoBase64URL } from "@simplewebauthn/server/helpers";
 import { kv } from "@vercel/kv";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getRequestUser } from "@/lib/requestUser";
+import { ensureUserExists } from "@/lib/userIndex";
 import { EXPECTED_ORIGINS, RP_ID, pendingPasskeyRegKey } from "@/lib/webauthn";
 
 // Step 2: verifies the attestation the authenticator produced against the
@@ -41,6 +42,12 @@ export async function POST(req: NextRequest) {
     }
 
     const { credentialID, credentialPublicKey, counter } = verification.registrationInfo;
+    // Mobile bearer-token sign-ins never ran through the web jwt callback
+    // that normally creates a users row (see the matching fix in
+    // mobileAuth.ts) -- a mobile-only user's session that predates that fix
+    // still needs this guard so the insert below doesn't fail its foreign
+    // key on a users row that was never created.
+    await ensureUserExists(user.id, "", user.name || "", user.image || "");
     const { error } = await supabaseAdmin.from("passkey_credentials").insert({
       id: isoBase64URL.fromBuffer(credentialID),
       user_id: user.id,

@@ -2,6 +2,27 @@ import { streamChatReply, type ChatMessage, type ChatTool, type Personalization 
 import { auth } from "@/auth";
 import { getMobileUserId } from "@/lib/mobileAuth";
 import { getWorkspaceInstructionsForUser } from "@/lib/workspace";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { clientIpFromHeaders } from "@/lib/sessions";
+
+// Guests get one free message client-side (see GUEST_FREE_MESSAGES in
+// chatgiza/page.tsx) before being prompted to sign in, but that check lives
+// entirely in localStorage -- anyone calling this endpoint directly (curl,
+// a script, a cleared-storage browser) skipped it completely and could run
+// unlimited AI usage at our cost. This is the server-side backstop: a
+// generous per-IP daily ceiling for guests (looser than the 1-message UI
+// nudge, since IPs can be shared behind NAT/office wifi and this is a hard
+// wall, not a UX prompt) and a per-account per-minute ceiling for signed-in
+// users so a compromised session or runaway script can't do the same.
+const GUEST_DAILY_LIMIT = 5;
+const USER_PER_MINUTE_LIMIT = 30;
+
+// Without this, Vercel kills the function at its platform default before
+// the reply even starts streaming -- agent_team mode especially can chain
+// several sequential model calls (a planner, worker agents, a
+// coordinator) before the final streamed answer begins, which can
+// genuinely take longer than a short default allows.
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -54,13 +75,33 @@ export async function POST(request: Request) {
   const session = await auth();
   const userId = session?.user?.id ?? (await getMobileUserId(request)) ?? undefined;
 
-  if (userId) {
-    try {
-      personalization.workspaceInstructions = (await getWorkspaceInstructionsForUser(userId)) ?? undefined;
-    } catch (err) {
-      console.error("Workspace instructions lookup failed:", err);
-    }
+  // These two don't depend on each other's result -- run them concurrently
+  // instead of back-to-back, so a short "hello" isn't stuck waiting on two
+  // sequential KV/DB round-trips before the model call even starts.
+  const [rate, workspaceInstructions] = await Promise.all([
+    userId
+      ? checkRateLimit(`chat:user:${userId}`, USER_PER_MINUTE_LIMIT, 60)
+      : checkRateLimit(`chat:guest:${clientIpFromHeaders(request.headers)}`, GUEST_DAILY_LIMIT, 86400),
+    userId
+      ? getWorkspaceInstructionsForUser(userId).catch((err) => {
+          console.error("Workspace instructions lookup failed:", err);
+          return undefined;
+        })
+      : Promise.resolve(undefined),
+  ]);
+
+  if (!rate.allowed) {
+    return Response.json(
+      {
+        error: userId
+          ? "You're sending messages too quickly -- please slow down."
+          : "You've used your free messages -- sign in to keep chatting.",
+      },
+      { status: 429 }
+    );
   }
+
+  personalization.workspaceInstructions = workspaceInstructions ?? undefined;
 
   const stream = streamChatReply(messages, tool, personalization);
 

@@ -2,7 +2,8 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { isStandaloneApp } from "@/lib/useInstallPrompt";
 import ChatSidebar from "@/components/ChatSidebar";
 import ChatMessageBubble from "@/components/ChatMessageBubble";
 import ChatComposer, { type ComposerTool } from "@/components/ChatComposer";
@@ -10,132 +11,31 @@ import GeneratingMediaPlaceholder from "@/components/GeneratingMediaPlaceholder"
 import MediaLibrary from "@/components/MediaLibrary";
 import ChatGizaMediaFeed from "@/components/ChatGizaMediaFeed";
 import LiveVisionPanel from "@/components/LiveVisionPanel";
-import ProjectsPanel, { type Project } from "@/components/ProjectsPanel";
-import ScheduledPanel, { type ScheduledTask } from "@/components/ScheduledPanel";
-import PluginsPanel, { type PluginKey } from "@/components/PluginsPanel";
+import ProjectsPanel from "@/components/ProjectsPanel";
+import type { ScheduledTask } from "@/components/ScheduledPanel";
+import { extractReminder } from "@/lib/reminderMarkers";
+import type { SearchHit } from "@/lib/ai";
+import type { PluginKey } from "@/components/PluginsPanel";
 import CodePanel from "@/components/CodePanel";
-import SettingsPanel, { type Profile, type PrivacyPrefs, type Tab as SettingsTab } from "@/components/SettingsPanel";
-import CompanyDashboard, { type CompanyProfile, type CompanyRequest } from "@/components/CompanyDashboard";
-import ComingSoonModal from "@/components/ComingSoonModal";
+import EbookLibrary, { type Ebook } from "@/components/EbookLibrary";
+import EbookEditor from "@/components/EbookEditor";
+import CompanyDashboard, { type CompanyRequest } from "@/components/CompanyDashboard";
 import SignInPromptModal from "@/components/SignInPromptModal";
 import OnboardingModal from "@/components/OnboardingModal";
 import SearchChatsOverlay from "@/components/SearchChatsOverlay";
 import LanguagePanel from "@/components/LanguagePanel";
-import UpgradePlanPanel from "@/components/UpgradePlanPanel";
-import SupportModal from "@/components/SupportModal";
 import CelebrationToast from "@/components/CelebrationToast";
-import UpgradeNudgeBanner, { shouldShowUpgradeNudge, snoozeUpgradeNudge } from "@/components/UpgradeNudgeBanner";
-import type { PlanTier } from "@/lib/plans";
+import { useChatGizaShell, lastActivity, type Message, type Conversation } from "@/components/ChatGizaShell";
 import { recordVisitAndGetStreak, checkStreakMilestone, bumpCounterAndCheckMilestone } from "@/lib/engagement";
-import { speakText } from "@/lib/speak";
 import { readAttachment, buildApiContent, type Attachment } from "@/lib/attachments";
-import { getStoredTheme, setTheme as persistTheme, applyTheme, type Theme } from "@/lib/theme";
-import { getStoredContrast, setContrast as persistContrast, applyContrast, type Contrast } from "@/lib/contrast";
-import { getStoredFontSize, setFontSize as persistFontSize, applyFontSize, type ChatFontSize } from "@/lib/fontSize";
-import {
-  getStoredAssistantColor,
-  setAssistantColor as persistAssistantColor,
-  applyAssistantColor,
-  type AssistantColor,
-} from "@/lib/assistantColor";
-import { getStoredChatFont, setChatFont as persistChatFont, applyChatFont, type ChatFont } from "@/lib/chatFont";
-import {
-  getStoredReduceMotion,
-  setReduceMotion as persistReduceMotion,
-  applyReduceMotion,
-  type ReduceMotion,
-} from "@/lib/reduceMotion";
-
-type Message = {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  attachments?: Attachment[];
-  imageUrl?: string;
-  videoUrl?: string;
-  videoStatus?: "queued" | "in_progress" | "completed" | "failed";
-  videoProgress?: number;
-  createdAt?: number;
-};
-
-type Conversation = {
-  id: string;
-  title: string;
-  messages: Message[];
-  projectId?: string;
-  pinned?: boolean;
-  archived?: boolean;
-  shared?: boolean;
-  shareId?: string;
-};
+import type { ChatContentPart, HistoryIndexEntry } from "@/lib/ai";
+import { newPairId, extractQId, findReferencedPair } from "@/lib/qid";
 
 type SendOverride = { conversationId: string; baseMessages: Message[] };
 
-// Conversations are scoped per signed-in account (or a shared "guest" bucket
-// when signed out) — a single global key let one Google account's chat
-// history bleed into whichever account next signed in on the same device.
-const GUEST_SCOPE = "guest";
-function storageKeyFor(scope: string) {
-  return `chatgiza:conversations:${scope}`;
-}
-function deletedIdsKeyFor(scope: string) {
-  return `chatgiza:deleted-ids:${scope}`;
-}
-const PROJECTS_KEY = "chatgiza:projects";
-const SCHEDULED_KEY = "chatgiza:scheduled";
-const PLUGINS_KEY = "chatgiza:plugins";
-const PROFILE_KEY = "chatgiza:profile";
-const MEMORY_KEY = "chatgiza:memory";
-const MEMORY_ENABLED_KEY = "chatgiza:memory-enabled";
-const HISTORY_ENABLED_KEY = "chatgiza:history-enabled";
-const NOTIFY_ON_COMPLETE_KEY = "chatgiza:notify-on-complete";
-const NOTIFY_IMAGE_GEN_KEY = "chatgiza:notify-image-gen";
-const ALL_NOTIFICATIONS_KEY = "chatgiza:all-notifications";
-const PRIVACY_PREFS_KEY = "chatgiza:privacy-prefs";
-const FEEDBACK_EMAILS_KEY = "chatgiza:feedback-emails-opt-in";
 const GUEST_MESSAGE_COUNT_KEY = "chatgiza:guest-message-count";
 const GUEST_FREE_MESSAGES = 1;
 const ONBOARDING_DISMISSED_KEY = "chatgiza:onboarding-dismissed";
-const LANGUAGE_KEY = "chatgiza:language";
-const LOCATION_KEY = "chatgiza:location";
-const COMPANY_KEY = "chatgiza:company";
-const USER_PLAN_KEY = "chatgiza:user-plan";
-const COMPANY_REQUESTS_KEY = "chatgiza:company-requests";
-const GREETED_SESSION_KEY = "chatgiza:greeted-this-session";
-const GREETING_TEXT = "Karibu sana! Nimefurahi kuwa na wewe leo. Naweza kukusaidia vipi?";
-
-// Longer, feature-specific explanations for the generic "Coming soon"
-// modal -- shown instead of the default one-line fallback when a key has
-// an entry here (see ComingSoonModal's `description` prop).
-const COMING_SOON_DESCRIPTIONS: Record<string, string> = {
-  Work:
-    "Work will be a separate space for your company's chats, kept apart from your personal ones. It will pull in your workspace's shared custom instructions (the ones your team sets up at chatgiza.com/workspace) automatically, so ChatGiZa already knows your company's context instead of you re-explaining it every time.",
-};
-
-const DEFAULT_PLUGINS: Record<PluginKey, boolean> = {
-  web_search: true,
-  deep_research: true,
-  deep_think: true,
-  image: true,
-  video: true,
-  document_writer: true,
-  sql_helper: true,
-  python_helper: true,
-  business_assistant: true,
-  ai_agent: true,
-  digital_twin: true,
-};
-
-const DEFAULT_PROFILE: Profile = { nickname: "", about: "" };
-const DEFAULT_COMPANY: CompanyProfile = { name: "", description: "", employees: [] };
-
-const DEFAULT_PRIVACY_PREFS: PrivacyPrefs = {
-  improveModel: false,
-  includeAudioRecordings: false,
-  includeVideoRecordings: false,
-  marketingMeasurement: true,
-  personalizedMarketing: true,
-};
 
 function loadJson<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -161,22 +61,135 @@ const NewChatBubbleIcon = (
 // Shown in the top bar once a real conversation is open, replacing the
 // Chat/Work tabs and New Chat button -- matches the reference: a "Share"
 // button and a "..." more-options menu, top-right.
-const TopBarShareIcon = (
-  <svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor">
-    <path
-      fillRule="evenodd"
-      clipRule="evenodd"
-      d="M10.9.164a.499.499 0 0 0-.87.336v2.52a7.5 7.5 0 0 0-7 7.48a.5.5 0 0 0 .947.224a4.92 4.92 0 0 1 4.41-2.72h1.65v2.5a.5.5 0 0 0 .835.372l5-4.5a.5.5 0 0 0 .036-.708l-5-5.5zm.13 3.34v-1.71l3.79 4.17l-3.79 3.41v-1.88a.5.5 0 0 0-.5-.5H8.38c-1.54 0-3 .6-4.08 1.63a6.505 6.505 0 0 1 6.23-4.63a.5.5 0 0 0 .5-.5z"
-    />
-    <path d="M5.5 2a.5.5 0 1 1 .001 1c-.678.003-1.21.014-1.65.05c-.605.05-.953.142-1.22.276a3.02 3.02 0 0 0-1.31 1.31c-.134.263-.226.61-.276 1.22c-.05.617-.051 1.41-.051 2.55v1.2c0 1.14 0 1.93.051 2.55c.05.605.142.953.276 1.22a3.02 3.02 0 0 0 1.31 1.31c.263.134.611.226 1.22.276c.617.05 1.41.051 2.55.051h1.2c1.14 0 1.93 0 2.55-.051c.605-.05.953-.142 1.22-.276a3 3 0 0 0 1.31-1.31c.134-.263.226-.611.276-1.22q.023-.295.035-.653a.507.507 0 0 1 .504-.493c.279 0 .505.228.496.507c-.033 1.05-.13 1.74-.42 2.31a4.03 4.03 0 0 1-1.75 1.75c-.856.436-1.98.436-4.22.436h-1.2c-2.24 0-3.36 0-4.22-.436a4.03 4.03 0 0 1-1.75-1.75c-.436-.856-.436-1.98-.436-4.22v-1.2c0-2.24 0-3.36.436-4.22a4.03 4.03 0 0 1 1.75-1.75c.732-.373 1.66-.427 3.32-.435z" />
+// Shown next to a project-owned chat's breadcrumb, matching the reference's
+// own device icon there.
+const ProjectChatDeviceIcon = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="20" height="14" x="2" y="3" rx="2" />
+    <line x1="8" x2="16" y1="21" y2="21" />
+    <line x1="12" x2="12" y1="17" y2="21" />
   </svg>
 );
 
-const TopBarMoreDotsIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-    <circle cx="5" cy="12" r="1.6" />
-    <circle cx="12" cy="12" r="1.6" />
-    <circle cx="19" cy="12" r="1.6" />
+// Icons for the project-chat breadcrumb's chevron menu.
+const ChatChevronDownIcon = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+);
+const ChatChevronRightIcon = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m9 18 6-6-6-6" />
+  </svg>
+);
+const ScheduleIcon = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 6v6l4 2" />
+  </svg>
+);
+const SkillIcon = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" />
+    <path d="M20 2v4" />
+    <path d="M22 4h-4" />
+    <circle cx="4" cy="20" r="2" />
+  </svg>
+);
+const CopyIdIcon = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+  </svg>
+);
+const ChatPinIcon = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 17v5" />
+    <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />
+  </svg>
+);
+const ChatPencilIcon = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+    <path d="m15 5 4 4" />
+  </svg>
+);
+const RemoveFromProjectIcon = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 13h6" />
+    <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+  </svg>
+);
+const ChatArchiveIcon = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="20" height="5" x="2" y="3" rx="1" />
+    <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+    <path d="M10 12h4" />
+  </svg>
+);
+const ChatTrashIcon = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 11v6" />
+    <path d="M14 11v6" />
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+    <path d="M3 6h18" />
+    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+  </svg>
+);
+// Replaces the old "Share" text button next to a project chat's breadcrumb
+// -- matches the reference's icon-only pair (share/public + panel toggle).
+const TopBarGlobeIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+    <path d="M2 12h20" />
+  </svg>
+);
+const TopBarPanelIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="18" height="18" x="3" y="3" rx="2" />
+    <path d="M15 3v18" />
+  </svg>
+);
+const TaskPanelChevronIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m9 18 6-6-6-6" />
+  </svg>
+);
+const TaskPanelCheckIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <path d="m16 9-5.5 5.5L8 12" />
+  </svg>
+);
+const TaskPanelOutputsIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 3v16a2 2 0 0 0 2 2h16" />
+    <path d="M18 17V9" />
+    <path d="M13 17V5" />
+    <path d="M8 17v-3" />
+  </svg>
+);
+const TaskPanelContextIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
+    <path d="M14 2v5a1 1 0 0 0 1 1h5" />
+    <path d="M10 9H8" />
+    <path d="M16 13H8" />
+    <path d="M16 17H8" />
+  </svg>
+);
+const BrowseCloseIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 6 6 18" />
+    <path d="m6 6 12 12" />
+  </svg>
+);
+const BrowseGlobeBigIcon = (
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+    <path d="M2 12h20" />
   </svg>
 );
 
@@ -268,111 +281,118 @@ function pickChunkSeconds(remaining: number): "4" | "8" | "12" {
   return "4";
 }
 
-function loadStoredConversations(scope: string): Conversation[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(storageKeyFor(scope));
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+// "YYYY-MM-DDTHH:mm", naive local time, no timezone offset -- same format
+// ScheduledPanel's own datetime-local input already uses, and what
+// Personalization.localDateTime is documented to expect.
+function toLocalDateTimeString(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-// Deletion tombstones: a conversation id disappearing from one side of a
-// merge used to be read as "this device just hasn't seen it yet" and get
-// silently re-added — which meant a conversation deleted on one device kept
-// coming back after the next sync. Recording *when* an id was deleted (and
-// carrying that record along on every merge/sync) lets a real deletion win
-// instead of being treated as data loss to protect against.
-type DeletedIds = Record<string, number>;
+// A conversation was previously sent to /api/chat in full, forever --
+// every message, every attached image's full base64 data URL, on every
+// single request, with no cap of any kind (unlike extractMemoryCandidates/
+// synthesizeDigitalTwin elsewhere, which both already slice(-N)). A long
+// conversation with a handful of attached images eventually hits the
+// model's context limit and just fails with a generic error. Bounding
+// message count keeps normal conversations completely unaffected (both
+// numbers are well above any typical chat) while giving a genuinely long
+// one somewhere to land instead of hard-failing; keeping only the most
+// recent attachments' real image data (older ones become a plain text
+// note instead) targets the actual dominant cost -- resent image bytes --
+// without silently making the model forget an image was ever discussed.
+const MAX_HISTORY_MESSAGES = 40;
+const MAX_MESSAGES_WITH_FULL_ATTACHMENTS = 6;
 
-function loadDeletedIds(scope: string): DeletedIds {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = localStorage.getItem(deletedIdsKeyFor(scope));
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
+function buildApiMessages(updatedMessages: Message[]): Array<{ role: Message["role"]; content: string | ChatContentPart[] }> {
+  const trimmed = updatedMessages.slice(-MAX_HISTORY_MESSAGES);
+  const cutoffIndex = trimmed.length - MAX_MESSAGES_WITH_FULL_ATTACHMENTS;
+  return trimmed.map((m, i) => {
+    if (!m.attachments?.length) return { role: m.role, content: m.content };
+    if (i >= cutoffIndex) return { role: m.role, content: buildApiContent(m.content, m.attachments) };
+    const names = m.attachments.map((a) => a.name).join(", ");
+    return { role: m.role, content: `${m.content}\n\n[Earlier attachment(s) not re-sent: ${names}]` };
+  });
 }
 
-// Tombstones older than this are pruned so the deleted-ids record doesn't
-// grow forever — by then every device has long since caught up on the
-// deletion, so there's nothing left it could still be protecting against.
-const TOMBSTONE_TTL_MS = 180 * 24 * 60 * 60 * 1000;
+// The system prompt already tells the model it can answer "how many
+// chats do I have" / reference past topics by name from a lightweight
+// index of the user's OTHER saved conversations -- but no caller ever
+// actually built or sent one, so that capability claim was completely
+// unreachable (the model could only guess or refuse). Capped (40,
+// matching the native Android app's own buildHistoryIndex) and sorted
+// by real recency (lastActivity, from real message timestamps) so this
+// stays cheap and always reflects what's actually most relevant, not an
+// arbitrary slice.
+const MAX_HISTORY_INDEX_ENTRIES = 40;
 
-function pruneDeletedIds(ids: DeletedIds): DeletedIds {
-  const cutoff = Date.now() - TOMBSTONE_TTL_MS;
-  const next: DeletedIds = {};
-  for (const [id, ts] of Object.entries(ids)) {
-    if (ts >= cutoff) next[id] = ts;
-  }
-  return next;
-}
-
-function mergeDeletedIds(a: DeletedIds, b: DeletedIds): DeletedIds {
-  const merged: DeletedIds = { ...a };
-  for (const [id, ts] of Object.entries(b)) {
-    if (!merged[id] || ts > merged[id]) merged[id] = ts;
-  }
-  return merged;
-}
-
-function lastActivity(c: Conversation): number {
-  let max = 0;
-  for (const m of c.messages) {
-    if (m.createdAt && m.createdAt > max) max = m.createdAt;
-  }
-  return max;
-}
-
-// Never let this tab's in-memory state silently drop a conversation that
-// only exists because another tab (or another device) wrote it after this
-// tab last read it — unless it's tombstoned, in which case the deletion wins
-// regardless of which side "remembers" the conversation.
-function mergeConversations(a: Conversation[], b: Conversation[], deletedIds: DeletedIds): Conversation[] {
-  const byId = new Map<string, Conversation>();
-  for (const c of [...a, ...b]) {
-    if (deletedIds[c.id]) continue;
-    const existing = byId.get(c.id);
-    if (!existing) {
-      byId.set(c.id, c);
-      continue;
-    }
-    const cActivity = lastActivity(c);
-    const existingActivity = lastActivity(existing);
-    if (cActivity > existingActivity || (cActivity === existingActivity && c.messages.length > existing.messages.length)) {
-      byId.set(c.id, c);
-    }
-  }
-  return Array.from(byId.values());
+function buildHistoryIndex(conversations: Conversation[], excludeId: string | null): HistoryIndexEntry[] {
+  return conversations
+    .filter((c) => c.id !== excludeId && !c.archived && c.messages.length > 0)
+    .sort((a, b) => lastActivity(b) - lastActivity(a))
+    .slice(0, MAX_HISTORY_INDEX_ENTRIES)
+    .map((c) => {
+      const firstUser = c.messages.find((m) => m.role === "user" && m.content.trim());
+      const snippet = (firstUser?.content ?? c.messages[0]?.content ?? "").trim().slice(0, 120);
+      return { title: c.title, snippet };
+    });
 }
 
 function ChatGizaInner() {
   const searchParams = useSearchParams();
   const { data: authSession, status: authStatus } = useSession();
   const signedIn = authStatus === "authenticated";
-  // `null` while NextAuth is still resolving the session — deliberately not
-  // "guest" during that window, so a signed-in user's history never gets
-  // read from (or briefly written to) the guest bucket before we actually
-  // know they're signed in.
-  const scope = authStatus === "loading" ? null : signedIn && authSession?.user?.id ? authSession.user.id : GUEST_SCOPE;
-  // Starts empty on purpose (must match the server-rendered pass, which has
-  // no `window`/localStorage) and gets filled in by the mount effect below —
-  // reading localStorage directly in the initializer caused a hydration
-  // mismatch (server saw [], client saw real data on the very first render).
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [deletedIds, setDeletedIds] = useState<DeletedIds>({});
-  const deletedIdsRef = useRef<DeletedIds>({});
+
+  const shell = useChatGizaShell();
+  const {
+    conversations,
+    setConversations,
+    syncHistoryNow,
+    setGenerating,
+    librarySignal,
+    projectsSignal,
+    activeId,
+    setActiveId,
+    temporaryMode,
+    setTemporaryMode,
+    shareConversation,
+    deleteConversation,
+    profile,
+    setProfile,
+    memoryEnabled,
+    memory,
+    language,
+    setLanguage,
+    digitalTwin,
+    company,
+    setCompany,
+    companyRequests,
+    setCompanyRequests,
+    projects,
+    setProjects,
+    setDeletedProjectIds,
+    pluginsEnabled,
+    scheduledTasks,
+    setScheduledTasks,
+    createScheduledTask,
+    setScheduledOpen,
+    setPluginsOpen,
+    setSupportOpen,
+    setComingSoonTitle,
+    location,
+    notifyOnComplete,
+    notifyImageGen,
+    allNotificationsEnabled,
+    openSettingsTab,
+  } = shell;
+
+  // Only true once mounted, running as the installed desktop app -- swaps
+  // the top bar's Chat/Work pill + conversation Share/More controls for a
+  // simple Home/Code switch, since that's the app's whole navigation now.
+  const [standalone, setStandalone] = useState(false);
   useEffect(() => {
-    deletedIdsRef.current = deletedIds;
-  }, [deletedIds]);
-  // Which account's (or the guest bucket's) data is currently loaded into
-  // `conversations`/`deletedIds` — kept separate from the *target* scope
-  // below so the storage-write effect can tell "we just switched accounts,
-  // don't persist yet" apart from "this really is this account's data."
-  const [loadedScope, setLoadedScope] = useState<string | null>(null);
-  const [activeId, setActiveId] = useState<string | null>(null);
+    setStandalone(isStandaloneApp());
+  }, []);
   const [input, setInput] = useState("");
   const [showHeroShimmer, setShowHeroShimmer] = useState(true);
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
@@ -381,501 +401,133 @@ function ChatGizaInner() {
   const [loading, setLoading] = useState(false);
   const [canStop, setCanStop] = useState(false);
   const [streamingId, setStreamingId] = useState<string | null>(null);
-  const [streamingTool, setStreamingTool] = useState<ComposerTool>(null);
   const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [mediaFeedOpen, setMediaFeedOpen] = useState(false);
+  // Unlike Media/Projects/Code (which open as full-screen overlays covering
+  // everything, sidebar included), E-book replaces just this column's own
+  // content -- the sidebar and its chat history stay visible and clickable
+  // the whole time, since jumping back into a chat while writing a book is
+  // a normal thing to want to do.
+  const [ebookView, setEbookView] = useState<{ type: "library" } | { type: "editor"; id: string } | null>(null);
   const [liveVisionOpen, setLiveVisionOpen] = useState(false);
   const [projectsOpen, setProjectsOpen] = useState(false);
-  const [scheduledOpen, setScheduledOpen] = useState(false);
-  const [pluginsOpen, setPluginsOpen] = useState(false);
+  // "Library"/"Projects" moved from the sidebar into Settings, which is
+  // rendered up in ChatGizaShell -- these modals stay owned here (their
+  // content is tied to page-local data), so librarySignal/projectsSignal
+  // are just "something changed" counters from the shell that this
+  // reacts to, opening the real local modal state. Refs, not the signal
+  // values themselves, gate this -- only an actual increase (a genuine
+  // new request) should open something, not the initial mount value.
+  const lastLibrarySignal = useRef(librarySignal);
+  const lastProjectsSignal = useRef(projectsSignal);
+  useEffect(() => {
+    if (librarySignal !== lastLibrarySignal.current) {
+      lastLibrarySignal.current = librarySignal;
+      setLibraryOpen(true);
+    }
+  }, [librarySignal]);
+  useEffect(() => {
+    if (projectsSignal !== lastProjectsSignal.current) {
+      lastProjectsSignal.current = projectsSignal;
+      setProjectsOpen(true);
+    }
+  }, [projectsSignal]);
   const [codeOpen, setCodeOpen] = useState(false);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [scheduledTasks, setScheduledTasks] = useState<ScheduledTask[]>([]);
-  const [pluginsEnabled, setPluginsEnabled] = useState<Record<PluginKey, boolean>>(DEFAULT_PLUGINS);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [companyDashboardOpen, setCompanyDashboardOpen] = useState(false);
-  const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTab>("General");
-  const [comingSoonTitle, setComingSoonTitle] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [theme, setThemeState] = useState<Theme>("system");
-  const [fontSize, setFontSizeState] = useState<ChatFontSize>("medium");
-  const [assistantColor, setAssistantColorState] = useState<AssistantColor>("default");
-  const [chatFont, setChatFontState] = useState<ChatFont>("default");
-  const [reduceMotion, setReduceMotionState] = useState<ReduceMotion>("system");
-  const [notifyOnComplete, setNotifyOnComplete] = useState(false);
-  const [notifyImageGen, setNotifyImageGen] = useState(true);
-  const [allNotificationsEnabled, setAllNotificationsEnabled] = useState(true);
-  const [contrast, setContrastState] = useState<Contrast>("system");
-  const [privacyPrefs, setPrivacyPrefs] = useState<PrivacyPrefs>(DEFAULT_PRIVACY_PREFS);
-  const [feedbackEmailsOptIn, setFeedbackEmailsOptIn] = useState(false);
   const [guestMessageCount, setGuestMessageCount] = useState(0);
   const [signInPromptOpen, setSignInPromptOpen] = useState(false);
   const [onboardingDismissed, setOnboardingDismissed] = useState(true);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
-  const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
-  const [company, setCompany] = useState<CompanyProfile>(DEFAULT_COMPANY);
-  const [companyRequests, setCompanyRequests] = useState<CompanyRequest[]>([]);
-  const [memory, setMemory] = useState<string[]>([]);
-  const [memoryEnabled, setMemoryEnabled] = useState(true);
-  // Idea #9: a single synthesized narrative profile, loaded once and sent
-  // alongside every chat request (see /api/twin, digital_twin tool).
-  const [digitalTwin, setDigitalTwin] = useState("");
-  const [digitalTwinUpdatedAt, setDigitalTwinUpdatedAt] = useState(0);
-  const [digitalTwinRegenerating, setDigitalTwinRegenerating] = useState(false);
-  const [historyEnabled, setHistoryEnabled] = useState(true);
-  const [language, setLanguage] = useState("Auto-detect");
   const [languageOpen, setLanguageOpen] = useState(false);
-  const [location, setLocationState] = useState("");
-  const [locationError, setLocationError] = useState<string | null>(null);
-  const [userPlan, setUserPlan] = useState<PlanTier | null>(null);
-  const [upgradePlanOpen, setUpgradePlanOpen] = useState(false);
-  const [upgradeNotice, setUpgradeNotice] = useState<string | null>(null);
-  const [supportOpen, setSupportOpen] = useState(false);
   const [celebration, setCelebration] = useState<string | null>(null);
-  const [showUpgradeNudge, setShowUpgradeNudge] = useState(false);
-  const [topBarMenuOpen, setTopBarMenuOpen] = useState(false);
-  const [greeting, setGreeting] = useState<string | null>(null);
+  // The chevron next to a project chat's breadcrumb.
+  const [chatMenuOpen, setChatMenuOpen] = useState(false);
+  const [changeProjectOpen, setChangeProjectOpen] = useState(false);
+  // The docked "Progress / Outputs / Context" panel from the top-right
+  // panel-toggle icon -- each row expands independently, collapsed by
+  // default, matching the reference exactly (informational only, same as
+  // this app's own Instructions/Memory/Context cards elsewhere).
+  const [taskPanelOpen, setTaskPanelOpen] = useState(false);
+  const [progressExpanded, setProgressExpanded] = useState(false);
+  const [outputsExpanded, setOutputsExpanded] = useState(false);
+  const [contextExpanded, setContextExpanded] = useState(false);
+  // The globe icon's "Browse" panel -- a plain iframe, not a real
+  // Claude-style browser agent (ChatGiZa has no backend that reads/clicks/
+  // types on a page), so it only works for sites that allow being framed;
+  // most real-world sites (Google, banks, etc.) block this via
+  // X-Frame-Options/CSP and will just show blank, which is a browser
+  // security limit, not something this code can work around.
+  const [browsePanelOpen, setBrowsePanelOpen] = useState(false);
+  const [browseInput, setBrowseInput] = useState("");
+  const [browseUrl, setBrowseUrl] = useState("");
+  // Plain text (no dot/no http prefix) is treated as a search query instead
+  // of a URL -- run through Tavily server-side (real results) rather than
+  // trying to iframe a search engine's own results page, which blocks
+  // embedding just like every other major site.
+  const [browseSearchResults, setBrowseSearchResults] = useState<SearchHit[] | null>(null);
+  const [browseSearchLoading, setBrowseSearchLoading] = useState(false);
+  // A real screenshot (via Browserless) of whatever URL is loaded, not an
+  // iframe -- iframing gets silently blocked by most real sites'
+  // X-Frame-Options/CSP, while a server-rendered screenshot always works
+  // since the target site never even knows it's being framed.
+  const [browseScreenshotLoaded, setBrowseScreenshotLoaded] = useState(false);
+  const [browseScreenshotError, setBrowseScreenshotError] = useState(false);
+  // Wider default, and draggable from its left edge (clamped so it can
+  // never swallow the whole screen or shrink past being usable).
+  const [browseWidth, setBrowseWidth] = useState(640);
+  const browseResizing = useRef(false);
+  useEffect(() => {
+    setChatMenuOpen(false);
+    setChangeProjectOpen(false);
+    setTaskPanelOpen(false);
+    setBrowsePanelOpen(false);
+    setBrowseSearchResults(null);
+    setBrowseScreenshotLoaded(false);
+    setBrowseScreenshotError(false);
+  }, [activeId]);
+
+  useEffect(() => {
+    function handleMouseMove(e: MouseEvent) {
+      if (!browseResizing.current) return;
+      const next = window.innerWidth - e.clientX;
+      // Firm floor and ceiling: the chat/composer side always keeps at
+      // least 380px so it never looks cramped, and the panel itself never
+      // grows past 1000px even on a very wide monitor -- the drag simply
+      // stops there instead of continuing to follow the cursor.
+      const maxWidth = Math.min(window.innerWidth - 380, 1150);
+      setBrowseWidth(Math.min(Math.max(next, 320), maxWidth));
+    }
+    function handleMouseUp() {
+      browseResizing.current = false;
+    }
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
   const [activeNavMessageId, setActiveNavMessageId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const autoSent = useRef(false);
-  const historySyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pulledHistoryFor = useRef<string | null>(null);
-  const profileSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pulledProfileFor = useRef<string | null>(null);
-  const pulledTwinFor = useRef<string | null>(null);
-  const twinSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const settingsSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pulledSettingsFor = useRef<string | null>(null);
-  const projectsSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pulledProjectsFor = useRef<string | null>(null);
-  const scheduledSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pulledScheduledFor = useRef<string | null>(null);
+  const openedConversationParam = useRef(false);
 
   useEffect(() => {
-    // One-time hydration from browser storage after mount — can't run during
+    // One-time hydration from browser storage after mount -- can't run during
     // SSR/the initial render, so this can't be a lazy useState initializer.
+    // The rest of the shared account/settings state hydrates itself the same
+    // way inside ChatGizaShell.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setProjects(loadJson(PROJECTS_KEY, []));
-    setScheduledTasks(loadJson(SCHEDULED_KEY, []));
-    setPluginsEnabled(loadJson(PLUGINS_KEY, DEFAULT_PLUGINS));
-    setProfile(loadJson(PROFILE_KEY, DEFAULT_PROFILE));
-    setCompany(loadJson(COMPANY_KEY, DEFAULT_COMPANY));
-    setCompanyRequests(loadJson(COMPANY_REQUESTS_KEY, []));
-    setUserPlan(loadJson<PlanTier | null>(USER_PLAN_KEY, null));
-    setMemory(loadJson(MEMORY_KEY, []));
-    setMemoryEnabled(loadJson(MEMORY_ENABLED_KEY, true));
-    setHistoryEnabled(loadJson(HISTORY_ENABLED_KEY, true));
-    setNotifyOnComplete(loadJson(NOTIFY_ON_COMPLETE_KEY, false));
-    setNotifyImageGen(loadJson(NOTIFY_IMAGE_GEN_KEY, true));
-    setAllNotificationsEnabled(loadJson(ALL_NOTIFICATIONS_KEY, true));
-    setPrivacyPrefs(loadJson(PRIVACY_PREFS_KEY, DEFAULT_PRIVACY_PREFS));
-    setFeedbackEmailsOptIn(loadJson(FEEDBACK_EMAILS_KEY, false));
-    const storedContrast = getStoredContrast();
-    setContrastState(storedContrast);
-    applyContrast(storedContrast);
     setGuestMessageCount(loadJson(GUEST_MESSAGE_COUNT_KEY, 0));
     setOnboardingDismissed(loadJson(ONBOARDING_DISMISSED_KEY, false));
-    setLanguage(loadJson(LANGUAGE_KEY, "Auto-detect"));
-    setLocationState(loadJson(LOCATION_KEY, ""));
-    const storedTheme = getStoredTheme();
-    setThemeState(storedTheme);
-    applyTheme(storedTheme);
-    const storedFontSize = getStoredFontSize();
-    setFontSizeState(storedFontSize);
-    applyFontSize(storedFontSize);
-    const storedAssistantColor = getStoredAssistantColor();
-    setAssistantColorState(storedAssistantColor);
-    applyAssistantColor(storedAssistantColor);
-    const storedChatFont = getStoredChatFont();
-    setChatFontState(storedChatFont);
-    applyChatFont(storedChatFont);
-    const storedReduceMotion = getStoredReduceMotion();
-    setReduceMotionState(storedReduceMotion);
-    applyReduceMotion(storedReduceMotion);
 
     const currentStreak = recordVisitAndGetStreak();
     const streakMessage = checkStreakMilestone(currentStreak);
     if (streakMessage) setCelebration(streakMessage);
-
-    setShowUpgradeNudge(shouldShowUpgradeNudge());
   }, []);
-
-  useEffect(() => {
-    // `activeId` always starts null on load (it isn't restored from storage),
-    // so this only ever fires on a fresh "Ready when you are" landing, once
-    // per browser tab session — voice first, then the greeting appears as a
-    // bubble on that empty screen. It disappears on its own the moment the
-    // user sends a real message, since the hero screen is replaced by the
-    // actual conversation view; nothing is ever saved to their chat history.
-    if (activeId !== null) return;
-    if (sessionStorage.getItem(GREETED_SESSION_KEY)) return;
-    sessionStorage.setItem(GREETED_SESSION_KEY, "1");
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setGreeting(GREETING_TEXT);
-    speakText(GREETING_TEXT);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Loads whichever scope (a specific account, or the shared guest bucket)
-  // the user currently is, whenever that identity changes — including sign
-  // out, which must swap `conversations` away from the account's data
-  // entirely rather than leaving it sitting in memory for the next person
-  // who uses this device/browser.
-  useEffect(() => {
-    if (!scope || scope === loadedScope) return;
-
-    let nextConversations = loadStoredConversations(scope);
-    let nextDeletedIds = pruneDeletedIds(loadDeletedIds(scope));
-
-    // One-time adoption: if this account (or the guest bucket) has never
-    // been used on this device before, but there's unclaimed guest history
-    // sitting here, claim it instead of starting empty — then clear the
-    // guest bucket so it can't also bleed into some other account later.
-    if (scope !== GUEST_SCOPE && nextConversations.length === 0) {
-      const guestConversations = loadStoredConversations(GUEST_SCOPE);
-      if (guestConversations.length > 0) {
-        nextConversations = guestConversations;
-        nextDeletedIds = mergeDeletedIds(nextDeletedIds, loadDeletedIds(GUEST_SCOPE));
-        localStorage.removeItem(storageKeyFor(GUEST_SCOPE));
-        localStorage.removeItem(deletedIdsKeyFor(GUEST_SCOPE));
-      }
-    }
-
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setConversations(mergeConversations(nextConversations, [], nextDeletedIds));
-    setDeletedIds(nextDeletedIds);
-    setActiveId(null);
-    pulledHistoryFor.current = null;
-    setLoadedScope(scope);
-  }, [scope, loadedScope]);
-
-  // Writes back to disk only once `conversations`/`deletedIds` actually
-  // belong to the current scope — during the render right after switching
-  // accounts, `conversations` still briefly holds the *previous* scope's
-  // data while `scope` has already moved on, and writing in that window
-  // would leak it into the new scope's storage.
-  useEffect(() => {
-    if (!historyEnabled || !scope || scope !== loadedScope) return;
-    const merged = mergeConversations(loadStoredConversations(scope), conversations, deletedIds);
-    localStorage.setItem(storageKeyFor(scope), JSON.stringify(merged));
-    localStorage.setItem(deletedIdsKeyFor(scope), JSON.stringify(deletedIds));
-  }, [conversations, deletedIds, historyEnabled, scope, loadedScope]);
-
-  // Pulls this account's synced history once per sign-in (keyed by user id
-  // so switching accounts in the same browser re-pulls) and merges it into
-  // whatever's already loaded locally — deletion tombstones from the server
-  // are merged in first so a deletion made on another device wins here too,
-  // instead of the conversation just reappearing.
-  useEffect(() => {
-    if (!signedIn || !historyEnabled || !scope) return;
-    const userId = authSession?.user?.id;
-    if (!userId || pulledHistoryFor.current === userId) return;
-    pulledHistoryFor.current = userId;
-    fetch("/api/history")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: { conversations?: Conversation[]; deletedIds?: DeletedIds } | null) => {
-        if (!data) return;
-        const merged = mergeDeletedIds(deletedIdsRef.current, data.deletedIds ?? {});
-        setDeletedIds(merged);
-        if (data.conversations) {
-          setConversations((prev) => mergeConversations(data.conversations!, prev, merged));
-        }
-      })
-      .catch(() => {});
-  }, [signedIn, historyEnabled, authSession?.user?.id, scope]);
-
-  // Pushes this device's conversations (and deletion tombstones) up to the
-  // account's synced storage so logging into the same account elsewhere
-  // sees the same history — including what's been deleted. Debounced since
-  // `conversations` also changes on every streamed token.
-  useEffect(() => {
-    if (!signedIn || !historyEnabled || !scope || scope !== loadedScope) return;
-    if (historySyncTimer.current) clearTimeout(historySyncTimer.current);
-    historySyncTimer.current = setTimeout(() => {
-      fetch("/api/history", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversations, deletedIds }),
-      }).catch(() => {});
-    }, 1200);
-    return () => {
-      if (historySyncTimer.current) clearTimeout(historySyncTimer.current);
-    };
-  }, [conversations, deletedIds, signedIn, historyEnabled, scope, loadedScope]);
-
-  // Same pull/push pattern as history, for the account-level settings that
-  // used to live only in this device's localStorage (nickname/about, memory,
-  // language) — the native Android app reads/writes the same endpoint, so
-  // editing your profile on one now shows up on the other.
-  useEffect(() => {
-    if (!signedIn) return;
-    const userId = authSession?.user?.id;
-    if (!userId || pulledProfileFor.current === userId) return;
-    pulledProfileFor.current = userId;
-    fetch("/api/profile")
-      .then((res) => (res.ok ? res.json() : null))
-      .then(
-        (
-          data: { profile?: Profile; memory?: string[]; memoryEnabled?: boolean; language?: string } | null
-        ) => {
-          if (!data) return;
-          if (data.profile) setProfile(data.profile);
-          if (data.memory) setMemory(data.memory);
-          if (typeof data.memoryEnabled === "boolean") setMemoryEnabled(data.memoryEnabled);
-          if (data.language) setLanguage(data.language);
-        }
-      )
-      .catch(() => {});
-  }, [signedIn, authSession?.user?.id]);
-
-  useEffect(() => {
-    if (!signedIn) return;
-    if (profileSyncTimer.current) clearTimeout(profileSyncTimer.current);
-    profileSyncTimer.current = setTimeout(() => {
-      fetch("/api/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profile, memory, memoryEnabled, language }),
-      }).catch(() => {});
-    }, 1200);
-    return () => {
-      if (profileSyncTimer.current) clearTimeout(profileSyncTimer.current);
-    };
-  }, [profile, memory, memoryEnabled, language, signedIn]);
-
-  // Idea #9: separate KV entry from profile/memory (see /api/twin) since
-  // it's a single synthesized narrative, not a list of discrete facts.
-  useEffect(() => {
-    if (!signedIn) return;
-    const userId = authSession?.user?.id;
-    if (!userId || pulledTwinFor.current === userId) return;
-    pulledTwinFor.current = userId;
-    fetch("/api/twin")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: { summary?: string; updatedAt?: number } | null) => {
-        if (!data) return;
-        if (typeof data.summary === "string") setDigitalTwin(data.summary);
-        if (typeof data.updatedAt === "number") setDigitalTwinUpdatedAt(data.updatedAt);
-      })
-      .catch(() => {});
-  }, [signedIn, authSession?.user?.id]);
-
-  // Debounced save, covers manual edits from the Digital Twin settings
-  // panel -- regenerating from chat history saves immediately instead (see
-  // handleRegenerateDigitalTwin below), so this only fires for typing.
-  useEffect(() => {
-    if (!signedIn || pulledTwinFor.current === null) return;
-    if (twinSyncTimer.current) clearTimeout(twinSyncTimer.current);
-    twinSyncTimer.current = setTimeout(() => {
-      fetch("/api/twin", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ summary: digitalTwin }),
-      })
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data: { updatedAt?: number } | null) => {
-          if (data && typeof data.updatedAt === "number") setDigitalTwinUpdatedAt(data.updatedAt);
-        })
-        .catch(() => {});
-    }, 1200);
-    return () => {
-      if (twinSyncTimer.current) clearTimeout(twinSyncTimer.current);
-    };
-  }, [digitalTwin, signedIn]);
-
-  // Same pull/push pattern, for plugins/notifications/privacy/location/company —
-  // the rest of what used to be localStorage-only settings.
-  useEffect(() => {
-    if (!signedIn) return;
-    const userId = authSession?.user?.id;
-    if (!userId || pulledSettingsFor.current === userId) return;
-    pulledSettingsFor.current = userId;
-    fetch("/api/settings")
-      .then((res) => (res.ok ? res.json() : null))
-      .then(
-        (
-          data: {
-            plugins?: Record<PluginKey, boolean>;
-            notifyOnComplete?: boolean;
-            notifyImageGen?: boolean;
-            allNotificationsEnabled?: boolean;
-            privacy?: PrivacyPrefs;
-            location?: string;
-            company?: CompanyProfile;
-            companyRequests?: CompanyRequest[];
-          } | null
-        ) => {
-          if (!data) return;
-          if (data.plugins) setPluginsEnabled(data.plugins);
-          if (typeof data.notifyOnComplete === "boolean") setNotifyOnComplete(data.notifyOnComplete);
-          if (typeof data.notifyImageGen === "boolean") setNotifyImageGen(data.notifyImageGen);
-          if (typeof data.allNotificationsEnabled === "boolean") setAllNotificationsEnabled(data.allNotificationsEnabled);
-          if (data.privacy) setPrivacyPrefs(data.privacy);
-          if (typeof data.location === "string") setLocationState(data.location);
-          if (data.company) setCompany(data.company);
-          if (data.companyRequests) setCompanyRequests(data.companyRequests);
-        }
-      )
-      .catch(() => {});
-  }, [signedIn, authSession?.user?.id]);
-
-  useEffect(() => {
-    if (!signedIn) return;
-    if (settingsSyncTimer.current) clearTimeout(settingsSyncTimer.current);
-    settingsSyncTimer.current = setTimeout(() => {
-      fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          plugins: pluginsEnabled,
-          notifyOnComplete,
-          notifyImageGen,
-          allNotificationsEnabled,
-          privacy: privacyPrefs,
-          location,
-          company,
-          companyRequests,
-        }),
-      }).catch(() => {});
-    }, 1200);
-    return () => {
-      if (settingsSyncTimer.current) clearTimeout(settingsSyncTimer.current);
-    };
-  }, [pluginsEnabled, notifyOnComplete, notifyImageGen, allNotificationsEnabled, privacyPrefs, location, company, companyRequests, signedIn]);
-
-  // Same pull/push pattern, for Projects.
-  useEffect(() => {
-    if (!signedIn) return;
-    const userId = authSession?.user?.id;
-    if (!userId || pulledProjectsFor.current === userId) return;
-    pulledProjectsFor.current = userId;
-    fetch("/api/projects")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: { projects?: Project[] } | null) => {
-        if (data?.projects) setProjects(data.projects);
-      })
-      .catch(() => {});
-  }, [signedIn, authSession?.user?.id]);
-
-  useEffect(() => {
-    if (!signedIn) return;
-    if (projectsSyncTimer.current) clearTimeout(projectsSyncTimer.current);
-    projectsSyncTimer.current = setTimeout(() => {
-      fetch("/api/projects", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projects }),
-      }).catch(() => {});
-    }, 1200);
-    return () => {
-      if (projectsSyncTimer.current) clearTimeout(projectsSyncTimer.current);
-    };
-  }, [projects, signedIn]);
-
-  // Same pull/push pattern, for scheduled/automation tasks — firing itself
-  // still happens client-side (whichever device has the tab/app open).
-  useEffect(() => {
-    if (!signedIn) return;
-    const userId = authSession?.user?.id;
-    if (!userId || pulledScheduledFor.current === userId) return;
-    pulledScheduledFor.current = userId;
-    fetch("/api/scheduled")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: { tasks?: ScheduledTask[] } | null) => {
-        if (data?.tasks) setScheduledTasks(data.tasks);
-      })
-      .catch(() => {});
-  }, [signedIn, authSession?.user?.id]);
-
-  useEffect(() => {
-    if (!signedIn) return;
-    if (scheduledSyncTimer.current) clearTimeout(scheduledSyncTimer.current);
-    scheduledSyncTimer.current = setTimeout(() => {
-      fetch("/api/scheduled", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tasks: scheduledTasks }),
-      }).catch(() => {});
-    }, 1200);
-    return () => {
-      if (scheduledSyncTimer.current) clearTimeout(scheduledSyncTimer.current);
-    };
-  }, [scheduledTasks, signedIn]);
-
-  useEffect(() => {
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
-  }, [profile]);
-
-  useEffect(() => {
-    localStorage.setItem(COMPANY_KEY, JSON.stringify(company));
-  }, [company]);
-
-  useEffect(() => {
-    if (userPlan) localStorage.setItem(USER_PLAN_KEY, JSON.stringify(userPlan));
-  }, [userPlan]);
-
-  useEffect(() => {
-    const upgrade = searchParams.get("upgrade");
-    if (upgrade === "cancelled") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setUpgradeNotice("Checkout was cancelled — no charge was made.");
-      window.history.replaceState(null, "", "/chatgiza");
-      return;
-    }
-    if (upgrade !== "success") return;
-    const sessionId = searchParams.get("session_id");
-    if (!sessionId) return;
-    window.history.replaceState(null, "", "/chatgiza");
-    fetch(`/api/checkout/verify?session_id=${encodeURIComponent(sessionId)}`)
-      .then((res) => res.json())
-      .then((data: { paid?: boolean; tier?: PlanTier }) => {
-        if (data.paid && data.tier) {
-          setUserPlan(data.tier);
-          setUpgradeNotice(`You're now on the ${data.tier[0].toUpperCase()}${data.tier.slice(1)} plan.`);
-        } else {
-          setUpgradeNotice("We couldn't confirm your payment yet. If you were charged, contact support.");
-        }
-      })
-      .catch(() => setUpgradeNotice("We couldn't confirm your payment yet. If you were charged, contact support."));
-  }, [searchParams]);
-
-  useEffect(() => {
-    localStorage.setItem(COMPANY_REQUESTS_KEY, JSON.stringify(companyRequests));
-  }, [companyRequests]);
-
-  useEffect(() => {
-    localStorage.setItem(MEMORY_KEY, JSON.stringify(memory));
-  }, [memory]);
-
-  useEffect(() => {
-    localStorage.setItem(MEMORY_ENABLED_KEY, JSON.stringify(memoryEnabled));
-  }, [memoryEnabled]);
-
-  useEffect(() => {
-    localStorage.setItem(HISTORY_ENABLED_KEY, JSON.stringify(historyEnabled));
-  }, [historyEnabled]);
-
-  useEffect(() => {
-    localStorage.setItem(NOTIFY_ON_COMPLETE_KEY, JSON.stringify(notifyOnComplete));
-  }, [notifyOnComplete]);
-
-  useEffect(() => {
-    localStorage.setItem(NOTIFY_IMAGE_GEN_KEY, JSON.stringify(notifyImageGen));
-  }, [notifyImageGen]);
-
-  useEffect(() => {
-    localStorage.setItem(ALL_NOTIFICATIONS_KEY, JSON.stringify(allNotificationsEnabled));
-  }, [allNotificationsEnabled]);
-
-  useEffect(() => {
-    localStorage.setItem(PRIVACY_PREFS_KEY, JSON.stringify(privacyPrefs));
-  }, [privacyPrefs]);
-
-  useEffect(() => {
-    localStorage.setItem(FEEDBACK_EMAILS_KEY, JSON.stringify(feedbackEmailsOptIn));
-  }, [feedbackEmailsOptIn]);
 
   useEffect(() => {
     localStorage.setItem(GUEST_MESSAGE_COUNT_KEY, JSON.stringify(guestMessageCount));
@@ -888,7 +540,7 @@ function ChatGizaInner() {
   useEffect(() => {
     // Gated on the account's server-tracked `isNewAccount` flag (set once,
     // the very first time this Google account ever signs in) rather than
-    // "no local profile data" — the old check re-asked existing users for
+    // "no local profile data" -- the old check re-asked existing users for
     // their birth date/country every time they opened ChatGiZa on a new
     // device or browser, since that profile data only ever lived in
     // localStorage. Existing accounts now never see this again, anywhere.
@@ -898,158 +550,14 @@ function ChatGizaInner() {
     }
   }, [signedIn, authSession?.user?.isNewAccount, onboardingDismissed]);
 
-  useEffect(() => {
-    localStorage.setItem(LANGUAGE_KEY, JSON.stringify(language));
-  }, [language]);
-
-  useEffect(() => {
-    localStorage.setItem(LOCATION_KEY, JSON.stringify(location));
-  }, [location]);
-
-  function requestLocation() {
-    setLocationError(null);
-    if (!navigator.geolocation) {
-      setLocationError("Location isn't available in this browser.");
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`
-          );
-          const data = await res.json();
-          const addr = data.address ?? {};
-          const place = addr.city || addr.town || addr.village || addr.county;
-          const label = [place, addr.country].filter(Boolean).join(", ");
-          setLocationState(label || `${pos.coords.latitude.toFixed(2)}, ${pos.coords.longitude.toFixed(2)}`);
-        } catch {
-          setLocationState(`${pos.coords.latitude.toFixed(2)}, ${pos.coords.longitude.toFixed(2)}`);
-        }
-      },
-      () => setLocationError("Location permission was denied.")
-    );
-  }
-
-  function clearLocation() {
-    setLocationState("");
-    setLocationError(null);
-  }
-
-  function handleThemeChange(t: Theme) {
-    persistTheme(t);
-    setThemeState(t);
-  }
-
-  function handleContrastChange(c: Contrast) {
-    persistContrast(c);
-    setContrastState(c);
-  }
-
-  async function handleDeleteAccount() {
-    try {
-      await fetch("/api/account", { method: "DELETE" });
-    } catch {
-      // Best-effort server cleanup — still sign the browser out below either way.
-    }
-    Object.keys(localStorage)
-      .filter((k) => k.startsWith("chatgiza:"))
-      .forEach((k) => localStorage.removeItem(k));
-    await signOut({ callbackUrl: "/login" });
-  }
-
-  // Idea #9: samples recent turns across the user's own saved conversations
-  // (not just the currently open one) so the synthesized profile reflects
-  // how they actually write/decide generally, not just today's chat.
-  async function handleRegenerateDigitalTwin() {
-    if (digitalTwinRegenerating) return;
-    setDigitalTwinRegenerating(true);
-    try {
-      const sample = conversations
-        .slice(0, 8)
-        .flatMap((c) => c.messages.slice(-10))
-        .slice(-60)
-        .map((m) => ({ role: m.role, content: m.content }));
-      const res = await fetch("/api/twin/synthesize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: sample, existingTwin: digitalTwin }),
-      });
-      const data = await res.json().catch(() => null);
-      if (data?.summary) {
-        setDigitalTwin(data.summary);
-        const saveRes = await fetch("/api/twin", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ summary: data.summary }),
-        });
-        const saved = await saveRes.json().catch(() => null);
-        if (saved && typeof saved.updatedAt === "number") setDigitalTwinUpdatedAt(saved.updatedAt);
-      }
-    } catch {
-      // Best-effort -- the existing profile (if any) just stays as-is.
-    } finally {
-      setDigitalTwinRegenerating(false);
-    }
-  }
-
-  function handleFontSizeChange(s: ChatFontSize) {
-    persistFontSize(s);
-    setFontSizeState(s);
-  }
-
-  function handleAssistantColorChange(c: AssistantColor) {
-    persistAssistantColor(c);
-    setAssistantColorState(c);
-  }
-
-  function handleChatFontChange(f: ChatFont) {
-    persistChatFont(f);
-    setChatFontState(f);
-  }
-
-  function handleReduceMotionChange(m: ReduceMotion) {
-    persistReduceMotion(m);
-    setReduceMotionState(m);
-  }
-
-  function clearAllHistory() {
-    const now = Date.now();
-    setDeletedIds((prev) => {
-      const next = { ...prev };
-      for (const c of conversations) next[c.id] = now;
-      return next;
-    });
-    setConversations([]);
-    if (scope) localStorage.setItem(storageKeyFor(scope), JSON.stringify([]));
-    setActiveId(null);
-  }
-
-  function openSettingsTab(tab: SettingsTab) {
-    setSettingsInitialTab(tab);
-    setSettingsOpen(true);
-  }
-
-  useEffect(() => {
-    localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
-  }, [projects]);
-
-  useEffect(() => {
-    localStorage.setItem(SCHEDULED_KEY, JSON.stringify(scheduledTasks));
-  }, [scheduledTasks]);
-
-  useEffect(() => {
-    localStorage.setItem(PLUGINS_KEY, JSON.stringify(pluginsEnabled));
-  }, [pluginsEnabled]);
-
   const scheduledTasksRef = useRef<ScheduledTask[]>([]);
   useEffect(() => {
     scheduledTasksRef.current = scheduledTasks;
   }, [scheduledTasks]);
 
   // Always points at the latest render's sendChatMessage (closed over current
-  // profile/memory state) so the scheduled-task interval below — whose effect
-  // only runs once on mount — never sends with stale personalization data.
+  // profile/memory state) so the scheduled-task interval below -- whose effect
+  // only runs once on mount -- never sends with stale personalization data.
   const sendChatMessageRef = useRef<typeof sendChatMessage>(() => Promise.resolve());
 
   useEffect(() => {
@@ -1074,6 +582,7 @@ function ChatGizaInner() {
       });
     }, 20000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const active = conversations.find((c) => c.id === activeId) ?? null;
@@ -1140,7 +649,7 @@ function ChatGizaInner() {
     setPendingAttachments((prev) => prev.filter((a) => a.id !== id));
   }
 
-  function startConversation(userMessage: Message, fallbackTitle: string, override?: SendOverride) {
+  function startConversation(userMessage: Message, fallbackTitle: string, override?: SendOverride, pairId?: string) {
     const existing = override
       ? { id: override.conversationId, messages: override.baseMessages }
       : activeId
@@ -1153,19 +662,26 @@ function ChatGizaInner() {
     setConversations((prev) =>
       isNew
         ? [
-            { id: conversationId, title: truncateTitle(fallbackTitle), messages: updatedMessages },
+            {
+              id: conversationId,
+              title: truncateTitle(fallbackTitle),
+              messages: updatedMessages,
+              ...(pendingProjectId ? { projectId: pendingProjectId } : {}),
+              ...(temporaryMode ? { temporary: true as const } : {}),
+            },
             ...prev,
           ]
         : prev.map((c) => (c.id === conversationId ? { ...c, messages: updatedMessages } : c))
     );
     setActiveId(conversationId);
+    if (isNew && pendingProjectId) setPendingProjectId(null);
 
     const assistantId = crypto.randomUUID();
     setStreamingId(assistantId);
     setConversations((prev) =>
       prev.map((c) =>
         c.id === conversationId
-          ? { ...c, messages: [...c.messages, { id: assistantId, role: "assistant", content: "", createdAt: Date.now() }] }
+          ? { ...c, messages: [...c.messages, { id: assistantId, role: "assistant", content: "", createdAt: Date.now(), pairId }] }
           : c
       )
     );
@@ -1220,6 +736,20 @@ function ChatGizaInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
+  // Supports "Open in > New Window" -- opens this exact conversation in a
+  // fresh tab via ?c=<id>. Waits for conversations to finish loading (from
+  // localStorage/KV) before applying, since the id won't be found yet on the
+  // very first render.
+  useEffect(() => {
+    if (openedConversationParam.current) return;
+    const c = searchParams.get("c");
+    if (!c) return;
+    if (conversations.some((conv) => conv.id === c)) {
+      openedConversationParam.current = true;
+      setActiveId(c);
+    }
+  }, [searchParams, conversations, setActiveId]);
+
   function handleEditMessage(messageId: string, newText: string) {
     if (guestQuotaExceeded()) return;
     if (!active) return;
@@ -1273,6 +803,7 @@ function ChatGizaInner() {
     setAttachError(null);
     setActiveTool(null);
     setLoading(true);
+    setGenerating(true);
 
     const userMessage: Message = {
       id: crypto.randomUUID(),
@@ -1291,7 +822,6 @@ function ChatGizaInner() {
       });
       const data = await res.json();
       if (!res.ok) {
-        if (res.status === 403) setUpgradePlanOpen(true);
         throw new Error(data.error ?? "Couldn't generate that image.");
       }
       updateAssistantMessage(conversationId, assistantId, { imageUrl: data.url });
@@ -1312,6 +842,7 @@ function ChatGizaInner() {
       updateAssistantMessage(conversationId, assistantId, { content: message });
     } finally {
       setLoading(false);
+      setGenerating(false);
       setStreamingId(null);
       setGeneratingImageId(null);
     }
@@ -1326,6 +857,7 @@ function ChatGizaInner() {
     setAttachError(null);
     setActiveTool(null);
     setLoading(true);
+    setGenerating(true);
 
     const userMessage: Message = { id: crypto.randomUUID(), role: "user", content: trimmed, createdAt: Date.now() };
     const { conversationId, assistantId } = startConversation(userMessage, trimmed, override);
@@ -1365,7 +897,6 @@ function ChatGizaInner() {
       });
       const startData = await startRes.json();
       if (!startRes.ok) {
-        if (startRes.status === 403) setUpgradePlanOpen(true);
         throw new Error(startData.error ?? "Couldn't start video generation.");
       }
 
@@ -1404,6 +935,7 @@ function ChatGizaInner() {
       });
     } finally {
       setLoading(false);
+      setGenerating(false);
       setStreamingId(null);
     }
   }
@@ -1417,25 +949,44 @@ function ChatGizaInner() {
     const trimmed = text.trim();
     if ((!trimmed && attachments.length === 0) || loading) return;
 
+    // If the user mentions a Q-ID ("Q-4F2A19") from any saved
+    // conversation, no matter how old, look up the real exchange it
+    // refers to so the model gets exact ground truth instead of a
+    // guess at what that ID might mean. Checks the current (possibly
+    // not yet saved) conversation's live messages first, then every
+    // saved conversation -- same order as the Android app's own
+    // findReferencedPair.
+    const mentionedQid = extractQId(trimmed);
+    const referencedPair = mentionedQid ? findReferencedPair(mentionedQid, active?.messages ?? [], conversations) : undefined;
+
     setInput("");
     setPendingAttachments([]);
     setAttachError(null);
-    setActiveTool(null);
+    // Deep Think is a standing mode, not a one-shot action -- stays selected
+    // across messages until the user explicitly switches back to GiZa 5.6
+    // themselves, instead of silently reverting after every single reply.
+    if (tool !== "deep_think") setActiveTool(null);
     setLoading(true);
+    setGenerating(true);
 
+    // Shared by this message and its reply -- generated once here so
+    // both sides carry the exact same value, matching the native
+    // Android app's own pairId scheme exactly (see src/lib/qid.ts).
+    const pairId = newPairId();
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: "user",
       content: trimmed,
       attachments: attachments.length > 0 ? attachments : undefined,
       createdAt: Date.now(),
+      pairId,
     };
     const { conversationId, assistantId, updatedMessages } = startConversation(
       userMessage,
       trimmed || attachments[0]?.name || "New chat",
-      override
+      override,
+      pairId
     );
-    setStreamingTool(tool);
     const controller = new AbortController();
     abortControllerRef.current = controller;
     setCanStop(true);
@@ -1448,22 +999,26 @@ function ChatGizaInner() {
         body: JSON.stringify({
           tool,
           conversationId,
-          messages: updatedMessages.map((m) => ({
-            role: m.role,
-            content: m.attachments?.length ? buildApiContent(m.content, m.attachments) : m.content,
-          })),
+          messages: buildApiMessages(updatedMessages),
           profile,
           memory: memoryEnabled ? memory : [],
           language,
           location,
           company,
           digitalTwin,
+          // Naive local time, "YYYY-MM-DDTHH:mm" -- lets the model resolve
+          // relative time references ("kesho", "at 6pm") into an absolute
+          // timestamp. Without this the reminder feature can only ever
+          // guess, since it's explicitly told never to guess a date/time
+          // it wasn't given.
+          localDateTime: toLocalDateTimeString(new Date()),
+          historyIndex: buildHistoryIndex(conversations, activeId),
+          referencedPair,
         }),
       });
 
       if (!res.ok || !res.body) {
         const data = await res.json().catch(() => ({}));
-        if (res.status === 403) setUpgradePlanOpen(true);
         throw new Error(data.error ?? "Sorry, something went wrong. Please try again.");
       }
 
@@ -1499,6 +1054,24 @@ function ChatGizaInner() {
       // Final flush in case the last chunk arrived after the last scheduled frame.
       updateAssistantMessage(conversationId, assistantId, { content: accumulated });
       if (stopped) return;
+
+      // The reply is confirmed fully done -- push it to the server right
+      // now rather than waiting for the debounced auto-save. Checking a
+      // different device (the Android app) within that debounce window
+      // would otherwise show the conversation with the user's own
+      // message but the just-finished reply still missing, since the
+      // server hadn't received it yet.
+      syncHistoryNow();
+
+      // A finished reply may have asked to set a real reminder -- this is
+      // the one place that side effect actually happens, exactly once per
+      // completed reply (never mid-stream, and never on a stopped/aborted
+      // one). The marker itself is stripped from what's rendered wherever
+      // this message is displayed (see ChatMessageBubble).
+      const reminder = extractReminder(accumulated);
+      if (reminder) {
+        createScheduledTask(reminder.prompt, reminder.runAt);
+      }
       const milestone = bumpCounterAndCheckMilestone("messages");
       if (milestone) setCelebration(milestone);
       if (typeof navigator !== "undefined" && navigator.vibrate) {
@@ -1524,8 +1097,8 @@ function ChatGizaInner() {
       abortControllerRef.current = null;
       setCanStop(false);
       setLoading(false);
+      setGenerating(false);
       setStreamingId(null);
-      setStreamingTool(null);
     }
   }
 
@@ -1552,99 +1125,73 @@ function ChatGizaInner() {
     if (activeId === id) setActiveId(null);
   }
 
-  function archiveAllConversations() {
-    setConversations((prev) => prev.map((c) => ({ ...c, archived: true, pinned: false })));
+  function createProject(id: string, name: string, description?: string) {
+    // Pinned by default -- a project you just deliberately named and
+    // created (via CreateProjectModal's "+") should show up in the
+    // sidebar right away, not disappear into "Pin projects to keep them
+    // here" until you go find it and pin it yourself.
+    setProjects((prev) => [
+      ...prev,
+      { id, name, createdAt: Date.now(), pinned: true, description: description || undefined },
+    ]);
+  }
+
+  function togglePinProject(id: string) {
+    setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, pinned: !p.pinned } : p)));
+  }
+
+  // Set when a pinned project row in the sidebar is clicked -- tells
+  // ProjectsPanel to open straight into that project's detail view
+  // instead of the grid of all projects.
+  const [openProjectId, setOpenProjectId] = useState<string | null>(null);
+  // Set by startChatInProject and consumed the next time startConversation
+  // creates a brand-new conversation -- lets that conversation carry the
+  // project's id and a real (message-derived) title instead of pre-seeding
+  // an empty "New chat" placeholder that never gets renamed.
+  const [pendingProjectId, setPendingProjectId] = useState<string | null>(null);
+  // Which project's nested chat list shows expanded in the sidebar. Sticky
+  // on purpose -- switching to "New chat" or some unrelated chat doesn't
+  // touch it, only opening a different project (or one of ITS chats) does,
+  // so the sidebar doesn't fold shut just because you glanced elsewhere.
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
+  function openProject(id: string) {
+    setOpenProjectId(id);
+    setProjectsOpen(true);
+    // Clicking the already-current project again is the only way to fold
+    // its sidebar list back up (besides opening a different one) -- it
+    // still opens/stays on the project's own page either way.
+    setCurrentProjectId((prev) => (prev === id ? null : id));
+  }
+
+  // Selecting one of a project's own chats should mark that project current
+  // too -- landing on any other chat (or "New chat") leaves currentProjectId
+  // alone, since only opening a project (or a chat inside one) should ever
+  // change which one shows expanded.
+  useEffect(() => {
+    const projectId = conversations.find((c) => c.id === activeId)?.projectId;
+    if (projectId) setCurrentProjectId(projectId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId]);
+
+  // Opened from inside a project (ProjectsPanel's own composer, the
+  // reference's "How can I help you today?" box) -- pre-seeds an empty
+  // conversation already assigned to the project (so startConversation's
+  // own new-vs-existing check finds it and just appends to it, never
+  // touching projectId) rather than routing the actual send through a
+  // second copy of the send pipeline. Handing off to the real composer
+  // with the draft carried over keeps every model/attachment/voice
+  // feature it already has, instead of rebuilding a slice of it here.
+  function startChatInProject(projectId: string, initialText: string) {
+    // Doesn't create the conversation itself -- just marks the project so
+    // the real one, with a real title, gets created the moment the user
+    // actually sends (see pendingProjectId / startConversation). Creating
+    // an empty placeholder here left it stuck on "New chat" forever, since
+    // startConversation's rename-on-first-message path only runs for
+    // conversations that don't already exist.
     setActiveId(null);
-  }
-
-  function deleteConversation(id: string) {
-    setConversations((prev) => prev.filter((c) => c.id !== id));
-    setDeletedIds((prev) => ({ ...prev, [id]: Date.now() }));
-    if (activeId === id) setActiveId(null);
-  }
-
-  async function shareConversation(id: string) {
-    const convo = conversations.find((c) => c.id === id);
-    if (!convo) return;
-
-    // Reuse the existing link instead of minting a new one on every click.
-    let shareId = convo.shareId;
-    if (!shareId) {
-      try {
-        const res = await fetch("/api/share", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: convo.title,
-            messages: convo.messages
-              .filter((m) => m.content)
-              .map((m) => ({ role: m.role, content: m.content })),
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? "Couldn't create a share link.");
-        shareId = data.id as string;
-      } catch {
-        return;
-      }
-    }
-
-    const url = `${window.location.origin}/share/${shareId}`;
-    let shared = false;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: convo.title, url });
-        shared = true;
-      } catch {
-        // user cancelled or share failed; fall through to clipboard copy
-      }
-    }
-    if (!shared) {
-      try {
-        await navigator.clipboard.writeText(url);
-        shared = true;
-      } catch {
-        // clipboard unavailable; nothing more we can do here
-      }
-    }
-    if (shared) {
-      setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, shared: true, shareId } : c)));
-    }
-  }
-
-  function unshareConversation(id: string) {
-    const convo = conversations.find((c) => c.id === id);
-    if (convo?.shareId) {
-      fetch(`/api/share/${convo.shareId}`, { method: "DELETE" }).catch(() => {});
-    }
-    setConversations((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, shared: false, shareId: undefined } : c))
-    );
-  }
-
-  function unarchiveConversation(id: string) {
-    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, archived: false } : c)));
-  }
-
-  function exportAllData() {
-    const payload = {
-      exportedAt: new Date().toISOString(),
-      conversations,
-      projects,
-      profile,
-      memory,
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `chatgiza-data-export-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function createProject(id: string, name: string) {
-    setProjects((prev) => [...prev, { id, name, createdAt: Date.now() }]);
+    setPendingProjectId(projectId);
+    if (initialText.trim()) setInput(initialText);
+    setProjectsOpen(false);
   }
 
   function renameProject(id: string, name: string) {
@@ -1653,6 +1200,7 @@ function ChatGizaInner() {
 
   function deleteProject(id: string) {
     setProjects((prev) => prev.filter((p) => p.id !== id));
+    setDeletedProjectIds((prev) => ({ ...prev, [id]: Date.now() }));
     setConversations((prev) => prev.map((c) => (c.projectId === id ? { ...c, projectId: undefined } : c)));
   }
 
@@ -1677,15 +1225,7 @@ function ChatGizaInner() {
     setCompanyRequests((prev) => prev.filter((r) => r.id !== id));
   }
 
-  function createScheduledTask(prompt: string, runAt: string) {
-    setScheduledTasks((prev) => [...prev, { id: crypto.randomUUID(), prompt, runAt, fired: false }]);
-  }
-
-  function deleteScheduledTask(id: string) {
-    setScheduledTasks((prev) => prev.filter((t) => t.id !== id));
-  }
-
-  const libraryItems = !signedIn ? [] : conversations.flatMap((c) =>
+  const libraryItems = !signedIn ? [] : conversations.flatMap((c: Conversation) =>
     c.messages
       .filter((m) => m.imageUrl || m.videoUrl)
       .map((m) => ({
@@ -1701,12 +1241,34 @@ function ChatGizaInner() {
   return (
     <>
       <ChatSidebar
+        // Always the icon toolbar (menu/panel/search/back/forward), same as
+        // Code's rail -- used to only show this in installed-PWA mode and
+        // fall back to the "ChatGiZa" wordmark in a normal browser tab,
+        // which is why Home's header looked different from Code's.
+        hideWordmark
         conversations={conversations
           .filter((c) => !c.archived)
-          .map((c) => ({ id: c.id, title: c.title, pinned: c.pinned, updatedAt: lastActivity(c) }))}
+          .map((c) => ({ id: c.id, title: c.title, pinned: c.pinned, updatedAt: lastActivity(c), projectId: c.projectId }))}
         activeId={activeId}
-        onSelect={setActiveId}
-        onNewChat={() => setActiveId(null)}
+        streamingId={streamingId}
+        // Which project's nested chat list should show expanded in the
+        // sidebar -- sticky (see currentProjectId's own declaration) so
+        // switching to "New chat" or an unrelated chat doesn't fold it.
+        currentProjectId={currentProjectId}
+        onSelect={(id) => {
+          setActiveId(id);
+          setProjectsOpen(false);
+          setOpenProjectId(null);
+          setPendingProjectId(null);
+          setEbookView(null);
+        }}
+        onNewChat={() => {
+          setActiveId(null);
+          setProjectsOpen(false);
+          setOpenProjectId(null);
+          setPendingProjectId(null);
+          setEbookView(null);
+        }}
         onRename={renameConversation}
         onTogglePin={togglePinConversation}
         onArchive={archiveConversation}
@@ -1714,20 +1276,26 @@ function ChatGizaInner() {
         onShare={shareConversation}
         onOpenLibrary={() => setLibraryOpen(true)}
         onOpenMedia={() => setMediaFeedOpen(true)}
+        onOpenEbook={() => setEbookView({ type: "library" })}
         onOpenLiveVision={() => setLiveVisionOpen(true)}
-        onOpenPlugins={() => setPluginsOpen(true)}
-        onOpenProjects={() => setProjectsOpen(true)}
         onOpenCode={() => setCodeOpen(true)}
         onOpenSearch={() => setSearchOpen(true)}
         onOpenComingSoon={setComingSoonTitle}
         onOpenSettingsTab={openSettingsTab}
         onOpenCompanyDashboard={() => setCompanyDashboardOpen(true)}
         onOpenLanguage={() => setLanguageOpen(true)}
-        onOpenUpgradePlan={() => setUpgradePlanOpen(true)}
-        onOpenSupport={() => setSupportOpen(true)}
+        onOpenSupport={() => window.open("https://support.wellxai.world", "_blank", "noopener,noreferrer")}
         onOpenScheduled={() => setScheduledOpen(true)}
-        userPlan={userPlan}
-        projects={projects.map(({ id, name }) => ({ id, name }))}
+        onOpenProjects={() => {
+          setOpenProjectId(null);
+          setProjectsOpen(true);
+        }}
+        onOpenProject={openProject}
+        onCreateProject={createProject}
+        onRenameProject={renameProject}
+        onDeleteProject={deleteProject}
+        onTogglePinProject={togglePinProject}
+        projects={projects.map(({ id, name, pinned }) => ({ id, name, pinned }))}
         onMoveToProject={assignConversationToProject}
       />
 
@@ -1735,71 +1303,11 @@ function ChatGizaInner() {
         <LanguagePanel language={language} onSelect={setLanguage} onClose={() => setLanguageOpen(false)} />
       )}
 
-      {settingsOpen && (
-        <SettingsPanel
-          onClose={() => setSettingsOpen(false)}
-          initialTab={settingsInitialTab}
-          theme={theme}
-          onThemeChange={handleThemeChange}
-          fontSize={fontSize}
-          onFontSizeChange={handleFontSizeChange}
-          assistantColor={assistantColor}
-          onAssistantColorChange={handleAssistantColorChange}
-          chatFont={chatFont}
-          onChatFontChange={handleChatFontChange}
-          reduceMotion={reduceMotion}
-          onReduceMotionChange={handleReduceMotionChange}
-          notifyOnComplete={notifyOnComplete}
-          onToggleNotifyOnComplete={() => setNotifyOnComplete((v) => !v)}
-          notifyImageGen={notifyImageGen}
-          onToggleNotifyImageGen={() => setNotifyImageGen((v) => !v)}
-          allNotificationsEnabled={allNotificationsEnabled}
-          onToggleAllNotifications={() => setAllNotificationsEnabled((v) => !v)}
-          contrast={contrast}
-          onContrastChange={handleContrastChange}
-          privacyPrefs={privacyPrefs}
-          onPrivacyPrefsChange={setPrivacyPrefs}
-          feedbackEmailsOptIn={feedbackEmailsOptIn}
-          onToggleFeedbackEmailsOptIn={() => setFeedbackEmailsOptIn((v) => !v)}
-          onOpenSupport={() => setSupportOpen(true)}
-          onDeleteAccount={handleDeleteAccount}
-          onOpenUpgradePlan={() => setUpgradePlanOpen(true)}
-          profile={profile}
-          onProfileChange={setProfile}
-          memoryEnabled={memoryEnabled}
-          onToggleMemoryEnabled={() => setMemoryEnabled((v) => !v)}
-          memory={memory}
-          onAddMemory={(fact) => setMemory((prev) => [...prev, fact])}
-          onRemoveMemory={(index) => setMemory((prev) => prev.filter((_, i) => i !== index))}
-          digitalTwin={digitalTwin}
-          digitalTwinUpdatedAt={digitalTwinUpdatedAt}
-          digitalTwinRegenerating={digitalTwinRegenerating}
-          onChangeDigitalTwin={setDigitalTwin}
-          onRegenerateDigitalTwin={handleRegenerateDigitalTwin}
-          historyEnabled={historyEnabled}
-          onToggleHistoryEnabled={() => setHistoryEnabled((v) => !v)}
-          onClearHistory={clearAllHistory}
-          conversations={conversations}
-          onShareConversation={shareConversation}
-          onUnshareConversation={unshareConversation}
-          onUnarchiveConversation={unarchiveConversation}
-          onDeleteConversation={deleteConversation}
-          onExportData={exportAllData}
-          onArchiveAllConversations={archiveAllConversations}
-          location={location}
-          locationError={locationError}
-          onRequestLocation={requestLocation}
-          onClearLocation={clearLocation}
-        />
-      )}
-
       {companyDashboardOpen && (
         <CompanyDashboard
           onClose={() => setCompanyDashboardOpen(false)}
           company={company}
           onCompanyChange={setCompany}
-          plan={userPlan}
-          onOpenUpgradePlan={() => setUpgradePlanOpen(true)}
           companyRequests={companyRequests}
           onAddCompanyRequest={addCompanyRequest}
           onUpdateCompanyRequestStatus={updateCompanyRequestStatus}
@@ -1807,22 +1315,9 @@ function ChatGizaInner() {
         />
       )}
 
-      {comingSoonTitle && (
-        <ComingSoonModal
-          title={comingSoonTitle}
-          description={COMING_SOON_DESCRIPTIONS[comingSoonTitle]}
-          onClose={() => setComingSoonTitle(null)}
-        />
-      )}
-
       {signInPromptOpen && <SignInPromptModal onClose={() => setSignInPromptOpen(false)} />}
 
-
       {celebration && <CelebrationToast message={celebration} onDone={() => setCelebration(null)} />}
-
-      {supportOpen && (
-        <SupportModal defaultEmail={authSession?.user?.email ?? undefined} onClose={() => setSupportOpen(false)} />
-      )}
 
       {onboardingOpen && (
         <OnboardingModal
@@ -1837,23 +1332,6 @@ function ChatGizaInner() {
             setOnboardingOpen(false);
           }}
         />
-      )}
-
-      {upgradePlanOpen && (
-        <UpgradePlanPanel currentTier={userPlan} onClose={() => setUpgradePlanOpen(false)} />
-      )}
-
-      {upgradeNotice && (
-        <div className="fixed bottom-4 left-1/2 z-[60] -translate-x-1/2 rounded-full border border-border bg-surface px-4 py-2 text-sm shadow-lg">
-          {upgradeNotice}
-          <button
-            onClick={() => setUpgradeNotice(null)}
-            className="ml-3 text-muted hover:text-foreground"
-            aria-label="Dismiss"
-          >
-            ×
-          </button>
-        </div>
       )}
 
       {searchOpen && (
@@ -1885,41 +1363,211 @@ function ChatGizaInner() {
 
       {projectsOpen && (
         <ProjectsPanel
+          key={openProjectId ?? "overview"}
           projects={projects}
           conversations={conversations.map(({ id, title, projectId }) => ({ id, title, projectId }))}
-          onClose={() => setProjectsOpen(false)}
+          onClose={() => {
+            setProjectsOpen(false);
+            setOpenProjectId(null);
+            setPendingProjectId(null);
+          }}
           onCreateProject={createProject}
           onRenameProject={renameProject}
           onDeleteProject={deleteProject}
+          onTogglePinProject={togglePinProject}
           onAssign={assignConversationToProject}
+          onStartChatInProject={startChatInProject}
+          onOpenComingSoon={setComingSoonTitle}
+          initialProjectId={openProjectId}
           onSelectConversation={(id) => {
             setActiveId(id);
             setProjectsOpen(false);
+            setOpenProjectId(null);
+            setPendingProjectId(null);
           }}
         />
       )}
 
-      {scheduledOpen && (
-        <ScheduledPanel
-          tasks={scheduledTasks}
-          onClose={() => setScheduledOpen(false)}
-          onCreate={createScheduledTask}
-          onDelete={deleteScheduledTask}
-        />
-      )}
-
-      {pluginsOpen && (
-        <PluginsPanel onClose={() => setPluginsOpen(false)} onOpenComingSoon={setComingSoonTitle} />
-      )}
-
       {codeOpen && <CodePanel onClose={() => setCodeOpen(false)} />}
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center px-4 pt-3">
-          <span />
+      <div
+        className={`relative flex flex-1 flex-col overflow-hidden transition-[margin] duration-300 ${
+          mediaFeedOpen ? "xl:mr-[600px] 2xl:mr-[720px]" : ""
+        }`}
+        // Opening Browse or the Task panel shrinks this column by that
+        // panel's own width (plus its edge gap) instead of letting the
+        // fixed-position panel just float on top and cover the composer --
+        // closing it (or dragging Browse narrower) gives that space back.
+        style={
+          browsePanelOpen
+            ? { marginRight: browseWidth + 8 }
+            : taskPanelOpen
+              ? { marginRight: 340 }
+              : undefined
+        }
+      >
+        {ebookView && (
+          <div className="absolute inset-0 z-30 flex flex-col bg-background">
+            {ebookView.type === "library" ? (
+              <EbookLibrary
+                onOpenBook={(book: Ebook) => setEbookView({ type: "editor", id: book.id })}
+                onClose={() => setEbookView(null)}
+              />
+            ) : (
+              <EbookEditor ebookId={ebookView.id} onBack={() => setEbookView({ type: "library" })} />
+            )}
+          </div>
+        )}
+        {!standalone && (
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center px-4 pt-6">
+          {/* Matches the reference's own "Project / chat" breadcrumb --
+              left-aligned next to the sidebar, not centered across the
+              whole width, and only for a chat that belongs to a project
+              (a regular chat's first column stays an empty span). */}
+          {active?.projectId ? (
+            <div className="relative flex min-w-0 items-center gap-0.5 justify-self-start">
+              <button
+                onClick={() => openProject(active.projectId as string)}
+                className="flex min-w-0 items-center gap-1.5 truncate text-sm font-medium transition-colors hover:text-foreground"
+              >
+                <span className="text-blue-500">{ProjectChatDeviceIcon}</span>
+                <span className="truncate text-muted">
+                  {projects.find((p) => p.id === active.projectId)?.name ?? "Project"}
+                </span>
+                <span className="text-muted">/</span>
+                <span className="truncate text-foreground">{active.title}</span>
+              </button>
+              <button
+                onClick={() => setChatMenuOpen((v) => !v)}
+                aria-label="Chat options"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+              >
+                {ChatChevronDownIcon}
+              </button>
+              {chatMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => {
+                      setChatMenuOpen(false);
+                      setChangeProjectOpen(false);
+                    }}
+                  />
+                  <div className="absolute left-0 top-full z-50 mt-1 w-56 rounded-2xl border border-border bg-surface p-1.5 shadow-lg">
+                    <button onClick={() => setComingSoonTitle("Schedule")} className="menu-item">
+                      <span className="icon">{ScheduleIcon}</span>
+                      <span className="flex-1 truncate">Schedule</span>
+                    </button>
+                    <button onClick={() => setComingSoonTitle("Turn into skill")} className="menu-item">
+                      <span className="icon">{SkillIcon}</span>
+                      <span className="flex-1 truncate">Turn into skill</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(active.id);
+                        setChatMenuOpen(false);
+                      }}
+                      className="menu-item"
+                    >
+                      <span className="icon">{CopyIdIcon}</span>
+                      <span className="flex-1 truncate">Copy session ID</span>
+                    </button>
+                    <div className="my-1 border-t border-border" />
+                    <button
+                      onClick={() => {
+                        togglePinConversation(active.id);
+                        setChatMenuOpen(false);
+                      }}
+                      className="menu-item"
+                    >
+                      <span className="icon">{ChatPinIcon}</span>
+                      <span className="flex-1 truncate">{active.pinned ? "Unpin" : "Pin"}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        const title = window.prompt("Rename conversation", active.title);
+                        if (title && title.trim()) renameConversation(active.id, title.trim());
+                        setChatMenuOpen(false);
+                      }}
+                      className="menu-item"
+                    >
+                      <span className="icon">{ChatPencilIcon}</span>
+                      <span className="flex-1 truncate">Rename</span>
+                    </button>
+                    <div className="relative">
+                      <button
+                        onClick={() => setChangeProjectOpen((v) => !v)}
+                        className="menu-item"
+                      >
+                        <span className="icon">{ProjectChatDeviceIcon}</span>
+                        <span className="flex-1 truncate">Change project</span>
+                        <span className="text-muted">{ChatChevronRightIcon}</span>
+                      </button>
+                      {changeProjectOpen && (
+                        <div className="absolute left-full top-0 z-50 ml-1 w-52 overflow-hidden rounded-2xl border border-border bg-surface p-1.5 shadow-lg">
+                          {projects.length === 0 ? (
+                            <p className="px-3 py-2 text-xs text-muted">No projects yet</p>
+                          ) : (
+                            projects
+                              .filter((p) => p.id !== active.projectId)
+                              .map((p) => (
+                                <button
+                                  key={p.id}
+                                  onClick={() => {
+                                    assignConversationToProject(active.id, p.id);
+                                    setChatMenuOpen(false);
+                                    setChangeProjectOpen(false);
+                                  }}
+                                  className="menu-item"
+                                >
+                                  <span className="flex-1 truncate">{p.name}</span>
+                                </button>
+                              ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => {
+                        assignConversationToProject(active.id, null);
+                        setChatMenuOpen(false);
+                      }}
+                      className="menu-item"
+                    >
+                      <span className="icon">{RemoveFromProjectIcon}</span>
+                      <span className="flex-1 truncate">Remove from project</span>
+                    </button>
+                    <div className="my-1 border-t border-border" />
+                    <button
+                      onClick={() => {
+                        archiveConversation(active.id);
+                        setChatMenuOpen(false);
+                      }}
+                      className="menu-item"
+                    >
+                      <span className="icon">{ChatArchiveIcon}</span>
+                      <span className="flex-1 truncate">Archive</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        deleteConversation(active.id);
+                        setChatMenuOpen(false);
+                      }}
+                      className="menu-item delete"
+                    >
+                      <span className="icon">{ChatTrashIcon}</span>
+                      <span className="flex-1 truncate">Delete</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <span />
+          )}
           {!active ? (
             <>
-              <div className="flex items-center justify-self-center gap-1 rounded-full bg-surface-2 p-1">
+              <div className="flex items-center justify-self-center gap-1 rounded-full bg-[#212121] p-1">
                 <span className="rounded-full bg-surface px-3 py-1 text-sm font-medium text-foreground shadow-sm">
                   Chat
                 </span>
@@ -1931,9 +1579,15 @@ function ChatGizaInner() {
                 </button>
               </div>
               <button
-                onClick={() => setActiveId(null)}
-                aria-label="New chat"
-                className="flex h-10 w-10 shrink-0 items-center justify-self-end rounded-full border border-border bg-surface text-xl text-muted transition-all hover:scale-105 hover:border-foreground/30 hover:text-foreground hover:shadow-md [&>svg]:mx-auto"
+                onClick={() => setTemporaryMode((v) => !v)}
+                aria-label={temporaryMode ? "Turn off Temporary Chat" : "Turn on Temporary Chat"}
+                aria-pressed={temporaryMode}
+                title={temporaryMode ? "Temporary Chat is on" : "Temporary Chat"}
+                className={`flex h-10 w-10 shrink-0 items-center justify-self-end rounded-full border text-xl transition-all hover:scale-105 [&>svg]:mx-auto ${
+                  temporaryMode
+                    ? "border-foreground bg-foreground text-background"
+                    : "border-border bg-surface text-muted hover:border-foreground/30 hover:text-foreground hover:shadow-md"
+                }`}
               >
                 {NewChatBubbleIcon}
               </button>
@@ -1941,63 +1595,271 @@ function ChatGizaInner() {
           ) : (
             <>
               <span />
-              <div className="relative flex items-center justify-self-end gap-1">
+              <div className="relative z-40 flex items-center justify-self-end gap-1">
                 <button
-                  onClick={() => shareConversation(active.id)}
-                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-2"
+                  onClick={() =>
+                    setBrowsePanelOpen((v) => {
+                      const next = !v;
+                      if (next) setTaskPanelOpen(false);
+                      return next;
+                    })
+                  }
+                  aria-label="Browse"
+                  aria-pressed={browsePanelOpen}
+                  className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+                    browsePanelOpen ? "bg-blue-500 text-white" : "text-muted hover:bg-surface-2 hover:text-foreground"
+                  }`}
                 >
-                  {TopBarShareIcon} Share
+                  {TopBarGlobeIcon}
                 </button>
                 <button
-                  onClick={() => setTopBarMenuOpen((v) => !v)}
-                  aria-label="More"
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                  onClick={() =>
+                    setTaskPanelOpen((v) => {
+                      const next = !v;
+                      if (next) setBrowsePanelOpen(false);
+                      return next;
+                    })
+                  }
+                  aria-label="Toggle panel"
+                  aria-pressed={taskPanelOpen}
+                  className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+                    taskPanelOpen ? "bg-surface-2 text-foreground" : "text-muted hover:bg-surface-2 hover:text-foreground"
+                  }`}
                 >
-                  {TopBarMoreDotsIcon}
+                  {TopBarPanelIcon}
                 </button>
-                {topBarMenuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setTopBarMenuOpen(false)} />
-                    <div className="absolute right-0 top-10 z-50 w-44 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-lg">
-                      <button
-                        onClick={() => {
-                          const title = window.prompt("Rename conversation", active.title);
-                          if (title && title.trim()) renameConversation(active.id, title.trim());
-                          setTopBarMenuOpen(false);
-                        }}
-                        className="block w-full px-3 py-2 text-left text-sm hover:bg-surface-2"
-                      >
-                        Rename
-                      </button>
-                      <button
-                        onClick={() => {
-                          deleteConversation(active.id);
-                          setTopBarMenuOpen(false);
-                        }}
-                        className="block w-full px-3 py-2 text-left text-sm text-red-500 hover:bg-surface-2"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </>
-                )}
               </div>
             </>
           )}
         </div>
+        )}
+
+        {taskPanelOpen && active && (
+          <div className="fixed right-3 top-3 z-30 w-80 p-0">
+            {/* One continuous panel (single border/background) instead of
+                three separate boxes -- matches the merged-card treatment
+                already used for ProjectsPanel's own Instructions/Memory/
+                Context/Automations cards. */}
+            <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-xl">
+              <div>
+                <button
+                  onClick={() => setProgressExpanded((v) => !v)}
+                  className="flex w-full items-center gap-1.5 px-3 py-2.5 text-left text-sm font-semibold"
+                >
+                  Progress
+                  <span className={`text-muted transition-transform ${progressExpanded ? "rotate-90" : ""}`}>
+                    {TaskPanelChevronIcon}
+                  </span>
+                </button>
+                {progressExpanded && (
+                  <div className="px-3 py-3">
+                    <div className="flex items-center gap-1.5 text-muted">
+                      {TaskPanelCheckIcon}
+                      <span className="h-px w-3 bg-border" />
+                      {TaskPanelCheckIcon}
+                      <span className="h-px w-3 bg-border" />
+                      <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full border border-border" />
+                    </div>
+                    <p className="mt-2 text-xs text-muted">See task progress for longer tasks.</p>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <button
+                  onClick={() => setOutputsExpanded((v) => !v)}
+                  className="flex w-full items-center gap-1.5 px-3 py-2.5 text-left text-sm font-semibold"
+                >
+                  Outputs
+                  <span className={`text-muted transition-transform ${outputsExpanded ? "rotate-90" : ""}`}>
+                    {TaskPanelChevronIcon}
+                  </span>
+                </button>
+                {outputsExpanded && (
+                  <div className="px-3 py-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted">
+                      {TaskPanelOutputsIcon}
+                    </span>
+                    <p className="mt-2 text-xs text-muted">View and open files created during this task.</p>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <button
+                  onClick={() => setContextExpanded((v) => !v)}
+                  className="flex w-full items-center gap-1.5 px-3 py-2.5 text-left text-sm font-semibold"
+                >
+                  Context
+                  <span className={`text-muted transition-transform ${contextExpanded ? "rotate-90" : ""}`}>
+                    {TaskPanelChevronIcon}
+                  </span>
+                </button>
+                {contextExpanded && (
+                  <div className="px-3 py-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted">
+                      {TaskPanelContextIcon}
+                    </span>
+                    <p className="mt-2 text-xs text-muted">Track tools and referenced files used in this task.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {browsePanelOpen && (
+          <div
+            className="fixed right-0 top-0 bottom-3 z-40 flex flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-xl"
+            style={{ width: browseWidth, maxWidth: "100%" }}
+          >
+            {/* Drag left to resize -- clamped in the mousemove handler so
+                it can't swallow the whole screen or shrink unusably small. */}
+            <div
+              onMouseDown={() => {
+                browseResizing.current = true;
+              }}
+              className="absolute -left-1 top-0 z-10 h-full w-2 cursor-col-resize"
+            />
+            <div className="flex items-center gap-2 border-b border-border p-2">
+              <button
+                onClick={() => setBrowsePanelOpen(false)}
+                aria-label="Close"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+              >
+                {BrowseCloseIcon}
+              </button>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const trimmed = browseInput.trim();
+                  if (!trimmed) return;
+                  const looksLikeUrl =
+                    /^https?:\/\//i.test(trimmed) || (!/\s/.test(trimmed) && /\.[a-z]{2,}(\/|$)/i.test(trimmed));
+                  if (looksLikeUrl) {
+                    setBrowseSearchResults(null);
+                    setBrowseScreenshotLoaded(false);
+                    setBrowseScreenshotError(false);
+                    setBrowseUrl(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
+                    return;
+                  }
+                  setBrowseUrl("");
+                  setBrowseSearchLoading(true);
+                  fetch(`/api/browse-search?q=${encodeURIComponent(trimmed)}`)
+                    .then((r) => r.json())
+                    .then((data: { results?: SearchHit[] }) => setBrowseSearchResults(data.results ?? []))
+                    .catch(() => setBrowseSearchResults([]))
+                    .finally(() => setBrowseSearchLoading(false));
+                }}
+                className="flex-1"
+              >
+                <input
+                  value={browseInput}
+                  onChange={(e) => setBrowseInput(e.target.value)}
+                  placeholder="Search or type a URL"
+                  className="w-full rounded-full border border-border bg-background px-3 py-1.5 text-sm outline-none focus:border-foreground/40"
+                />
+              </form>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {browseUrl ? (
+                <div className="flex h-full flex-col">
+                  <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-1.5">
+                    <span className="truncate text-xs text-muted">{browseUrl}</span>
+                    <a
+                      href={browseUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 text-xs font-medium text-foreground hover:underline"
+                    >
+                      Open in new tab
+                    </a>
+                  </div>
+                  <div className="flex-1 overflow-auto bg-background">
+                    {browseScreenshotError ? (
+                      <div className="flex h-full flex-col items-center justify-center gap-2 px-8 text-center">
+                        <p className="text-sm text-muted">Couldn&apos;t render this page.</p>
+                      </div>
+                    ) : (
+                      <>
+                        {!browseScreenshotLoaded && (
+                          <div className="flex h-full items-center justify-center text-sm text-muted">Loading...</div>
+                        )}
+                        <img
+                          key={browseUrl}
+                          src={`/api/browse-screenshot?url=${encodeURIComponent(browseUrl)}`}
+                          alt=""
+                          className={`w-full ${browseScreenshotLoaded ? "block" : "hidden"}`}
+                          onLoad={() => setBrowseScreenshotLoaded(true)}
+                          onError={() => setBrowseScreenshotError(true)}
+                        />
+                      </>
+                    )}
+                  </div>
+                </div>
+              ) : browseSearchLoading ? (
+                <div className="flex h-full items-center justify-center text-sm text-muted">Searching...</div>
+              ) : browseSearchResults ? (
+                browseSearchResults.length > 0 ? (
+                  <div className="flex flex-col gap-1 p-2">
+                    {browseSearchResults.map((r, i) => (
+                      <a
+                        key={i}
+                        href={r.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-xl p-3 transition-colors hover:bg-surface-2"
+                      >
+                        <p className="truncate text-sm font-semibold text-foreground">{r.title}</p>
+                        <p className="truncate text-xs text-muted">{r.url}</p>
+                        {r.content && <p className="mt-1 line-clamp-2 text-xs text-muted">{r.content}</p>}
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-2 px-8 text-center">
+                    <p className="text-sm text-muted">No results found.</p>
+                  </div>
+                )
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-2 px-8 text-center">
+                  <span className="text-muted">{BrowseGlobeBigIcon}</span>
+                  <p className="text-base font-semibold">Browse</p>
+                  <p className="max-w-xs text-sm text-muted">
+                    Search the web, or type a URL to see a live snapshot of that page.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Right-edge conversation navigator -- one marker per message
-            (user and assistant), evenly spaced down a fixed track so a
-            long conversation never pushes a marker outside the viewport.
+            (user and assistant), stacked tightly together (not stretched
+            to fill the whole track) so it reads as one compact cluster,
+            matching the reference. Capped to the same top-24/bottom-24
+            track height with overflow hidden so a very long conversation
+            still can't push a marker outside the viewport.
             The marker for whichever message is currently centered in the
             scroll container is highlighted (see the scroll effect above);
             clicking any marker jumps straight to that message. */}
-        {active && active.messages.length >= 2 && (
+        {active &&
+          (() => {
+            // A brand-new assistant reply starts as an empty placeholder
+            // (see startConversation) the instant you send a message, before
+            // any text/image/video has actually streamed in -- counting that
+            // placeholder here was giving a 2-message conversation a phantom
+            // second marker with nothing real to jump to.
+            const navMessages = active.messages.filter(
+              (m) => m.role === "user" || m.content.trim() !== "" || m.imageUrl || m.videoUrl || m.videoStatus
+            );
+            if (navMessages.length < 2) return null;
+            return (
           <nav
             aria-label="Conversation navigation"
-            className="fixed right-2 top-24 bottom-24 z-30 hidden w-4 flex-col items-end justify-between sm:flex"
+            className="fixed right-2 top-24 bottom-24 z-30 hidden w-4 flex-col items-end justify-center gap-1.5 overflow-hidden sm:flex"
           >
-            {active.messages.map((m) => {
+            {navMessages.map((m) => {
               const isActive = activeNavMessageId === m.id;
               return (
                 <button
@@ -2009,42 +1871,30 @@ function ChatGizaInner() {
                   }}
                   aria-label={`Jump to ${m.role === "user" ? "your message" : "reply"}: ${m.content.slice(0, 40) || "…"}`}
                   className={`ml-auto rounded-full transition-all duration-150 ${
-                    isActive ? "h-[3px] w-5 bg-foreground" : "h-[2px] w-3.5 bg-foreground/25 hover:bg-foreground/50"
+                    isActive ? "h-[3px] w-5 bg-foreground" : "h-[2px] w-3.5 bg-foreground/60 hover:bg-foreground"
                   }`}
                 />
               );
             })}
           </nav>
-        )}
+            );
+          })()}
 
         {!active ? (
           <div className="relative mx-auto flex w-full max-w-[var(--max-w-chat)] flex-1 flex-col items-center justify-end px-4 pb-3 sm:justify-center sm:pb-0">
-            {signedIn && !userPlan && showUpgradeNudge && (
-              <UpgradeNudgeBanner
-                onUpgrade={() => {
-                  setShowUpgradeNudge(false);
-                  setUpgradePlanOpen(true);
-                }}
-                onDismiss={() => {
-                  snoozeUpgradeNudge();
-                  setShowUpgradeNudge(false);
-                }}
-              />
-            )}
-
             {showHeroShimmer && (
               <div className="hero-shimmer-bg" onAnimationEnd={() => setShowHeroShimmer(false)} />
             )}
 
-            <h1 className="relative z-10 text-3xl font-semibold tracking-tight">Ready when you are.</h1>
-
-            {greeting && (
-              <div className="relative z-10 mt-5 flex max-w-md items-start gap-2 rounded-2xl border border-border bg-surface px-4 py-3 text-sm leading-6 text-foreground shadow-sm">
-                <span aria-hidden className="mt-0.5 shrink-0 text-base">
-                  🔊
-                </span>
-                <span>{greeting}</span>
-              </div>
+            {temporaryMode ? (
+              <>
+                <h1 className="relative z-10 text-3xl font-semibold tracking-tight">Temporary chat</h1>
+                <p className="relative z-10 mt-2 text-sm text-muted">
+                  This chat won&apos;t appear in history or be used to train our models.
+                </p>
+              </>
+            ) : (
+              <h1 className="relative z-10 text-3xl font-semibold tracking-tight">Ready when you are.</h1>
             )}
 
             <div className="relative z-10 mt-8 w-full">
@@ -2061,6 +1911,11 @@ function ChatGizaInner() {
                 error={attachError}
                 disabled={loading}
                 onStop={canStop ? handleStopGenerating : undefined}
+                temporaryMode={temporaryMode}
+                onToggleTemporary={() => {
+                  setTemporaryMode((v) => !v);
+                  setActiveId(null);
+                }}
                 onSubmit={(e) => {
                   e.preventDefault();
                   handleSend(input, pendingAttachments);
@@ -2100,11 +1955,9 @@ function ChatGizaInner() {
                       <div className="flex items-center gap-3 px-1 py-4">
                         <span className="typing-dots shrink-0">
                           <span />
-                          <span />
-                          <span />
                         </span>
                         <span className="text-sm text-muted">
-                          {streamingTool === "deep_think" ? "Thinking…" : "ChatGiZa is thinking…"}
+                          Thinking…
                         </span>
                       </div>
                     )}
@@ -2119,6 +1972,7 @@ function ChatGizaInner() {
                       imageUrl={m.imageUrl}
                       videoUrl={m.videoUrl}
                       isStreaming={m.id === streamingId}
+                      qid={m.pairId}
                       onEdit={m.role === "user" ? (text) => handleEditMessage(m.id, text) : undefined}
                       onEditImage={m.imageUrl ? (instruction) => handleEditImage(m.imageUrl as string, instruction) : undefined}
                       onRegenerate={
@@ -2146,6 +2000,11 @@ function ChatGizaInner() {
               error={attachError}
               disabled={loading}
               onStop={canStop ? handleStopGenerating : undefined}
+              temporaryMode={temporaryMode}
+              onToggleTemporary={() => {
+                setTemporaryMode((v) => !v);
+                setActiveId(null);
+              }}
               onSubmit={(e) => {
                 e.preventDefault();
                 handleSend(input, pendingAttachments);

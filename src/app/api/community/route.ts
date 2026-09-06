@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { kv } from "@vercel/kv";
 import { auth } from "@/auth";
 import { getMobileUserId } from "@/lib/mobileAuth";
-import { COMMUNITY_KEY, COMMUNITY_MESSAGE_LIMIT, type CommunityMessage } from "@/lib/community";
+import { COMMUNITY_KEY, COMMUNITY_MESSAGE_LIMIT, mutateCommunityMessages, type CommunityMessage } from "@/lib/community";
 
 // Polled by every app that has the Community screen open -- same
 // no-push-infra pattern as the per-code collab chat, but everyone reads
@@ -39,16 +39,19 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const messages = (await kv.get<CommunityMessage[]>(COMMUNITY_KEY)) ?? [];
-    messages.push({
-      id: crypto.randomUUID(),
-      authorId: userId,
-      authorName: displayName,
-      content,
-      createdAt: Date.now(),
+    const trimmed = await mutateCommunityMessages((messages) => {
+      const next = [
+        ...messages,
+        {
+          id: crypto.randomUUID(),
+          authorId: userId,
+          authorName: displayName,
+          content,
+          createdAt: Date.now(),
+        },
+      ];
+      return next.length > COMMUNITY_MESSAGE_LIMIT ? next.slice(next.length - COMMUNITY_MESSAGE_LIMIT) : next;
     });
-    const trimmed = messages.length > COMMUNITY_MESSAGE_LIMIT ? messages.slice(messages.length - COMMUNITY_MESSAGE_LIMIT) : messages;
-    await kv.set(COMMUNITY_KEY, trimmed);
     return NextResponse.json({ messages: trimmed });
   } catch (err) {
     console.error("Community post error", err);

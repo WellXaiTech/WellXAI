@@ -8,6 +8,8 @@ import { extractMemoryCandidates, type ChatMessage } from "@/lib/ai";
 // fires occasionally. Returns suggested new memory entries for the user
 // to accept/dismiss; nothing is saved here, that's a separate PUT to
 // /api/profile once the user approves a suggestion.
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   const session = await auth();
   const userId = session?.user?.id ?? (await getMobileUserId(req));

@@ -2,16 +2,41 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { kv } from "@vercel/kv";
-import { headers } from "next/headers";
-import { sendMailBestEffort } from "@/lib/mailer";
-import { welcomeEmail } from "@/lib/emailTemplates";
+import { headers, cookies } from "next/headers";
+import { randomInt } from "crypto";
+import { sendMail, sendMailBestEffort } from "@/lib/mailer";
+import { welcomeEmail, signInCodeEmail } from "@/lib/emailTemplates";
 import { recordSession, isRevoked, clientIpFromHeaders } from "@/lib/sessions";
 import { recordUserSeen } from "@/lib/userIndex";
 import { verifySsoLoginToken } from "@/lib/sso";
+import { supabaseAdmin } from "@/lib/supabase";
+import { verifyTotp } from "@/lib/totp";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { mintDeviceTrustToken, verifyDeviceTrustToken } from "@/lib/deviceTrust";
+
+export const DEVICE_TRUST_COOKIE = "chatgiza-device-trust";
 
 function welcomedKey(sub: string) {
   return `chatgiza:welcomed:${sub}`;
 }
+
+export function webTotpPendingKey(pendingId: string) {
+  return `chatgiza:totp-web-pending:${pendingId}`;
+}
+
+export type PendingWebLogin = {
+  sub: string;
+  email: string;
+  name: string;
+  image: string;
+  method: "totp" | "email";
+  // Only set when method is "email" -- the code just emailed, checked by
+  // the email-verify provider below.
+  code?: string;
+  // How many times this code has been re-sent -- see
+  // src/app/api/auth/resend-code/route.ts, capped at MAX_RESENDS there.
+  resendCount?: number;
+};
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
@@ -24,6 +49,64 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     error: "/login",
   },
   callbacks: {
+    // Runs before a session is ever created, on every provider. Google
+    // sign-in (OAuth and One Tap) used to go straight to a session for every
+    // account -- a second factor was only ever enforced for accounts that
+    // had explicitly turned on the Authenticator App. Now every account
+    // needs a second factor on every sign-in: TOTP if the account has it
+    // enabled, otherwise a mandatory emailed code (passkey-as-second-factor
+    // was scoped to Android only -- web has no passkey-login capability
+    // today). A device that already cleared this once stays trusted (see
+    // DEVICE_TRUST_COOKIE) until the user actually signs out, so this isn't
+    // a fresh challenge on every single sign-in. totp-verify/email-verify
+    // below are the completion steps for the two ladder branches and must
+    // NOT be re-gated here -- that would loop forever. sso is a separate
+    // trust boundary this ladder doesn't cover.
+    async signIn({ user, account, profile }) {
+      if (
+        account?.provider !== "google" &&
+        account?.provider !== "google-one-tap"
+      ) {
+        return true;
+      }
+
+      const sub = (profile?.sub as string | undefined) ?? user?.id;
+      if (!sub) return true;
+
+      const trustCookie = (await cookies()).get(DEVICE_TRUST_COOKIE)?.value;
+      const trustedSub = await verifyDeviceTrustToken(trustCookie);
+      if (trustedSub === sub) return true;
+
+      const email = (profile?.email as string | undefined) ?? user?.email ?? "";
+      const name = (typeof profile?.name === "string" ? profile.name : user?.name) ?? "";
+      const image = (typeof profile?.picture === "string" ? profile.picture : user?.image) ?? "";
+
+      const { data: userRow } = await supabaseAdmin
+        .from("users")
+        .select("totp_enabled")
+        .eq("id", sub)
+        .maybeSingle();
+
+      const pendingId = crypto.randomUUID();
+
+      if (userRow?.totp_enabled) {
+        const pending: PendingWebLogin = { sub, email, name, image, method: "totp" };
+        await kv.set(webTotpPendingKey(pendingId), pending, { ex: 300 });
+        return `/login/verify?pendingId=${pendingId}&method=totp`;
+      }
+
+      // Both Google providers already require an email on the identity
+      // (see the one-tap provider's own `!payload.email` check below) --
+      // sendMail throwing here for the unreachable empty-email case fails
+      // sign-in outright instead of stranding the user on a challenge page
+      // for a code that was never sent.
+      const code = randomInt(0, 1_000_000).toString().padStart(6, "0");
+      const pending: PendingWebLogin = { sub, email, name, image, method: "email", code };
+      await kv.set(webTotpPendingKey(pendingId), pending, { ex: 300 });
+      const { subject, html, from } = signInCodeEmail(code);
+      await sendMail(email, subject, html, from);
+      return `/login/verify?pendingId=${pendingId}&method=email`;
+    },
     async jwt({ token, profile, user, account }) {
       // `profile.sub` (OAuth) / `user.id` (One Tap) is Google's stable
       // per-account id — same value on every device/browser signed into the
@@ -64,7 +147,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           console.error("recordSession failed:", err);
         }
         try {
-          await recordUserSeen(sub as string, (email as string) ?? "", name, image, !!token.isNewAccount);
+          const ua = (await headers()).get("user-agent");
+          const platform = ua?.includes("ChatGiZaDesktop/") ? "desktop" : "web";
+          await recordUserSeen(sub as string, (email as string) ?? "", name, image, !!token.isNewAccount, platform);
         } catch (err) {
           console.error("recordUserSeen failed:", err);
         }
@@ -165,6 +250,79 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: identity.name,
           email: identity.email,
           image: null,
+        };
+      },
+    }),
+    Credentials({
+      id: "totp-verify",
+      name: "Authenticator Code",
+      credentials: {
+        pendingId: { label: "pendingId", type: "text" },
+        code: { label: "code", type: "text" },
+      },
+      // Completion step for the signIn callback's TOTP gate above: trusts
+      // the identity staged there under pendingId only after the code is
+      // checked against that same account's totp_secret, same shape as the
+      // sso provider trusting a token pre-verified elsewhere.
+      async authorize(credentials) {
+        const pendingId = credentials?.pendingId;
+        const code = credentials?.code;
+        if (!pendingId || typeof pendingId !== "string" || !code || typeof code !== "string") return null;
+
+        const rate = await checkRateLimit(`totp-web:${pendingId}`, 8, 300);
+        if (!rate.allowed) return null;
+
+        const pending = await kv.get<PendingWebLogin>(webTotpPendingKey(pendingId));
+        if (!pending) return null;
+
+        const { data: userRow } = await supabaseAdmin
+          .from("users")
+          .select("totp_secret")
+          .eq("id", pending.sub)
+          .maybeSingle();
+        const secret = userRow?.totp_secret as string | null;
+        if (!secret || !verifyTotp(secret, code)) return null;
+
+        await kv.del(webTotpPendingKey(pendingId));
+
+        return {
+          id: pending.sub,
+          name: pending.name || null,
+          email: pending.email,
+          image: pending.image || null,
+        };
+      },
+    }),
+    Credentials({
+      id: "email-verify",
+      name: "Email Code",
+      credentials: {
+        pendingId: { label: "pendingId", type: "text" },
+        code: { label: "code", type: "text" },
+      },
+      // Completion step for the signIn callback's mandatory-2FA ladder when
+      // the account has no TOTP enabled -- same shape as totp-verify, but
+      // checks the code emailed at stage time (stored on the pending entry
+      // itself) instead of a TOTP secret.
+      async authorize(credentials) {
+        const pendingId = credentials?.pendingId;
+        const code = credentials?.code;
+        if (!pendingId || typeof pendingId !== "string" || !code || typeof code !== "string") return null;
+
+        const rate = await checkRateLimit(`email-verify-web:${pendingId}`, 8, 300);
+        if (!rate.allowed) return null;
+
+        const pending = await kv.get<PendingWebLogin>(webTotpPendingKey(pendingId));
+        if (!pending || pending.method !== "email" || !pending.code) return null;
+        if (pending.code !== code) return null;
+
+        await kv.del(webTotpPendingKey(pendingId));
+
+        return {
+          id: pending.sub,
+          name: pending.name || null,
+          email: pending.email,
+          image: pending.image || null,
         };
       },
     }),

@@ -101,6 +101,52 @@ export async function saveAllAds(ads: Ad[]): Promise<void> {
   await kv.set(ADS_KEY, ads);
 }
 
+const ADS_VERSION_KEY = "chatgiza:ads:version";
+const MAX_CAS_ATTEMPTS = 5;
+
+// Compare-and-swap, run atomically inside Redis itself via EVAL (Upstash's
+// REST API has no persistent connection to hold a WATCH/MULTI transaction
+// open across commands, so a Lua script is the standard way to get atomicity
+// here): only writes the new list if ADS_VERSION_KEY still matches what the
+// caller read before mutating, and bumps it on success.
+const CAS_SCRIPT = `
+local current = redis.call('GET', KEYS[2])
+if current == false then current = '0' end
+if current == ARGV[1] then
+  redis.call('SET', KEYS[1], ARGV[2])
+  redis.call('SET', KEYS[2], ARGV[3])
+  return 1
+end
+return 0
+`;
+
+// Every write to the ads list (create, admin approve/reject, payment
+// verified) should go through this instead of a plain getAllAds() +
+// saveAllAds() pair. Those used to race: two callers reading the list at
+// nearly the same moment and both writing back their own full copy meant
+// whichever save landed last silently discarded the other's change --
+// e.g. a new ad's checkout finishing at the same moment an admin approved a
+// different ad could erase one or the other. This retries the mutator
+// against the latest list whenever it loses the race, instead of ever
+// blindly overwriting a change it didn't see.
+export async function mutateAds(mutator: (ads: Ad[]) => Ad[]): Promise<Ad[]> {
+  for (let attempt = 0; attempt < MAX_CAS_ATTEMPTS; attempt++) {
+    const [ads, version] = await Promise.all([
+      kv.get<Ad[]>(ADS_KEY),
+      kv.get<number>(ADS_VERSION_KEY),
+    ]);
+    const currentVersion = version ?? 0;
+    const nextAds = mutator(ads ?? []);
+    const ok = await kv.eval<[string, string, string], number>(
+      CAS_SCRIPT,
+      [ADS_KEY, ADS_VERSION_KEY],
+      [String(currentVersion), JSON.stringify(nextAds), String(currentVersion + 1)]
+    );
+    if (ok === 1) return nextAds;
+  }
+  throw new Error("Couldn't save -- too much activity right now, please try again");
+}
+
 export function isAdActive(ad: Ad, nowMs: number): boolean {
   return ad.status === "approved" && ad.expiresAt !== null && ad.expiresAt > nowMs;
 }

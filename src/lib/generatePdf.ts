@@ -66,7 +66,7 @@ function renderRichLine(
   return cursorY + lineHeight;
 }
 
-export async function textToPdfBlob(title: string, body: string): Promise<Blob> {
+async function buildPdfDoc(title: string, body: string): Promise<jsPDF> {
   const { jsPDF } = await import("jspdf");
   // A4 in points (595.28 x 841.89) — jsPDF's built-in "a4" format preset.
   const doc = new jsPDF({ unit: "pt", format: "a4" });
@@ -112,6 +112,27 @@ export async function textToPdfBlob(title: string, body: string): Promise<Blob> 
       continue;
     }
 
+    const taskMatch = rawLine.match(/^\s*[-*+]\s*\[([ xX])\]\s+(.*)/);
+    if (taskMatch) {
+      const bulletIndent = 16;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.text(taskMatch[1].trim() ? "[x]" : "[ ]", margin, y);
+      y = renderRichLine(doc, cleanInlineMarkdown(taskMatch[2]), margin + bulletIndent, y, maxWidth - bulletIndent, pageHeight, margin, 11, 16);
+      continue;
+    }
+
+    const orderedMatch = rawLine.match(/^\s*(\d+)[.)]\s+(.*)/);
+    if (orderedMatch) {
+      const marker = `${orderedMatch[1]}.`;
+      const bulletIndent = doc.getTextWidth(marker) + 8;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.text(marker, margin, y);
+      y = renderRichLine(doc, cleanInlineMarkdown(orderedMatch[2]), margin + bulletIndent, y, maxWidth - bulletIndent, pageHeight, margin, 11, 16);
+      continue;
+    }
+
     const bulletMatch = rawLine.match(/^\s*[-*+]\s+(.*)/);
     if (bulletMatch) {
       const bulletIndent = 14;
@@ -125,5 +146,19 @@ export async function textToPdfBlob(title: string, body: string): Promise<Blob> 
     y = renderRichLine(doc, cleanInlineMarkdown(rawLine), margin, y, maxWidth, pageHeight, margin, 11, 16);
   }
 
+  return doc;
+}
+
+/** Client-side downloads (e.g. ChatMessageBubble's "Download as PDF"). */
+export async function textToPdfBlob(title: string, body: string): Promise<Blob> {
+  const doc = await buildPdfDoc(title, body);
   return doc.output("blob");
+}
+
+/** Server-side (API routes): arraybuffer avoids relying on the Blob global
+ * inside a Node serverless function, unlike the client-only "blob" output. */
+export async function textToPdfBuffer(title: string, body: string): Promise<Buffer> {
+  const doc = await buildPdfDoc(title, body);
+  const arrayBuffer = doc.output("arraybuffer") as ArrayBuffer;
+  return Buffer.from(arrayBuffer);
 }

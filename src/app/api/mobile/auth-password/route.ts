@@ -1,25 +1,8 @@
-import { finishMobileSignIn } from "@/lib/mobileAuth";
-import { kv } from "@vercel/kv";
+import { resolveMobileSignIn } from "@/lib/mobileAuth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { verifyPassword } from "@/lib/password";
-
-// Same KV key + shape the TOTP step of the Google sign-in path
-// (src/app/api/mobile/auth/route.ts) already uses, so a password sign-in
-// that needs a second factor stages into the exact same place -- the
-// existing PUT handler there verifies the code and finishes the sign-in;
-// nothing about that route needs to change to support this second entry
-// point into it.
-function pendingLoginKey(pendingId: string) {
-  return `chatgiza:totp-login:${pendingId}`;
-}
-
-type PendingLogin = {
-  sub: string;
-  email: string;
-  name: string | null;
-  picture: string | null;
-  deviceModel: string | null;
-};
+import { checkRateLimit } from "@/lib/rateLimit";
+import { clientIpFromHeaders } from "@/lib/sessions";
 
 // Sign-in via the in-app password (Security > Change Password), looked up
 // by either the account's email or its saved contact phone number
@@ -42,9 +25,21 @@ export async function POST(request: Request) {
   const column = method === "phone" ? "phone" : "email";
   const lookupValue = method === "phone" ? identifier : identifier.toLowerCase();
 
+  // Two independent limiters: one per source IP so a single attacker can't
+  // spray guesses across many accounts, one per identifier so a botnet
+  // can't spread guesses against one account across many IPs.
+  const ip = clientIpFromHeaders(request.headers);
+  const [ipRate, idRate] = await Promise.all([
+    checkRateLimit(`pwd-mobile-ip:${ip}`, 20, 900),
+    checkRateLimit(`pwd-mobile-id:${lookupValue}`, 10, 900),
+  ]);
+  if (!ipRate.allowed || !idRate.allowed) {
+    return Response.json({ error: "Too many attempts -- try again in a few minutes" }, { status: 429 });
+  }
+
   const { data: userRow } = await supabaseAdmin
     .from("users")
-    .select("id, email, name, image, password_hash, totp_enabled")
+    .select("id, email, name, image, password_hash")
     .eq(column, lookupValue)
     .maybeSingle();
 
@@ -53,19 +48,13 @@ export async function POST(request: Request) {
     return Response.json({ error: "Incorrect details or password" }, { status: 401 });
   }
 
-  const pending: PendingLogin = {
+  const pending = {
     sub: userRow!.id as string,
-    email: userRow!.email as string,
+    email: userRow!.email as string | null,
     name: (userRow!.name as string | null) ?? null,
     picture: (userRow!.image as string | null) ?? null,
     deviceModel,
   };
 
-  if (userRow!.totp_enabled) {
-    const pendingId = crypto.randomUUID();
-    await kv.set(pendingLoginKey(pendingId), pending, { ex: 300 });
-    return Response.json({ totpRequired: true, pendingId });
-  }
-
-  return finishMobileSignIn(request, pending);
+  return resolveMobileSignIn(request, pending, body?.deviceTrustToken);
 }

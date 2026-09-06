@@ -7,6 +7,8 @@ import { synthesizeDigitalTwin, type ChatMessage } from "@/lib/ai";
 // sends (recent turns from the current chat, or a broader sample the app
 // pulls across saved History) -- nothing is saved here, that's a separate
 // PUT to /api/twin once the user reviews and confirms the draft.
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   const session = await auth();
   const userId = session?.user?.id ?? (await getMobileUserId(req));

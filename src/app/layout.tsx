@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Manrope, Geist_Mono, Cascadia_Code, Cascadia_Mono } from "next/font/google";
+import { Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import { headers } from "next/headers";
 import Script from "next/script";
@@ -7,60 +7,41 @@ import AuthProvider from "@/components/AuthProvider";
 import GoogleOneTap from "@/components/GoogleOneTap";
 import "./globals.css";
 
-// Free stand-in for "Ginto" (a licensed commercial typeface we don't have files
-// for) — chosen as the closest free geometric sans-serif available on Google
-// Fonts. Swap this import if real Ginto font files become available.
-const bodyFont = Plus_Jakarta_Sans({
-  variable: "--font-plus-jakarta-sans",
-  subsets: ["latin"],
-});
-
-// Second option in the Font picker (Settings > General > Chat font) --
-// loaded here (not per-component) since next/font/google fonts have to be
-// instantiated at module scope to generate their CSS variable correctly.
-const manropeFont = Manrope({
-  variable: "--font-manrope",
-  subsets: ["latin"],
-});
-
+// The site's code-block monospace font -- unrelated to the Font picker below,
+// kept regardless of which prose typeface is selected there.
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
-// The Font picker's Microsoft options -- the only two Microsoft-made
-// typefaces actually released under a free/open license (SIL OFL). Segoe
-// UI itself is NOT free: it ships only under a Windows/Office license, so
-// it can't be offered here. Both are on Google Fonts as variable fonts.
-const cascadiaCodeFont = Cascadia_Code({
-  variable: "--font-cascadia-code",
-  subsets: ["latin"],
-});
-
-const cascadiaMonoFont = Cascadia_Mono({
-  variable: "--font-cascadia-mono",
-  subsets: ["latin"],
-});
-
-// Selawik isn't on Google Fonts, so it's self-hosted here instead of via
-// next/font/google -- files are Microsoft's own official 1.01 release
-// (github.com/microsoft/Selawik, SIL Open Font License 1.1), just Regular
-// and Bold since that's all chat text ever actually renders (body copy +
-// markdown "**bold**"), not the full five-weight family from the release.
-const selawikFont = localFont({
-  variable: "--font-selawik",
+// Combined family (both weights) used for --font-sans, the site's general
+// typeface everywhere outside chat message bubbles -- UI chrome (buttons,
+// tabs, suggestion pills, headings) sets heavier Tailwind font-weight
+// classes (font-medium/font-semibold) than the Light default, and those
+// need Nova's own real Regular face to snap to. A single-weight family
+// has no heavier face to snap to, so the browser fakes one by fattening
+// the Light strokes instead -- that synthetic bold is what was making the
+// composer/suggestion-pill area look heavy even after the body default
+// moved to Light.
+const novaFont = localFont({
+  variable: "--font-nova",
   src: [
-    { path: "../fonts/selawik/selawik-regular.woff2", weight: "400", style: "normal" },
-    { path: "../fonts/selawik/selawik-bold.woff2", weight: "700", style: "normal" },
+    { path: "../fonts/nova/Nova-Light.otf", weight: "300", style: "normal" },
+    { path: "../fonts/nova/Nova-Regular.otf", weight: "400", style: "normal" },
   ],
 });
 
-// User-supplied font file (Fontshare's Clash Display), self-hosted the same
-// way as Selawik above -- a single variable-weight file covers the whole
-// 200-700 range instead of separate per-weight files.
-const clashDisplayFont = localFont({
-  variable: "--font-clash-display",
-  src: [{ path: "../fonts/clash-display/ClashDisplay-Variable.ttf", weight: "200 700", style: "normal" }],
+// Single-weight families for the Settings > General > Chat font picker,
+// which pins chat message prose to one exact weight regardless of any
+// markdown "**bold**" spans within it.
+const novaRegularFont = localFont({
+  variable: "--font-nova-regular",
+  src: [{ path: "../fonts/nova/Nova-Regular.otf", weight: "400", style: "normal" }],
+});
+
+const novaLightFont = localFont({
+  variable: "--font-nova-light",
+  src: [{ path: "../fonts/nova/Nova-Light.otf", weight: "300", style: "normal" }],
 });
 
 const SITE_NAME = "ChatGiZa";
@@ -218,7 +199,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${bodyFont.variable} ${manropeFont.variable} ${geistMono.variable} ${cascadiaCodeFont.variable} ${cascadiaMonoFont.variable} ${selawikFont.variable} ${clashDisplayFont.variable} h-full antialiased`}
+      className={`${geistMono.variable} ${novaFont.variable} ${novaRegularFont.variable} ${novaLightFont.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
@@ -230,7 +211,7 @@ export default async function RootLayout({
           />
         )}
         <Script id="theme-init" strategy="beforeInteractive">
-          {`(function(){try{var t=localStorage.getItem("chatgiza:theme");if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t);}var f=localStorage.getItem("chatgiza:font-size");if(f==="small"||f==="medium"||f==="large"||f==="xlarge"){document.documentElement.setAttribute("data-font-size",f);}var a=localStorage.getItem("chatgiza:assistant-color");if(a==="warm"){document.documentElement.setAttribute("data-assistant-color",a);}var c=localStorage.getItem("chatgiza:contrast");if(c==="medium"||c==="increased"){document.documentElement.setAttribute("data-contrast",c);}var cf=localStorage.getItem("chatgiza:chat-font");if(cf==="manrope"||cf==="system"){document.documentElement.setAttribute("data-chat-font",cf);}}catch(e){}})();`}
+          {`(function(){try{var t=localStorage.getItem("chatgiza:theme");if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t);}var f=localStorage.getItem("chatgiza:font-size");if(f==="small"||f==="medium"||f==="large"||f==="xlarge"){document.documentElement.setAttribute("data-font-size",f);}var a=localStorage.getItem("chatgiza:assistant-color");if(a==="warm"){document.documentElement.setAttribute("data-assistant-color",a);}var c=localStorage.getItem("chatgiza:contrast");if(c==="medium"||c==="increased"){document.documentElement.setAttribute("data-contrast",c);}var cf=localStorage.getItem("chatgiza:chat-font");if(cf==="nova_regular"){document.documentElement.setAttribute("data-chat-font",cf);}}catch(e){}})();`}
         </Script>
         {/* Standard, well-known SW registration idiom (register on window load) —
             PWA analysis tools like PWABuilder/Lighthouse specifically look for

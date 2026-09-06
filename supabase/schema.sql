@@ -31,8 +31,15 @@ create table if not exists users (
   -- trust level as the in-app password: self-reported, not proof of
   -- ownership of that number.
   phone text,
+  -- Which ChatGiZa surfaces this account has signed in from -- "web",
+  -- "desktop" (Electron), "android", "vscode". Appended to (never
+  -- overwritten) on each sign-in; shown as badges on the admin Users page.
+  platforms text[] not null default '{}'::text[],
   created_at timestamptz not null default now(),
-  last_seen_at timestamptz not null default now()
+  last_seen_at timestamptz not null default now(),
+  -- Set on every sign-out (see chatgizaSignOut -> /api/auth/clear-device-trust).
+  -- Distinct from last_seen_at, which only moves on real sign-in.
+  last_logout_at timestamptz
 );
 
 -- Run once for existing databases created before is_verified existed:
@@ -50,6 +57,12 @@ create table if not exists users (
 
 -- Run once for existing databases created before phone existed:
 -- alter table users add column if not exists phone text;
+
+-- Run once for existing databases created before platforms existed:
+-- alter table users add column if not exists platforms text[] not null default '{}'::text[];
+
+-- Run once for existing databases created before last_logout_at existed:
+-- alter table users add column if not exists last_logout_at timestamptz;
 
 -- WebAuthn passkeys -- a user can register more than one (phone, laptop,
 -- security key), so this is its own table rather than a column on users.
@@ -207,6 +220,41 @@ create table if not exists media_follows (
   created_at timestamptz not null default now(),
   primary key (follower_id, followed_id)
 );
+
+-- E-book library, shown at /ebook. Two kinds:
+-- 'uploaded' -- a PDF the user already had; always status 'ready', file_url
+--   set on creation, no ebook_pages rows (nothing to edit, it's opaque).
+-- 'written' -- an in-app book with editable ebook_pages; starts 'draft'
+--   (file_url null, nothing exported yet) and becomes 'ready' once /export
+--   assembles the pages into a real PDF (see generatePdf.ts). Pages stay
+--   editable after that -- exporting again just re-renders file_url.
+create table if not exists ebooks (
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null references users(id) on delete cascade,
+  title text not null,
+  description text,
+  source text not null default 'uploaded', -- 'uploaded' | 'written'
+  status text not null default 'ready', -- 'draft' | 'ready'
+  file_url text,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_ebooks_user on ebooks(user_id, created_at desc);
+alter table ebooks enable row level security;
+
+-- One row per page of a 'written' ebook, in reading order via `position`.
+-- content is Markdown, the same dialect ProjectsPanel's guide viewer and
+-- ChatMessageBubble already render -- the editor at /ebook/[id] shows it in
+-- a plain textarea with a Preview toggle rather than a true WYSIWYG editor,
+-- since that's the same tradeoff already made for chat/guide content here.
+create table if not exists ebook_pages (
+  id uuid primary key default gen_random_uuid(),
+  ebook_id uuid not null references ebooks(id) on delete cascade,
+  position int not null default 0,
+  content text not null default '',
+  updated_at timestamptz not null default now()
+);
+create index if not exists idx_ebook_pages_ebook on ebook_pages(ebook_id, position);
+alter table ebook_pages enable row level security;
 
 create index if not exists idx_workspace_members_user on workspace_members(user_id);
 create index if not exists idx_api_keys_user on api_keys(user_id);
