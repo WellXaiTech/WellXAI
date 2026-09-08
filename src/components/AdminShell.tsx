@@ -75,6 +75,21 @@ const OrgMemoryIcon = (
   </svg>
 );
 
+const ErrorsIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+    <path d="M12 9v4" />
+    <path d="M12 17h.01" />
+  </svg>
+);
+
+const FlaggedAccountsIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+    <path d="M4 22V15" />
+  </svg>
+);
+
 const LogoutIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -117,6 +132,8 @@ const NAV_ITEMS = [
   { href: "/wx-6f44c8d2a535/identity-access", label: "Identity & Access", icon: IdentityAccessIcon, color: "text-emerald-500" },
   { href: "/wx-6f44c8d2a535/users", label: "Users", icon: UsersIcon, color: "text-violet-500" },
   { href: "/wx-6f44c8d2a535/user-analytics", label: "User Analytics", icon: UserAnalyticsIcon, color: "text-cyan-500" },
+  { href: "/wx-6f44c8d2a535/flagged-accounts", label: "Flagged Accounts", icon: FlaggedAccountsIcon, color: "text-red-500" },
+  { href: "/wx-6f44c8d2a535/errors", label: "Errors", icon: ErrorsIcon, color: "text-yellow-500" },
   { href: "/wx-6f44c8d2a535/billing", label: "Billing", icon: BillingIcon, color: "text-amber-500" },
   { href: "/wx-6f44c8d2a535/org-memory", label: "Org Memory", icon: OrgMemoryIcon, color: "text-pink-500" },
   { href: "/advertise/admin", label: "Ads review", icon: AdsIcon, color: "text-rose-500" },

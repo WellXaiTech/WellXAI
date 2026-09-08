@@ -98,3 +98,23 @@ export function paymentConfirmationEmail(planName: string, amount: string): { su
     `),
   };
 }
+
+// Admin-only, not user-facing -- sent immediately when someone crosses the
+// 2FA rate limit (repeated wrong codes in a short window), the clearest
+// signal available today that an account is actively being brute-forced
+// rather than a real owner mistyping a code once or twice.
+export function suspiciousLoginAlertEmail(detail: string): { subject: string; html: string; from?: string } {
+  return {
+    subject: "ChatGiZa security alert: repeated failed sign-in attempts",
+    from: "WellXAI <noreply@tm.wellxai.world>",
+    html: wrap(
+      `
+      <p style="${HEADING_STYLE}">Possible brute-force attempt</p>
+      <p style="${BODY_STYLE}">An account just crossed the 2FA rate limit -- more wrong codes than a real owner mistyping once or twice would produce.</p>
+      <div style="${BOX_STYLE}"><p style="${BODY_STYLE} margin: 0; font-family: monospace;">${detail}</p></div>
+      <p style="${BODY_STYLE}">The attempt was already blocked by rate limiting; this is a heads-up, not an active breach.</p>
+    `,
+      "WellXAI"
+    ),
+  };
+}

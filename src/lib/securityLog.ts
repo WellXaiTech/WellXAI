@@ -1,4 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase";
+import { sendMailBestEffort } from "@/lib/mailer";
+import { suspiciousLoginAlertEmail } from "@/lib/emailTemplates";
+import { adminEmailList } from "@/lib/admin";
 
 export type SecurityEventType =
   | "member_joined"
@@ -8,7 +11,12 @@ export type SecurityEventType =
   | "api_key_created"
   | "api_key_revoked"
   | "sso_configured"
-  | "sso_login";
+  | "sso_login"
+  // Not workspace-scoped (workspaceId is null for these) -- a failed or
+  // rate-limited 2FA attempt is a per-account event, logged against
+  // whichever account was being signed into. See src/auth.ts.
+  | "login_2fa_failed"
+  | "login_2fa_rate_limited";
 
 export type SecurityEvent = {
   id: string;
@@ -60,6 +68,17 @@ export async function logSecurityEvent(
   } catch (err) {
     console.error("logSecurityEvent failed:", err);
   }
+}
+
+/** Real-time half of "protection against hacks" -- logSecurityEvent alone
+ * just writes a row nobody's necessarily watching; this actually notifies
+ * every admin the moment an account crosses the 2FA rate limit, which is
+ * the strongest signal available today that a real attack (not a typo) is
+ * in progress. Best-effort, same reasoning as logSecurityEvent -- an
+ * alerting failure must never break the login flow it's watching. */
+export async function alertAdminsOfSuspiciousLogin(detail: string): Promise<void> {
+  const { subject, html, from } = suspiciousLoginAlertEmail(detail);
+  await Promise.all(adminEmailList().map((email) => sendMailBestEffort(email, subject, html, from)));
 }
 
 export async function listWorkspaceSecurityEvents(workspaceId: string, limit = 100): Promise<SecurityEvent[]> {

@@ -158,6 +158,24 @@ create table if not exists security_events (
   created_at timestamptz not null default now()
 );
 
+-- In-app error log: the internal counterpart to Sentry (src/instrumentation.ts's
+-- onRequestError logs to both). user_id is nullable (unlike security_events'
+-- actor_user_id) and ON DELETE SET NULL rather than a hard reference failure --
+-- most server errors have no signed-in user at all (anonymous visitor, a cron
+-- route, a malformed request before auth even runs), and an error row
+-- shouldn't become unwritable, or vanish, just because the account that
+-- triggered it later gets deleted.
+create table if not exists app_errors (
+  id uuid primary key default gen_random_uuid(),
+  message text not null,
+  stack text,
+  route text,
+  user_id text references users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_app_errors_created on app_errors(created_at desc);
+
 -- Enterprise SSO: one OIDC connection per workspace, keyed by the work
 -- email domain that should route into it. client_secret is stored plainly
 -- here (not hashed) because, unlike API keys, we must present it back to
@@ -281,4 +299,5 @@ alter table media_likes enable row level security;
 alter table media_comments enable row level security;
 alter table media_follows enable row level security;
 alter table security_events enable row level security;
+alter table app_errors enable row level security;
 alter table workspace_sso enable row level security;

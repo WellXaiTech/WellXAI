@@ -59,7 +59,17 @@ const ADMIN_PREFIX = "/wx-6f44c8d2a535";
 // also need to work on this host (/login, the NextAuth error page it
 // redirects to on a failed sign-in) pass through untouched instead of
 // getting the admin prefix wrongly glued onto them and 404ing.
-const ADMIN_SUBROUTES = ["/agents", "/apps", "/billing", "/identity-access", "/org-memory", "/user-analytics", "/users"];
+const ADMIN_SUBROUTES = [
+  "/agents",
+  "/apps",
+  "/billing",
+  "/identity-access",
+  "/org-memory",
+  "/user-analytics",
+  "/users",
+  "/errors",
+  "/flagged-accounts",
+];
 
 // Paths (and, for the ones with their own sub-routes, prefixes) that only
 // make sense on the company site, never on the product domain.

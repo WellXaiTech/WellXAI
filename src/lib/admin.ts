@@ -14,3 +14,13 @@ export function isAdminEmail(email: string | null | undefined): boolean {
   if (!email) return false;
   return adminEmails().has(email.toLowerCase());
 }
+
+// The real (mixed-case, as configured) addresses -- for actually sending
+// mail to, as opposed to isAdminEmail's lowercase Set used only for
+// membership checks.
+export function adminEmailList(): string[] {
+  return (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim())
+    .filter(Boolean);
+}

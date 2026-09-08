@@ -13,6 +13,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { verifyTotp } from "@/lib/totp";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { mintDeviceTrustToken, verifyDeviceTrustToken } from "@/lib/deviceTrust";
+import { logSecurityEvent, alertAdminsOfSuspiciousLogin } from "@/lib/securityLog";
 
 export const DEVICE_TRUST_COOKIE = "chatgiza-device-trust";
 
@@ -269,10 +270,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const code = credentials?.code;
         if (!pendingId || typeof pendingId !== "string" || !code || typeof code !== "string") return null;
 
-        const rate = await checkRateLimit(`totp-web:${pendingId}`, 8, 300);
-        if (!rate.allowed) return null;
-
+        // Fetched before the rate-limit check (not after, like before) so
+        // there's a real account to attribute the event to either way --
+        // logging/alerting need pending.sub regardless of which check
+        // fails first.
         const pending = await kv.get<PendingWebLogin>(webTotpPendingKey(pendingId));
+
+        const rate = await checkRateLimit(`totp-web:${pendingId}`, 8, 300);
+        if (!rate.allowed) {
+          if (pending) {
+            await logSecurityEvent(pending.sub, "login_2fa_rate_limited", { detail: "Authenticator code, web sign-in" });
+            await alertAdminsOfSuspiciousLogin(
+              `Account ${pending.email} (${pending.sub}) was rate-limited entering its Authenticator code during web sign-in -- repeated wrong codes in a short window.`
+            );
+          }
+          return null;
+        }
         if (!pending) return null;
 
         const { data: userRow } = await supabaseAdmin
@@ -281,7 +294,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           .eq("id", pending.sub)
           .maybeSingle();
         const secret = userRow?.totp_secret as string | null;
-        if (!secret || !verifyTotp(secret, code)) return null;
+        if (!secret || !verifyTotp(secret, code)) {
+          await logSecurityEvent(pending.sub, "login_2fa_failed", { detail: "Authenticator code, web sign-in" });
+          return null;
+        }
 
         await kv.del(webTotpPendingKey(pendingId));
 
@@ -309,12 +325,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const code = credentials?.code;
         if (!pendingId || typeof pendingId !== "string" || !code || typeof code !== "string") return null;
 
-        const rate = await checkRateLimit(`email-verify-web:${pendingId}`, 8, 300);
-        if (!rate.allowed) return null;
-
         const pending = await kv.get<PendingWebLogin>(webTotpPendingKey(pendingId));
+
+        const rate = await checkRateLimit(`email-verify-web:${pendingId}`, 8, 300);
+        if (!rate.allowed) {
+          if (pending) {
+            await logSecurityEvent(pending.sub, "login_2fa_rate_limited", { detail: "Emailed code, web sign-in" });
+            await alertAdminsOfSuspiciousLogin(
+              `Account ${pending.email} (${pending.sub}) was rate-limited entering its emailed sign-in code -- repeated wrong codes in a short window.`
+            );
+          }
+          return null;
+        }
         if (!pending || pending.method !== "email" || !pending.code) return null;
-        if (pending.code !== code) return null;
+        if (pending.code !== code) {
+          await logSecurityEvent(pending.sub, "login_2fa_failed", { detail: "Emailed code, web sign-in" });
+          return null;
+        }
 
         await kv.del(webTotpPendingKey(pendingId));
 
