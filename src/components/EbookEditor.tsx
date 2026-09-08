@@ -522,7 +522,7 @@ function CoverEditor({
             type="button"
             onClick={onGenerate}
             disabled={generating}
-            className="btn-primary flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium disabled:opacity-50"
+            className="btn-primary flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-medium disabled:opacity-50"
           >
             {SparkleIcon} {generating ? "Generating…" : "Generate with AI"}
           </button>
@@ -530,7 +530,7 @@ function CoverEditor({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-xs font-medium hover:bg-surface-2 disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg border border-border px-3.5 py-1.5 text-xs font-medium hover:bg-surface-2 disabled:opacity-50"
           >
             {UploadIcon} {uploading ? "Uploading…" : "Upload image"}
           </button>
@@ -538,7 +538,7 @@ function CoverEditor({
             <button
               type="button"
               onClick={() => onChange({ imageUrl: undefined })}
-              className="flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-xs font-medium text-muted hover:bg-surface-2"
+              className="flex items-center gap-1.5 rounded-lg border border-border px-3.5 py-1.5 text-xs font-medium text-muted hover:bg-surface-2"
             >
               Remove image
             </button>
