@@ -13,6 +13,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import type { WritingSuggestion } from "@/lib/ai";
 import { WritingIssues, writingIssuesKey, getWritingIssueRanges } from "@/lib/tiptapWritingIssues";
+import { getLocalShop } from "@/lib/chackallLocalShop";
 
 type Page = { id: string; position: number; content: string };
 type EbookCover = { title?: string; subtitle?: string; author?: string; background?: string; imageUrl?: string };
@@ -176,6 +177,17 @@ const UploadIcon = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
     <path d="M12 3v12M7 8l5-5 5 5" />
     <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+  </svg>
+);
+const QuantaraIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+    <rect x="3" y="3" width="18" height="18" rx="4" />
+    <path d="M8 12h8M8 16h5M8 8h3" />
+  </svg>
+);
+const ShopIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+    <path d="M3 9l1-5h16l1 5M4 9v10a1 1 0 001 1h14a1 1 0 001-1V9M4 9h16M9 21v-6h6v6" />
   </svg>
 );
 
@@ -409,11 +421,23 @@ function CoverEditor({
   uploading,
   saveStatus,
   error,
+  onShareQuantara,
+  sharingQuantara,
+  quantaraResult,
+  onSellChackall,
+  sellingChackall,
+  chackallResult,
 }: {
   ebook: Ebook;
   cover: EbookCover;
   onChange: (patch: EbookCover) => void;
   onGenerate: () => void;
+  onShareQuantara: () => void;
+  sharingQuantara: boolean;
+  quantaraResult: string | null;
+  onSellChackall: () => void;
+  sellingChackall: boolean;
+  chackallResult: string | null;
   onUpload: (file: File) => void;
   generating: boolean;
   uploading: boolean;
@@ -557,6 +581,34 @@ function CoverEditor({
         </div>
         {error && <p className="text-xs text-red-400">{error}</p>}
         <p className="text-xs text-muted">AI generates the artwork only -- title, subtitle, and author are drawn on top by this editor.</p>
+
+        {/* Cross-posting into ChatGiZa's other two products -- Quantara
+            (the media feed) and ChackAll (the link-aggregator storefront) --
+            using the same cover this tab already builds, instead of asking
+            the writer to redo it manually in either place. */}
+        <div className="border-t border-border pt-5">
+          <p className="mb-2 text-xs font-medium text-muted">Share &amp; sell</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={onShareQuantara}
+              disabled={sharingQuantara}
+              className="flex items-center gap-1.5 rounded-lg border border-border px-3.5 py-1.5 text-xs font-medium hover:bg-surface-2 disabled:opacity-50"
+            >
+              {QuantaraIcon} {sharingQuantara ? "Sharing…" : "Share to Quantara"}
+            </button>
+            <button
+              type="button"
+              onClick={onSellChackall}
+              disabled={sellingChackall}
+              className="flex items-center gap-1.5 rounded-lg border border-border px-3.5 py-1.5 text-xs font-medium hover:bg-surface-2 disabled:opacity-50"
+            >
+              {ShopIcon} {sellingChackall ? "Listing…" : "Sell on ChackAll"}
+            </button>
+          </div>
+          {quantaraResult && <p className="mt-2 text-xs text-muted">{quantaraResult}</p>}
+          {chackallResult && <p className="mt-2 text-xs text-muted">{chackallResult}</p>}
+        </div>
       </div>
     </div>
   );
@@ -581,6 +633,10 @@ export default function EbookEditor({ ebookId, onBack }: { ebookId: string; onBa
   const [generatingCover, setGeneratingCover] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [coverError, setCoverError] = useState<string | null>(null);
+  const [sharingQuantara, setSharingQuantara] = useState(false);
+  const [quantaraResult, setQuantaraResult] = useState<string | null>(null);
+  const [sellingChackall, setSellingChackall] = useState(false);
+  const [chackallResult, setChackallResult] = useState<string | null>(null);
 
   const [reviewing, setReviewing] = useState(false);
   const [reviewScore, setReviewScore] = useState<number | null>(null);
@@ -762,6 +818,76 @@ export default function EbookEditor({ ebookId, onBack }: { ebookId: string; onBa
     }
   }
 
+  // Fetches the cover image (a remote Storage URL) and re-encodes it as a
+  // data: URL -- /api/media/posts only accepts inline image data (same as
+  // a normal Quantara post composed from a file picker), not arbitrary
+  // remote URLs.
+  async function imageUrlToDataUrl(url: string): Promise<string> {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function shareToQuantara() {
+    if (!ebook) return;
+    setSharingQuantara(true);
+    setQuantaraResult(null);
+    try {
+      const text = [ebook.title, ebook.description].filter(Boolean).join("\n\n");
+      const imageDataUrls = coverDraft.imageUrl ? [await imageUrlToDataUrl(coverDraft.imageUrl)] : [];
+      const res = await fetch("/api/media/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, imageDataUrls }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Failed to share");
+      setQuantaraResult("Shared to Quantara.");
+    } catch (err) {
+      setQuantaraResult(err instanceof Error ? err.message : "Failed to share to Quantara");
+    } finally {
+      setSharingQuantara(false);
+    }
+  }
+
+  async function sellOnChackall() {
+    if (!ebook) return;
+    const shop = getLocalShop();
+    if (!shop) {
+      setChackallResult("You don't have a ChackAll shop on this browser yet -- create one first at /store.");
+      return;
+    }
+    const price = window.prompt(`Price for "${ebook.title}" (e.g. 10000 TZS)`);
+    if (!price) return;
+    setSellingChackall(true);
+    setChackallResult(null);
+    try {
+      const res = await fetch(`/api/store/shops/${shop.slug}/products`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: shop.editToken,
+          name: coverDraft.title || ebook.title,
+          price,
+          image: coverDraft.imageUrl || null,
+          description: ebook.description,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Failed to list on ChackAll");
+      setChackallResult(`Listed on your ChackAll shop "${shop.name}".`);
+    } catch (err) {
+      setChackallResult(err instanceof Error ? err.message : "Failed to list on ChackAll");
+    } finally {
+      setSellingChackall(false);
+    }
+  }
+
   async function checkWriting() {
     if (!editor) return;
     const text = editor.getText();
@@ -935,6 +1061,12 @@ export default function EbookEditor({ ebookId, onBack }: { ebookId: string; onBa
             uploading={uploadingCover}
             saveStatus={coverSaveStatus}
             error={coverError}
+            onShareQuantara={shareToQuantara}
+            sharingQuantara={sharingQuantara}
+            quantaraResult={quantaraResult}
+            onSellChackall={sellOnChackall}
+            sellingChackall={sellingChackall}
+            chackallResult={chackallResult}
           />
         ) : (
           <div className="flex min-h-0 flex-1 flex-col">
