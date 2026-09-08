@@ -404,11 +404,6 @@ function ChatGizaInner() {
   const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [mediaFeedOpen, setMediaFeedOpen] = useState(false);
-  // Unlike Media/Projects/Code (which open as full-screen overlays covering
-  // everything, sidebar included), E-book replaces just this column's own
-  // content -- the sidebar and its chat history stay visible and clickable
-  // the whole time, since jumping back into a chat while writing a book is
-  // a normal thing to want to do.
   const [ebookView, setEbookView] = useState<{ type: "library" } | { type: "editor"; id: string } | null>(null);
   const [liveVisionOpen, setLiveVisionOpen] = useState(false);
   const [projectsOpen, setProjectsOpen] = useState(false);
@@ -1398,6 +1393,24 @@ function ChatGizaInner() {
 
       {codeOpen && <CodePanel onClose={() => setCodeOpen(false)} />}
 
+      {/* Full-screen, same as Media/Projects/Code above -- previously this
+          only replaced the chat column so the sidebar stayed usable
+          alongside it, but that read as a smaller, half-attached panel
+          rather than its own real space; matching the other tools' full
+          takeover reads as more deliberate/polished. */}
+      {ebookView && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-background">
+          {ebookView.type === "library" ? (
+            <EbookLibrary
+              onOpenBook={(book: Ebook) => setEbookView({ type: "editor", id: book.id })}
+              onClose={() => setEbookView(null)}
+            />
+          ) : (
+            <EbookEditor ebookId={ebookView.id} onBack={() => setEbookView({ type: "library" })} />
+          )}
+        </div>
+      )}
+
       <div
         className={`relative flex flex-1 flex-col overflow-hidden transition-[margin] duration-300 ${
           mediaFeedOpen ? "xl:mr-[600px] 2xl:mr-[720px]" : ""
@@ -1414,18 +1427,6 @@ function ChatGizaInner() {
               : undefined
         }
       >
-        {ebookView && (
-          <div className="absolute inset-0 z-30 flex flex-col bg-background">
-            {ebookView.type === "library" ? (
-              <EbookLibrary
-                onOpenBook={(book: Ebook) => setEbookView({ type: "editor", id: book.id })}
-                onClose={() => setEbookView(null)}
-              />
-            ) : (
-              <EbookEditor ebookId={ebookView.id} onBack={() => setEbookView({ type: "library" })} />
-            )}
-          </div>
-        )}
         {!standalone && (
         <div className="grid grid-cols-[1fr_auto_1fr] items-center px-4 pt-6">
           {/* Matches the reference's own "Project / chat" breadcrumb --

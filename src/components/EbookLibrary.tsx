@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+
+type EbookCover = { title?: string; subtitle?: string; author?: string; background?: string; imageUrl?: string };
 
 export type Ebook = {
   id: string;
@@ -10,6 +12,7 @@ export type Ebook = {
   source: "uploaded" | "written";
   status: "draft" | "ready";
   fileUrl: string | null;
+  cover: EbookCover | null;
   createdAt: number;
 };
 
@@ -20,10 +23,15 @@ const UploadIcon = (
     <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
   </svg>
 );
-const BookGlyph = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+const PlusIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);
+const SearchIcon = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="7" />
+    <path d="m21 21-4.3-4.3" />
   </svg>
 );
 const CloseIcon = (
@@ -44,8 +52,53 @@ const ExternalIcon = (
     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
   </svg>
 );
+const DocIcon = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 2h9l5 5v15H6z" />
+    <path d="M15 2v5h5" />
+  </svg>
+);
+const PdfGlyph = (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 2h9l5 5v15H6z" />
+    <path d="M15 2v5h5" />
+  </svg>
+);
 
 const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+
+type Filter = "all" | "written" | "uploaded";
+
+function CoverThumb({ book }: { book: Ebook }) {
+  const cover = book.cover;
+  const light = cover?.background ? ["#f4ede1", "#ece7de"].includes(cover.background) : false;
+
+  if (book.source === "uploaded") {
+    return (
+      <div className="flex aspect-[2/3] w-full flex-col items-center justify-center gap-2 rounded-md border border-border bg-surface text-muted">
+        {PdfGlyph}
+        <span className="text-[10px] font-semibold uppercase tracking-wide">PDF</span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="relative flex aspect-[2/3] w-full flex-col justify-end overflow-hidden rounded-md border border-border p-3"
+      style={{
+        backgroundColor: cover?.background ?? "#1c1c1c",
+        backgroundImage: cover?.imageUrl ? `url(${cover.imageUrl})` : undefined,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        color: cover?.imageUrl ? "#fff" : light ? "#1c1c1c" : "#fff",
+      }}
+    >
+      {cover?.imageUrl && <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/5 to-transparent" />}
+      <p className="relative line-clamp-3 font-serif text-sm font-semibold leading-tight">{cover?.title || book.title}</p>
+      {cover?.author && <p className="relative mt-1 text-[11px] opacity-85">{cover.author}</p>}
+    </div>
+  );
+}
 
 export default function EbookLibrary({
   onOpenBook,
@@ -66,6 +119,8 @@ export default function EbookLibrary({
   const [startingBook, setStartingBook] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [readerBook, setReaderBook] = useState<Ebook | null>(null);
+  const [filter, setFilter] = useState<Filter>("all");
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -160,99 +215,157 @@ export default function EbookLibrary({
     }
   }
 
+  const counts = useMemo(
+    () => ({
+      all: ebooks.length,
+      written: ebooks.filter((b) => b.source === "written").length,
+      uploaded: ebooks.filter((b) => b.source === "uploaded").length,
+    }),
+    [ebooks]
+  );
+
+  const visibleBooks = useMemo(() => {
+    return ebooks
+      .filter((b) => filter === "all" || b.source === filter)
+      .filter((b) => !query.trim() || b.title.toLowerCase().includes(query.trim().toLowerCase()));
+  }, [ebooks, filter, query]);
+
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
-      <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="heading text-2xl">E-books</h1>
-            <p className="mt-1 text-sm text-muted">Write a new book page by page with AI, or upload a PDF you already have.</p>
-          </div>
+    <div className="flex h-full">
+      {/* Library sidebar -- search, quick-create actions, and shelf filters,
+          the same shape a real reading/writing app (Kindle, Apple Books,
+          Notion) uses instead of everything crammed into the main column. */}
+      <div className="flex w-60 shrink-0 flex-col gap-5 overflow-y-auto border-r border-border bg-surface px-4 py-6 sm:w-64">
+        <div className="flex items-center justify-between">
+          <h1 className="heading text-lg">E-books</h1>
           {onClose && (
             <button
               onClick={onClose}
               aria-label="Close"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
             >
               {CloseIcon}
             </button>
           )}
         </div>
 
-        {uploadError && <p className="mb-4 text-sm text-red-400">{uploadError}</p>}
+        <div className="relative">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">{SearchIcon}</span>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search your books"
+            className="w-full rounded-full border border-border bg-background py-2 pl-9 pr-3 text-sm outline-none focus:border-foreground/40"
+          />
+        </div>
 
-        {/* Always visible (not just when the library is empty) -- "Create a
-            Book" is the only way to start a new one now that it isn't a
-            header button anymore, so it can't be hidden once you already
-            have books. */}
-        <div className="mb-8 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-border p-6">
-            <p className="text-sm font-medium">Before you start</p>
-            <ul className="mt-3 space-y-1.5 text-sm text-muted">
-              <li>Give your book a clear purpose before you start.</li>
-              <li>Use &quot;Write with AI&quot; whenever you&apos;re stuck.</li>
-              <li>Short chapters are easier to finish than long ones.</li>
-            </ul>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="mt-4 flex items-center gap-1.5 text-sm font-medium text-muted transition-colors hover:text-foreground disabled:opacity-50"
-            >
-              {UploadIcon} {uploading ? "Uploading…" : "Or upload a PDF you already have"}
-            </button>
-            <p className="mt-1 text-xs text-muted">PDF files only, up to 20MB.</p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/pdf"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleUploadFile(file);
-                e.target.value = "";
-              }}
-            />
-          </div>
-
+        <div className="space-y-2">
           <button
             onClick={handleNewBook}
             disabled={startingBook}
-            className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border p-6 text-center transition-colors hover:bg-surface-2 disabled:opacity-50"
+            className="btn-primary flex w-full items-center justify-center gap-1.5 rounded-full py-2.5 text-sm font-medium disabled:opacity-60"
           >
-            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-muted">{BookGlyph}</span>
-            <span className="text-sm font-semibold">{startingBook ? "Starting…" : "Create a Book"}</span>
-            <span className="text-xs text-muted">Write page by page with AI</span>
+            {PlusIcon} {startingBook ? "Starting…" : "New book"}
           </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="flex w-full items-center justify-center gap-1.5 rounded-full border border-border py-2.5 text-sm font-medium hover:bg-surface-2 disabled:opacity-50"
+          >
+            {UploadIcon} {uploading ? "Uploading…" : "Upload a PDF"}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleUploadFile(file);
+              e.target.value = "";
+            }}
+          />
+          {uploadError && <p className="text-xs text-red-400">{uploadError}</p>}
         </div>
 
-        {loading ? (
-          <p className="text-sm text-muted">Loading…</p>
-        ) : ebooks.length > 0 ? (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {ebooks.map((book) => (
-              <div
-                key={book.id}
-                className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-surface-2 transition-colors hover:bg-surface"
-              >
-                <button onClick={() => openBook(book)} className="flex flex-1 flex-col items-start gap-1 p-4 text-left">
-                  <span className="line-clamp-2 text-sm font-medium">{book.title}</span>
-                  <span className="mt-auto text-xs text-muted">
+        <div className="min-h-0 flex-1">
+          <p className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted">Shelf</p>
+          {([
+            ["all", "All books"],
+            ["written", "Written with AI"],
+            ["uploaded", "Uploaded PDFs"],
+          ] as const).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setFilter(key)}
+              className={`flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm transition-colors ${
+                filter === key ? "bg-surface-2 font-medium text-foreground" : "text-muted hover:bg-surface-2 hover:text-foreground"
+              }`}
+            >
+              <span>{label}</span>
+              <span className="text-xs text-muted">{counts[key]}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="rounded-xl border border-border p-3">
+          <p className="text-xs font-medium">Before you start</p>
+          <ul className="mt-1.5 space-y-1 text-[11px] leading-snug text-muted">
+            <li>Give your book a clear purpose.</li>
+            <li>Use &quot;Ask for a change&quot; whenever you&apos;re stuck.</li>
+            <li>Short chapters finish faster than long ones.</li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Shelf -- real cover thumbnails (background/image + title, from the
+          editor's Cover tab) instead of plain text tiles, so a library with
+          several books actually reads as a bookshelf. */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8 sm:px-10">
+        <div className="mx-auto w-full max-w-5xl">
+          <div className="mb-6 flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold text-muted">
+              {filter === "all" ? "All books" : filter === "written" ? "Written with AI" : "Uploaded PDFs"}
+              <span className="ml-1.5 font-normal">({visibleBooks.length})</span>
+            </h2>
+          </div>
+
+          {loading ? (
+            <p className="text-sm text-muted">Loading…</p>
+          ) : visibleBooks.length > 0 ? (
+            <div className="grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 lg:grid-cols-5">
+              {visibleBooks.map((book) => (
+                <div key={book.id} className="group relative flex flex-col">
+                  <button
+                    onClick={() => openBook(book)}
+                    className="block w-full overflow-hidden rounded-md shadow-md ring-1 ring-black/5 transition-transform duration-150 group-hover:-translate-y-1 group-hover:shadow-xl"
+                  >
+                    <CoverThumb book={book} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(book.id)}
+                    disabled={deletingId === book.id}
+                    aria-label="Delete"
+                    className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity hover:bg-black/80 group-hover:opacity-100 disabled:opacity-50"
+                  >
+                    {TrashIcon}
+                  </button>
+                  <p className="mt-2 line-clamp-1 text-sm font-medium">{book.title}</p>
+                  <p className="flex items-center gap-1 text-xs text-muted">
+                    {book.source === "uploaded" ? DocIcon : null}
                     {book.source === "written" ? (book.status === "draft" ? "Draft" : "Written with AI") : "Uploaded"} ·{" "}
                     {new Date(book.createdAt).toLocaleDateString()}
-                  </span>
-                </button>
-                <button
-                  onClick={() => handleDelete(book.id)}
-                  disabled={deletingId === book.id}
-                  aria-label="Delete"
-                  className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-background/80 text-muted opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 disabled:opacity-50"
-                >
-                  {TrashIcon}
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : null}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border py-16 text-center">
+              <p className="text-sm font-medium">No books here yet</p>
+              <p className="text-xs text-muted">{query ? "Try a different search." : "Start a new one from the sidebar."}</p>
+            </div>
+          )}
+        </div>
       </div>
 
       {readerBook && (
