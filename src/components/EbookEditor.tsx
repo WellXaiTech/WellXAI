@@ -436,7 +436,7 @@ function CoverEditor({
           going side-by-side without the two overlapping. */}
       <div className="w-full max-w-[320px] shrink-0">
         <div
-          className="relative flex aspect-[2/3] w-full flex-col justify-between overflow-hidden rounded-lg border border-border p-6 shadow-lg"
+          className="relative flex aspect-[2/3] w-full flex-col justify-between overflow-hidden rounded-lg p-6 shadow-lg"
           style={{
             backgroundColor: background,
             backgroundImage: cover.imageUrl ? `url(${cover.imageUrl})` : undefined,
