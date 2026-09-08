@@ -45,6 +45,17 @@ export async function uploadGeneratedEbook(bytes: Buffer, title: string): Promis
   return publicUrlOf(path);
 }
 
+/** Uploads an AI-generated cover image's bytes directly (server already has them). */
+export async function uploadCoverImage(bytes: Buffer): Promise<string | null> {
+  const path = `covers/${crypto.randomUUID()}.png`;
+  const { error } = await supabaseAdmin.storage.from(EBOOK_BUCKET).upload(path, bytes, { contentType: "image/png" });
+  if (error) {
+    console.error("uploadCoverImage error:", error);
+    return null;
+  }
+  return publicUrlOf(path);
+}
+
 /** True if [url] points at our own ebook bucket -- checked before trusting a
  * client-supplied fileUrl for an upload, since the client uploaded it
  * directly to Storage without our API seeing the bytes. */

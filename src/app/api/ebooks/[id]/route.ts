@@ -6,6 +6,14 @@ import { deleteEbookFile } from "@/lib/ebookStorage";
 const MAX_TITLE_LENGTH = 200;
 const MAX_DESCRIPTION_LENGTH = 2000;
 
+export type EbookCover = {
+  title?: string;
+  subtitle?: string;
+  author?: string;
+  background?: string;
+  imageUrl?: string;
+};
+
 type EbookRow = {
   id: string;
   title: string;
@@ -13,6 +21,7 @@ type EbookRow = {
   source: "uploaded" | "written";
   status: "draft" | "ready";
   file_url: string | null;
+  cover: EbookCover | null;
   created_at: string;
 };
 
@@ -24,6 +33,7 @@ function toEbook(row: EbookRow) {
     source: row.source,
     status: row.status,
     fileUrl: row.file_url,
+    cover: row.cover,
     createdAt: new Date(row.created_at).getTime(),
   };
 }
@@ -31,7 +41,7 @@ function toEbook(row: EbookRow) {
 async function loadOwnedEbook(id: string, userId: string) {
   const { data, error } = await supabaseAdmin
     .from("ebooks")
-    .select("id, user_id, title, description, source, status, file_url, created_at")
+    .select("id, user_id, title, description, source, status, file_url, cover, created_at")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
@@ -67,22 +77,32 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const body = await req.json().catch(() => null);
 
-  const updates: Record<string, string | null> = {};
-  if (typeof body?.title === "string") {
-    const title = body.title.trim().slice(0, MAX_TITLE_LENGTH);
-    if (!title) return NextResponse.json({ error: "A title is required" }, { status: 400 });
-    updates.title = title;
-  }
-  if (typeof body?.description === "string") {
-    updates.description = body.description.trim().slice(0, MAX_DESCRIPTION_LENGTH) || null;
-  }
-  if (Object.keys(updates).length === 0) {
-    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
-  }
-
   try {
     const existing = await loadOwnedEbook(id, user.id);
     if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const updates: Record<string, string | EbookCover | null> = {};
+    if (typeof body?.title === "string") {
+      const title = body.title.trim().slice(0, MAX_TITLE_LENGTH);
+      if (!title) return NextResponse.json({ error: "A title is required" }, { status: 400 });
+      updates.title = title;
+    }
+    if (typeof body?.description === "string") {
+      updates.description = body.description.trim().slice(0, MAX_DESCRIPTION_LENGTH) || null;
+    }
+    // Merged shallowly with whatever's already saved (not replaced outright)
+    // so, e.g., typing a subtitle doesn't wipe out an already-generated
+    // cover image the client's own local state doesn't currently hold.
+    if (body?.cover && typeof body.cover === "object") {
+      const merged: EbookCover = { ...(existing.cover ?? {}), ...body.cover };
+      (Object.keys(merged) as (keyof EbookCover)[]).forEach((k) => {
+        if (merged[k] === null || merged[k] === undefined || merged[k] === "") delete merged[k];
+      });
+      updates.cover = merged;
+    }
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+    }
 
     const { data, error } = await supabaseAdmin.from("ebooks").update(updates).eq("id", id).select().single();
     if (error || !data) throw error ?? new Error("update failed");

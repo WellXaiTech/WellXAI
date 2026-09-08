@@ -254,16 +254,24 @@ create table if not exists ebooks (
   source text not null default 'uploaded', -- 'uploaded' | 'written'
   status text not null default 'ready', -- 'draft' | 'ready'
   file_url text,
+  -- Cover design for a 'written' book: {title?, subtitle?, author?,
+  -- background?, imageUrl?} -- all optional, filled in piecemeal from the
+  -- editor's Cover tab. imageUrl is either an AI-generated image (see
+  -- generateEbookCoverImage) or one the user uploaded directly, both stored
+  -- the same way a book's exported PDF is (see ebookStorage.ts).
+  cover jsonb,
   created_at timestamptz not null default now()
 );
 create index if not exists idx_ebooks_user on ebooks(user_id, created_at desc);
 alter table ebooks enable row level security;
 
+-- Run once for existing databases created before cover existed:
+-- alter table ebooks add column if not exists cover jsonb;
+
 -- One row per page of a 'written' ebook, in reading order via `position`.
--- content is Markdown, the same dialect ProjectsPanel's guide viewer and
--- ChatMessageBubble already render -- the editor at /ebook/[id] shows it in
--- a plain textarea with a Preview toggle rather than a true WYSIWYG editor,
--- since that's the same tradeoff already made for chat/guide content here.
+-- content is HTML from the Tiptap WYSIWYG editor at /ebook/[id]
+-- (EbookEditor.tsx) -- editor.getHTML() in, editor.commands.setContent()
+-- out, same as any other Tiptap-backed editor in this app.
 create table if not exists ebook_pages (
   id uuid primary key default gen_random_uuid(),
   ebook_id uuid not null references ebooks(id) on delete cascade,

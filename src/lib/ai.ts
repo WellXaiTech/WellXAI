@@ -1422,6 +1422,38 @@ export async function reviewWriting(text: string): Promise<WritingReview> {
   return parseWritingReview(raw);
 }
 
+// Powers the /ebook editor's Cover tab "Generate with AI" button -- a real
+// image (not a mock/placeholder), sized for a portrait book cover. Uses
+// OpenAI's image model directly (no DeepSeek fallback -- DeepSeek has no
+// image-generation API), and always requests b64_json rather than a hosted
+// url: gpt-image-1 (unlike dall-e-3) only supports b64_json, and returning
+// bytes either way means the caller can upload them straight to our own
+// Storage bucket instead of depending on OpenAI's own URL staying live.
+export async function generateEbookCoverImage(title: string, description: string): Promise<Buffer> {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("Cover generation needs an OpenAI API key configured.");
+  }
+  const { default: OpenAI } = await import("openai");
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const prompt = [
+    `A professional, striking book cover illustration for a book titled "${title}".`,
+    description.trim() && `The book is about: ${description.trim()}`,
+    "No text, letters, or words anywhere in the image -- the title is added separately afterward. Just a compelling, high-quality cover illustration or photo-style artwork that fits the book's subject and tone.",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const result = await client.images.generate({
+    model: "gpt-image-1",
+    prompt,
+    size: "1024x1536",
+    n: 1,
+  });
+  const b64 = result.data?.[0]?.b64_json;
+  if (!b64) throw new Error("No cover image was returned.");
+  return Buffer.from(b64, "base64");
+}
+
 const BUSINESS_ADVICE_SYSTEM_PROMPT = `You are a business consultant helping a small business owner (in Tanzania/East Africa) who just added a product to their ChackAll storefront. Given the product's title, description, and source site, give brief, practical, actionable advice.
 
 Respond with ONLY valid JSON, no markdown code fences, no text before or after, matching exactly this shape:

@@ -861,4 +861,13 @@ textarea::placeholder {
   height: 0;
   pointer-events: none;
 }
+/* AI writing-review decorations (src/lib/tiptapWritingIssues.ts) -- a
+   Grammarly/Word-style wavy underline over flagged text, purely visual
+   (never part of the saved document). */
+.writing-issue {
+  text-decoration: underline wavy #ef4444;
+  text-decoration-skip-ink: none;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
 

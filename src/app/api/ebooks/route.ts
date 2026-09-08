@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { ensureUserExists } from "@/lib/userIndex";
 import { getRequestUser } from "@/lib/requestUser";
 import { isOwnEbookUrl } from "@/lib/ebookStorage";
+import type { EbookCover } from "./[id]/route";
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_DESCRIPTION_LENGTH = 2000;
@@ -14,6 +15,7 @@ type EbookRow = {
   source: "uploaded" | "written";
   status: "draft" | "ready";
   file_url: string | null;
+  cover: EbookCover | null;
   created_at: string;
 };
 
@@ -25,6 +27,7 @@ function toEbook(row: EbookRow) {
     source: row.source,
     status: row.status,
     fileUrl: row.file_url,
+    cover: row.cover,
     createdAt: new Date(row.created_at).getTime(),
   };
 }
@@ -37,7 +40,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from("ebooks")
-    .select("id, title, description, source, status, file_url, created_at")
+    .select("id, title, description, source, status, file_url, cover, created_at")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
   if (error) {
