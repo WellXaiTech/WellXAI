@@ -878,7 +878,7 @@ export default function EbookEditor({ ebookId, onBack }: { ebookId: string; onBa
       <div className="flex min-h-0 flex-1">
         {/* Book navigation -- Cover, then every page in order, matching a
             real word processor's page thumbnails/outline pane. */}
-        <div className="flex w-48 shrink-0 flex-col border-r border-border bg-surface py-2 sm:w-56">
+        <div className="flex w-60 shrink-0 flex-col bg-surface py-2 sm:w-72">
           <button
             onClick={() => setActiveView("cover")}
             className={`mx-2 mb-1 flex items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition-colors ${
