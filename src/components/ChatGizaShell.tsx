@@ -43,7 +43,6 @@ import {
   applyAssistantColor,
   type AssistantColor,
 } from "@/lib/assistantColor";
-import { getStoredChatFont, setChatFont as persistChatFont, applyChatFont, type ChatFont } from "@/lib/chatFont";
 import {
   getStoredReduceMotion,
   setReduceMotion as persistReduceMotion,
@@ -308,8 +307,6 @@ type ChatGizaShellContextValue = {
   handleFontSizeChange: (s: ChatFontSize) => void;
   assistantColor: AssistantColor;
   handleAssistantColorChange: (c: AssistantColor) => void;
-  chatFont: ChatFont;
-  handleChatFontChange: (f: ChatFont) => void;
   reduceMotion: ReduceMotion;
   handleReduceMotionChange: (m: ReduceMotion) => void;
 
@@ -403,7 +400,6 @@ export default function ChatGizaShell({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("system");
   const [fontSize, setFontSizeState] = useState<ChatFontSize>("medium");
   const [assistantColor, setAssistantColorState] = useState<AssistantColor>("default");
-  const [chatFont, setChatFontState] = useState<ChatFont>("nova_light");
   const [reduceMotion, setReduceMotionState] = useState<ReduceMotion>("system");
   const [notifyOnComplete, setNotifyOnComplete] = useState(false);
   const [notifyImageGen, setNotifyImageGen] = useState(true);
@@ -490,9 +486,6 @@ export default function ChatGizaShell({ children }: { children: ReactNode }) {
     const storedAssistantColor = getStoredAssistantColor();
     setAssistantColorState(storedAssistantColor);
     applyAssistantColor(storedAssistantColor);
-    const storedChatFont = getStoredChatFont();
-    setChatFontState(storedChatFont);
-    applyChatFont(storedChatFont);
     const storedReduceMotion = getStoredReduceMotion();
     setReduceMotionState(storedReduceMotion);
     applyReduceMotion(storedReduceMotion);
@@ -920,11 +913,6 @@ export default function ChatGizaShell({ children }: { children: ReactNode }) {
     setAssistantColorState(c);
   }
 
-  function handleChatFontChange(f: ChatFont) {
-    persistChatFont(f);
-    setChatFontState(f);
-  }
-
   function handleReduceMotionChange(m: ReduceMotion) {
     persistReduceMotion(m);
     setReduceMotionState(m);
@@ -1139,8 +1127,6 @@ export default function ChatGizaShell({ children }: { children: ReactNode }) {
     handleFontSizeChange,
     assistantColor,
     handleAssistantColorChange,
-    chatFont,
-    handleChatFontChange,
     reduceMotion,
     handleReduceMotionChange,
     notifyOnComplete,
@@ -1197,8 +1183,6 @@ export default function ChatGizaShell({ children }: { children: ReactNode }) {
           onFontSizeChange={handleFontSizeChange}
           assistantColor={assistantColor}
           onAssistantColorChange={handleAssistantColorChange}
-          chatFont={chatFont}
-          onChatFontChange={handleChatFontChange}
           reduceMotion={reduceMotion}
           onReduceMotionChange={handleReduceMotionChange}
           notifyOnComplete={notifyOnComplete}

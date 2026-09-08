@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { Geist_Mono } from "next/font/google";
-import localFont from "next/font/local";
+import { Geist_Mono, Roboto } from "next/font/google";
 import { headers } from "next/headers";
 import Script from "next/script";
 import AuthProvider from "@/components/AuthProvider";
@@ -14,34 +13,15 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Combined family (both weights) used for --font-sans, the site's general
-// typeface everywhere outside chat message bubbles -- UI chrome (buttons,
-// tabs, suggestion pills, headings) sets heavier Tailwind font-weight
-// classes (font-medium/font-semibold) than the Light default, and those
-// need Nova's own real Regular face to snap to. A single-weight family
-// has no heavier face to snap to, so the browser fakes one by fattening
-// the Light strokes instead -- that synthetic bold is what was making the
-// composer/suggestion-pill area look heavy even after the body default
-// moved to Light.
-const novaFont = localFont({
-  variable: "--font-nova",
-  src: [
-    { path: "../fonts/nova/Nova-Light.otf", weight: "300", style: "normal" },
-    { path: "../fonts/nova/Nova-Regular.otf", weight: "400", style: "normal" },
-  ],
-});
-
-// Single-weight families for the Settings > General > Chat font picker,
-// which pins chat message prose to one exact weight regardless of any
-// markdown "**bold**" spans within it.
-const novaRegularFont = localFont({
-  variable: "--font-nova-regular",
-  src: [{ path: "../fonts/nova/Nova-Regular.otf", weight: "400", style: "normal" }],
-});
-
-const novaLightFont = localFont({
-  variable: "--font-nova-light",
-  src: [{ path: "../fonts/nova/Nova-Light.otf", weight: "300", style: "normal" }],
+// Roboto specifically (not a generic OS-varying system-font stack) -- the
+// actual Google typeface, same one Android/ChromeOS show by default, so it
+// looks the same everywhere rather than as Segoe UI on Windows, San
+// Francisco on Mac, etc. Website only -- the native Android app has its
+// own separate font handling and is untouched by this.
+const roboto = Roboto({
+  variable: "--font-roboto",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "700"],
 });
 
 const SITE_NAME = "ChatGiZa";
@@ -199,7 +179,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistMono.variable} ${novaFont.variable} ${novaRegularFont.variable} ${novaLightFont.variable} h-full antialiased`}
+      className={`${geistMono.variable} ${roboto.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">

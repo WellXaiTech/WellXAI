@@ -15,6 +15,33 @@ const products = [
     description:
       "Bring ChatGiZa into your own product through a simple REST API.",
   },
+  {
+    // Its own subdomain (store.wellxai.world), same as the ChatGiZa card
+    // above points at chatgiza.com -- both leave this site entirely.
+    href: "https://store.wellxai.world",
+    title: "ChackAll",
+    tag: "Storefront",
+    description:
+      "A link-aggregator storefront for sellers -- one page for all your products, built to share anywhere.",
+  },
+  {
+    // A real ChatGiZa feature, so it lives on chatgiza.com like the ChatGiZa
+    // card above, not on this domain (see src/proxy.ts).
+    href: "https://chatgiza.com/ebook",
+    title: "E-book",
+    tag: "ChatGiZa",
+    description:
+      "Write, edit, and keep your own e-books, page by page, right inside ChatGiZa.",
+  },
+  {
+    // ?open=media deep-links straight into the media feed panel instead of
+    // landing on plain chat (see the matching useEffect in chatgiza/page.tsx).
+    href: "https://chatgiza.com/chatgiza?open=media",
+    title: "Quantara",
+    tag: "ChatGiZa",
+    description:
+      "ChatGiZa's media feed -- share and discover posts from the community.",
+  },
 ];
 
 export default function ProductsPage() {
@@ -36,14 +63,15 @@ export default function ProductsPage() {
               </span>
             </>
           );
-          // The ChatGiZa card leaves this site entirely (proxy.ts redirects
-          // /chatgiza on this host over to the real chat app) -- a new tab
-          // keeps wellxai.world open, matching how Navbar/Footer already
-          // handle this exact same jump elsewhere.
-          return p.href === "/chatgiza" ? (
+          // Anything that leaves this site entirely (ChatGiZa itself, its
+          // sub-features on chatgiza.com, ChackAll's own subdomain) opens in
+          // a new tab so wellxai.world stays open, matching how Navbar/Footer
+          // already handle this exact same jump elsewhere. "/chatgiza" is
+          // proxy.ts-redirected the same way if it's ever used bare.
+          return p.href.startsWith("http") || p.href === "/chatgiza" ? (
             <a
               key={p.href}
-              href="https://chatgiza.com"
+              href={p.href === "/chatgiza" ? "https://chatgiza.com" : p.href}
               target="_blank"
               rel="noopener noreferrer"
               className="card group rounded-2xl p-6 hover:border-foreground/40 transition-colors"

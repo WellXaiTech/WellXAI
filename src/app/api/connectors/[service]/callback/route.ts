@@ -1,13 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CONNECTOR_CONFIGS, type ConnectorId, getConnectorToken, saveConnectorToken, verifyConnectorState, requestToken } from "@/lib/connectors";
 
+// This tab only ever exists because ensureConnected() (useBuildAgent.ts)
+// opened it via window.open() and is polling popup.closed to know when to
+// resume -- so it must close ITSELF once it's done, not wait for the user
+// to notice and do it by hand (that's the "connects but never returns to
+// ChatGiZa" complaint this fixes). window.close() is allowed here even
+// under noopener, since a script-opened tab can always close itself
+// regardless of whether its opener can see back into it.
 function resultPage(title: string, message: string) {
   return new NextResponse(
     `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>body{background:#000;color:#fff;font-family:-apple-system,Roboto,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:24px}
     div{max-width:360px}h1{font-size:20px}p{color:#aaa;font-size:14px}</style>
-    </head><body><div><h1>${title}</h1><p>${message}</p></div></body></html>`,
+    </head><body><div><h1>${title}</h1><p>${message}</p></div>
+    <script>setTimeout(function(){ window.close(); }, 900);</script>
+    </body></html>`,
     { headers: { "Content-Type": "text/html; charset=utf-8" } }
   );
 }
@@ -29,7 +38,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ serv
   const state = url.searchParams.get("state");
   const providerError = url.searchParams.get("error");
   if (providerError) {
-    return resultPage("Connection cancelled", "You can close this tab and return to ChatGiZa.");
+    return resultPage("Connection cancelled", "This tab will close automatically.");
   }
   if (!code || !state) {
     return resultPage("Connection failed", "Missing authorization code. Please try again from the app.");
@@ -72,7 +81,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ serv
       if (result.body.includes("invalid_grant") || result.body.includes("bad_verification_code") || result.body.includes("incorrect_client_credentials")) {
         const existing = await getConnectorToken(decoded.userId, id);
         if (existing) {
-          return resultPage(`${cfg.name} connected`, "You can close this tab and return to ChatGiZa.");
+          return resultPage(`${cfg.name} connected`, "This tab will close automatically.");
         }
       }
       return resultPage("Connection failed", "The provider rejected the connection. Please try again.");
@@ -91,7 +100,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ serv
       connectedAt: Date.now(),
     });
 
-    return resultPage(`${cfg.name} connected`, "You can close this tab and return to ChatGiZa.");
+    return resultPage(`${cfg.name} connected`, "This tab will close automatically.");
   } catch (err) {
     console.error(`Connector ${id} callback error:`, err);
     return resultPage("Connection failed", "Something went wrong. Please try again.");

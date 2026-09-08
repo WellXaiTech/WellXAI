@@ -750,6 +750,14 @@ function ChatGizaInner() {
     }
   }, [searchParams, conversations, setActiveId]);
 
+  // Lets an outside link (e.g. the Quantara card on wellxai.world's
+  // Products page) deep-link straight into the Quantara media feed via
+  // ?open=media, instead of landing on plain chat and making people find
+  // it themselves in the sidebar.
+  useEffect(() => {
+    if (searchParams.get("open") === "media") setMediaFeedOpen(true);
+  }, [searchParams]);
+
   function handleEditMessage(messageId: string, newText: string) {
     if (guestQuotaExceeded()) return;
     if (!active) return;
@@ -1761,7 +1769,7 @@ function ChatGizaInner() {
                 />
               </form>
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="sidebar-scroll flex-1 overflow-y-auto">
               {browseUrl ? (
                 <div className="flex h-full flex-col">
                   <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-1.5">
@@ -1775,7 +1783,7 @@ function ChatGizaInner() {
                       Open in new tab
                     </a>
                   </div>
-                  <div className="flex-1 overflow-auto bg-background">
+                  <div className="sidebar-scroll flex-1 overflow-auto bg-background">
                     {browseScreenshotError ? (
                       <div className="flex h-full flex-col items-center justify-center gap-2 px-8 text-center">
                         <p className="text-sm text-muted">Couldn&apos;t render this page.</p>
@@ -1940,7 +1948,7 @@ function ChatGizaInner() {
           <>
             <div
               ref={scrollRef}
-              className="no-scrollbar mx-auto w-full max-w-[var(--content-width)] flex-1 overflow-y-auto px-4 py-8 space-y-4"
+              className="sidebar-scroll mx-auto w-full max-w-[var(--max-w-chat)] flex-1 overflow-y-auto px-4 py-8 space-y-4"
             >
               {active.messages.map((m) => {
                 const isGeneratingMedia = m.id === generatingImageId || Boolean(m.videoStatus);

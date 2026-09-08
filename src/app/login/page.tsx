@@ -137,7 +137,7 @@ function LoginPageInner() {
 
         <h1 className="text-2xl font-semibold tracking-tight sm:text-4xl">Sign in to {brand}</h1>
         <p className="mt-3 max-w-sm text-sm leading-6 text-muted md:mt-4">
-          {isCompanyHost
+          {isCompanyHost || isAdminHost
             ? "Sign in to manage your WellXAI account."
             : "Save your chat history, pick up conversations across devices, and personalize ChatGiZa to how you work."}
         </p>

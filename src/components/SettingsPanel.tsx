@@ -6,7 +6,6 @@ import type { Theme } from "@/lib/theme";
 import type { Contrast } from "@/lib/contrast";
 import type { ChatFontSize } from "@/lib/fontSize";
 import type { AssistantColor } from "@/lib/assistantColor";
-import type { ChatFont } from "@/lib/chatFont";
 import type { ReduceMotion } from "@/lib/reduceMotion";
 import { COUNTRIES, COUNTRY_CODES } from "@/lib/countries";
 import { checkBirthDate, getMaxBirthDate } from "@/lib/ageGate";
@@ -257,15 +256,6 @@ const PaletteIcon = (
     <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
     <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
     <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
-  </svg>
-);
-const LetterTextIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M15 5h6" />
-    <path d="M15 12h6" />
-    <path d="M3 19h18" />
-    <path d="m3 12 3.553-7.724a.5.5 0 0 1 .894 0L11 12" />
-    <path d="M3.92 10h6.16" />
   </svg>
 );
 const WavesIcon = (
@@ -661,8 +651,6 @@ export default function SettingsPanel({
   onFontSizeChange,
   assistantColor,
   onAssistantColorChange,
-  chatFont,
-  onChatFontChange,
   reduceMotion,
   onReduceMotionChange,
   notifyOnComplete,
@@ -715,8 +703,6 @@ export default function SettingsPanel({
   onFontSizeChange: (s: ChatFontSize) => void;
   assistantColor: AssistantColor;
   onAssistantColorChange: (c: AssistantColor) => void;
-  chatFont: ChatFont;
-  onChatFontChange: (f: ChatFont) => void;
   reduceMotion: ReduceMotion;
   onReduceMotionChange: (m: ReduceMotion) => void;
   notifyOnComplete: boolean;
@@ -1566,17 +1552,6 @@ export default function SettingsPanel({
                     options={[
                       { value: "default" as AssistantColor, label: "Default" },
                       { value: "warm" as AssistantColor, label: "Warm" },
-                    ]}
-                  />
-                </SettingTile>
-
-                <SettingTile icon={LetterTextIcon} label="Chat font">
-                  <SettingsSelect
-                    value={chatFont}
-                    onChange={onChatFontChange}
-                    options={[
-                      { value: "nova_light" as ChatFont, label: "Nova Light (Default)" },
-                      { value: "nova_regular" as ChatFont, label: "Nova Regular" },
                     ]}
                   />
                 </SettingTile>

@@ -67,6 +67,15 @@ export type BuildProject = {
   messages: BuildChatMessage[];
   lastActivity: number;
   pinned?: boolean;
+  // Set once push_to_github succeeds for this project -- lets the sidebar
+  // group it under "GitHub Projects" instead of "Folder Projects" (see
+  // BuildWorkspace.tsx's History rail).
+  githubRepoUrl?: string;
+  // Set from the onboarding modal's mandatory "name your project" step --
+  // only ever needed when the user got through onboarding without either
+  // connecting GitHub or a folder, so the project would otherwise have no
+  // real identity at all for the sidebar's History groups to key off of.
+  manualGroupName?: string;
 };
 
 // Multiple build projects persist side by side (like Private Chat's
@@ -395,6 +404,11 @@ export function useBuildAgent() {
   const [files, setFiles] = useState<Record<string, string>>({});
   const [messages, setMessages] = useState<BuildChatMessage[]>([]);
   const [sending, setSending] = useState(false);
+  // Real transcript of every run_terminal_command call this session -- the
+  // Terminal button's bottom panel just renders this list; nothing here is
+  // simulated, each entry is the actual command sent to /api/build/execute
+  // and the actual output (or error) it returned.
+  const [terminalHistory, setTerminalHistory] = useState<{ command: string; output: string }[]>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
   // Unlike sendingStats.tokens (reset to 0 at the start of every turn),
   // this accumulates for the lifetime of the whole session -- the real
@@ -441,6 +455,11 @@ export function useBuildAgent() {
   // null until the active project has actually been written to once --
   // a brand new "New chat" project has no id (and no history entry) yet.
   const activeIdRef = useRef<string | null>(null);
+  // Set by the onboarding modal's "name your project" step right before
+  // the deferred first message finally goes out -- the upsert effect below
+  // reads it exactly once, when it mints a brand-new project id, then
+  // clears it so it never leaks onto some later, unrelated project.
+  const pendingManualGroupNameRef = useRef<string | null>(null);
   // Set once run_terminal_command creates a real E2B sandbox, so a later
   // call in the same session reuses it (keeping node_modules from an
   // earlier "npm install" around for a later "npm test") instead of
@@ -504,10 +523,16 @@ export function useBuildAgent() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (Object.keys(files).length === 0 && messages.length === 0) return;
+    const isNewProject = activeIdRef.current === null;
     const id = activeIdRef.current ?? newId();
     activeIdRef.current = id;
     const prev = projectsRef.current;
     const idx = prev.findIndex((p) => p.id === id);
+    // Only consumed on the very first save of a brand-new project -- an
+    // existing project just carries its own already-set value forward
+    // forever after, same as githubRepoUrl below.
+    const manualGroupName = isNewProject ? pendingManualGroupNameRef.current ?? undefined : prev[idx]?.manualGroupName;
+    if (isNewProject) pendingManualGroupNameRef.current = null;
     // Carry the pin forward -- without this, every message sent in a
     // pinned project would silently unpin it again on the next save.
     const entry: BuildProject = {
@@ -517,6 +542,8 @@ export function useBuildAgent() {
       messages,
       lastActivity: Date.now(),
       pinned: idx >= 0 ? prev[idx].pinned : undefined,
+      githubRepoUrl: idx >= 0 ? prev[idx].githubRepoUrl : undefined,
+      manualGroupName,
     };
     const next = idx >= 0 ? [...prev.slice(0, idx), entry, ...prev.slice(idx + 1)] : [entry, ...prev];
     projectsRef.current = next;
@@ -566,9 +593,13 @@ export function useBuildAgent() {
   // Typed through a minimal local interface rather than the ambient
   // FileSystemDirectoryHandle DOM type -- that type isn't in every
   // TypeScript lib config, and this is the only shape actually used here.
-  const connectLocalFolder = useCallback(async (): Promise<boolean> => {
+  // Returns the connected folder's real name on success (so a caller can
+  // stamp it straight onto the project -- see setPendingManualGroupName --
+  // without depending on the stale localFolderName closure of whatever
+  // render it was called from), or null on failure/cancel.
+  const connectLocalFolder = useCallback(async (): Promise<string | null> => {
     const picker = (window as unknown as { showDirectoryPicker?: () => Promise<FsDirHandle> }).showDirectoryPicker;
-    if (!picker) return false;
+    if (!picker) return null;
     try {
       const handle = await picker();
       localDirHandleRef.current = handle;
@@ -579,13 +610,13 @@ export function useBuildAgent() {
       for (const [path, content] of Object.entries(filesRef.current)) {
         await writeFileToLocalFolder(path, content);
       }
-      return true;
+      return handle.name;
     } catch (err) {
       // AbortError is just "the user closed the picker without choosing".
       if (!(err instanceof DOMException && err.name === "AbortError")) {
         console.error("Local folder connection failed:", err);
       }
-      return false;
+      return null;
     }
   }, [writeFileToLocalFolder]);
 
@@ -729,6 +760,7 @@ export function useBuildAgent() {
           });
           const data = await res.json();
           if (!res.ok) return `Push failed: ${data.error ?? "unknown error"}`;
+          if (activeIdRef.current) setProjectGithubRepo(activeIdRef.current, data.repoUrl);
           return `Pushed to GitHub: ${data.repoUrl}`;
         } catch {
           return "Push failed: network error.";
@@ -782,10 +814,16 @@ export function useBuildAgent() {
             body: JSON.stringify({ files: filesRef.current, command, sandboxId: sandboxIdRef.current }),
           });
           const data = await res.json();
-          if (!res.ok) return `Command failed: ${data.error ?? "unknown error"}`;
+          if (!res.ok) {
+            setTerminalHistory((prev) => [...prev, { command, output: `Command failed: ${data.error ?? "unknown error"}` }]);
+            return `Command failed: ${data.error ?? "unknown error"}`;
+          }
           sandboxIdRef.current = data.sandboxId;
-          return data.output || "(command produced no output)";
+          const output = data.output || "(command produced no output)";
+          setTerminalHistory((prev) => [...prev, { command, output }]);
+          return output;
         } catch {
+          setTerminalHistory((prev) => [...prev, { command, output: "Command failed: network error." }]);
           return "Command failed: network error.";
         }
       }
@@ -1099,6 +1137,7 @@ export function useBuildAgent() {
     setFiles({});
     setMessages([]);
     setError(null);
+    setTerminalHistory([]);
     sandboxIdRef.current = undefined;
     try {
       if (typeof window !== "undefined") window.localStorage.removeItem(ACTIVE_ID_KEY);
@@ -1119,6 +1158,7 @@ export function useBuildAgent() {
     setFiles(found.files);
     setMessages(found.messages);
     setError(null);
+    setTerminalHistory([]);
     sandboxIdRef.current = undefined;
     try {
       if (typeof window !== "undefined") window.localStorage.setItem(ACTIVE_ID_KEY, found.id);
@@ -1162,6 +1202,20 @@ export function useBuildAgent() {
     }
   }, []);
 
+  // Marks the given project as GitHub-backed once push_to_github succeeds
+  // for it -- moves it into the sidebar's "GitHub Projects" group from
+  // then on, alongside every other project of its persisted fields.
+  const setProjectGithubRepo = useCallback((id: string, url: string) => {
+    const next = projectsRef.current.map((p) => (p.id === id ? { ...p, githubRepoUrl: url } : p));
+    projectsRef.current = next;
+    setProjects(next);
+    try {
+      if (typeof window !== "undefined") window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(next));
+    } catch {
+      // Non-fatal -- see selectProject above.
+    }
+  }, []);
+
   return {
     files,
     messages,
@@ -1188,8 +1242,17 @@ export function useBuildAgent() {
     connectLocalFolder,
     githubConnected,
     connectGithubNow,
+    setPendingManualGroupName: (name: string) => {
+      pendingManualGroupNameRef.current = name;
+    },
     permissionMode,
     setPermissionMode,
     projectName: deriveProjectName(files, messages),
+    // The saved BuildProject record behind whatever's currently loaded --
+    // lets a caller show which group (repo/folder/manual name) this chat
+    // belongs to, not just its own derived title. null before the very
+    // first save (see the upsert effect) or right after reset().
+    activeProject: projects.find((p) => p.id === activeIdRef.current) ?? null,
+    terminalHistory,
   };
 }

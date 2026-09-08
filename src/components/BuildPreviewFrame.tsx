@@ -92,6 +92,13 @@ function stripModuleSyntax(code: string): string {
     .replace(/^(\s*)export\s+/gm, "$1");
 }
 
+// Hides the scrollbar entirely inside the preview iframe -- it's a
+// separate document (via srcDoc), so the app's own `.sidebar-scroll`
+// styling never reaches it; per feedback, this preview specifically should
+// have no visible scrollbar/arrows at all, scrolling only by wheel/trackpad.
+const PREVIEW_SCROLLBAR_CSS =
+  "<style>html,body{scrollbar-width:none;-ms-overflow-style:none;}*::-webkit-scrollbar{width:0;height:0;}</style>";
+
 function buildReactDocument(files: Files): string {
   const appCode = findFile(files, "App.js", "src/App.js") ?? "function App() { return null; }";
   const css = Object.entries(files)
@@ -104,6 +111,7 @@ function buildReactDocument(files: Files): string {
 <head>
 <meta charset="utf-8" />
 <style>html,body,#root{height:100%;margin:0;}body{font-family:system-ui,-apple-system,sans-serif;}</style>
+${PREVIEW_SCROLLBAR_CSS}
 <style>${css}</style>
 </head>
 <body>
@@ -186,6 +194,12 @@ function buildStaticDocument(files: Files): string {
     const js = findFile(files, src);
     return js ? `<script>${js}</script>` : match;
   });
+  // Added to the preview copy only -- never written back into the user's
+  // own index.html -- right after <head> if one exists, otherwise just
+  // prepended (browsers tolerate a <style> before <html>/<head>).
+  combined = /<head[^>]*>/i.test(combined)
+    ? combined.replace(/<head[^>]*>/i, (match) => `${match}${PREVIEW_SCROLLBAR_CSS}`)
+    : `${PREVIEW_SCROLLBAR_CSS}${combined}`;
   return combined;
 }
 

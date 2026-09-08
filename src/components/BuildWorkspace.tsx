@@ -6,12 +6,14 @@ import ReactMarkdown from "react-markdown";
 import { normalizeSpacing } from "@/lib/pdfMarkers";
 import remarkGfm from "remark-gfm";
 import BuildPreviewFrame from "@/components/BuildPreviewFrame";
+import BuildFileTree from "@/components/BuildFileTree";
 import { useBuildAgent, type BuildChatMessage, type BuildProject } from "@/lib/useBuildAgent";
 import { validateBuildFiles, MAX_BUILD_SINGLE_FILE_BYTES } from "@/lib/buildFileLimits";
 import { useChatGizaShell } from "@/components/ChatGizaShell";
 import AccountMenu from "@/components/AccountMenu";
 import LanguagePanel from "@/components/LanguagePanel";
 import { resolveAddressBarUrl } from "@/lib/addressBar";
+import type { SearchHit } from "@/lib/ai";
 
 const URL_PATTERN = /(https?:\/\/[^\s]+)/g;
 
@@ -215,9 +217,15 @@ type SpeechWindow = Window & {
 const MIN_PREVIEW_WIDTH = 320;
 const MAX_PREVIEW_WIDTH = 1000;
 const DEFAULT_PREVIEW_WIDTH = 460;
-// Chat always keeps at least this much room, no matter how far Live is
-// dragged wider.
-const MIN_CHAT_WIDTH = 280;
+// Chat always keeps at least this much room, no matter how far any panel
+// is dragged wider. 280 (the original value) was too tight in practice --
+// once panels could actually be dragged far enough to reach that floor
+// (after removing the separate 1000px/65% ceilings), chat's own header
+// broke at that width: the title badge and the 5-icon toolbar, both
+// absolutely positioned from opposite corners, physically overlapped
+// instead of leaving each other room. 420 is enough for both to coexist
+// plus a usable composer/message column beneath them.
+const MIN_CHAT_WIDTH = 420;
 
 // Chat messages are the only place push/deploy results ever show up now
 // (no manual "Push"/"Deploy" buttons) -- linkify URLs so a "Deployed:
@@ -319,10 +327,69 @@ const PencilIcon = (
     <path d="m15 5 4 4" />
   </svg>
 );
+// Graduation cap -- the "Learn to code" rail button, right below "New chat".
+const LearnIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 10 12 5 2 10l10 5 10-5Z" />
+    <path d="M6 12v5c0 1.66 2.69 3 6 3s6-1.34 6-3v-5" />
+  </svg>
+);
+// Sits in front of the project-name badge at the row's top-left corner.
+const ProjectBadgeIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 17h-.5a1.5 1.5 0 0 0 0 3h17a1.5 1.5 0 0 0 0-3H20M4 17h16M4 17V8.2c0-1.12 0-1.68.218-2.108c.192-.377.497-.682.874-.874C5.52 5 6.08 5 7.2 5h9.6c1.12 0 1.68 0 2.107.218c.377.192.683.497.875.874c.218.427.218.987.218 2.105V17" />
+  </svg>
+);
+// The Browse panel -- ported as-is from chatgiza/page.tsx's own globe-icon
+// panel (same feature, same icons/behavior), just wired to this page's
+// globe button instead of a separate one.
+const BrowseCloseIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 6 6 18" />
+    <path d="m6 6 12 12" />
+  </svg>
+);
+const BrowseGlobeBigIcon = (
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+    <path d="M2 12h20" />
+  </svg>
+);
+// The onboarding row for connecting a real GitHub account.
+const GitHubGlyphIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.57.1.78-.25.78-.55v-2.17c-3.2.7-3.88-1.35-3.88-1.35-.52-1.34-1.28-1.7-1.28-1.7-1.04-.72.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.75 2.69 1.25 3.34.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.24 2.76.12 3.05.74.81 1.18 1.84 1.18 3.1 0 4.43-2.69 5.4-5.25 5.69.41.36.78 1.06.78 2.14v3.17c0 .3.21.66.79.55A10.51 10.51 0 0 0 23.5 12c0-6.35-5.15-11.5-11.5-11.5Z" />
+  </svg>
+);
+// The two quick-start cards on the first-time landing screen, below.
+const WebsiteStartIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+    <path d="M2 12h20" />
+  </svg>
+);
+const AppStartIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.5 6h3m-8 13V5a3 3 0 0 1 3-3h7a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3h-7a3 3 0 0 1-3-3" />
+  </svg>
+);
 const CloseIcon = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M18 6 6 18" />
     <path d="m6 6 12 12" />
+  </svg>
+);
+// The "Progress" panel's own icon -- graduation cap, specific to the
+// coding-school/Learn-to-code side of Build, leftmost in the icon group.
+const StudentPanelIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M11.3 2.05a4.6 4.6 0 0 1 1.38 0c.515.08 1.01.279 1.84.612l7.19 2.9c.554.224 1 .404 1.33.57c.317.162.634.363.797.68c.111.215.166.45.166.685v8a.5.5 0 0 1-1 0v-6.62c-.324.162-.759.337-1.29.552l-.708.285v5.78c0 1.92-1.24 3.3-2.92 4.18s-3.9 1.32-6.08 1.32s-4.39-.437-6.07-1.32c-1.69-.88-2.93-2.27-2.93-4.18v-5.78l-.709-.286c-.554-.224-1-.404-1.33-.571c-.317-.161-.633-.362-.797-.68a1.5 1.5 0 0 1 0-1.37c.163-.316.48-.517.797-.678c.328-.167.775-.348 1.33-.571l7.18-2.9c.827-.334 1.32-.533 1.84-.613zm1.22.987a3.5 3.5 0 0 0-1.07 0c-.387.06-.768.21-1.68.577l-7.1 2.86c-.583.235-.988.4-1.27.544c-.3.153-.355.233-.362.246a.5.5 0 0 0 0 .457c.007.013.062.094.362.246c.284.145.689.31 1.27.544l7.1 2.86c.907.366 1.29.517 1.68.577a3.5 3.5 0 0 0 1.07 0c.387-.06.768-.21 1.68-.576l7.1-2.86c.583-.235.989-.4 1.27-.544c.3-.153.355-.233.362-.246a.5.5 0 0 0 0-.457c-.007-.013-.062-.093-.362-.246c-.284-.145-.69-.309-1.27-.544l-7.1-2.86c-.907-.366-1.29-.516-1.68-.576zm1.99 9.29l5.48-2.21v5.38c0 1.41-.888 2.52-2.39 3.3c-1.5.784-3.54 1.2-5.61 1.2s-4.11-.419-5.61-1.2c-1.5-.782-2.39-1.89-2.39-3.3v-5.37l5.47 2.21c.827.334 1.32.533 1.84.613c.456.07.921.07 1.38 0c.515-.08 1.01-.279 1.84-.612z"
+    />
   </svg>
 );
 const GlobeIcon = (
@@ -504,6 +571,7 @@ export default function BuildWorkspace() {
     stop,
     sessionTokens,
     setFileContent,
+    deleteFile,
     reset,
     projects,
     selectProject,
@@ -515,9 +583,12 @@ export default function BuildWorkspace() {
     connectLocalFolder,
     githubConnected,
     connectGithubNow,
+    setPendingManualGroupName,
     permissionMode,
     setPermissionMode,
     projectName,
+    activeProject,
+    terminalHistory,
   } = useBuildAgent();
   const [input, setInput] = useState("");
   const inputRef = useRef(input);
@@ -540,6 +611,292 @@ export default function BuildWorkspace() {
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [modelInfoOpen, setModelInfoOpen] = useState(false);
   const [buildUsage, setBuildUsage] = useState<{ used: number; limit: number; resetsInSeconds: number } | null>(null);
+  // The globe icon's "Browse" panel -- ported as-is from chatgiza/page.tsx.
+  // A plain server-rendered screenshot of whatever URL is loaded (not an
+  // iframe, which most real sites block via X-Frame-Options/CSP), or a
+  // Tavily-backed web search if the input isn't a URL. Doubles as the AI's
+  // own live-build view (see `showLiveInBrowse` and its JSX further down):
+  // whenever this project actually has files and the user hasn't explicitly
+  // searched/typed a URL, it defaults to showing BuildPreviewFrame instead
+  // of the idle "search the web" placeholder -- covers the whole span the
+  // user asked for, start to finish (while the AI is actively writing,
+  // right after it finishes, and on reopening an older chat that already
+  // has a site), not just the narrow moment `sending` happens to be true.
+  const [browsePanelOpen, setBrowsePanelOpen] = useState(false);
+  useEffect(() => {
+    // A fresh turn starting is also what should clear out any manual
+    // browse/search the user left this panel in -- otherwise a chat
+    // reopened mid-search would keep showing that stale search instead of
+    // snapping back to the live build the moment new work starts.
+    if (sending) {
+      setBrowsePanelOpen(true);
+      setBrowseUrl("");
+      setBrowseSearchResults(null);
+    }
+  }, [sending]);
+  // The Terminal icon's own panel -- independent of Browse (both can be
+  // open at once), sliding up from the bottom of the chat column instead
+  // of sharing Browse's side-panel space. Shows the real transcript of
+  // every run_terminal_command call this session (see terminalHistory in
+  // useBuildAgent.ts) -- never simulated output.
+  const [terminalPanelOpen, setTerminalPanelOpen] = useState(false);
+  // The "Files" icon's own panel -- browse/edit/delete the project's real
+  // virtual files directly (BuildFileTree already existed, built but never
+  // wired to anything). Independent of Terminal/Browse, same as those two
+  // are independent of each other.
+  const [filesPanelOpen, setFilesPanelOpen] = useState(false);
+  // The "Progress" panel -- real steps from this chat's own history (each
+  // assistant reply so far), not a fabricated lesson tracker. Independent
+  // of Files/Terminal/Browse, same as those three are independent of each
+  // other.
+  const [progressPanelOpen, setProgressPanelOpen] = useState(false);
+  const [progressWidth, setProgressWidth] = useState(380);
+  const progressResizing = useRef(false);
+  const progressPendingX = useRef<number | null>(null);
+  const progressRafId = useRef<number | null>(null);
+  useEffect(() => {
+    function handleMouseMove(e: MouseEvent) {
+      if (!progressResizing.current) return;
+      // Recording the latest cursor position on every raw event is cheap
+      // (just a ref write, no re-render); the actual setState -- which IS
+      // expensive, since it re-renders this whole component including the
+      // message list -- only runs once per animation frame via the RAF
+      // below. Without this, a fast mouse could fire far more mousemoves
+      // than the screen can actually paint, and the panel visibly
+      // jittered/lagged trying to re-render on every single one of them.
+      progressPendingX.current = e.clientX;
+      if (progressRafId.current !== null) return;
+      progressRafId.current = requestAnimationFrame(() => {
+        progressRafId.current = null;
+        const clientX = progressPendingX.current;
+        if (clientX === null) return;
+        const next = window.innerWidth - clientX;
+        const maxWidth = maxWidthFor("progress", MIN_CHAT_WIDTH);
+        setProgressWidth(Math.min(Math.max(next, 320), maxWidth));
+      });
+    }
+    function handleMouseUp() {
+      progressResizing.current = false;
+      setIsDragActive(false);
+    }
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      if (progressRafId.current !== null) cancelAnimationFrame(progressRafId.current);
+    };
+  }, []);
+  const [filesWidth, setFilesWidth] = useState(420);
+  const filesResizing = useRef(false);
+  const filesPendingX = useRef<number | null>(null);
+  const filesRafId = useRef<number | null>(null);
+  useEffect(() => {
+    function handleMouseMove(e: MouseEvent) {
+      if (!filesResizing.current) return;
+      filesPendingX.current = e.clientX;
+      if (filesRafId.current !== null) return;
+      filesRafId.current = requestAnimationFrame(() => {
+        filesRafId.current = null;
+        const clientX = filesPendingX.current;
+        if (clientX === null) return;
+        const next = window.innerWidth - clientX;
+        const maxWidth = maxWidthFor("files", MIN_CHAT_WIDTH);
+        setFilesWidth(Math.min(Math.max(next, 320), maxWidth));
+      });
+    }
+    function handleMouseUp() {
+      filesResizing.current = false;
+      setIsDragActive(false);
+    }
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      if (filesRafId.current !== null) cancelAnimationFrame(filesRafId.current);
+    };
+  }, []);
+  // The "Live" panel -- a real rendered preview of the project (via
+  // BuildPreviewFrame's srcDoc iframe), not the code text itself. Sits at
+  // the row's left edge, in History's own spot -- per feedback, that's
+  // specifically where it belongs, not appended after Files like
+  // Progress/Terminal/Browse. A real fixed, shrink-0 width with its own
+  // handle either way; the width itself starts bigger than the other
+  // panels' defaults, per feedback that it should open noticeably wide.
+  const [livePanelOpen, setLivePanelOpen] = useState(false);
+  const [liveWidth, setLiveWidth] = useState(900);
+  const liveResizing = useRef(false);
+  const livePendingX = useRef<number | null>(null);
+  const liveRafId = useRef<number | null>(null);
+  useEffect(() => {
+    function handleMouseMove(e: MouseEvent) {
+      if (!liveResizing.current) return;
+      livePendingX.current = e.clientX;
+      if (liveRafId.current !== null) return;
+      liveRafId.current = requestAnimationFrame(() => {
+        liveRafId.current = null;
+        const clientX = livePendingX.current;
+        if (clientX === null) return;
+        // Anchored to the row's LEFT edge, not window.innerWidth -- Live
+        // sits first in the row (History's spot), so its width is how far
+        // the cursor is from the row's own left edge, not from the
+        // window's right edge like every other (right-side) panel here.
+        const rowLeft = rowRef.current?.getBoundingClientRect().left ?? 0;
+        const next = clientX - rowLeft;
+        // No chat reserve -- chat is hidden while Live is open, so the
+        // only room worth protecting is whatever Files (and any other
+        // still-open panel) is using.
+        const maxWidth = maxWidthFor("live", 0);
+        setLiveWidth(Math.min(Math.max(next, 320), maxWidth));
+      });
+    }
+    function handleMouseUp() {
+      liveResizing.current = false;
+      setIsDragActive(false);
+    }
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      if (liveRafId.current !== null) cancelAnimationFrame(liveRafId.current);
+    };
+  }, []);
+  // Wraps setFileContent so a real edit (not the AI's own writes, which
+  // call setFileContent directly elsewhere) is the one thing that pops
+  // Live open automatically -- typing a fix into a file is exactly the
+  // moment where seeing it rendered live, without a manual click, is the
+  // whole point of the feature.
+  function handleFileEdit(path: string, content: string) {
+    setFileContent(path, content);
+    setLivePanelOpen(true);
+  }
+  function handleFileCreate(path: string) {
+    setFileContent(path, "");
+  }
+  const [terminalWidth, setTerminalWidth] = useState(420);
+  const terminalResizing = useRef(false);
+  const terminalPendingX = useRef<number | null>(null);
+  const terminalRafId = useRef<number | null>(null);
+  useEffect(() => {
+    function handleMouseMove(e: MouseEvent) {
+      if (!terminalResizing.current) return;
+      terminalPendingX.current = e.clientX;
+      if (terminalRafId.current !== null) return;
+      terminalRafId.current = requestAnimationFrame(() => {
+        terminalRafId.current = null;
+        const clientX = terminalPendingX.current;
+        if (clientX === null) return;
+        const next = window.innerWidth - clientX;
+        const maxWidth = maxWidthFor("terminal", MIN_CHAT_WIDTH);
+        setTerminalWidth(Math.min(Math.max(next, 320), maxWidth));
+      });
+    }
+    function handleMouseUp() {
+      terminalResizing.current = false;
+      setIsDragActive(false);
+    }
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      if (terminalRafId.current !== null) cancelAnimationFrame(terminalRafId.current);
+    };
+  }, []);
+  const [browseInput, setBrowseInput] = useState("");
+  const [browseUrl, setBrowseUrl] = useState("");
+  const [browseSearchResults, setBrowseSearchResults] = useState<SearchHit[] | null>(null);
+  const [browseSearchLoading, setBrowseSearchLoading] = useState(false);
+  const [browseScreenshotLoaded, setBrowseScreenshotLoaded] = useState(false);
+  const [browseScreenshotError, setBrowseScreenshotError] = useState(false);
+  const [browseWidth, setBrowseWidth] = useState(950);
+  const browseResizing = useRef(false);
+  const browsePendingX = useRef<number | null>(null);
+  const browseRafId = useRef<number | null>(null);
+  useEffect(() => {
+    function handleMouseMove(e: MouseEvent) {
+      if (!browseResizing.current) return;
+      browsePendingX.current = e.clientX;
+      if (browseRafId.current !== null) return;
+      browseRafId.current = requestAnimationFrame(() => {
+        browseRafId.current = null;
+        const clientX = browsePendingX.current;
+        if (clientX === null) return;
+        const next = window.innerWidth - clientX;
+        const maxWidth = maxWidthFor("browse", MIN_CHAT_WIDTH);
+        setBrowseWidth(Math.min(Math.max(next, 320), maxWidth));
+      });
+    }
+    function handleMouseUp() {
+      browseResizing.current = false;
+      setIsDragActive(false);
+    }
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      if (browseRafId.current !== null) cancelAnimationFrame(browseRafId.current);
+    };
+  }, []);
+  // Keeps every panel's resize ceiling aware of how much room the OTHER
+  // open panels are already using -- without this, several panels each
+  // independently allowed up to ~1000px could combine to squeeze chat down
+  // to nothing, or (for Live's flex-grow fill) bring back the exact dead-
+  // space bug fixed above the moment a second panel opens alongside it.
+  // Updated on every render, not inside an effect -- each resize handler's
+  // closure above only runs once (mounted with `[]`), so without this ref
+  // it would keep reading the OTHER panels' widths from whenever it first
+  // mounted instead of their current values.
+  const panelWidthsRef = useRef({ progress: 0, files: 0, terminal: 0, browse: 0, live: 0 });
+  panelWidthsRef.current = {
+    progress: progressPanelOpen ? progressWidth : 0,
+    files: filesPanelOpen ? filesWidth : 0,
+    terminal: terminalPanelOpen ? terminalWidth : 0,
+    browse: browsePanelOpen ? browseWidth : 0,
+    live: livePanelOpen ? liveWidth : 0,
+  };
+  // Every panel here (Progress/Files/Terminal/Browse/Live) shares the row
+  // with chat, so each one's ceiling reserves room for chat (reserveForChat)
+  // plus whatever the OTHER open panels are already using -- that alone is
+  // what keeps a drag from squeezing chat or another panel away to nothing.
+  // No hardCap by default (Infinity) -- per feedback, every panel should be
+  // able to open genuinely wide, not stop at an arbitrary number while
+  // there's still real room on the screen; a hardCap of 1000 was tried
+  // first and it's exactly what capped how far a panel could be dragged
+  // even on a large monitor with plenty of space left.
+  function maxWidthFor(panel: keyof typeof panelWidthsRef.current, reserveForChat: number, hardCap = Infinity) {
+    const others = Object.entries(panelWidthsRef.current)
+      .filter(([key]) => key !== panel)
+      .reduce((sum, [, w]) => sum + w, 0);
+    return Math.max(320, Math.min(hardCap, window.innerWidth - reserveForChat - others));
+  }
+  // Drives the full-screen drag-overlay below. Live's own body is a real
+  // IFRAME (a separate browsing context via srcDoc) -- once the cursor
+  // passes over it mid-drag, that iframe (not this page) starts receiving
+  // mouse events, which is what made dragging near Live jitter, get "stuck"
+  // partway (a mouseup landing inside the iframe never reaches this page's
+  // own listener, leaving the *Resizing ref stuck true), and show a native
+  // text-selection highlight or a "not-allowed" cursor instead of the
+  // resize cursor -- all symptoms of the browser trying to select text or
+  // start a native drag instead of running our own resize logic. Every
+  // panel's onMouseDown below sets this true and calls preventDefault (to
+  // stop that native selection/drag from starting in the first place); the
+  // transparent overlay it renders then catches every mouse event for the
+  // rest of the drag so none of them can fall through into the iframe.
+  const [isDragActive, setIsDragActive] = useState(false);
+  // Belt-and-braces alongside preventDefault above -- suppresses text
+  // selection for the WHOLE page (not just the resize handle) for as long
+  // as a drag is active, so a fast drag that briefly outruns the overlay
+  // can't still leave stray selected/highlighted text behind.
+  useEffect(() => {
+    document.body.style.userSelect = isDragActive ? "none" : "";
+    return () => {
+      document.body.style.userSelect = "";
+    };
+  }, [isDragActive]);
   // Triggered by pressing Send on a brand-new project's very first
   // message, not sitting as standalone buttons on the landing screen --
   // the actual message is held here until the sequence (GitHub, then a
@@ -549,7 +906,47 @@ export default function BuildWorkspace() {
   // gesture, and that "recent click" expires while a GitHub OAuth popup
   // is open (which can take the user as long as they need) -- chaining
   // both off a single click would make the folder picker silently fail.
-  const [onboardStep, setOnboardStep] = useState<"github" | "folder" | null>(null);
+  // One combined screen -- GitHub, folder, and typed-name all offered
+  // together as equal, independent choices, not a forced sequence of
+  // separate steps (that's what produced the "connects GitHub but then
+  // also asks for a folder, then also asks for a name" confusion before).
+  // Picking any ONE of the three is enough to proceed.
+  // A one-time, purely cosmetic welcome (name, then role) shown only the
+  // very first time anyone ever opens Build on this browser -- unlike
+  // onboardOpen below, it's not about where a project's files live, it's
+  // just a friendlier first impression before that. Neither answer
+  // changes any later behavior. Checked directly against localStorage
+  // (not the projects state, which loads asynchronously in useBuildAgent
+  // and would otherwise flash this for an instant on every load) so an
+  // existing user with real history never sees it, and a genuinely new
+  // one only ever does once.
+  const [welcomeStep, setWelcomeStep] = useState<"name" | "role" | null>(null);
+  const [welcomeName, setWelcomeName] = useState("");
+  const [welcomeRole, setWelcomeRole] = useState("");
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const WELCOME_KEY = "chatgiza_build_welcomed_v1";
+    if (window.localStorage.getItem(WELCOME_KEY)) return;
+    if (window.localStorage.getItem("chatgiza_build_projects_v1")) {
+      // Already had projects before this existed -- don't retroactively
+      // greet an existing user, just mark it seen.
+      window.localStorage.setItem(WELCOME_KEY, "1");
+      return;
+    }
+    setWelcomeStep("name");
+  }, []);
+  function finishWelcome() {
+    try {
+      window.localStorage.setItem("chatgiza_build_welcomed_v1", "1");
+    } catch {
+      // Non-fatal -- worst case it asks again next visit.
+    }
+    setWelcomeStep(null);
+  }
+
+  const [onboardOpen, setOnboardOpen] = useState(false);
+  const [onboardNameInput, setOnboardNameInput] = useState("");
+  const [onboardBusy, setOnboardBusy] = useState<"github" | "folder" | null>(null);
   const pendingSubmitRef = useRef<{ text: string; images: { dataUrl: string; name: string }[] } | null>(null);
   const folderSupported = typeof window !== "undefined" && "showDirectoryPicker" in window;
 
@@ -559,30 +956,74 @@ export default function BuildWorkspace() {
     if (pending) send(pending.text, pending.images.length > 0 ? pending.images : undefined);
   }
 
+  function finishOnboarding() {
+    setOnboardOpen(false);
+    setOnboardNameInput("");
+    runPendingSubmit();
+  }
+
   async function handleOnboardGithub() {
-    await connectGithubNow();
-    if (folderSupported && !localFolderName) {
-      setOnboardStep("folder");
-    } else {
-      setOnboardStep(null);
-      runPendingSubmit();
-    }
+    setOnboardBusy("github");
+    const ok = await connectGithubNow();
+    setOnboardBusy(null);
+    if (ok) finishOnboarding();
   }
 
   async function handleOnboardFolder() {
-    await connectLocalFolder();
-    setOnboardStep(null);
-    runPendingSubmit();
+    setOnboardBusy("folder");
+    const folderName = await connectLocalFolder();
+    setOnboardBusy(null);
+    if (!folderName) return;
+    // Stamped onto the project itself (same mechanism as the typed-name
+    // option) rather than relying on the live localFolderName state --
+    // that resets to null on every reload, so grouping off it directly
+    // would silently un-group every folder project the moment the page
+    // reloads, even though the same real folder would reconnect fine.
+    setPendingManualGroupName(folderName);
+    finishOnboarding();
   }
 
-  function skipOnboardStep() {
-    if (onboardStep === "github" && folderSupported && !localFolderName) {
-      setOnboardStep("folder");
-      return;
-    }
-    setOnboardStep(null);
-    runPendingSubmit();
+  function handleOnboardName() {
+    const name = onboardNameInput.trim();
+    if (!name) return;
+    setPendingManualGroupName(name);
+    finishOnboarding();
   }
+
+  // Puts this new project into an ALREADY-existing folder/manual group
+  // instead of a fresh one -- the user's own explicit choice each time,
+  // never assumed automatically (that's what silently reused a stale
+  // group like "HELLO" for an unrelated new project before this).
+  function handleOnboardExisting(groupName: string) {
+    setPendingManualGroupName(groupName);
+    finishOnboarding();
+  }
+
+  // Shared by every quick-start card on the first-time landing screen
+  // (Learn to code, Build a website, Build an app) -- always starts a
+  // fresh project (like "New chat" does) and immediately sends a fixed
+  // opening instruction, instead of leaving the user to type it
+  // themselves. Goes through the same identity gate a first real message
+  // would (not `started`-gated like onSubmit -- reset() just ran, so this
+  // project is about to be blank regardless of what the current render's
+  // `started` still says).
+  //
+  // Always opens the picker for a brand-new project rather than silently
+  // reusing whatever GitHub/folder connection is still active from a
+  // previous one this session -- per explicit feedback, the user wants to
+  // choose that fresh each time (new group vs. an existing one, listed as
+  // its own option in the modal), not have it decided for them.
+  function startWithPrompt(text: string) {
+    reset();
+    pendingSubmitRef.current = { text, images: [] };
+    setOnboardOpen(true);
+  }
+
+  const LEARN_TO_CODE_PROMPT =
+    "Teach me to code step by step -- explain what you're doing and why as you go, check that I understand before moving on, and let me try writing parts myself instead of just building it for me.";
+  const startLearnToCode = () => startWithPrompt(LEARN_TO_CODE_PROMPT);
+  const startWebsite = () => startWithPrompt("Help me build a website. Ask me what it's for before you start.");
+  const startApp = () => startWithPrompt("Help me build an app. Ask me what it should do before you start.");
 
   function toggleListening() {
     if (recognitionRef.current) {
@@ -618,13 +1059,115 @@ export default function BuildWorkspace() {
     setIsListening(true);
   }
   const started = messages.length > 0 || Object.keys(files).length > 0;
+  // Shown next to the chat's own title at the top of the page -- which
+  // group (repo/folder/manual name) this specific chat lives under, the
+  // same context the History rail's group headers already give, just
+  // surfaced here too so it doesn't only exist one click away.
+  const activeGroupName = activeProject?.githubRepoUrl
+    ? activeProject.githubRepoUrl.split("/").filter(Boolean).pop()
+    : activeProject?.manualGroupName;
   // Pinned projects float to the top (like a pinned chat/email), then
   // everything else by most-recently-active.
   const sortedProjects = [...projects].sort((a, b) => {
     if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
     return b.lastActivity - a.lastActivity;
   });
+  // Groups are labeled with the REAL name the user gave -- the actual repo
+  // name a GitHub-linked project pushed to, or the actual folder name
+  // connected on this device -- never a generic "GitHub"/"Folder" label.
+  // Each distinct repo a project has been pushed to gets its own group
+  // (mirrors a project picker where each repo/folder is its own named
+  // container, with the individual chats nested under it), and every
+  // folder-only project nests under the one connected folder's own name
+  // (only one folder can be connected at a time today).
+  function repoNameFromUrl(url: string): string {
+    const parts = url.split("/").filter(Boolean);
+    return parts[parts.length - 1] || url;
+  }
+  // Keyed by a normalized (trimmed, lowercased) form of the name so the
+  // same folder or repo picked/typed again -- possibly with different
+  // capitalization or stray whitespace -- always lands in the ONE existing
+  // group instead of quietly spawning a second, near-identical-looking
+  // one. The group keeps whichever exact casing it first appeared with.
+  function groupByName(list: BuildProject[]): Map<string, BuildProject[]> {
+    const map = new Map<string, { displayName: string; projects: BuildProject[] }>();
+    for (const p of list) {
+      const displayName = p.githubRepoUrl ? repoNameFromUrl(p.githubRepoUrl) : (p.manualGroupName as string);
+      const key = displayName.trim().toLowerCase();
+      const existing = map.get(key);
+      if (existing) existing.projects.push(p);
+      else map.set(key, { displayName: displayName.trim(), projects: [p] });
+    }
+    const result = new Map<string, BuildProject[]>();
+    for (const { displayName, projects: list } of map.values()) result.set(displayName, list);
+    return result;
+  }
+  const githubGroupMap = groupByName(sortedProjects.filter((p) => p.githubRepoUrl));
+  // Everything else groups by manualGroupName -- set from onboarding's
+  // "name this project" step for a typed name, or (just as often) from the
+  // real connected-folder name once handleOnboardFolder stamps it there.
+  // Either way it's a real, project-owned value stored once and carried
+  // forward forever after (see the upsert effect in useBuildAgent.ts), so
+  // it survives a reload instead of depending on the live localFolderName
+  // state, which resets to null every time. Onboarding is meant to make
+  // this mandatory going forward, so ungroupedProjects should really only
+  // ever hold projects saved before this existed.
+  const manualGroupMap = groupByName(sortedProjects.filter((p) => !p.githubRepoUrl && p.manualGroupName));
+  const ungroupedProjects = sortedProjects.filter((p) => !p.githubRepoUrl && !p.manualGroupName);
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  function toggleGroup(name: string) {
+    setCollapsedGroups((cur) => ({ ...cur, [name]: !cur[name] }));
+  }
   const [historyMenuId, setHistoryMenuId] = useState<string | null>(null);
+  // One row inside a History group (either a repo-name group or the
+  // folder group) -- shared so neither renders its own copy of this markup.
+  function renderProjectRow(p: BuildProject) {
+    return (
+      <div key={p.id} className="group relative flex items-center gap-1 rounded-xl px-2 py-1.5 hover:bg-surface-2">
+        {p.pinned && <span className="shrink-0 text-muted">{PinIcon}</span>}
+        <button onClick={() => selectProject(p.id)} className="min-w-0 flex-1 truncate text-left text-sm font-medium">
+          {p.name}
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setHistoryMenuId((cur) => (cur === p.id ? null : p.id));
+          }}
+          aria-label="Project options"
+          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-border hover:text-foreground ${
+            historyMenuId === p.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          }`}
+        >
+          {KebabIcon}
+        </button>
+        {historyMenuId === p.id && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute right-0 top-full z-10 mt-1 w-32 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-lg"
+          >
+            <button
+              onClick={() => {
+                togglePinProject(p.id);
+                setHistoryMenuId(null);
+              }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium hover:bg-surface-2"
+            >
+              {PinIcon} {p.pinned ? "Unpin" : "Pin"}
+            </button>
+            <button
+              onClick={() => {
+                deleteProject(p.id);
+                setHistoryMenuId(null);
+              }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium text-red-500 hover:bg-surface-2"
+            >
+              {DeleteRowIcon} Delete
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
   // Keyed by the group's first message index -- which step-groups the user
   // has manually collapsed. Expanded by DEFAULT now (inverted from the
   // original "collapsed unless opened" design) -- the request was to see
@@ -758,7 +1301,7 @@ export default function BuildWorkspace() {
   // resizing so every mouse event lands on this page's own DOM instead of
   // falling through into the iframe, which is what actually closes that
   // gap.
-  const [isDragActive, setIsDragActive] = useState(false);
+  const [deadPreviewDragActive, setDeadPreviewDragActive] = useState(false);
   const dragStartRef = useRef({ mouseX: 0, width: 0 });
   // Wraps chat + Live (not the rail) -- its rect bounds how large Live can
   // grow, so chat is never squeezed away to nothing.
@@ -767,7 +1310,7 @@ export default function BuildWorkspace() {
   useEffect(() => {
     function stopResizing() {
       isResizingRef.current = false;
-      setIsDragActive(false);
+      setDeadPreviewDragActive(false);
       document.body.style.cursor = "";
     }
     function onMouseMove(e: MouseEvent) {
@@ -810,7 +1353,7 @@ export default function BuildWorkspace() {
   function startResizingPreview(e: React.MouseEvent) {
     e.preventDefault();
     isResizingRef.current = true;
-    setIsDragActive(true);
+    setDeadPreviewDragActive(true);
     // previewWidth is only the FLOOR Live was last explicitly set/dragged
     // to -- its actual on-screen width is very often larger than that,
     // because flex-grow keeps it filling any extra room the row has
@@ -932,17 +1475,14 @@ export default function BuildWorkspace() {
     setInput("");
     const images = attachedImages;
     setAttachedImages([]);
-    // Only a brand-new project's first message triggers the connect
-    // sequence -- a follow-up message on a project already in progress
-    // just sends normally, same as before.
-    if (!started && githubConnected !== true) {
+    // Only a brand-new project's first message triggers the identity
+    // picker -- a follow-up message on a project already in progress just
+    // sends normally, same as before. Always opens it fresh rather than
+    // silently reusing a still-active GitHub/folder connection from a
+    // previous project -- see startWithPrompt's comment for why.
+    if (!started) {
       pendingSubmitRef.current = { text, images };
-      setOnboardStep("github");
-      return;
-    }
-    if (!started && folderSupported && !localFolderName) {
-      pendingSubmitRef.current = { text, images };
-      setOnboardStep("folder");
+      setOnboardOpen(true);
       return;
     }
     send(text, images.length > 0 ? images : undefined);
@@ -1070,60 +1610,49 @@ export default function BuildWorkspace() {
         <span className="flex h-5 w-5 shrink-0 items-center justify-center">{PencilIcon}</span>
         New chat
       </button>
+      <button
+        onClick={startLearnToCode}
+        className="flex h-10 w-full items-center gap-2 rounded-xl px-2 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+      >
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center">{LearnIcon}</span>
+        Learn to code
+      </button>
 
-      {/* History right here in the rail, below New chat, always visible
-          -- no click needed to open it, no badge/counter, nothing to
-          close. It's just the list of saved projects, permanently. */}
-      {sortedProjects.length > 0 && (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <span className="px-2.5 py-1 text-xs text-muted">History</span>
-          <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto">
-            {sortedProjects.map((p) => (
-              <div key={p.id} className="group relative flex items-center gap-1 rounded-xl px-2 py-1.5 hover:bg-surface-2">
-                {p.pinned && <span className="shrink-0 text-muted">{PinIcon}</span>}
-                <button onClick={() => selectProject(p.id)} className="min-w-0 flex-1 truncate text-left text-sm font-medium">
-                  {p.name}
+      {/* History right here in the rail, below New chat, always visible.
+          Grouped by the REAL name behind each project -- the actual repo
+          name it was pushed to, or the actual folder name connected on
+          this device -- never a generic "GitHub"/"Folder" label, matching
+          how a project picker names each container after the real project
+          it is. Each group collapses independently and has its own "+" to
+          start a new chat. */}
+      {(githubGroupMap.size > 0 || manualGroupMap.size > 0 || ungroupedProjects.length > 0) && (
+        <div className="sidebar-scroll flex min-h-0 flex-1 flex-col overflow-y-auto">
+          {/* Plain rows, no group header -- only ever projects saved
+              before onboarding made naming mandatory. A header only ever
+              appears once a project actually has a real name. */}
+          {ungroupedProjects.length > 0 && <div className="space-y-0.5 pb-1">{ungroupedProjects.map(renderProjectRow)}</div>}
+
+          {[...githubGroupMap.entries(), ...manualGroupMap.entries()].map(([groupName, list]) => (
+            <div key={groupName} className="flex shrink-0 flex-col">
+              <div className="group/header flex items-center gap-1 rounded-lg px-1 py-1 hover:bg-surface-2">
+                <button
+                  onClick={() => toggleGroup(groupName)}
+                  className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1 text-left text-sm font-medium text-foreground"
+                >
+                  <span className={`shrink-0 transition-transform ${!collapsedGroups[groupName] ? "rotate-90" : ""}`}>{ChevronRightIcon}</span>
+                  <span className="truncate">{groupName}</span>
                 </button>
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setHistoryMenuId((cur) => (cur === p.id ? null : p.id));
-                  }}
-                  aria-label="Project options"
-                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-border hover:text-foreground ${
-                    historyMenuId === p.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                  }`}
+                  onClick={reset}
+                  aria-label={`New chat in ${groupName}`}
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted opacity-0 transition-colors hover:bg-border hover:text-foreground group-hover/header:opacity-100"
                 >
-                  {KebabIcon}
+                  {PlusTabIcon}
                 </button>
-                {historyMenuId === p.id && (
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="absolute right-0 top-full z-10 mt-1 w-32 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-lg"
-                  >
-                    <button
-                      onClick={() => {
-                        togglePinProject(p.id);
-                        setHistoryMenuId(null);
-                      }}
-                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium hover:bg-surface-2"
-                    >
-                      {PinIcon} {p.pinned ? "Unpin" : "Pin"}
-                    </button>
-                    <button
-                      onClick={() => {
-                        deleteProject(p.id);
-                        setHistoryMenuId(null);
-                      }}
-                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium text-red-500 hover:bg-surface-2"
-                    >
-                      {DeleteRowIcon} Delete
-                    </button>
-                  </div>
-                )}
               </div>
-            ))}
-          </div>
+              {!collapsedGroups[groupName] && <div className="space-y-0.5 pb-1">{list.map(renderProjectRow)}</div>}
+            </div>
+          ))}
         </div>
       )}
 
@@ -1144,6 +1673,66 @@ export default function BuildWorkspace() {
     </div>
   );
 
+  if (welcomeStep) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center bg-background px-6 text-center text-foreground">
+        {welcomeStep === "name" ? (
+          <>
+            <h1 className="text-3xl font-semibold tracking-tight">What's your name?</h1>
+            <p className="mt-2 text-sm text-muted">So ChatGiZa knows what to call you.</p>
+            <div className="mt-6 w-full max-w-sm">
+              <input
+                autoFocus
+                value={welcomeName}
+                onChange={(e) => setWelcomeName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && welcomeName.trim()) setWelcomeStep("role");
+                }}
+                placeholder="Your name"
+                className="w-full rounded-full border border-border bg-surface px-5 py-3 text-center text-sm outline-none focus:border-foreground/40"
+              />
+              <button
+                type="button"
+                disabled={!welcomeName.trim()}
+                onClick={() => setWelcomeStep("role")}
+                className="btn-primary mt-3 w-full rounded-full px-5 py-3 text-sm font-medium disabled:opacity-40"
+              >
+                Continue
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h1 className="text-3xl font-semibold tracking-tight">What kind of work do you do?</h1>
+            <p className="mt-2 text-sm text-muted">Just for a nicer first impression -- it doesn't change how Build works.</p>
+            <div className="mt-6 w-full max-w-sm">
+              <select
+                value={welcomeRole}
+                onChange={(e) => setWelcomeRole(e.target.value)}
+                className="w-full rounded-full border border-border bg-surface px-5 py-3 text-center text-sm outline-none focus:border-foreground/40"
+              >
+                <option value="">Select your role</option>
+                <option value="engineer">Software engineer</option>
+                <option value="designer">Designer</option>
+                <option value="business">Business owner</option>
+                <option value="student">Student</option>
+                <option value="other">Other</option>
+              </select>
+              {welcomeRole && (
+                <button type="button" onClick={finishWelcome} className="btn-primary mt-3 w-full rounded-full px-5 py-3 text-sm font-medium">
+                  Continue
+                </button>
+              )}
+              <button type="button" onClick={finishWelcome} className="mt-4 text-sm text-muted transition-colors hover:text-foreground">
+                Set up later
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
   if (!started) {
     return (
       <>
@@ -1159,7 +1748,7 @@ export default function BuildWorkspace() {
           // a dead gap below instead of at the bottom where it's always
           // been.
           <div className="mx-auto flex w-full max-w-[var(--max-w-chat)] flex-1 flex-col overflow-hidden px-4">
-            <div className="flex-1 overflow-y-auto pb-4 pt-8">
+            <div className="sidebar-scroll flex-1 overflow-y-auto pb-4 pt-8">
               <h1 className="text-xl font-semibold tracking-tight">What should ChatGiZa build?</h1>
               <div className="mt-4 w-full">
                 <BuildStatsCard projects={projects} />
@@ -1187,17 +1776,49 @@ export default function BuildWorkspace() {
             </form>
           </div>
         ) : (
-          // A genuinely first-time user, nothing to show yet -- the
-          // original centered empty-state, unchanged.
+          // A genuinely first-time user, nothing to show yet. Used to be
+          // just the heading + composer with nothing else -- per feedback,
+          // that landed people on a blank box with no sense of what Build
+          // can actually do. Quick-start cards (mirroring how a fresh
+          // coding-agent session offers "design a system" / "debug" /
+          // "build a prototype" style starting points) go first; the
+          // composer right below still covers "I have my own idea" for
+          // anyone who'd rather just type it themselves.
           <div className="relative mx-auto flex w-full max-w-[var(--max-w-chat)] flex-1 flex-col items-center justify-center px-4">
             <h1 className="text-3xl font-semibold tracking-tight">What should ChatGiZa build?</h1>
-            <form onSubmit={onSubmit} className="mt-8 w-full">
+            <div className="mt-6 grid w-full gap-2.5 sm:grid-cols-3">
+              <button
+                type="button"
+                onClick={startWebsite}
+                className="flex flex-col items-start gap-2 rounded-2xl border border-border p-4 text-left transition-colors hover:border-foreground/40 hover:bg-surface-2"
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-2 text-muted">{WebsiteStartIcon}</span>
+                <span className="text-sm font-medium text-foreground">Build a website</span>
+              </button>
+              <button
+                type="button"
+                onClick={startApp}
+                className="flex flex-col items-start gap-2 rounded-2xl border border-border p-4 text-left transition-colors hover:border-foreground/40 hover:bg-surface-2"
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-2 text-muted">{AppStartIcon}</span>
+                <span className="text-sm font-medium text-foreground">Build an app</span>
+              </button>
+              <button
+                type="button"
+                onClick={startLearnToCode}
+                className="flex flex-col items-start gap-2 rounded-2xl border border-border p-4 text-left transition-colors hover:border-foreground/40 hover:bg-surface-2"
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-2 text-muted">{LearnIcon}</span>
+                <span className="text-sm font-medium text-foreground">Learn to code</span>
+              </button>
+            </div>
+            <form onSubmit={onSubmit} className="mt-4 w-full">
               <div className="flex items-center gap-2 rounded-2xl border border-composer-border bg-composer px-4 py-3 shadow-sm">
                 <input
                   autoFocus
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="e.g. Build a landing page for a bakery"
+                  placeholder="Or describe your own idea -- e.g. Build a landing page for a bakery"
                   className="flex-1 bg-transparent text-sm outline-none"
                 />
                 <button
@@ -1217,40 +1838,93 @@ export default function BuildWorkspace() {
       {languageOpen && (
         <LanguagePanel language={language} onSelect={setLanguage} onClose={() => setLanguageOpen(false)} />
       )}
-      {onboardStep && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center sm:p-6" role="alertdialog" aria-modal="true">
-          <div className="w-full max-w-sm rounded-t-2xl border border-border bg-surface p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-lg sm:rounded-2xl">
-            <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-border sm:hidden" />
-            {onboardStep === "github" ? (
+      {onboardOpen && (
+        // Wider than a typical small modal and anchored near the bottom of
+        // the screen, right above the composer. Redrawn as a plain list of
+        // full-width rows (a single hairline between them, via divide-y)
+        // instead of three separately bordered, separately colored boxes
+        // -- that read as a form; this reads as one clean menu, monochrome
+        // throughout like the rest of the app, each row's own icon circle
+        // the only real ink change and pressed for its whole width, not
+        // just a small button inside it.
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:p-6" role="alertdialog" aria-modal="true">
+          <div className="w-full max-w-2xl rounded-2xl border border-border bg-surface p-2 shadow-lg">
+            <p className="px-3 pb-2 pt-3 text-base font-semibold text-foreground">Where should this project live?</p>
+            {manualGroupMap.size > 0 && (
               <>
-                <p className="text-sm font-medium text-foreground">Connect your GitHub account</p>
-                <p className="mt-1 text-xs text-muted">
-                  Your project will save to a real GitHub repository as you build, linked to your account.
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-sm font-medium text-foreground">Connect a folder on this device</p>
-                <p className="mt-1 text-xs text-muted">
-                  Choose a folder on your desktop or laptop -- every file gets written there too as it's built, alongside GitHub.
-                </p>
+                <p className="px-3 pb-1 text-xs font-medium text-muted">Continue an existing project</p>
+                <div className="divide-y divide-border">
+                  {Array.from(manualGroupMap.keys()).map((name) => (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={() => handleOnboardExisting(name)}
+                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-2"
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-foreground">{AttachFolderIcon}</span>
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{name}</span>
+                      <span className="shrink-0 text-muted">{ChevronRightIcon}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="px-3 pb-1 pt-3 text-xs font-medium text-muted">Or start something new</p>
               </>
             )}
-            <div className="mt-4 flex justify-end gap-2">
+            <div className="divide-y divide-border">
               <button
                 type="button"
-                onClick={skipOnboardStep}
-                className="rounded-full px-4 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                onClick={handleOnboardGithub}
+                disabled={onboardBusy !== null}
+                className="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-surface-2 disabled:opacity-60"
               >
-                Skip for now
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-foreground">{GitHubGlyphIcon}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-foreground">
+                    {onboardBusy === "github" ? "Connecting…" : "Connect GitHub"}
+                  </span>
+                  <span className="block text-xs text-muted">Saves to a real repository as you build</span>
+                </span>
+                <span className="shrink-0 text-muted">{ChevronRightIcon}</span>
               </button>
-              <button
-                type="button"
-                onClick={onboardStep === "github" ? handleOnboardGithub : handleOnboardFolder}
-                className="btn-primary rounded-full px-4 py-2 text-sm font-medium"
-              >
-                {onboardStep === "github" ? "Connect GitHub" : "Choose folder"}
-              </button>
+              {folderSupported && (
+                <button
+                  type="button"
+                  onClick={handleOnboardFolder}
+                  disabled={onboardBusy !== null}
+                  className="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-surface-2 disabled:opacity-60"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-foreground">{AttachFolderIcon}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium text-foreground">
+                      {onboardBusy === "folder" ? "Choosing…" : "Choose a folder on this device"}
+                    </span>
+                    <span className="block text-xs text-muted">Every file gets written there too as it's built</span>
+                  </span>
+                  <span className="shrink-0 text-muted">{ChevronRightIcon}</span>
+                </button>
+              )}
+              <div className="flex w-full items-center gap-3 px-3 py-2">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-foreground">{PencilIcon}</span>
+                <input
+                  autoFocus
+                  value={onboardNameInput}
+                  onChange={(e) => setOnboardNameInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleOnboardName();
+                  }}
+                  placeholder="Or just give it a name -- e.g. Bakery landing page"
+                  className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted"
+                />
+                <button
+                  type="button"
+                  disabled={!onboardNameInput.trim()}
+                  onClick={handleOnboardName}
+                  aria-label="Continue"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-30"
+                >
+                  {ChevronRightIcon}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1262,60 +1936,171 @@ export default function BuildWorkspace() {
   return (
     <>
     <div className="flex h-full w-full overflow-hidden">
-      {rail}
+      {/* History steps out of the way while Live is open -- per feedback,
+          Live specifically belongs in this exact spot (not appended after
+          Files like Progress/Terminal/Browse), so it gets the room History
+          just vacated instead of squeezing in in addition to it. Comes
+          back the instant Live closes (with Files, or by hand). */}
+      {!livePanelOpen && rail}
       <div ref={rowRef} className="relative flex min-h-0 flex-1">
-        {/* Pinned to the row's own top-right corner (not the narrow
-            centered chat column) -- the user drew this out explicitly:
-            these 4 icons belong at the true far edge of the page, the way
-            a global toolbar sits, not tucked inside the chat's own header
-            where they were before. */}
-        <div className="absolute right-3 top-3 z-10 flex shrink-0 items-center gap-0.5 text-muted">
-          <button aria-label="Terminal" className="flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground [&>svg]:h-[18px] [&>svg]:w-[18px]">
-            {TerminalIcon}
-          </button>
-          <button aria-label="Image" className="flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground [&>svg]:h-[18px] [&>svg]:w-[18px]">
-            {BuildingCardIcon}
-          </button>
-          {/* Inert for now -- kept visible for a future panel design, but
-              not wired to open anything until that's actually built. */}
-          <button
-            aria-label="Live preview (coming soon)"
-            disabled
-            className="flex h-7 w-7 cursor-default items-center justify-center rounded-full text-muted opacity-50 [&>svg]:h-[18px] [&>svg]:w-[18px]"
+        {/* Sits at the row's LEFT edge, in History's own spot, per
+            feedback -- a real fixed, shrink-0 width with its own handle,
+            same mechanics as every other panel (Files included, which
+            stays fully independent of this one). Resizes from its RIGHT
+            edge since it's the leftmost thing in the row now; the handle
+            anchors to rowRef's own left edge rather than window.innerWidth
+            like the right-side panels. Bigger default width than the
+            other panels start at -- per feedback, it should open noticeably
+            wide by default, not the same modest size as Progress/Terminal. */}
+        {livePanelOpen && (
+          <div
+            className="relative flex min-w-0 shrink-0 flex-col overflow-hidden rounded-r-2xl border-r border-border bg-surface mr-4"
+            style={{ width: liveWidth }}
           >
-            {GlobeIcon}
-          </button>
-          <button aria-label="More" className="flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground [&>svg]:h-[18px] [&>svg]:w-[18px]">
-            {KebabIcon}
-          </button>
-        </div>
+            <div
+              onMouseDown={(e) => {
+                e.preventDefault();
+                liveResizing.current = true;
+                setIsDragActive(true);
+              }}
+              className="absolute -right-1 top-0 z-10 h-full w-2 cursor-col-resize"
+            />
+            <div className="flex shrink-0 items-center justify-between border-b border-border p-2">
+              <span className="px-1 text-sm font-semibold text-foreground">Live</span>
+              <button
+                onClick={() => setLivePanelOpen(false)}
+                aria-label="Close"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+              >
+                {CloseIcon}
+              </button>
+            </div>
+            <div className="min-h-0 flex-1">
+              <BuildPreviewFrame files={files} />
+            </div>
+          </div>
+        )}
+        {!livePanelOpen && (
         <div
           // The live preview section is removed (see `liveSectionRemoved`
-          // above), so chat always takes the plain full-width layout. No
-          // max-width HERE anymore, though -- that constraint moved down
-          // onto the header/composer/scroll-content wrappers individually
-          // below, so the SCROLL CONTAINER itself spans this whole row and
-          // its native scrollbar renders at the row's true right edge
-          // (flush with the page, next to the icon group above) instead of
-          // hugging the narrow --content-width column's own edge, which
-          // read as a scrollbar stranded in the middle of the page.
-          className="flex min-h-0 w-full min-w-0 flex-col p-3"
+          // above). flex-1 (not w-full) so the Browse panel below, when
+          // open, shares this row as a sibling instead of overlaying on
+          // top of it -- chat shrinks to make room rather than getting
+          // covered. relative (not just the outer row) so the title badge
+          // and icon group below -- both absolutely positioned against
+          // THIS div now, not the outer row -- shrink back in together
+          // with the chat column as the Browse panel opens, instead of
+          // staying pinned to the full row's edge and ending up stranded
+          // over the now-open panel. No max-width HERE anymore, though --
+          // that constraint moved down onto the header/composer/scroll-
+          // content wrappers individually below, so the SCROLL CONTAINER
+          // itself spans this whole column and its native scrollbar
+          // renders at the column's true right edge (flush with the icon
+          // group above) instead of hugging the narrow --content-width
+          // column's own edge, which read as a scrollbar stranded in the
+          // middle of the page.
+          className="relative flex min-h-0 min-w-0 flex-1 flex-col p-3"
         >
+          {/* Mirrors the icon group's own positioning on the opposite
+              corner -- per feedback, the project's name (+ its group, if
+              any) reads as a page title and belongs up here at the
+              column's true top edge next to it, not centered inside the
+              narrow chat column below where it used to compete with the
+              message content for attention. */}
+          {started && (
+            <div className="absolute left-3 top-3 z-10 flex min-w-0 max-w-[50%] shrink items-center gap-2">
+              {/* Icon and the chat's own name are plain, no background --
+                  the pill belongs ONLY on the group name after them (the
+                  actual folder/repo this chat lives in), not the chat name
+                  itself. */}
+              <span className="shrink-0 text-foreground">{ProjectBadgeIcon}</span>
+              <span className="min-w-0 truncate text-sm font-bold text-foreground">{projectName}</span>
+              {activeGroupName && (
+                <span className="shrink-0 truncate rounded-md bg-surface-2 px-2 py-1 text-xs font-bold text-foreground">
+                  {activeGroupName}
+                </span>
+              )}
+            </div>
+          )}
+          {/* Pinned to the CHAT COLUMN's own top-right corner -- moves
+              inward together with it (not stranded over the Browse panel)
+              once that panel opens and the column shrinks to share the
+              row, per feedback. */}
+          <div className="absolute right-3 top-3 z-10 flex shrink-0 items-center gap-0.5 text-foreground">
+            <button
+              onClick={() => setProgressPanelOpen((v) => !v)}
+              aria-label="Progress"
+              aria-pressed={progressPanelOpen}
+              className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors [&>svg]:h-4 [&>svg]:w-4 ${
+                progressPanelOpen ? "bg-blue-500 text-white" : "text-foreground hover:bg-surface-2"
+              }`}
+            >
+              {StudentPanelIcon}
+            </button>
+            <button
+              onClick={() => setTerminalPanelOpen((v) => !v)}
+              aria-label="Terminal"
+              aria-pressed={terminalPanelOpen}
+              className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors [&>svg]:h-4 [&>svg]:w-4 ${
+                terminalPanelOpen ? "bg-blue-500 text-white" : "text-foreground hover:bg-surface-2"
+              }`}
+            >
+              {TerminalIcon}
+            </button>
+            <button
+              onClick={() => setFilesPanelOpen((v) => !v)}
+              aria-label="Files"
+              aria-pressed={filesPanelOpen}
+              className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors [&>svg]:h-4 [&>svg]:w-4 ${
+                filesPanelOpen ? "bg-blue-500 text-white" : "text-foreground hover:bg-surface-2"
+              }`}
+            >
+              {BuildingCardIcon}
+            </button>
+            {/* Live is otherwise fully independent of Files now (see its
+                panel further down) -- per feedback, treating it as a
+                special satellite of Files (positioned first in the row,
+                hiding chat/History, closing together) was itself the bug:
+                two panels sharing one "slot" in the layout is what kept
+                breaking. It still opens itself automatically the moment a
+                real edit happens (see handleFileEdit), but this toggle
+                lets it be opened/closed by hand too, exactly like Progress/
+                Terminal/Browse. */}
+            <button
+              onClick={() => setLivePanelOpen((v) => !v)}
+              aria-label="Live"
+              aria-pressed={livePanelOpen}
+              className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors [&>svg]:h-4 [&>svg]:w-4 ${
+                livePanelOpen ? "bg-blue-500 text-white" : "text-foreground hover:bg-surface-2"
+              }`}
+            >
+              {DevicePreviewIcon}
+            </button>
+            <button
+              onClick={() => setBrowsePanelOpen((v) => !v)}
+              aria-label="Browse"
+              aria-pressed={browsePanelOpen}
+              className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors [&>svg]:h-4 [&>svg]:w-4 ${
+                browsePanelOpen ? "bg-blue-500 text-white" : "text-foreground hover:bg-surface-2"
+              }`}
+            >
+              {GlobeIcon}
+            </button>
+            <button aria-label="More" className="flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-surface-2 [&>svg]:h-[18px] [&>svg]:w-[18px]">
+              {KebabIcon}
+            </button>
+          </div>
           {/* No card chrome at all here -- no border, no fill. The live
               window is the only one styled as a bordered "window"; the
               chat side just sits plainly on the page. */}
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {/* Just the project name now -- the icon row that used to
-                share this line moved out to the row's own top-right
-                corner above (see the absolutely-positioned group before
-                this div), not nested inside the narrow chat column.
-                CENTERED (mx-auto) per explicit request ("kati kati, usawa
-                wa A4"), but a bit wider than --content-width (679px) --
-                confirmed centered correctly, then asked for a bit more
-                width while staying centered, hence the bump to 900px. */}
-            <div className="mx-auto flex w-full max-w-[800px] shrink-0 items-center gap-2 px-3 py-2 text-muted">
-              {started && <span className="min-w-0 truncate text-xs font-semibold text-foreground">{projectName}</span>}
-            </div>
+            {/* The project name + group used to have its own header row
+                right here, centered above the messages -- moved up to sit
+                beside the icon group at the row's true top edge instead
+                (see the absolutely-positioned block before this div), so
+                a little top padding on the scroll area keeps messages
+                from starting directly under it. */}
+            <div className="pt-11" />
             {/* The SCROLL CONTAINER stays full-width (so its native
                 scrollbar still sits at the true page edge, per the
                 earlier fix) -- but the actual message content inside it is
@@ -1857,6 +2642,7 @@ export default function BuildWorkspace() {
             </form>
           </div>
         </div>
+        )}
 
         {/* Rebuilt from scratch, deliberately minimal this time -- the
             earlier design here (multi-tab strip, address bar, external-site
@@ -1950,7 +2736,7 @@ export default function BuildWorkspace() {
                   the window with no button held. This intercepts every
                   mouse event first so none of them can fall through into
                   the iframe until the resize actually ends. */}
-              {isDragActive && (
+              {deadPreviewDragActive && (
                 <div
                   className="absolute inset-0 z-20"
                   style={{ cursor: "col-resize" }}
@@ -1959,8 +2745,306 @@ export default function BuildWorkspace() {
             </div>
           </div>
         )}
+        {/* The "Progress" panel -- real steps straight from this chat's
+            own history (each non-step assistant reply so far), not a
+            fabricated lesson tracker. Meant for the Learn-to-code side of
+            Build, but not gated to it -- any chat's own real progress
+            shows here the same way. */}
+        {progressPanelOpen && (
+          <div
+            className="relative flex shrink-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface m-3 ml-0 shadow-sm"
+            style={{ width: progressWidth }}
+          >
+            <div
+              onMouseDown={(e) => {
+                e.preventDefault();
+                progressResizing.current = true;
+                setIsDragActive(true);
+              }}
+              className="absolute -left-1 top-0 z-10 h-full w-2 cursor-col-resize"
+            />
+            <div className="flex shrink-0 items-center justify-between border-b border-border p-2">
+              <span className="px-1 text-sm font-semibold text-foreground">Progress</span>
+              <button
+                onClick={() => setProgressPanelOpen(false)}
+                aria-label="Close"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+              >
+                {CloseIcon}
+              </button>
+            </div>
+            <div className="sidebar-scroll flex-1 overflow-y-auto p-3">
+              {(() => {
+                const steps = messages.filter((m) => m.role === "assistant" && !m.step && !m.reverted);
+                if (steps.length === 0) {
+                  return <p className="text-sm text-muted">No steps yet -- they'll show up here as the chat goes.</p>;
+                }
+                return (
+                  <ol className="space-y-3">
+                    {steps.map((m, i) => {
+                      const firstLine = m.content.split("\n").find((line) => line.trim().length > 0) ?? m.content;
+                      return (
+                        <li key={i} className="flex gap-2.5">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[11px] font-semibold text-foreground">
+                            {i + 1}
+                          </span>
+                          <p className="min-w-0 flex-1 truncate text-sm text-foreground">{firstLine}</p>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+        {/* Same side-panel treatment as Terminal/Browse -- BuildFileTree
+            already existed (a real file list + editable content view) but
+            had never been wired to anything until now. Fully independent
+            of every other panel, Live included: its own fixed width, own
+            handle, own header, own close, no cascading or shared state
+            with anything else. Two earlier approaches tried to
+            AUTOMATICALLY link Files and Live to guarantee zero gap between
+            them (flex-grow on Live, then making Files fill whatever Live
+            didn't use, then hiding chat/History while Live was open so
+            they'd share the row alone) -- all rejected: per feedback, that
+            whole idea of squeezing two panels into one special shared
+            "slot" was itself the recurring bug, not any one specific
+            implementation of it. Every panel, including Live now, sits in
+            the same ordinary row as chat -- chat's own flex-1 is what has
+            reliably kept Progress/Terminal/Browse gap-free this whole
+            time, and Live gets that same protection for free by no longer
+            being a special case. */}
+        {filesPanelOpen && (
+          <div
+            className="relative flex min-w-0 shrink-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface m-3 ml-0 shadow-sm"
+            style={{ width: filesWidth }}
+          >
+            <div
+              onMouseDown={(e) => {
+                e.preventDefault();
+                filesResizing.current = true;
+                setIsDragActive(true);
+              }}
+              className="absolute -left-1 top-0 z-10 h-full w-2 cursor-col-resize"
+            />
+            {/* No outer "Files" title bar -- per feedback, it was pure
+                redundant chrome: BuildFileTree's own root row already
+                names the actual project right underneath where that label
+                used to sit. Still closable via the Files icon in the
+                toolbar (it toggles open/closed either way), so nothing is
+                lost by dropping the duplicate label + its own close
+                button. */}
+            <BuildFileTree
+              files={files}
+              onChange={handleFileEdit}
+              onDelete={deleteFile}
+              onCreate={handleFileCreate}
+              projectName={projectName}
+            />
+          </div>
+        )}
+        {/* Same side-panel treatment as Browse below (flex sibling of the
+            chat column, not an overlay) -- per feedback, Terminal should
+            open "normally, like the globe icon" rather than as a small
+            bottom drawer. Independent of browsePanelOpen -- both can be
+            open together, each taking its own share of the row. */}
+        {terminalPanelOpen && (
+          <div
+            className="relative flex shrink-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface m-3 ml-0 shadow-sm"
+            style={{ width: terminalWidth }}
+          >
+            <div
+              onMouseDown={(e) => {
+                e.preventDefault();
+                terminalResizing.current = true;
+                setIsDragActive(true);
+              }}
+              className="absolute -left-1 top-0 z-10 h-full w-2 cursor-col-resize"
+            />
+            <div className="flex shrink-0 items-center justify-between border-b border-border p-2">
+              <span className="px-1 text-sm font-semibold text-foreground">Terminal</span>
+              <button
+                onClick={() => setTerminalPanelOpen(false)}
+                aria-label="Close"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+              >
+                {CloseIcon}
+              </button>
+            </div>
+            <div className="sidebar-scroll flex-1 overflow-y-auto p-3 font-mono text-xs">
+              {terminalHistory.length === 0 ? (
+                <p className="text-muted">No commands run yet this session.</p>
+              ) : (
+                terminalHistory.map((entry, i) => (
+                  <div key={i} className="mb-3">
+                    <p className="text-foreground">
+                      <span className="text-muted">$ </span>
+                      {entry.command}
+                    </p>
+                    <pre className="mt-1 whitespace-pre-wrap break-words text-muted">{entry.output}</pre>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+        {/* A flex sibling of the chat column above (which is flex-1, not
+            w-full, precisely so it yields room here) instead of a fixed
+            overlay -- per feedback, opening Browse should push the chat
+            column aside, not cover it. */}
+        {(() => {
+          const showLiveInBrowse =
+            Object.keys(files).length > 0 && !browseUrl && !browseSearchResults && !browseSearchLoading;
+          return browsePanelOpen && (
+          <div
+            className="relative flex shrink-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface m-3 ml-0 shadow-sm"
+            style={{ width: browseWidth }}
+          >
+            <div
+              onMouseDown={(e) => {
+                e.preventDefault();
+                browseResizing.current = true;
+                setIsDragActive(true);
+              }}
+              className="absolute -left-1 top-0 z-10 h-full w-2 cursor-col-resize"
+            />
+            {/* No header at all while showing Live -- same chromeless,
+                full-bleed treatment as the dedicated Live panel next to
+                Files (per feedback: just the site, no "Live" label or its
+                own close button eating into it). Still closable by hand
+                via the globe icon itself in the toolbar, which toggles
+                browsePanelOpen regardless of what's currently showing
+                inside it -- unlike the dedicated Live panel, Browse always
+                keeps that one toolbar entry point. */}
+            {!showLiveInBrowse && (
+            <div className="flex items-center gap-2 border-b border-border p-2">
+              <button
+                onClick={() => setBrowsePanelOpen(false)}
+                aria-label="Close"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+              >
+                {BrowseCloseIcon}
+              </button>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const trimmed = browseInput.trim();
+                  if (!trimmed) return;
+                  const looksLikeUrl =
+                    /^https?:\/\//i.test(trimmed) || (!/\s/.test(trimmed) && /\.[a-z]{2,}(\/|$)/i.test(trimmed));
+                  if (looksLikeUrl) {
+                    setBrowseSearchResults(null);
+                    setBrowseScreenshotLoaded(false);
+                    setBrowseScreenshotError(false);
+                    setBrowseUrl(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
+                    return;
+                  }
+                  setBrowseUrl("");
+                  setBrowseSearchLoading(true);
+                  fetch(`/api/browse-search?q=${encodeURIComponent(trimmed)}`)
+                    .then((r) => r.json())
+                    .then((data: { results?: SearchHit[] }) => setBrowseSearchResults(data.results ?? []))
+                    .catch(() => setBrowseSearchResults([]))
+                    .finally(() => setBrowseSearchLoading(false));
+                }}
+                className="flex-1"
+              >
+                <input
+                  value={browseInput}
+                  onChange={(e) => setBrowseInput(e.target.value)}
+                  placeholder="Search or type a URL"
+                  className="w-full rounded-full border border-border bg-background px-3 py-1.5 text-sm outline-none focus:border-foreground/40"
+                />
+              </form>
+            </div>
+            )}
+            <div className={showLiveInBrowse ? "h-full" : "sidebar-scroll flex-1 overflow-y-auto"}>
+              {showLiveInBrowse ? (
+                <BuildPreviewFrame files={files} />
+              ) : browseUrl ? (
+                <div className="flex h-full flex-col">
+                  <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-1.5">
+                    <span className="truncate text-xs text-muted">{browseUrl}</span>
+                    <a
+                      href={browseUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 text-xs font-medium text-foreground hover:underline"
+                    >
+                      Open in new tab
+                    </a>
+                  </div>
+                  <div className="sidebar-scroll flex-1 overflow-auto bg-background">
+                    {browseScreenshotError ? (
+                      <div className="flex h-full flex-col items-center justify-center gap-2 px-8 text-center">
+                        <p className="text-sm text-muted">Couldn&apos;t render this page.</p>
+                      </div>
+                    ) : (
+                      <>
+                        {!browseScreenshotLoaded && (
+                          <div className="flex h-full items-center justify-center text-sm text-muted">Loading...</div>
+                        )}
+                        <img
+                          key={browseUrl}
+                          src={`/api/browse-screenshot?url=${encodeURIComponent(browseUrl)}`}
+                          alt=""
+                          className={`w-full ${browseScreenshotLoaded ? "block" : "hidden"}`}
+                          onLoad={() => setBrowseScreenshotLoaded(true)}
+                          onError={() => setBrowseScreenshotError(true)}
+                        />
+                      </>
+                    )}
+                  </div>
+                </div>
+              ) : browseSearchLoading ? (
+                <div className="flex h-full items-center justify-center text-sm text-muted">Searching...</div>
+              ) : browseSearchResults ? (
+                browseSearchResults.length > 0 ? (
+                  <div className="flex flex-col gap-1 p-2">
+                    {browseSearchResults.map((r, i) => (
+                      <a
+                        key={i}
+                        href={r.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-xl p-3 transition-colors hover:bg-surface-2"
+                      >
+                        <p className="truncate text-sm font-semibold text-foreground">{r.title}</p>
+                        <p className="truncate text-xs text-muted">{r.url}</p>
+                        {r.content && <p className="mt-1 line-clamp-2 text-xs text-muted">{r.content}</p>}
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-2 px-8 text-center">
+                    <p className="text-sm text-muted">No results found.</p>
+                  </div>
+                )
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-2 px-8 text-center">
+                  <span className="text-muted">{BrowseGlobeBigIcon}</span>
+                  <p className="text-base font-semibold">Browse</p>
+                  <p className="max-w-xs text-sm text-muted">Search the web, or type a URL to see a live snapshot of that page.</p>
+                </div>
+              )}
+            </div>
+          </div>
+          );
+        })()}
       </div>
     </div>
+    {/* Catches every mouse event for the rest of an active panel drag, so
+        none of them can land inside Live's iframe (a separate browsing
+        context that would otherwise silently swallow mousemove/mouseup --
+        see isDragActive's own comment above for the full failure mode this
+        fixes: jitter, a drag that gets "stuck" partway, and a native
+        text-selection/not-allowed cursor showing up instead of the resize
+        cursor). Covers the whole viewport, not just the row, since the
+        cursor can end up anywhere during a fast drag. */}
+    {isDragActive && (
+      <div className="fixed inset-0 z-[100]" style={{ cursor: "col-resize" }} />
+    )}
     {languageOpen && (
       <LanguagePanel language={language} onSelect={setLanguage} onClose={() => setLanguageOpen(false)} />
     )}

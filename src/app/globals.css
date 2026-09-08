@@ -3,7 +3,7 @@
 :root {
   --sidebar-width: 260px;
   --content-width: 679px;
-  --max-w-chat: 820px;
+  --max-w-chat: 810px;
   --radius: 12px;
   --background: #ffffff;
   --foreground: #0d0d0d;
@@ -162,16 +162,6 @@ textarea:-webkit-autofill:focus {
   --chat-font-size: 19px;
   --chat-line-height: 1.65;
 }
-/* Only two options now: Nova Light (the default) and Nova Regular. Each
-   pinned to its own single-weight family explicitly -- --font-sans is the
-   combined two-weight family (see layout.tsx), so relying on "inherit"
-   here would pull in both weights rather than pin chat prose to one. */
-:root[data-chat-font="nova_light"] {
-  --chat-font-family: var(--font-nova-light), Arial, Helvetica, sans-serif;
-}
-:root[data-chat-font="nova_regular"] {
-  --chat-font-family: var(--font-nova-regular), Arial, Helvetica, sans-serif;
-}
 
 :root[data-contrast="medium"] {
   --border: #cfcfcf;
@@ -241,7 +231,12 @@ textarea:-webkit-autofill:focus {
   --color-border: var(--border);
   --color-muted: var(--muted);
   --color-pure-black: var(--pure-black);
-  --font-sans: var(--font-nova);
+  /* Roboto (a real loaded Google typeface, see layout.tsx) -- same font
+     everywhere regardless of OS, not a system stack that would otherwise
+     show as Segoe UI on Windows, San Francisco on Mac, etc. Website only
+     -- the native Android app has its own separate font handling and is
+     untouched by this. */
+  --font-sans: var(--font-roboto), Arial, Helvetica, sans-serif;
   --font-mono: var(--font-geist-mono);
 }
 
@@ -324,6 +319,34 @@ textarea::placeholder {
 }
 
 .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* CodeMirror's own scroll container (.cm-scroller) renders the browser's
+   native scrollbar by default, both the vertical one and the horizontal
+   one from long unwrapped lines -- same thin/gray treatment as
+   .sidebar-scroll above, so the code editor's scrollbars match every
+   other scrollbar in the app instead of standing out as native chrome. */
+.cm-scroller {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.cm-scroller::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.cm-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cm-scroller::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+
+.cm-scroller::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
 }
 
