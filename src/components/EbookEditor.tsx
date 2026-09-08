@@ -855,7 +855,7 @@ export default function EbookEditor({ ebookId, onBack }: { ebookId: string; onBa
       {/* Window-title-bar row -- Back + document title + save status live
           here, like a real word processor's title bar, instead of inside
           the page itself. */}
-      <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background px-3 sm:px-4">
+      <div className="flex h-14 shrink-0 items-center gap-2 bg-background px-3 sm:px-4">
         <button
           onClick={onBack}
           title="Back to E-books"
