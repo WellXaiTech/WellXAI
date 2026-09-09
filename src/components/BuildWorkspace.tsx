@@ -581,6 +581,21 @@ const PencilIcon = (
     <path d="m15 5 4 4" />
   </svg>
 );
+// "Continue an existing project" rows in the onboarding modal, and each
+// real-named group in History -- the exact folder glyph the user
+// provided, not the outline-style AttachFolderIcon those used before.
+const ExistingFolderIcon = (
+  <svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12.5zM2.5 3a.5.5 0 0 0-.5.5V6h12v-.5a.5.5 0 0 0-.5-.5H9c-.964 0-1.71-.629-2.174-1.154C6.374 3.334 5.82 3 5.264 3zM14 7H2v5.5a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5z" />
+  </svg>
+);
+// "Or just give it a name" row's own pencil -- the exact glyph the user
+// provided, separate from the plain PencilIcon "New chat" etc. use.
+const NamePencilIcon = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3.5 18.985V20.5h1.514c1.227 0 1.84 0 2.391-.228c.551-.229.985-.662 1.852-1.53l9.864-9.863c.883-.883 1.324-1.324 1.373-1.866q.012-.135 0-.269c-.05-.541-.49-.983-1.373-1.865c-.883-.883-1.324-1.324-1.865-1.373a1.5 1.5 0 0 0-.27 0c-.541.049-.982.49-1.865 1.373l-9.864 9.864c-.867.867-1.3 1.3-1.529 1.852c-.228.55-.228 1.164-.228 2.39M13.5 6.5l4 4" />
+  </svg>
+);
 // Graduation cap -- the "Learn to code" rail button, right below "New chat".
 const LearnIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2294,16 +2309,15 @@ export default function BuildWorkspace() {
         // the only real ink change and pressed for its whole width, not
         // just a small button inside it.
         <div
+          // No darkening tint at all now, per feedback -- the page behind
+          // should look completely normal, not dimmed. Just the blur
+          // (still enough to visually separate the modal from the page
+          // without touching its actual brightness/color).
           className="fixed inset-0 z-50 flex items-end justify-center p-4 backdrop-blur-sm sm:p-6"
-          // A flat bg-black/60 read as a plain dimmer, not a backdrop --
-          // this radial glow instead pools soft light right behind where
-          // the card sits (bottom-center, per this modal's own anchoring)
-          // and fades to near-black at the edges, still pure monochrome.
-          style={{ background: "radial-gradient(circle at 50% 85%, rgba(255,255,255,0.07), rgba(0,0,0,0.82) 55%)" }}
           role="alertdialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-2xl rounded-2xl border border-border bg-surface p-2 shadow-2xl ring-1 ring-white/[0.04]">
+          <div className="w-full max-w-2xl rounded-2xl border border-border bg-[#20201F] p-2 shadow-2xl ring-1 ring-white/[0.04]">
             <p className="px-3 pb-2 pt-3 text-base font-semibold text-foreground">Where should this project live?</p>
             {manualGroupMap.size > 0 && (
               <>
@@ -2316,7 +2330,10 @@ export default function BuildWorkspace() {
                       onClick={() => handleOnboardExisting(name)}
                       className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-2"
                     >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-foreground">{AttachFolderIcon}</span>
+                      {/* No circle background here anymore, per feedback --
+                          plain icon only, same glyph as History's own
+                          group headers use. */}
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center text-foreground">{ExistingFolderIcon}</span>
                       <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{name}</span>
                       <span className="shrink-0 text-muted">{ChevronRightIcon}</span>
                     </button>
@@ -2348,7 +2365,7 @@ export default function BuildWorkspace() {
                   disabled={onboardBusy !== null}
                   className="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-surface-2 disabled:opacity-60"
                 >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-foreground">{AttachFolderIcon}</span>
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-foreground">{ExistingFolderIcon}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-medium text-foreground">
                       {onboardBusy === "folder" ? "Choosing…" : "Choose a folder on this device"}
@@ -2359,7 +2376,7 @@ export default function BuildWorkspace() {
                 </button>
               )}
               <div className="flex w-full items-center gap-3 px-3 py-2">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-foreground">{PencilIcon}</span>
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-foreground">{NamePencilIcon}</span>
                 <input
                   autoFocus
                   value={onboardNameInput}
