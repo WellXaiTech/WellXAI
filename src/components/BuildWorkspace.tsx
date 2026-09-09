@@ -2180,7 +2180,11 @@ export default function BuildWorkspace() {
                 pushes this whole flex-1 min-w-0 chat column wider to fit,
                 overriding the width panel-dragging is actually supposed to
                 leave it. */}
-            <div ref={scrollRef} className="sidebar-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+            {/* Deliberately not .sidebar-scroll -- per feedback, this chat's
+                scrollbar should keep the browser's own full-size native
+                scrollbar (with its up/down arrow buttons), matching the
+                main Ask chat, not the thin borderless nav-sidebar style. */}
+            <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
             <div className="mx-auto w-full max-w-[800px] space-y-1 px-4 py-8">
               {renderItems.map((item) => {
                 if (item.kind === "stepGroup") {

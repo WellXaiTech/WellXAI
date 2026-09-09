@@ -1949,7 +1949,13 @@ function ChatGizaInner() {
           <>
             <div
               ref={scrollRef}
-              className="sidebar-scroll w-full flex-1 overflow-y-auto"
+              // Deliberately not .sidebar-scroll -- per feedback, this one
+              // should keep the browser's own full-size native scrollbar
+              // (with its up/down arrow buttons), not the thin borderless
+              // treatment used for the nav sidebar. Now that :root sets
+              // color-scheme for the active theme, that native scrollbar
+              // already renders dark-appropriate on its own.
+              className="w-full flex-1 overflow-y-auto"
             >
               {/* The scroll container itself spans the full column width so
                   its scrollbar rides the true right edge next to the

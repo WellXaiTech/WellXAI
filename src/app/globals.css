@@ -19,10 +19,16 @@
   --box-rgb: 255, 255, 255;
   --pure-black: #000000;
   --user-bubble-bg: var(--surface-2);
+  /* Without this, the browser has no idea the page is dark-themed and
+     draws its own native chrome -- scrollbars included -- with light-mode
+     assumptions: a stark white thumb/arrows on a dark background, wherever
+     something scrolls without a custom ::-webkit-scrollbar override. */
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
+    color-scheme: dark;
     --background: #151515;
     --foreground: #e5e5e5;
     --surface: #151515;
@@ -40,6 +46,7 @@
 }
 
 :root[data-theme="dark"] {
+  color-scheme: dark;
   --background: #151515;
   --foreground: #e5e5e5;
   --surface: #151515;
@@ -56,6 +63,7 @@
 }
 
 :root[data-theme="light"] {
+  color-scheme: light;
   --background: #ffffff;
   --foreground: #0d0d0d;
   --surface: #ffffff;
