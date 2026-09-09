@@ -1383,7 +1383,15 @@ export default function BuildWorkspace() {
     for (const { displayName, projects: list } of map.values()) result.set(displayName, list);
     return result;
   }
-  const githubGroupMap = groupByName(sortedProjects.filter((p) => p.githubRepoUrl));
+  // A project's own first message is literally LEARN_TO_CODE_PROMPT only
+  // when it was started via the "Learn to code" button -- no separate
+  // persisted flag needed, this is real and stable (the first message
+  // never changes after the fact) without touching BuildProject's own
+  // saved shape. Pulled out of GitHub/Files below into their own "Learn"
+  // section, per feedback that History should separate all three.
+  const isLearnProject = (p: BuildProject) => p.messages[0]?.content === LEARN_TO_CODE_PROMPT;
+  const learnProjects = sortedProjects.filter(isLearnProject);
+  const githubGroupMap = groupByName(sortedProjects.filter((p) => p.githubRepoUrl && !isLearnProject(p)));
   // Everything else groups by manualGroupName -- set from onboarding's
   // "name this project" step for a typed name, or (just as often) from the
   // real connected-folder name once handleOnboardFolder stamps it there.
@@ -1392,9 +1400,10 @@ export default function BuildWorkspace() {
   // it survives a reload instead of depending on the live localFolderName
   // state, which resets to null every time. Onboarding is meant to make
   // this mandatory going forward, so ungroupedProjects should really only
-  // ever hold projects saved before this existed.
-  const manualGroupMap = groupByName(sortedProjects.filter((p) => !p.githubRepoUrl && p.manualGroupName));
-  const ungroupedProjects = sortedProjects.filter((p) => !p.githubRepoUrl && !p.manualGroupName);
+  // ever hold projects saved before this existed. Both of these are the
+  // "Files" section -- named-but-not-GitHub, or not named at all.
+  const manualGroupMap = groupByName(sortedProjects.filter((p) => !p.githubRepoUrl && p.manualGroupName && !isLearnProject(p)));
+  const ungroupedProjects = sortedProjects.filter((p) => !p.githubRepoUrl && !p.manualGroupName && !isLearnProject(p));
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   function toggleGroup(name: string) {
     setCollapsedGroups((cur) => ({ ...cur, [name]: !cur[name] }));
@@ -1901,40 +1910,112 @@ export default function BuildWorkspace() {
       </button>
 
       {/* History right here in the rail, below New chat, always visible.
-          Grouped by the REAL name behind each project -- the actual repo
-          name it was pushed to, or the actual folder name connected on
-          this device -- never a generic "GitHub"/"Folder" label, matching
-          how a project picker names each container after the real project
-          it is. Each group collapses independently and has its own "+" to
-          start a new chat. */}
-      {(githubGroupMap.size > 0 || manualGroupMap.size > 0 || ungroupedProjects.length > 0) && (
+          Split into three top-level sections now (Learn/GitHub/Files), per
+          feedback -- previously GitHub and Files repo/folder groups sat
+          interleaved in one flat list with no way to tell at a glance
+          which was which. Within GitHub/Files, still grouped by the REAL
+          name behind each project -- the actual repo it was pushed to, or
+          the actual folder connected on this device -- never a generic
+          label. Each of those sub-groups still collapses independently
+          and has its own "+" to start a new chat; Learn is flat (a
+          learn-to-code session doesn't get its own repo/folder identity
+          the way a real build does, so there's nothing to sub-group by). */}
+      {(learnProjects.length > 0 || githubGroupMap.size > 0 || manualGroupMap.size > 0 || ungroupedProjects.length > 0) && (
         <div className="sidebar-scroll flex min-h-0 flex-1 flex-col overflow-y-auto">
-          {/* Plain rows, no group header -- only ever projects saved
-              before onboarding made naming mandatory. A header only ever
-              appears once a project actually has a real name. */}
-          {ungroupedProjects.length > 0 && <div className="space-y-0.5 pb-1">{ungroupedProjects.map(renderProjectRow)}</div>}
-
-          {[...githubGroupMap.entries(), ...manualGroupMap.entries()].map(([groupName, list]) => (
-            <div key={groupName} className="flex shrink-0 flex-col">
-              <div className="group/header flex items-center gap-1 rounded-lg px-1 py-1 hover:bg-surface-2">
-                <button
-                  onClick={() => toggleGroup(groupName)}
-                  className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1 text-left text-sm font-medium text-foreground"
-                >
-                  <span className={`shrink-0 transition-transform ${!collapsedGroups[groupName] ? "rotate-90" : ""}`}>{ChevronRightIcon}</span>
-                  <span className="truncate">{groupName}</span>
-                </button>
-                <button
-                  onClick={reset}
-                  aria-label={`New chat in ${groupName}`}
-                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted opacity-0 transition-colors hover:bg-border hover:text-foreground group-hover/header:opacity-100"
-                >
-                  {PlusTabIcon}
-                </button>
-              </div>
-              {!collapsedGroups[groupName] && <div className="space-y-0.5 pb-1">{list.map(renderProjectRow)}</div>}
+          {learnProjects.length > 0 && (
+            <div className="flex shrink-0 flex-col">
+              {/* Bigger now (text-xs, not -[11px]) and a real collapse
+                  chevron, same as the repo/folder sub-groups below --
+                  per feedback, these section labels should both read
+                  larger and be hideable, not just static text. */}
+              <button
+                onClick={() => toggleGroup("__section_learn")}
+                className="flex items-center gap-1.5 px-2 pb-1 pt-2 text-left text-xs font-semibold uppercase tracking-wide text-muted"
+              >
+                <span className={`shrink-0 transition-transform ${!collapsedGroups["__section_learn"] ? "rotate-90" : ""}`}>{ChevronRightIcon}</span>
+                Learn
+              </button>
+              {!collapsedGroups["__section_learn"] && <div className="space-y-0.5 pb-1">{learnProjects.map(renderProjectRow)}</div>}
             </div>
-          ))}
+          )}
+
+          {githubGroupMap.size > 0 && (
+            <div className="flex shrink-0 flex-col">
+              <button
+                onClick={() => toggleGroup("__section_github")}
+                className="flex items-center gap-1.5 px-2 pb-1 pt-2 text-left text-xs font-semibold uppercase tracking-wide text-muted"
+              >
+                <span className={`shrink-0 transition-transform ${!collapsedGroups["__section_github"] ? "rotate-90" : ""}`}>{ChevronRightIcon}</span>
+                GitHub
+              </button>
+              {!collapsedGroups["__section_github"] && (
+              <>
+              {[...githubGroupMap.entries()].map(([groupName, list]) => (
+                <div key={groupName} className="flex shrink-0 flex-col">
+                  <div className="group/header flex items-center gap-1 rounded-lg px-1 py-1 hover:bg-surface-2">
+                    <button
+                      onClick={() => toggleGroup(groupName)}
+                      className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1 text-left text-sm font-medium text-foreground"
+                    >
+                      <span className={`shrink-0 transition-transform ${!collapsedGroups[groupName] ? "rotate-90" : ""}`}>{ChevronRightIcon}</span>
+                      <span className="truncate">{groupName}</span>
+                    </button>
+                    <button
+                      onClick={reset}
+                      aria-label={`New chat in ${groupName}`}
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted opacity-0 transition-colors hover:bg-border hover:text-foreground group-hover/header:opacity-100"
+                    >
+                      {PlusTabIcon}
+                    </button>
+                  </div>
+                  {!collapsedGroups[groupName] && <div className="space-y-0.5 pb-1">{list.map(renderProjectRow)}</div>}
+                </div>
+              ))}
+              </>
+              )}
+            </div>
+          )}
+
+          {(manualGroupMap.size > 0 || ungroupedProjects.length > 0) && (
+            <div className="flex shrink-0 flex-col">
+              <button
+                onClick={() => toggleGroup("__section_files")}
+                className="flex items-center gap-1.5 px-2 pb-1 pt-2 text-left text-xs font-semibold uppercase tracking-wide text-muted"
+              >
+                <span className={`shrink-0 transition-transform ${!collapsedGroups["__section_files"] ? "rotate-90" : ""}`}>{ChevronRightIcon}</span>
+                Files
+              </button>
+              {!collapsedGroups["__section_files"] && (
+              <>
+              {/* Plain rows, no group header -- only ever projects saved
+                  before onboarding made naming mandatory. A header only
+                  ever appears once a project actually has a real name. */}
+              {ungroupedProjects.length > 0 && <div className="space-y-0.5 pb-1">{ungroupedProjects.map(renderProjectRow)}</div>}
+              {[...manualGroupMap.entries()].map(([groupName, list]) => (
+                <div key={groupName} className="flex shrink-0 flex-col">
+                  <div className="group/header flex items-center gap-1 rounded-lg px-1 py-1 hover:bg-surface-2">
+                    <button
+                      onClick={() => toggleGroup(groupName)}
+                      className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1 text-left text-sm font-medium text-foreground"
+                    >
+                      <span className={`shrink-0 transition-transform ${!collapsedGroups[groupName] ? "rotate-90" : ""}`}>{ChevronRightIcon}</span>
+                      <span className="truncate">{groupName}</span>
+                    </button>
+                    <button
+                      onClick={reset}
+                      aria-label={`New chat in ${groupName}`}
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted opacity-0 transition-colors hover:bg-border hover:text-foreground group-hover/header:opacity-100"
+                    >
+                      {PlusTabIcon}
+                    </button>
+                  </div>
+                  {!collapsedGroups[groupName] && <div className="space-y-0.5 pb-1">{list.map(renderProjectRow)}</div>}
+                </div>
+              ))}
+              </>
+              )}
+            </div>
+          )}
         </div>
       )}
 
