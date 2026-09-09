@@ -1975,8 +1975,7 @@ export default function BuildWorkspace() {
           state declarations' own comment): no fake Status/Environment/PR
           filters that would have nothing real behind them. */}
       {(learnProjects.length > 0 || historyEntries.length > 0) && (
-        <div className="relative flex items-center justify-between px-1 pt-1">
-          <span className="text-xs font-medium text-muted">History</span>
+        <div className="relative flex items-center justify-end px-1 pt-1">
           <button
             type="button"
             onClick={(e) => {
