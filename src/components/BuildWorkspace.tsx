@@ -147,9 +147,10 @@ function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
     // clip means nothing can ever visibly escape this card's rounded
     // corners even under some future edge case. Flat bg-surface-2 now
     // (not a two-tone gradient) -- per feedback, one solid color for the
-    // whole card. Tighter all around (px-4/pb-4/pt-3, not px-5/pb-6/pt-4).
-    <div className="w-full max-w-lg overflow-hidden rounded-xl border border-border bg-surface-2 px-4 pb-4 pt-3">
-      <div className="mb-3 flex items-center justify-between">
+    // whole card. Tighter all around, top especially (pt-2, not pt-4/-3
+    // before it) so "Overview" sits right near the card's top edge.
+    <div className="w-full max-w-lg overflow-hidden rounded-xl border border-border bg-surface-2 px-4 pb-4 pt-2">
+      <div className="mb-2.5 flex items-center justify-between">
         <div className="flex items-center gap-4">
           {(["overview", "models"] as const).map((v) => (
             <button
@@ -189,7 +190,7 @@ function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
         </p>
       ) : (
         <>
-      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-1 sm:grid-cols-4">
         {cells.map((c) => (
           // bg-white/[0.06] over the flat card background -- a plain
           // bg-surface here (the same token the card itself now uses)
