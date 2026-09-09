@@ -3,6 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
+import CodeMirror from "@uiw/react-codemirror";
+import { vscodeDark } from "@uiw/codemirror-theme-vscode";
+import { javascript } from "@codemirror/lang-javascript";
+import { EditorView } from "@codemirror/view";
 import { normalizeSpacing } from "@/lib/pdfMarkers";
 import remarkGfm from "remark-gfm";
 import BuildPreviewFrame from "@/components/BuildPreviewFrame";
@@ -226,6 +230,19 @@ const DEFAULT_PREVIEW_WIDTH = 460;
 // instead of leaving each other room. 420 is enough for both to coexist
 // plus a usable composer/message column beneath them.
 const MIN_CHAT_WIDTH = 420;
+
+// The command-confirmation dialog's code snippet used to render as plain
+// muted text -- same font/color as the surrounding paragraph, no different
+// from any other sentence. Real syntax highlighting (same VS Code theme the
+// Files panel's own CodeMirror already uses) makes it unmistakably "this is
+// code, read it carefully" before approving. Compact chrome (no gutter/line
+// numbers, small font) since this is a one-or-two-line snippet, not a file.
+const confirmationCodeChrome = EditorView.theme({
+  "&": { fontSize: "12.5px", backgroundColor: "transparent" },
+  ".cm-gutters": { display: "none" },
+  ".cm-content": { padding: "0" },
+  "&.cm-editor.cm-focused": { outline: "none" },
+});
 
 // Chat messages are the only place push/deploy results ever show up now
 // (no manual "Push"/"Deploy" buttons) -- linkify URLs so a "Deployed:
@@ -2276,8 +2293,14 @@ export default function BuildWorkspace() {
                       confirmation always showing the real thing about to
                       run, in its own monospace block. */}
                   {pendingConfirmation.code && (
-                    <div className="mt-2 overflow-x-auto rounded-lg bg-surface px-3 py-2 font-mono text-xs text-muted">
-                      {pendingConfirmation.code}
+                    <div className="mt-2 overflow-hidden rounded-lg bg-[#1e1e1e] px-3 py-2">
+                      <CodeMirror
+                        value={pendingConfirmation.code}
+                        theme={vscodeDark}
+                        extensions={[javascript(), confirmationCodeChrome, EditorView.lineWrapping]}
+                        editable={false}
+                        basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false }}
+                      />
                     </div>
                   )}
                   <div className="mt-3 flex flex-wrap justify-end gap-2">
