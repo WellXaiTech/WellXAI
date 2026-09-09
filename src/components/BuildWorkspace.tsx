@@ -2041,8 +2041,8 @@ export default function BuildWorkspace() {
                 onClick={() => toggleGroup("__section_learn")}
                 className="flex items-center gap-1.5 px-2 pb-1 pt-2 text-left text-xs font-semibold uppercase tracking-wide text-muted"
               >
+                <span>Learn</span>
                 <span className={`shrink-0 transition-transform ${!collapsedGroups["__section_learn"] ? "rotate-90" : ""}`}>{ChevronRightIcon}</span>
-                Learn
               </button>
               {!collapsedGroups["__section_learn"] && <div className="space-y-0.5 pb-1">{learnProjects.map(renderProjectRow)}</div>}
             </div>
@@ -2060,8 +2060,12 @@ export default function BuildWorkspace() {
                     onClick={() => toggleGroup(entry.name)}
                     className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1 text-left text-sm font-medium text-foreground"
                   >
+                    {/* Chevron trails the name now (not leads it) -- same
+                        "text first, arrow last" convention already used
+                        for the Progress panel's own step lines, per
+                        feedback that a leading arrow here was wrong. */}
+                    <span className="min-w-0 flex-1 truncate">{entry.name}</span>
                     <span className={`shrink-0 transition-transform ${!collapsedGroups[entry.name] ? "rotate-90" : ""}`}>{ChevronRightIcon}</span>
-                    <span className="truncate">{entry.name}</span>
                   </button>
                   <button
                     onClick={reset}
