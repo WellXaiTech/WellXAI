@@ -669,6 +669,11 @@ export default function BuildWorkspace() {
   // of Files/Terminal/Browse, same as those three are independent of each
   // other.
   const [progressPanelOpen, setProgressPanelOpen] = useState(false);
+  // Which Progress steps are showing their full text instead of the
+  // truncated first line -- a plain CSS ellipsis gave no hint a step could
+  // be expanded at all. The chevron (rotates open) matches this app's own
+  // "Ran N commands ›" collapsible-summary pattern elsewhere.
+  const [expandedProgressSteps, setExpandedProgressSteps] = useState<Set<number>>(new Set());
   const [progressWidth, setProgressWidth] = useState(380);
   const progressResizing = useRef(false);
   const progressPendingX = useRef<number | null>(null);
@@ -2840,15 +2845,36 @@ export default function BuildWorkspace() {
                   return <p className="text-sm text-muted">No steps yet -- they'll show up here as the chat goes.</p>;
                 }
                 return (
-                  <ol className="space-y-3">
+                  <ol className="space-y-1">
                     {steps.map((m, i) => {
                       const firstLine = m.content.split("\n").find((line) => line.trim().length > 0) ?? m.content;
+                      const isExpanded = expandedProgressSteps.has(i);
                       return (
-                        <li key={i} className="flex gap-2.5">
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[11px] font-semibold text-foreground">
-                            {i + 1}
-                          </span>
-                          <p className="min-w-0 flex-1 truncate text-sm text-foreground">{firstLine}</p>
+                        <li key={i}>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedProgressSteps((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(i)) next.delete(i);
+                                else next.add(i);
+                                return next;
+                              })
+                            }
+                            className="flex w-full items-start gap-2.5 rounded-lg px-1 py-1.5 text-left transition-colors hover:bg-surface-2"
+                          >
+                            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[11px] font-semibold text-foreground">
+                              {i + 1}
+                            </span>
+                            <p className={`min-w-0 flex-1 text-sm text-foreground ${isExpanded ? "whitespace-pre-wrap" : "truncate"}`}>
+                              {isExpanded ? m.content : firstLine}
+                            </p>
+                            <span
+                              className={`mt-1 shrink-0 text-muted transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                            >
+                              {ChevronRightIcon}
+                            </span>
+                          </button>
                         </li>
                       );
                     })}
