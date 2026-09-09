@@ -149,7 +149,11 @@ function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
     // (not a two-tone gradient) -- per feedback, one solid color for the
     // whole card. Tighter all around, top especially (pt-2, not pt-4/-3
     // before it) so "Overview" sits right near the card's top edge.
-    <div className="w-full max-w-lg overflow-hidden rounded-xl border border-border bg-surface-2 px-4 pb-4 pt-2">
+    // Wider (max-w-xl, was -lg) and less side padding (px-3, was px-4) --
+    // per feedback, the card itself should extend further out, and the
+    // stat boxes inside it should stretch closer to its edges rather than
+    // leaving a visible margin of bare background on each side.
+    <div className="w-full max-w-xl overflow-hidden rounded-xl border border-border bg-surface-2 px-3 pb-4 pt-2">
       <div className="mb-2.5 flex items-center justify-between">
         <div className="flex items-center gap-4">
           {(["overview", "models"] as const).map((v) => (
