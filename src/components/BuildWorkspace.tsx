@@ -1404,6 +1404,29 @@ export default function BuildWorkspace() {
   // "Files" section -- named-but-not-GitHub, or not named at all.
   const manualGroupMap = groupByName(sortedProjects.filter((p) => !p.githubRepoUrl && p.manualGroupName && !isLearnProject(p)));
   const ungroupedProjects = sortedProjects.filter((p) => !p.githubRepoUrl && !p.manualGroupName && !isLearnProject(p));
+  // A plain row and a named group used to render as two separate blocks
+  // (every ungrouped row, THEN every group), so a group's most recent
+  // activity never actually placed it among the rows around that time --
+  // it always sank to the bottom regardless of how recently it was
+  // touched. This walks sortedProjects (already recency-order) once,
+  // emitting each group the first time one of its projects is reached and
+  // skipping the rest of that group's projects after, so rows and groups
+  // interleave by real recency instead of being two disconnected blocks.
+  const filesEntries: ({ kind: "row"; project: BuildProject } | { kind: "group"; name: string; list: BuildProject[] })[] = [];
+  {
+    const seenGroups = new Set<string>();
+    for (const p of sortedProjects) {
+      if (p.githubRepoUrl || isLearnProject(p)) continue;
+      if (!p.manualGroupName) {
+        filesEntries.push({ kind: "row", project: p });
+        continue;
+      }
+      const name = [...manualGroupMap.keys()].find((k) => manualGroupMap.get(k)!.includes(p))!;
+      if (seenGroups.has(name)) continue;
+      seenGroups.add(name);
+      filesEntries.push({ kind: "group", name, list: manualGroupMap.get(name)! });
+    }
+  }
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   function toggleGroup(name: string) {
     setCollapsedGroups((cur) => ({ ...cur, [name]: !cur[name] }));
@@ -1976,7 +1999,7 @@ export default function BuildWorkspace() {
             </div>
           )}
 
-          {(manualGroupMap.size > 0 || ungroupedProjects.length > 0) && (
+          {filesEntries.length > 0 && (
             <div className="flex shrink-0 flex-col">
               <button
                 onClick={() => toggleGroup("__section_files")}
@@ -1985,35 +2008,36 @@ export default function BuildWorkspace() {
                 <span className={`shrink-0 transition-transform ${!collapsedGroups["__section_files"] ? "rotate-90" : ""}`}>{ChevronRightIcon}</span>
                 Files
               </button>
-              {!collapsedGroups["__section_files"] && (
-              <>
-              {/* Plain rows, no group header -- only ever projects saved
-                  before onboarding made naming mandatory. A header only
-                  ever appears once a project actually has a real name. */}
-              {ungroupedProjects.length > 0 && <div className="space-y-0.5 pb-1">{ungroupedProjects.map(renderProjectRow)}</div>}
-              {[...manualGroupMap.entries()].map(([groupName, list]) => (
-                <div key={groupName} className="flex shrink-0 flex-col">
-                  <div className="group/header flex items-center gap-1 rounded-lg px-1 py-1 hover:bg-surface-2">
-                    <button
-                      onClick={() => toggleGroup(groupName)}
-                      className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1 text-left text-sm font-medium text-foreground"
-                    >
-                      <span className={`shrink-0 transition-transform ${!collapsedGroups[groupName] ? "rotate-90" : ""}`}>{ChevronRightIcon}</span>
-                      <span className="truncate">{groupName}</span>
-                    </button>
-                    <button
-                      onClick={reset}
-                      aria-label={`New chat in ${groupName}`}
-                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted opacity-0 transition-colors hover:bg-border hover:text-foreground group-hover/header:opacity-100"
-                    >
-                      {PlusTabIcon}
-                    </button>
-                  </div>
-                  {!collapsedGroups[groupName] && <div className="space-y-0.5 pb-1">{list.map(renderProjectRow)}</div>}
-                </div>
-              ))}
-              </>
-              )}
+              {!collapsedGroups["__section_files"] &&
+                filesEntries.map((entry) =>
+                  entry.kind === "row" ? (
+                    <div key={entry.project.id} className="space-y-0.5 pb-1">
+                      {renderProjectRow(entry.project)}
+                    </div>
+                  ) : (
+                    <div key={entry.name} className="flex shrink-0 flex-col">
+                      <div className="group/header flex items-center gap-1 rounded-lg px-1 py-1 hover:bg-surface-2">
+                        <button
+                          onClick={() => toggleGroup(entry.name)}
+                          className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1 text-left text-sm font-medium text-foreground"
+                        >
+                          <span className={`shrink-0 transition-transform ${!collapsedGroups[entry.name] ? "rotate-90" : ""}`}>
+                            {ChevronRightIcon}
+                          </span>
+                          <span className="truncate">{entry.name}</span>
+                        </button>
+                        <button
+                          onClick={reset}
+                          aria-label={`New chat in ${entry.name}`}
+                          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted opacity-0 transition-colors hover:bg-border hover:text-foreground group-hover/header:opacity-100"
+                        >
+                          {PlusTabIcon}
+                        </button>
+                      </div>
+                      {!collapsedGroups[entry.name] && <div className="space-y-0.5 pb-1">{entry.list.map(renderProjectRow)}</div>}
+                    </div>
+                  )
+                )}
             </div>
           )}
         </div>
