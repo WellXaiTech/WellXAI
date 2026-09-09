@@ -6,6 +6,11 @@ import type { Attachment } from "@/lib/attachments";
 import TypingPlaceholder from "@/components/TypingPlaceholder";
 import { openExternalQuery } from "@/lib/addressBar";
 
+// The composer scrolls internally past this height rather than continuing
+// to grow -- otherwise a very long pasted message could push the send
+// button (and, on the hero composer, everything below it) off-screen.
+const MAX_COMPOSER_HEIGHT = 240;
+
 export type ComposerTool =
   | "web_search"
   | "deep_research"
@@ -277,7 +282,7 @@ export default function ChatComposer({
   onSubmit: (e: React.FormEvent) => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const messageInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuPanelRef = useRef<HTMLDivElement>(null);
   const toolMenuRef = useRef<HTMLDivElement>(null);
@@ -309,6 +314,20 @@ export default function ChatComposer({
     if (isHero) messageInputRef.current?.focus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Grows the composer upward as the message wraps to more lines, instead
+  // of staying a single fixed-height row and just scrolling long text
+  // sideways inside it (a plain <input> can't wrap at all, which is what
+  // this replaced). Re-measured on every keystroke: reset to "auto" first
+  // so a shrinking message (e.g. after deleting a line) actually shrinks
+  // back down, not just grows -- scrollHeight alone never reports a
+  // smaller number than whatever height is already set.
+  useEffect(() => {
+    const el = messageInputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, MAX_COMPOSER_HEIGHT)}px`;
+  }, [value]);
 
   // Dropdowns are portaled to document.body with position:fixed, anchored to
   // the WHOLE composer wrapper (not the trigger button) — portaling escapes a
@@ -731,13 +750,29 @@ export default function ChatComposer({
       {fileInputEl}
 
       <div className="relative w-full">
-        <input
+        <textarea
           ref={messageInputRef}
           value={value}
           onChange={(e) => onValueChange(e.target.value)}
+          onKeyDown={(e) => {
+            // Enter sends, same as the <input> this replaced -- Shift+Enter
+            // (or any IME composition, e.g. typing in Japanese/Chinese)
+            // still inserts a real newline instead, which a plain <input>
+            // could never do at all. Calls the same onSubmit the Send
+            // button's own type="submit" triggers, directly -- rather than
+            // form.requestSubmit(), which (at least in some embedded/
+            // automated contexts) can dispatch a submit event that never
+            // actually reaches this form's onSubmit handler.
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              onSubmit(e as unknown as React.FormEvent);
+            }
+          }}
           placeholder={isHero ? undefined : disabled ? "ChatGiZa is typing…" : "Ask anything"}
           autoComplete="off"
-          className="w-full bg-transparent px-1 py-1 text-sm text-foreground outline-none"
+          rows={1}
+          style={{ maxHeight: MAX_COMPOSER_HEIGHT }}
+          className="w-full resize-none overflow-y-auto bg-transparent px-1 py-1 text-sm text-foreground outline-none"
         />
         {isHero && !value && (
           <div className="pointer-events-none absolute inset-0 flex items-center px-1 text-sm font-bold text-muted">
