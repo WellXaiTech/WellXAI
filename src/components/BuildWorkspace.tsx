@@ -153,16 +153,20 @@ function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
   const multiplier = tokensUsed ? Math.round(tokensUsed / PRIDE_AND_PREJUDICE_TOKENS) : null;
 
   // Every backend Build can route a turn to (see promptShared.ts's
-  // MODELS -- OpenAI, DeepSeek, or the Anthropic last resort) shows under
-  // one brand name, same as the model picker in the composer -- which
-  // actual API served a given turn is an internal implementation detail,
-  // not something to surface to users. Grouping happens right here, by
-  // label, so backends never appear as separate rows even though
-  // tokenUsage.ts still tracks them separately server-side.
+  // MODELS) shows under a brand name, same as the composer's own model
+  // picker -- which actual API served a turn is an internal detail, not
+  // something to surface to users. Two brand tiers, not one: the primary
+  // and DeepSeek fallback are interchangeable day-to-day capability, so
+  // both read as "GiZa 5.6"; the Anthropic last resort (reached only when
+  // both of those are down) is the meaningfully bigger/rarer model, so it
+  // gets its own "GiZa 6" tier -- per feedback, matching how the
+  // reference split its own two rows by real capability tier, not by
+  // vendor. Grouping happens right here, by label; tokenUsage.ts still
+  // tracks the three backends separately underneath.
   const MODEL_LABELS: Record<string, string> = {
     "gpt-5.5": "GiZa 5.6",
     "deepseek-chat": "GiZa 5.6",
-    "claude-opus-5": "GiZa 5.6",
+    "claude-opus-5": "GiZa 6",
   };
   const dayTotals = (modelHistory ?? []).map((d) =>
     Object.values(d.models).reduce((sum, m) => sum + m.in + m.out, 0)
