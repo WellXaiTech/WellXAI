@@ -2750,7 +2750,16 @@ export default function BuildWorkspace() {
                   combined content set a hard floor under chat's real width
                   well above what MIN_CHAT_WIDTH claimed, letting a
                   side panel get dragged wide enough to overflow anyway. */}
-              <div className="flex flex-wrap items-center justify-between gap-1 px-1 pt-1.5">
+              {/* relative -- the usage popup (nested a couple levels down,
+                  in the GiZa 5.6/High/ring cluster) anchors to THIS row,
+                  not the composer box above it -- they're siblings, not
+                  parent/child, which is exactly why an earlier attempt to
+                  make the box itself the anchor did nothing: the popup
+                  was never a descendant of it in the first place. This
+                  row sits at (almost) the same horizontal extent as the
+                  box above it, so left-0/right-0 here still reads as
+                  "covers the composer", not a coincidence. */}
+              <div className="relative flex flex-wrap items-center justify-between gap-1 px-1 pt-1.5">
                 <div className="flex items-center gap-1">
                   {/* Was a plain static "Auto" label that didn't do
                       anything -- now a real Mode selector wired to the
@@ -2897,7 +2906,7 @@ export default function BuildWorkspace() {
                     {MicIcon}
                   </button>
                 </div>
-                <div className="relative">
+                <div>
                   {/* "GiZa 5.6" and "High" are plain, inert labels now --
                       confirmed the popup opening from either of them read
                       as "clicking does the same one thing everywhere", so
@@ -2906,10 +2915,14 @@ export default function BuildWorkspace() {
                       on click, as requested. No "·" separator between
                       them, and a wider gap before the ring specifically
                       (gap-3 on the row, versus gap-1.5 within each label)
-                      so the ring reads as its own separate thing. */}
-                  <div className="flex items-center gap-3 rounded-full px-2 py-1 text-xs font-medium text-muted">
-                    <span>GiZa 5.6</span>
-                    <span>High</span>
+                      so the ring reads as its own separate thing. Each of
+                      the three (GiZa 5.6, High, the ring) gets its own
+                      separate hover background now, not one shared pill
+                      spanning all three -- per feedback, hovering one
+                      shouldn't highlight the others too. */}
+                  <div className="flex items-center gap-3 text-xs font-medium text-muted">
+                    <span className="rounded-md px-2 py-1 transition-colors hover:bg-surface-2">GiZa 5.6</span>
+                    <span className="rounded-md px-2 py-1 transition-colors hover:bg-surface-2">High</span>
                     {/* A real ring (SVG circle stroke, hollow center --
                         not a filled Tailwind dot, which a previous version
                         of this used and which the user correctly pointed
@@ -2931,7 +2944,7 @@ export default function BuildWorkspace() {
                         setModelInfoOpen((v) => !v);
                       }}
                       aria-label="Usage"
-                      className="flex shrink-0 items-center justify-center rounded-full transition-colors hover:text-foreground"
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-surface-2 hover:text-foreground"
                     >
                       <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                         <circle
@@ -2945,10 +2958,17 @@ export default function BuildWorkspace() {
                     </button>
                   </div>
                   {modelInfoOpen && (
-                    // Wider and a touch taller (w-96/p-4, was w-80/p-3) and
-                    // a specific dark shade (#20201F, not the --surface
-                    // token) -- per feedback, matching the reference
-                    // popup's own size and background more closely.
+                    // Back to its original size (w-96, anchored right) --
+                    // per feedback, it shouldn't stretch to fill the whole
+                    // composer, just cleanly cover whatever part of it
+                    // actually sits underneath. right-0 now correctly
+                    // resolves against THIS row (which just gained
+                    // `relative` above) instead of falling through to the
+                    // viewport -- the real bug earlier wasn't the width,
+                    // it was that this popup was never a descendant of the
+                    // composer box it was trying to anchor to, so it had
+                    // no correct positioned ancestor at all. A specific
+                    // dark shade (#20201F, not the --surface token).
                     <div
                       onClick={(e) => e.stopPropagation()}
                       className="absolute bottom-full right-0 z-20 mb-2 w-96 rounded-xl border border-border bg-[#20201F] p-4 text-xs shadow-lg"
