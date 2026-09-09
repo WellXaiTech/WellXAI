@@ -698,6 +698,16 @@ const ChevronRightIcon = (
     <path d="m9 6 6 6-6 6" />
   </svg>
 );
+// History's Sort by/Group by trigger -- same "arrows pointing opposite
+// ways" shape as the reference's own sort icon.
+const SortIcon = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m21 16-4 4-4-4" />
+    <path d="M17 20V4" />
+    <path d="m3 8 4-4 4 4" />
+    <path d="M7 4v16" />
+  </svg>
+);
 const MinimizeIcon = (
   <svg width="14" height="14" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
     <path d="M28 6h14v14m0 9.474V39a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3h9m7.8 16.2L41.1 6.9" />
@@ -1347,11 +1357,20 @@ export default function BuildWorkspace() {
   const activeGroupName = activeProject?.githubRepoUrl
     ? activeProject.githubRepoUrl.split("/").filter(Boolean).pop()
     : activeProject?.manualGroupName;
-  // Pinned projects float to the top (like a pinned chat/email), then
-  // everything else by most-recently-active.
+  // Real Sort by / Group by controls (see the small icon button above
+  // History) -- only two options each, because that's genuinely all the
+  // data supports. No "Date created" (never tracked, only lastActivity)
+  // and no "Status"/"Environment"/"PR status" filters like the reference
+  // menu had -- none of those concepts exist anywhere in this app's
+  // project data, so offering them would mean fake options with nothing
+  // real behind them.
+  const [historySortBy, setHistorySortBy] = useState<"activity" | "name">("activity");
+  const [historyGroupBy, setHistoryGroupBy] = useState<"folder" | "none">("folder");
+  // Pinned projects float to the top (like a pinned chat/email) regardless
+  // of sort choice, then everything else by the chosen sort.
   const sortedProjects = [...projects].sort((a, b) => {
     if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
-    return b.lastActivity - a.lastActivity;
+    return historySortBy === "name" ? a.name.localeCompare(b.name) : b.lastActivity - a.lastActivity;
   });
   // Groups are labeled with the REAL name the user gave -- the actual repo
   // name a GitHub-linked project pushed to, or the actual folder name
@@ -1421,7 +1440,10 @@ export default function BuildWorkspace() {
     const seenGroups = new Set<string>();
     for (const p of sortedProjects) {
       if (isLearnProject(p)) continue;
-      if (!p.githubRepoUrl && !p.manualGroupName) {
+      // "Group by: None" -- every project is its own flat row, real repo/
+      // folder groups included, since that's literally what "no grouping"
+      // means; still respects whatever Sort by is currently chosen.
+      if (historyGroupBy === "none" || (!p.githubRepoUrl && !p.manualGroupName)) {
         historyEntries.push({ kind: "row", project: p });
         continue;
       }
@@ -1436,6 +1458,7 @@ export default function BuildWorkspace() {
   function toggleGroup(name: string) {
     setCollapsedGroups((cur) => ({ ...cur, [name]: !cur[name] }));
   }
+  const [historyMenuOpen, setHistoryMenuOpen] = useState(false);
   const [historyMenuId, setHistoryMenuId] = useState<string | null>(null);
   // One row inside a History group (either a repo-name group or the
   // folder group) -- shared so neither renders its own copy of this markup.
@@ -1770,6 +1793,15 @@ export default function BuildWorkspace() {
     return () => window.removeEventListener("click", onClick);
   }, [attachMenuOpen]);
 
+  useEffect(() => {
+    if (!historyMenuOpen) return;
+    function onClick() {
+      setHistoryMenuOpen(false);
+    }
+    window.addEventListener("click", onClick);
+    return () => window.removeEventListener("click", onClick);
+  }, [historyMenuOpen]);
+
   // Fetched fresh on every open -- a peek, not a consuming request, so
   // just looking at this popover never itself counts toward either
   // window.
@@ -1936,6 +1968,58 @@ export default function BuildWorkspace() {
         <span className="flex h-5 w-5 shrink-0 items-center justify-center">{LearnIcon}</span>
         Learn to code
       </button>
+
+      {/* Sort by / Group by for History below -- same idea as the
+          reference menu's sort icon, cut down to only the two controls
+          this app's project data can actually back for real (see the
+          state declarations' own comment): no fake Status/Environment/PR
+          filters that would have nothing real behind them. */}
+      {(learnProjects.length > 0 || historyEntries.length > 0) && (
+        <div className="relative flex items-center justify-between px-1 pt-1">
+          <span className="text-xs font-medium text-muted">History</span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setHistoryMenuOpen((v) => !v);
+            }}
+            aria-label="Sort and group history"
+            className="flex h-6 w-6 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+          >
+            {SortIcon}
+          </button>
+          {historyMenuOpen && (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="absolute right-0 top-full z-20 mt-1 w-48 overflow-hidden rounded-xl border border-border bg-surface p-1 shadow-lg"
+            >
+              <p className="px-3 pb-1 pt-2 text-[11px] font-medium text-muted">Sort by</p>
+              {(["activity", "name"] as const).map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => setHistorySortBy(opt)}
+                  className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-surface-2"
+                >
+                  {opt === "activity" ? "Last activity" : "Name"}
+                  {historySortBy === opt && <span className="text-blue-500">✓</span>}
+                </button>
+              ))}
+              <div className="my-1 border-t border-border" />
+              <p className="px-3 pb-1 pt-1 text-[11px] font-medium text-muted">Group by</p>
+              {(["folder", "none"] as const).map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => setHistoryGroupBy(opt)}
+                  className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-surface-2"
+                >
+                  {opt === "folder" ? "Folder" : "None"}
+                  {historyGroupBy === opt && <span className="text-blue-500">✓</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* History right here in the rail, below New chat, always visible.
           Learn keeps its own generic section label (a learn-to-code
