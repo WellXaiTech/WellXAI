@@ -1255,6 +1255,21 @@ export default function BuildWorkspace() {
   const [onboardBusy, setOnboardBusy] = useState<"github" | "folder" | null>(null);
   const pendingSubmitRef = useRef<{ text: string; images: { dataUrl: string; name: string }[] } | null>(null);
   const folderSupported = typeof window !== "undefined" && "showDirectoryPicker" in window;
+  // Closes on ANY click outside the card -- the backdrop itself, or
+  // something else entirely like a History row in the rail (which isn't
+  // even inside this modal's own DOM subtree). Previously nothing closed
+  // this short of a full page refresh, per feedback.
+  const onboardCardRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!onboardOpen) return;
+    function onClick(e: MouseEvent) {
+      if (onboardCardRef.current && !onboardCardRef.current.contains(e.target as Node)) {
+        setOnboardOpen(false);
+      }
+    }
+    window.addEventListener("mousedown", onClick);
+    return () => window.removeEventListener("mousedown", onClick);
+  }, [onboardOpen]);
 
   function runPendingSubmit() {
     const pending = pendingSubmitRef.current;
@@ -2199,6 +2214,118 @@ export default function BuildWorkspace() {
     );
   }
 
+  // Anchored to the composer's own form (which gets `relative` added below)
+  // via `absolute bottom-full`, not a viewport-fixed overlay -- that's what
+  // guarantees the card's left/right edges land exactly on the chatbox's
+  // own edges and its bottom edge sits right against the chatbox's top
+  // edge, on any window width and in both the "returning user" and
+  // "first-time user" composer layouts, instead of us having to hand-copy
+  // the composer's own max-width/centering/bottom-offset into a second,
+  // separate fixed-position box that can drift out of sync with it.
+  const onboardingCard = onboardOpen && (
+    // Wider than a typical small modal. Redrawn as a plain list of
+    // full-width rows (a single hairline between them, via divide-y)
+    // instead of three separately bordered, separately colored boxes --
+    // that read as a form; this reads as one clean menu, monochrome
+    // throughout like the rest of the app, each row's own icon circle the
+    // only real ink change and pressed for its whole width, not just a
+    // small button inside it.
+    <div
+      // No darkening tint and no blur -- per feedback, the page behind
+      // (including History in the rail) should look completely normal and
+      // clearly readable, not dimmed or blurred.
+      className="absolute inset-x-0 bottom-full z-50 pb-2"
+      role="alertdialog"
+      aria-modal="true"
+    >
+      <div
+        ref={onboardCardRef}
+        className="w-full rounded-2xl border border-border bg-[#20201F] p-2 shadow-2xl ring-1 ring-white/[0.04]"
+      >
+        <p className="px-3 pb-2 pt-3 text-base font-semibold text-foreground">Where should this project live?</p>
+        {manualGroupMap.size > 0 && (
+          <>
+            <p className="px-3 pb-1 text-xs font-medium text-muted">Continue an existing project</p>
+            <div className="divide-y divide-border">
+              {Array.from(manualGroupMap.keys()).map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => handleOnboardExisting(name)}
+                  className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-2"
+                >
+                  {/* No circle background here anymore, per feedback --
+                      plain icon only, same glyph as History's own group
+                      headers use. */}
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-foreground">{ExistingFolderIcon}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{name}</span>
+                  <span className="shrink-0 text-muted">{ChevronRightIcon}</span>
+                </button>
+              ))}
+            </div>
+            <p className="px-3 pb-1 pt-3 text-xs font-medium text-muted">Or start something new</p>
+          </>
+        )}
+        <div className="divide-y divide-border">
+          <button
+            type="button"
+            onClick={handleOnboardGithub}
+            disabled={onboardBusy !== null}
+            className="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-surface-2 disabled:opacity-60"
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-foreground">{GitHubGlyphIcon}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium text-foreground">
+                {onboardBusy === "github" ? "Connecting…" : "Connect GitHub"}
+              </span>
+              <span className="block text-xs text-muted">Saves to a real repository as you build</span>
+            </span>
+            <span className="shrink-0 text-muted">{ChevronRightIcon}</span>
+          </button>
+          {folderSupported && (
+            <button
+              type="button"
+              onClick={handleOnboardFolder}
+              disabled={onboardBusy !== null}
+              className="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-surface-2 disabled:opacity-60"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-foreground">{ExistingFolderIcon}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium text-foreground">
+                  {onboardBusy === "folder" ? "Choosing…" : "Choose a folder on this device"}
+                </span>
+                <span className="block text-xs text-muted">Every file gets written there too as it's built</span>
+              </span>
+              <span className="shrink-0 text-muted">{ChevronRightIcon}</span>
+            </button>
+          )}
+          <div className="flex w-full items-center gap-3 px-3 py-2">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-foreground">{NamePencilIcon}</span>
+            <input
+              autoFocus
+              value={onboardNameInput}
+              onChange={(e) => setOnboardNameInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleOnboardName();
+              }}
+              placeholder="Or just give it a name -- e.g. Bakery landing page"
+              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted"
+            />
+            <button
+              type="button"
+              disabled={!onboardNameInput.trim()}
+              onClick={handleOnboardName}
+              aria-label="Continue"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-30"
+            >
+              {ChevronRightIcon}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   if (!started) {
     return (
       <>
@@ -2220,7 +2347,8 @@ export default function BuildWorkspace() {
                 <BuildStatsCard projects={projects} />
               </div>
             </div>
-            <form onSubmit={onSubmit} className="pb-6 pt-2">
+            <form onSubmit={onSubmit} className="relative pb-6 pt-2">
+              {onboardingCard}
               {/* py-2, not py-3 -- shorter box per feedback. The send
                   button is bare now (no blue fill), just the icon in
                   --muted/--foreground like the rest of the app's icon
@@ -2289,7 +2417,8 @@ export default function BuildWorkspace() {
                 <span className="text-sm font-medium text-foreground">Learn to code</span>
               </button>
             </div>
-            <form onSubmit={onSubmit} className="mt-4 w-full">
+            <form onSubmit={onSubmit} className="relative mt-4 w-full">
+              {onboardingCard}
               <div className="relative flex items-center gap-2 rounded-2xl border border-composer-border bg-composer px-4 py-2 shadow-sm">
                 <input
                   autoFocus
@@ -2318,107 +2447,6 @@ export default function BuildWorkspace() {
       </div>
       {languageOpen && (
         <LanguagePanel language={language} onSelect={setLanguage} onClose={() => setLanguageOpen(false)} />
-      )}
-      {onboardOpen && (
-        // Wider than a typical small modal and anchored near the bottom of
-        // the screen, right above the composer. Redrawn as a plain list of
-        // full-width rows (a single hairline between them, via divide-y)
-        // instead of three separately bordered, separately colored boxes
-        // -- that read as a form; this reads as one clean menu, monochrome
-        // throughout like the rest of the app, each row's own icon circle
-        // the only real ink change and pressed for its whole width, not
-        // just a small button inside it.
-        <div
-          // No darkening tint and no blur now, per feedback -- the page
-          // behind (including History in the rail) should look completely
-          // normal and clearly readable, not dimmed or blurred.
-          className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:p-6"
-          role="alertdialog"
-          aria-modal="true"
-        >
-          <div className="w-full max-w-2xl rounded-2xl border border-border bg-[#20201F] p-2 shadow-2xl ring-1 ring-white/[0.04]">
-            <p className="px-3 pb-2 pt-3 text-base font-semibold text-foreground">Where should this project live?</p>
-            {manualGroupMap.size > 0 && (
-              <>
-                <p className="px-3 pb-1 text-xs font-medium text-muted">Continue an existing project</p>
-                <div className="divide-y divide-border">
-                  {Array.from(manualGroupMap.keys()).map((name) => (
-                    <button
-                      key={name}
-                      type="button"
-                      onClick={() => handleOnboardExisting(name)}
-                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-2"
-                    >
-                      {/* No circle background here anymore, per feedback --
-                          plain icon only, same glyph as History's own
-                          group headers use. */}
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center text-foreground">{ExistingFolderIcon}</span>
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{name}</span>
-                      <span className="shrink-0 text-muted">{ChevronRightIcon}</span>
-                    </button>
-                  ))}
-                </div>
-                <p className="px-3 pb-1 pt-3 text-xs font-medium text-muted">Or start something new</p>
-              </>
-            )}
-            <div className="divide-y divide-border">
-              <button
-                type="button"
-                onClick={handleOnboardGithub}
-                disabled={onboardBusy !== null}
-                className="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-surface-2 disabled:opacity-60"
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-foreground">{GitHubGlyphIcon}</span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium text-foreground">
-                    {onboardBusy === "github" ? "Connecting…" : "Connect GitHub"}
-                  </span>
-                  <span className="block text-xs text-muted">Saves to a real repository as you build</span>
-                </span>
-                <span className="shrink-0 text-muted">{ChevronRightIcon}</span>
-              </button>
-              {folderSupported && (
-                <button
-                  type="button"
-                  onClick={handleOnboardFolder}
-                  disabled={onboardBusy !== null}
-                  className="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-surface-2 disabled:opacity-60"
-                >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-foreground">{ExistingFolderIcon}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium text-foreground">
-                      {onboardBusy === "folder" ? "Choosing…" : "Choose a folder on this device"}
-                    </span>
-                    <span className="block text-xs text-muted">Every file gets written there too as it's built</span>
-                  </span>
-                  <span className="shrink-0 text-muted">{ChevronRightIcon}</span>
-                </button>
-              )}
-              <div className="flex w-full items-center gap-3 px-3 py-2">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-foreground">{NamePencilIcon}</span>
-                <input
-                  autoFocus
-                  value={onboardNameInput}
-                  onChange={(e) => setOnboardNameInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleOnboardName();
-                  }}
-                  placeholder="Or just give it a name -- e.g. Bakery landing page"
-                  className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted"
-                />
-                <button
-                  type="button"
-                  disabled={!onboardNameInput.trim()}
-                  onClick={handleOnboardName}
-                  aria-label="Continue"
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-30"
-                >
-                  {ChevronRightIcon}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
       )}
       </>
     );
