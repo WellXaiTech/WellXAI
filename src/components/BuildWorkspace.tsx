@@ -2448,10 +2448,8 @@ export default function BuildWorkspace() {
               )}
               {/* One rounded box, not an input + a separate "Send" button
                   beside it -- the send icon sits inside the box's own right
-                  edge, same shape as the empty-state composer. A lighter
-                  surface (not the near-black composer color) so the box
-                  itself is visibly distinct from the black chat behind it. */}
-              <div className="flex items-end gap-2 rounded-2xl border border-composer-border bg-background px-4 py-2 shadow-sm">
+                  edge, same shape as the empty-state composer. */}
+              <div className="flex items-end gap-2 rounded-2xl border border-composer-border bg-[#20201F] px-4 py-2 shadow-sm">
                 <textarea
                   ref={messageInputRef}
                   value={input}
