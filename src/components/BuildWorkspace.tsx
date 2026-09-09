@@ -233,6 +233,11 @@ const DEFAULT_PREVIEW_WIDTH = 460;
 // small, not stopped this far short of the screen's actual edge.
 const MIN_CHAT_WIDTH = 240;
 
+// Same cap as the main ChatComposer's auto-growing textarea -- scrolls
+// internally past this height instead of pushing the send button (and the
+// Auto/model row below it) off the bottom of a short panel.
+const MAX_COMPOSER_HEIGHT = 240;
+
 // The command-confirmation dialog's code snippet used to render as plain
 // muted text -- same font/color as the surrounding paragraph, no different
 // from any other sentence. Real syntax highlighting (same VS Code theme the
@@ -612,6 +617,17 @@ export default function BuildWorkspace() {
   const [input, setInput] = useState("");
   const inputRef = useRef(input);
   inputRef.current = input;
+  const messageInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Grows the composer upward as the message wraps to more lines, same
+  // behavior as the main ChatComposer -- reset to "auto" first so a
+  // shrinking message actually shrinks back down too, not just grows.
+  useEffect(() => {
+    const el = messageInputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, MAX_COMPOSER_HEIGHT)}px`;
+  }, [input]);
   const [attachedImages, setAttachedImages] = useState<{ dataUrl: string; name: string }[]>([]);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -2432,12 +2448,27 @@ export default function BuildWorkspace() {
                   edge, same shape as the empty-state composer. A lighter
                   surface (not the near-black composer color) so the box
                   itself is visibly distinct from the black chat behind it. */}
-              <div className="flex items-center gap-2 rounded-2xl border border-composer-border bg-background px-4 py-2 shadow-sm">
-                <input
+              <div className="flex items-end gap-2 rounded-2xl border border-composer-border bg-background px-4 py-2 shadow-sm">
+                <textarea
+                  ref={messageInputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    // Enter sends, Shift+Enter inserts a real newline -- a
+                    // textarea doesn't auto-submit its form on Enter the
+                    // way the plain <input> this replaced did, so this has
+                    // to call the same onSubmit the Send button triggers,
+                    // directly (not form.requestSubmit(), which doesn't
+                    // reliably reach this form's onSubmit in every context).
+                    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                      e.preventDefault();
+                      onSubmit(e as unknown as React.FormEvent);
+                    }
+                  }}
                   placeholder="Ask for a change…"
-                  className="flex-1 bg-transparent text-sm outline-none"
+                  rows={1}
+                  style={{ maxHeight: MAX_COMPOSER_HEIGHT }}
+                  className="flex-1 resize-none overflow-y-auto bg-transparent py-1 text-sm outline-none"
                 />
                 <button
                   type={sending ? "button" : "submit"}
