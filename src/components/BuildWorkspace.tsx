@@ -2033,9 +2033,15 @@ export default function BuildWorkspace() {
           groups and plain ungrouped rows now interleave directly by
           recency (historyEntries, computed above) instead of sitting in
           separate blocks. */}
-      {(learnProjects.length > 0 || historyEntries.length > 0) && (
+      {historyEntries.length > 0 && (
         <div className="sidebar-scroll flex min-h-0 flex-1 flex-col overflow-y-auto">
-          {learnProjects.length > 0 && (
+          {/* Learn only shows once a real GitHub repo or named folder
+              exists elsewhere in History -- per feedback, a brand-new
+              account with nothing but tutorial sessions shouldn't have
+              Learn sitting there as if it were real project history;
+              hidden entirely (not just deprioritized) until historyEntries
+              has something real in it. */}
+          {learnProjects.length > 0 && historyEntries.length > 0 && (
             <div className="flex shrink-0 flex-col">
               <button
                 onClick={() => toggleGroup("__section_learn")}
