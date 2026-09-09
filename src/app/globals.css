@@ -751,6 +751,29 @@ textarea::placeholder {
   padding: 0.75em 1em;
   overflow-x: auto;
   margin: 0 0 0.75em;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* Without this, a wide code block falls back to the browser's own default
+   scrollbar -- on Windows that draws with visible arrow buttons at each
+   end, a jarring stray bar right in the middle of the chat. Same thin,
+   borderless treatment as .cm-scroller and .sidebar-scroll elsewhere. */
+.markdown pre::-webkit-scrollbar {
+  height: 6px;
+}
+
+.markdown pre::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.markdown pre::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+
+.markdown pre::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
 }
 .markdown pre code {
   background: none;

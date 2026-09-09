@@ -1949,8 +1949,16 @@ function ChatGizaInner() {
           <>
             <div
               ref={scrollRef}
-              className="sidebar-scroll mx-auto w-full max-w-[var(--max-w-chat)] flex-1 overflow-y-auto px-4 py-8 space-y-4"
+              className="sidebar-scroll w-full flex-1 overflow-y-auto"
             >
+              {/* The scroll container itself spans the full column width so
+                  its scrollbar rides the true right edge next to the
+                  sidebar -- on a wide window, a scrollbar on a
+                  max-w-chat-constrained element instead strands it in the
+                  middle of empty space, nowhere near where a scrollbar
+                  should be. This inner div is what actually stays narrow
+                  and centered, same as the composer below it. */}
+              <div className="mx-auto w-full max-w-[var(--max-w-chat)] space-y-4 px-4 py-8">
               {active.messages.map((m) => {
                 const isGeneratingMedia = m.id === generatingImageId || Boolean(m.videoStatus);
                 return m.role === "assistant" && m.id === streamingId && !m.content && !m.imageUrl && !m.videoUrl ? (
@@ -1994,6 +2002,7 @@ function ChatGizaInner() {
                   </div>
                 );
               })}
+              </div>
             </div>
 
             <ChatComposer
