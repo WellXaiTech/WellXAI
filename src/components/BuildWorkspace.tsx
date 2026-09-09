@@ -47,7 +47,13 @@ function toDayKey(ts: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function computeBuildStats(projects: BuildProject[]) {
+// windowDays narrows every stat (not just which heatmap cells count) to
+// projects last touched within that many days -- a real filter over the
+// same real data, not a separate fake "30d view" of numbers that don't
+// otherwise exist anywhere.
+function computeBuildStats(allProjects: BuildProject[], windowDays: number | null = null) {
+  const projects =
+    windowDays === null ? allProjects : allProjects.filter((p) => Date.now() - p.lastActivity <= windowDays * 86400000);
   const sessions = projects.length;
   const messages = projects.reduce((sum, p) => sum + p.messages.filter((m) => !m.step).length, 0);
   const dayKeySet = new Set(projects.map((p) => toDayKey(p.lastActivity)));
@@ -88,13 +94,24 @@ function computeBuildStats(projects: BuildProject[]) {
 }
 
 function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
-  const stats = computeBuildStats(projects);
+  // "Overview" is the only real tab -- there's no per-model breakdown
+  // anywhere in this data (a project's messages don't record which model
+  // answered), so a "Models" tab is left out rather than added as a
+  // button that would just be empty. All/30d/7d, unlike that, is a real
+  // filter over real timestamps -- genuinely recomputes every stat below.
+  const [windowDays, setWindowDays] = useState<number | null>(null);
+  const stats = computeBuildStats(projects, windowDays);
   const cells: { label: string; value: number }[] = [
     { label: "Projects", value: stats.sessions },
     { label: "Messages", value: stats.messages },
     { label: "Active days", value: stats.activeDays },
     { label: "Current streak", value: stats.currentStreak },
     { label: "Longest streak", value: stats.longestStreak },
+  ];
+  const windowOptions: { label: string; value: number | null }[] = [
+    { label: "All", value: null },
+    { label: "30d", value: 30 },
+    { label: "7d", value: 7 },
   ];
   return (
     // overflow-hidden -- a grid item's own minmax(0,1fr) column already
@@ -107,9 +124,30 @@ function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
       className="w-full max-w-md overflow-hidden rounded-2xl border border-border p-6 pb-8"
       style={{ background: "linear-gradient(180deg, var(--surface-2), var(--surface))" }}
     >
+      <div className="mb-4 flex items-center justify-between">
+        <span className="text-sm font-semibold text-foreground">Overview</span>
+        <div className="flex items-center gap-1 rounded-full border border-border bg-black/20 p-0.5">
+          {windowOptions.map((opt) => (
+            <button
+              key={opt.label}
+              type="button"
+              onClick={() => setWindowDays(opt.value)}
+              className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                windowDays === opt.value ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         {cells.map((c) => (
-          <div key={c.label} className="min-w-0 rounded-xl border border-border bg-surface p-3">
+          // bg-white/[0.06] over the card's own gradient -- a plain
+          // bg-surface here (the same token the gradient already fades
+          // toward) blended into the card at its darker end instead of
+          // reading as a distinctly lighter box the way the reference did.
+          <div key={c.label} className="min-w-0 rounded-xl border border-white/10 bg-white/[0.06] p-3">
             <p className="truncate text-xs text-muted">{c.label}</p>
             <p className="mt-0.5 text-xl font-semibold text-foreground">{c.value}</p>
           </div>
