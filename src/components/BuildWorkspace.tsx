@@ -2964,11 +2964,15 @@ export default function BuildWorkspace() {
                     // viewport -- the real bug earlier wasn't the width,
                     // it was that this popup was never a descendant of the
                     // composer box it was trying to anchor to, so it had
-                    // no correct positioned ancestor at all. A specific
+                    // no correct positioned ancestor at all. mb-0 (was
+                    // mb-2) -- that gap let a sliver of plain page
+                    // background show between the popup and this row,
+                    // reading as two disconnected dark patches instead of
+                    // one seamless cover; now they sit flush. A specific
                     // dark shade (#20201F, not the --surface token).
                     <div
                       onClick={(e) => e.stopPropagation()}
-                      className="absolute bottom-full right-0 z-20 mb-2 w-96 rounded-xl border border-border bg-[#20201F] p-4 text-xs shadow-lg"
+                      className="absolute bottom-full right-0 z-20 mb-0 w-96 rounded-xl border border-border bg-[#20201F] p-4 text-xs shadow-lg"
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-muted">Context window</span>
