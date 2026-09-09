@@ -2180,14 +2180,10 @@ export default function BuildWorkspace() {
                 pushes this whole flex-1 min-w-0 chat column wider to fit,
                 overriding the width panel-dragging is actually supposed to
                 leave it. */}
-            {/* Deliberately not .sidebar-scroll -- confirmed against the
-                composer textarea right below (never custom-styled, and it
-                renders a clean native scrollbar with arrow buttons):
-                .sidebar-scroll's own scrollbar-width:thin +
-                ::-webkit-scrollbar-thumb combination is what renders as a
-                broken hatched texture here, not native scrollbars in
-                general. Leaving this fully unstyled matches the composer. */}
-            <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+            {/* Per feedback: the thin .sidebar-scroll treatment already
+                used elsewhere in the app is the actual target here, same
+                as the main Ask chat. */}
+            <div ref={scrollRef} className="sidebar-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
             <div className="mx-auto w-full max-w-[800px] space-y-1 px-4 py-8">
               {renderItems.map((item) => {
                 if (item.kind === "stepGroup") {
@@ -2475,7 +2471,7 @@ export default function BuildWorkspace() {
                   placeholder="Ask for a change…"
                   rows={1}
                   style={{ maxHeight: MAX_COMPOSER_HEIGHT }}
-                  className="flex-1 resize-none overflow-y-auto bg-transparent py-1 text-sm outline-none"
+                  className="sidebar-scroll flex-1 resize-none overflow-y-auto bg-transparent py-1 text-sm outline-none"
                 />
                 <button
                   type={sending ? "button" : "submit"}

@@ -1949,15 +1949,10 @@ function ChatGizaInner() {
           <>
             <div
               ref={scrollRef}
-              // Deliberately not .sidebar-scroll -- confirmed side by side
-              // against the composer's textarea (which has never had any
-              // custom scrollbar CSS and renders a clean native scrollbar
-              // with arrow buttons): .sidebar-scroll's own combination of
-              // scrollbar-width:thin with ::-webkit-scrollbar-thumb is what
-              // renders as a broken hatched texture on this browser, not
-              // "native scrollbars in general". Leaving this one fully
-              // unstyled gets the same clean look the composer already has.
-              className="w-full flex-1 overflow-y-auto"
+              // Per feedback: the thin .sidebar-scroll treatment already
+              // used elsewhere in the app (nav sidebar, etc.) is the actual
+              // target here, not the browser's own wide native scrollbar.
+              className="sidebar-scroll w-full flex-1 overflow-y-auto"
             >
               {/* The scroll container itself spans the full column width so
                   its scrollbar rides the true right edge next to the

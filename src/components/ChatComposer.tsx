@@ -772,7 +772,7 @@ export default function ChatComposer({
           autoComplete="off"
           rows={1}
           style={{ maxHeight: MAX_COMPOSER_HEIGHT }}
-          className="w-full resize-none overflow-y-auto bg-transparent px-1 py-1 text-sm text-foreground outline-none"
+          className="sidebar-scroll w-full resize-none overflow-y-auto bg-transparent px-1 py-1 text-sm text-foreground outline-none"
         />
         {isHero && !value && (
           <div className="pointer-events-none absolute inset-0 flex items-center px-1 text-sm font-bold text-muted">
