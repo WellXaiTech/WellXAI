@@ -2941,15 +2941,16 @@ export default function BuildWorkspace() {
                         setModelInfoOpen((v) => !v);
                       }}
                       aria-label="Usage"
-                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-surface-2 hover:text-foreground"
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-surface-2 hover:text-foreground"
                     >
                       <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                         <circle
                           cx="7"
                           cy="7"
                           r="5.5"
-                          strokeWidth="2"
-                          className={sessionTokens > 0 ? "stroke-blue-500" : "stroke-muted"}
+                          strokeWidth="3"
+                          stroke={sessionTokens > 0 ? undefined : "#20201F"}
+                          className={sessionTokens > 0 ? "stroke-blue-500" : ""}
                         />
                       </svg>
                     </button>
