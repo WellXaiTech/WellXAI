@@ -222,14 +222,16 @@ const MIN_PREVIEW_WIDTH = 320;
 const MAX_PREVIEW_WIDTH = 1000;
 const DEFAULT_PREVIEW_WIDTH = 460;
 // Chat always keeps at least this much room, no matter how far any panel
-// is dragged wider. 280 (the original value) was too tight in practice --
-// once panels could actually be dragged far enough to reach that floor
-// (after removing the separate 1000px/65% ceilings), chat's own header
-// broke at that width: the title badge and the 5-icon toolbar, both
-// absolutely positioned from opposite corners, physically overlapped
-// instead of leaving each other room. 420 is enough for both to coexist
-// plus a usable composer/message column beneath them.
-const MIN_CHAT_WIDTH = 420;
+// is dragged wider. 420 was a workaround for the header breaking at
+// anything narrower (the title badge and 5-icon toolbar were two
+// independently absolutely-positioned corners with no way to know about
+// each other's real size) -- now that they're one real flex row instead
+// (title min-w-0/truncate, icons shrink-0), the header can't overlap at
+// any width, so this floor only needs to cover the icon toolbar's own
+// minimum (~190px) plus just enough for the composer to stay usable.
+// Per feedback, a panel should be draggable until chat is genuinely
+// small, not stopped this far short of the screen's actual edge.
+const MIN_CHAT_WIDTH = 240;
 
 // The command-confirmation dialog's code snippet used to render as plain
 // muted text -- same font/color as the surrounding paragraph, no different
@@ -888,14 +890,18 @@ export default function BuildWorkspace() {
     const others = Object.entries(panelWidthsRef.current)
       .filter(([key]) => key !== panel)
       .reduce((sum, [, w]) => sum + w, 0);
-    // rowRef's own width, not window.innerWidth -- this row sits to the
-    // right of ChatSidebar (roughly 260px), so window.innerWidth alone
-    // overstated how much room chat + every open panel actually had to
-    // share by that same ~260px. A panel dragged to this old ceiling
-    // physically ran off the right edge of the screen, hidden past the
-    // viewport rather than just "as wide as it could get".
-    const rowWidth = rowRef.current?.getBoundingClientRect().width ?? window.innerWidth;
-    return Math.max(320, Math.min(hardCap, rowWidth - reserveForChat - others));
+    // window.innerWidth minus the row's own LEFT edge (where ChatSidebar
+    // ends), not the row's own rendered WIDTH -- the row has no width cap
+    // of its own (it just grows to fit flex-1 chat + every panel's current
+    // width), so measuring its width was circular: a panel already dragged
+    // too wide inflates the very number meant to be its ceiling, and the
+    // row (and whichever panel is widest) simply overflows the viewport
+    // instead of ever being stopped. The row's left edge, by contrast,
+    // never moves regardless of how wide its children get, so subtracting
+    // it from window.innerWidth gives the real, stable available width.
+    const rowLeft = rowRef.current?.getBoundingClientRect().left ?? 0;
+    const available = window.innerWidth - rowLeft;
+    return Math.max(320, Math.min(hardCap, available - reserveForChat - others));
   }
   // Drives the full-screen drag-overlay below. Live's own body is a real
   // IFRAME (a separate browsing context via srcDoc) -- once the cursor
@@ -1966,7 +1972,14 @@ export default function BuildWorkspace() {
           just vacated instead of squeezing in in addition to it. Comes
           back the instant Live closes (with Files, or by hand). */}
       {!livePanelOpen && rail}
-      <div ref={rowRef} className="relative flex min-h-0 flex-1">
+      {/* min-w-0 -- without it, this row (itself a flex item next to
+          ChatSidebar) defaulted to a content-based min-width, so it could
+          render wider than the space it was actually given and rely on the
+          page-level overflow-hidden to hide the difference, rather than
+          genuinely shrinking. That's what let the whole row -- chat
+          included -- balloon past the viewport instead of chat ever
+          reaching a truly narrow width. */}
+      <div ref={rowRef} className="relative flex min-h-0 min-w-0 flex-1">
         {/* Sits at the row's LEFT edge, in History's own spot, per
             feedback -- a real fixed, shrink-0 width with its own handle,
             same mechanics as every other panel (Files included, which
@@ -1987,7 +2000,12 @@ export default function BuildWorkspace() {
                 liveResizing.current = true;
                 setIsDragActive(true);
               }}
-              className="absolute -right-1 top-0 z-10 h-full w-2 cursor-col-resize"
+              // Widened from the original w-2 (8px) -- per feedback, that
+              // was easy to miss by a couple of pixels and get nothing in
+              // response, reading as the drag being stuck rather than a
+              // near-miss (same fix already applied to Live's own handle
+              // further down, extended here to every other panel).
+              className="absolute -right-2 top-0 z-10 h-full w-4 cursor-col-resize"
             />
             <div className="flex shrink-0 items-center justify-between border-b border-border p-2">
               <span className="px-1 text-sm font-semibold text-foreground">Live</span>
@@ -2025,32 +2043,35 @@ export default function BuildWorkspace() {
           // middle of the page.
           className="relative flex min-h-0 min-w-0 flex-1 flex-col p-3"
         >
-          {/* Mirrors the icon group's own positioning on the opposite
-              corner -- per feedback, the project's name (+ its group, if
-              any) reads as a page title and belongs up here at the
-              column's true top edge next to it, not centered inside the
-              narrow chat column below where it used to compete with the
-              message content for attention. */}
-          {started && (
-            <div className="absolute left-3 top-3 z-10 flex min-w-0 max-w-[50%] shrink items-center gap-2">
-              {/* Icon and the chat's own name are plain, no background --
-                  the pill belongs ONLY on the group name after them (the
-                  actual folder/repo this chat lives in), not the chat name
-                  itself. */}
-              <span className="shrink-0 text-foreground">{ProjectBadgeIcon}</span>
-              <span className="min-w-0 truncate text-sm font-bold text-foreground">{projectName}</span>
-              {activeGroupName && (
-                <span className="shrink-0 truncate rounded-md bg-surface-2 px-2 py-1 text-xs font-bold text-foreground">
-                  {activeGroupName}
-                </span>
-              )}
-            </div>
-          )}
-          {/* Pinned to the CHAT COLUMN's own top-right corner -- moves
-              inward together with it (not stranded over the Browse panel)
-              once that panel opens and the column shrinks to share the
-              row, per feedback. */}
-          <div className="absolute right-3 top-3 z-10 flex shrink-0 items-center gap-0.5 text-foreground">
+          {/* A single real flex row (title on the left, icon toolbar on the
+              right) instead of two independently absolutely-positioned
+              corners -- those had no way to know about each other's actual
+              size, so at a narrow enough chat width the title's own
+              max-w-[50%] budget (measured against the whole row, not what
+              the icon group left over) could still exceed the real leftover
+              space and get squeezed down to just a few unreadable pixels.
+              A real flex row can't do that: the title's min-w-0 + truncate
+              only ever shrinks it into whatever the shrink-0 icon group
+              didn't take, down to 0 if it must, but never negative/overlapping. */}
+          <div className="relative z-10 flex shrink-0 items-center justify-between gap-2 px-3 pt-3">
+            {started ? (
+              <div className="flex min-w-0 items-center gap-2">
+                {/* Icon and the chat's own name are plain, no background --
+                    the pill belongs ONLY on the group name after them (the
+                    actual folder/repo this chat lives in), not the chat name
+                    itself. */}
+                <span className="shrink-0 text-foreground">{ProjectBadgeIcon}</span>
+                <span className="min-w-0 truncate text-sm font-bold text-foreground">{projectName}</span>
+                {activeGroupName && (
+                  <span className="shrink-0 truncate rounded-md bg-surface-2 px-2 py-1 text-xs font-bold text-foreground">
+                    {activeGroupName}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <span />
+            )}
+            <div className="flex shrink-0 items-center gap-0.5 text-foreground">
             <button
               onClick={() => setProgressPanelOpen((v) => !v)}
               aria-label="Progress"
@@ -2113,18 +2134,12 @@ export default function BuildWorkspace() {
             <button aria-label="More" className="flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-surface-2 [&>svg]:h-[18px] [&>svg]:w-[18px]">
               {KebabIcon}
             </button>
+            </div>
           </div>
           {/* No card chrome at all here -- no border, no fill. The live
               window is the only one styled as a bordered "window"; the
               chat side just sits plainly on the page. */}
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {/* The project name + group used to have its own header row
-                right here, centered above the messages -- moved up to sit
-                beside the icon group at the row's true top edge instead
-                (see the absolutely-positioned block before this div), so
-                a little top padding on the scroll area keeps messages
-                from starting directly under it. */}
-            <div className="pt-11" />
             {/* The SCROLL CONTAINER stays full-width (so its native
                 scrollbar still sits at the true page edge, per the
                 earlier fix) -- but the actual message content inside it is
@@ -2138,7 +2153,13 @@ export default function BuildWorkspace() {
                 their own breathing room below via a margin on the
                 "message" render item itself instead, so steps don't
                 inherit gaps this size. */}
-            <div ref={scrollRef} className="sidebar-scroll min-h-0 flex-1 overflow-y-auto">
+            {/* overflow-x-hidden (only overflow-y was ever set here) --
+                without it, a wide descendant (a long code snippet, an
+                unbroken URL) doesn't just scroll horizontally in place, it
+                pushes this whole flex-1 min-w-0 chat column wider to fit,
+                overriding the width panel-dragging is actually supposed to
+                leave it. */}
+            <div ref={scrollRef} className="sidebar-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
             <div className="mx-auto w-full max-w-[800px] space-y-1 px-4 py-8">
               {renderItems.map((item) => {
                 if (item.kind === "stepGroup") {
@@ -2427,8 +2448,14 @@ export default function BuildWorkspace() {
               </div>
               {/* Below the box, not inside it -- Auto/attach/mic on the
                   left, model+effort (with the info popover) on the right,
-                  matching the coding-agent composer this was modeled on. */}
-              <div className="flex items-center justify-between gap-1 px-1 pt-1.5">
+                  matching the coding-agent composer this was modeled on.
+                  flex-wrap (not a fixed single row) -- neither group has
+                  anywhere left to shrink (every label/icon here is already
+                  as compact as it can be), so without wrapping, this row's
+                  combined content set a hard floor under chat's real width
+                  well above what MIN_CHAT_WIDTH claimed, letting a
+                  side panel get dragged wide enough to overflow anyway. */}
+              <div className="flex flex-wrap items-center justify-between gap-1 px-1 pt-1.5">
                 <div className="flex items-center gap-1">
                   {/* Was a plain static "Auto" label that didn't do
                       anything -- now a real Mode selector wired to the
@@ -2791,7 +2818,10 @@ export default function BuildWorkspace() {
                 progressResizing.current = true;
                 setIsDragActive(true);
               }}
-              className="absolute -left-1 top-0 z-10 h-full w-2 cursor-col-resize"
+              // Widened from the original w-2 (8px), same reasoning as
+              // Live's own handle -- a thin 8px strip was easy to miss by a
+              // couple of pixels and get nothing in response.
+              className="absolute -left-2 top-0 z-10 h-full w-4 cursor-col-resize"
             />
             <div className="flex shrink-0 items-center justify-between border-b border-border p-2">
               <span className="px-1 text-sm font-semibold text-foreground">Progress</span>
@@ -2856,7 +2886,10 @@ export default function BuildWorkspace() {
                 filesResizing.current = true;
                 setIsDragActive(true);
               }}
-              className="absolute -left-1 top-0 z-10 h-full w-2 cursor-col-resize"
+              // Widened from the original w-2 (8px), same reasoning as
+              // Live's own handle -- a thin 8px strip was easy to miss by a
+              // couple of pixels and get nothing in response.
+              className="absolute -left-2 top-0 z-10 h-full w-4 cursor-col-resize"
             />
             {/* No outer "Files" title bar -- per feedback, it was pure
                 redundant chrome: BuildFileTree's own root row already
@@ -2890,7 +2923,10 @@ export default function BuildWorkspace() {
                 terminalResizing.current = true;
                 setIsDragActive(true);
               }}
-              className="absolute -left-1 top-0 z-10 h-full w-2 cursor-col-resize"
+              // Widened from the original w-2 (8px), same reasoning as
+              // Live's own handle -- a thin 8px strip was easy to miss by a
+              // couple of pixels and get nothing in response.
+              className="absolute -left-2 top-0 z-10 h-full w-4 cursor-col-resize"
             />
             {/* Permanently dark, same reasoning as the command-confirmation
                 dialog's code block -- a real terminal (VS Code's included)
@@ -2959,7 +2995,10 @@ export default function BuildWorkspace() {
                 browseResizing.current = true;
                 setIsDragActive(true);
               }}
-              className="absolute -left-1 top-0 z-10 h-full w-2 cursor-col-resize"
+              // Widened from the original w-2 (8px), same reasoning as
+              // Live's own handle -- a thin 8px strip was easy to miss by a
+              // couple of pixels and get nothing in response.
+              className="absolute -left-2 top-0 z-10 h-full w-4 cursor-col-resize"
             />
             {/* No header at all while showing Live -- same chromeless,
                 full-bleed treatment as the dedicated Live panel next to
