@@ -1379,7 +1379,11 @@ export default function BuildWorkspace() {
   // menu had -- none of those concepts exist anywhere in this app's
   // project data, so offering them would mean fake options with nothing
   // real behind them.
-  const [historySortBy, setHistorySortBy] = useState<"activity" | "name">("activity");
+  // "name" (stable, alphabetical) by default now, not "activity" -- per
+  // feedback, a project jumping to the top of the list the instant it's
+  // opened (and everything else shifting down under it) read as
+  // confusing/unpredictable positioning, not helpful recency.
+  const [historySortBy, setHistorySortBy] = useState<"activity" | "name">("name");
   const [historyGroupBy, setHistoryGroupBy] = useState<"folder" | "none">("folder");
   // Pinned projects float to the top (like a pinned chat/email) regardless
   // of sort choice, then everything else by the chosen sort.
@@ -1446,29 +1450,45 @@ export default function BuildWorkspace() {
   // generic section label, since a learn-to-code session genuinely has no
   // project-given name to show instead.
   //
-  // historyEntries walks sortedProjects (already recency-order) once,
-  // emitting a group the first time one of its projects is reached and
-  // skipping the rest of that group's projects after -- rows and groups
-  // interleave by real recency instead of sitting in separate blocks.
-  const historyEntries: ({ kind: "row"; project: BuildProject } | { kind: "group"; name: string; list: BuildProject[] })[] = [];
+  // GitHub and Folder render as two separate blocks now (GitHub entries
+  // always first, Folder entries always after), never interleaved with
+  // each other -- per feedback, having them intermix based on whichever
+  // was more recently touched read as chaotic positioning, not helpful
+  // grouping. Each block is internally stable/sorted by the chosen Sort
+  // by, but a GitHub group can never end up sitting between two Folder
+  // entries or vice versa.
+  type HistoryEntry = { kind: "row"; project: BuildProject } | { kind: "group"; name: string; list: BuildProject[] };
+  const githubEntries: HistoryEntry[] = [];
   {
     const seenGroups = new Set<string>();
     for (const p of sortedProjects) {
-      if (isLearnProject(p)) continue;
-      // "Group by: None" -- every project is its own flat row, real repo/
-      // folder groups included, since that's literally what "no grouping"
-      // means; still respects whatever Sort by is currently chosen.
-      if (historyGroupBy === "none" || (!p.githubRepoUrl && !p.manualGroupName)) {
-        historyEntries.push({ kind: "row", project: p });
+      if (isLearnProject(p) || !p.githubRepoUrl) continue;
+      if (historyGroupBy === "none") {
+        githubEntries.push({ kind: "row", project: p });
         continue;
       }
-      const map = p.githubRepoUrl ? githubGroupMap : manualGroupMap;
-      const name = [...map.keys()].find((k) => map.get(k)!.includes(p))!;
+      const name = [...githubGroupMap.keys()].find((k) => githubGroupMap.get(k)!.includes(p))!;
       if (seenGroups.has(name)) continue;
       seenGroups.add(name);
-      historyEntries.push({ kind: "group", name, list: map.get(name)! });
+      githubEntries.push({ kind: "group", name, list: githubGroupMap.get(name)! });
     }
   }
+  const folderEntries: HistoryEntry[] = [];
+  {
+    const seenGroups = new Set<string>();
+    for (const p of sortedProjects) {
+      if (isLearnProject(p) || p.githubRepoUrl) continue;
+      if (historyGroupBy === "none" || !p.manualGroupName) {
+        folderEntries.push({ kind: "row", project: p });
+        continue;
+      }
+      const name = [...manualGroupMap.keys()].find((k) => manualGroupMap.get(k)!.includes(p))!;
+      if (seenGroups.has(name)) continue;
+      seenGroups.add(name);
+      folderEntries.push({ kind: "group", name, list: manualGroupMap.get(name)! });
+    }
+  }
+  const historyEntries = [...githubEntries, ...folderEntries];
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   function toggleGroup(name: string) {
     setCollapsedGroups((cur) => ({ ...cur, [name]: !cur[name] }));
