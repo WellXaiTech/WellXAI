@@ -2180,11 +2180,14 @@ export default function BuildWorkspace() {
                 pushes this whole flex-1 min-w-0 chat column wider to fit,
                 overriding the width panel-dragging is actually supposed to
                 leave it. */}
-            {/* Back to .sidebar-scroll's plain thin thumb -- the browser's
-                own "native" scrollbar was tried here too, but rendered as
-                an ugly hatched texture on the actual site instead of a
-                clean bar, so that approach is out. */}
-            <div ref={scrollRef} className="sidebar-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+            {/* Deliberately not .sidebar-scroll -- confirmed against the
+                composer textarea right below (never custom-styled, and it
+                renders a clean native scrollbar with arrow buttons):
+                .sidebar-scroll's own scrollbar-width:thin +
+                ::-webkit-scrollbar-thumb combination is what renders as a
+                broken hatched texture here, not native scrollbars in
+                general. Leaving this fully unstyled matches the composer. */}
+            <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
             <div className="mx-auto w-full max-w-[800px] space-y-1 px-4 py-8">
               {renderItems.map((item) => {
                 if (item.kind === "stepGroup") {

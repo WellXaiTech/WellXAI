@@ -1949,12 +1949,15 @@ function ChatGizaInner() {
           <>
             <div
               ref={scrollRef}
-              // Back to .sidebar-scroll's plain thin thumb -- the browser's
-              // own "native" scrollbar was tried here per earlier feedback,
-              // but on the actual site it rendered as an ugly hatched
-              // texture instead of the clean bar from Claude Code's own
-              // window, so that approach is out.
-              className="sidebar-scroll w-full flex-1 overflow-y-auto"
+              // Deliberately not .sidebar-scroll -- confirmed side by side
+              // against the composer's textarea (which has never had any
+              // custom scrollbar CSS and renders a clean native scrollbar
+              // with arrow buttons): .sidebar-scroll's own combination of
+              // scrollbar-width:thin with ::-webkit-scrollbar-thumb is what
+              // renders as a broken hatched texture on this browser, not
+              // "native scrollbars in general". Leaving this one fully
+              // unstyled gets the same clean look the composer already has.
+              className="w-full flex-1 overflow-y-auto"
             >
               {/* The scroll container itself spans the full column width so
                   its scrollbar rides the true right edge next to the
