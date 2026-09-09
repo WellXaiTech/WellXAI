@@ -145,15 +145,10 @@ function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
     // overflow-hidden -- a grid item's own minmax(0,1fr) column already
     // stops it from overflowing in ordinary use, but this belt-and-braces
     // clip means nothing can ever visibly escape this card's rounded
-    // corners even under some future edge case. A two-tone gradient
-    // instead of a flat bg-surface-2, per feedback that the flat panel
-    // looked bare. rounded-xl (not -2xl) and less top padding (pt-4, not
-    // a uniform p-6) -- both toned down per feedback that the corners read
-    // as too round and the gap above "Overview" as too tall.
-    <div
-      className="w-full max-w-lg overflow-hidden rounded-xl border border-border px-5 pb-6 pt-4"
-      style={{ background: "linear-gradient(180deg, var(--surface-2), var(--surface))" }}
-    >
+    // corners even under some future edge case. Flat bg-surface-2 now
+    // (not a two-tone gradient) -- per feedback, one solid color for the
+    // whole card. Tighter all around (px-4/pb-4/pt-3, not px-5/pb-6/pt-4).
+    <div className="w-full max-w-lg overflow-hidden rounded-xl border border-border bg-surface-2 px-4 pb-4 pt-3">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
           {(["overview", "models"] as const).map((v) => (
@@ -194,17 +189,16 @@ function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
         </p>
       ) : (
         <>
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
         {cells.map((c) => (
-          // bg-white/[0.06] over the card's own gradient -- a plain
-          // bg-surface here (the same token the gradient already fades
-          // toward) blended into the card at its darker end instead of
-          // reading as a distinctly lighter box the way the reference did.
-          // Shorter and wider now (px-3 py-1.5, rounded-lg not -xl) per
-          // feedback that these read as too tall and too round.
-          <div key={c.label} className="min-w-0 rounded-lg border border-white/10 bg-white/[0.06] px-3 py-1.5">
+          // bg-white/[0.06] over the flat card background -- a plain
+          // bg-surface here (the same token the card itself now uses)
+          // would blend in almost completely instead of reading as a
+          // distinctly lighter box the way the reference did. Tighter
+          // again (px-3 py-1, smaller gap between boxes) per feedback.
+          <div key={c.label} className="min-w-0 rounded-lg border border-white/10 bg-white/[0.06] px-3 py-1">
             <p className="truncate text-xs text-muted">{c.label}</p>
-            <p className="mt-0.5 text-xl font-semibold text-foreground">{c.value}</p>
+            <p className="mt-0.5 text-base font-semibold text-foreground">{c.value}</p>
           </div>
         ))}
       </div>
