@@ -2861,19 +2861,17 @@ export default function BuildWorkspace() {
                                 return next;
                               })
                             }
-                            className="flex w-full items-start gap-2.5 rounded-lg px-1 py-1.5 text-left transition-colors hover:bg-surface-2"
+                            // Text leads, step number and chevron trail at
+                            // the end -- matches the reference row order
+                            // ("Used 16 tools ›"), not a leading number
+                            // badge in front of the text.
+                            className="flex w-full items-start gap-1.5 rounded-lg px-1 py-1.5 text-left text-sm text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
                           >
-                            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[11px] font-semibold text-foreground">
-                              {i + 1}
-                            </span>
-                            <p className={`min-w-0 flex-1 text-sm text-foreground ${isExpanded ? "whitespace-pre-wrap" : "truncate"}`}>
+                            <p className={`min-w-0 flex-1 ${isExpanded ? "whitespace-pre-wrap" : "truncate"}`}>
                               {isExpanded ? m.content : firstLine}
                             </p>
-                            <span
-                              className={`mt-1 shrink-0 text-muted transition-transform ${isExpanded ? "rotate-90" : ""}`}
-                            >
-                              {ChevronRightIcon}
-                            </span>
+                            <span className="shrink-0 text-xs">{i + 1}</span>
+                            <span className={`shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`}>{ChevronRightIcon}</span>
                           </button>
                         </li>
                       );
