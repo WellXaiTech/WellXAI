@@ -2309,11 +2309,10 @@ export default function BuildWorkspace() {
         // the only real ink change and pressed for its whole width, not
         // just a small button inside it.
         <div
-          // No darkening tint at all now, per feedback -- the page behind
-          // should look completely normal, not dimmed. Just the blur
-          // (still enough to visually separate the modal from the page
-          // without touching its actual brightness/color).
-          className="fixed inset-0 z-50 flex items-end justify-center p-4 backdrop-blur-sm sm:p-6"
+          // No darkening tint and no blur now, per feedback -- the page
+          // behind (including History in the rail) should look completely
+          // normal and clearly readable, not dimmed or blurred.
+          className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:p-6"
           role="alertdialog"
           aria-modal="true"
         >
