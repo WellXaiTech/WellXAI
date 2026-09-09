@@ -2874,7 +2874,7 @@ export default function BuildWorkspace() {
             open together, each taking its own share of the row. */}
         {terminalPanelOpen && (
           <div
-            className="relative flex shrink-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface m-3 ml-0 shadow-sm"
+            className="relative flex shrink-0 flex-col overflow-hidden rounded-2xl border border-border shadow-sm m-3 ml-0"
             style={{ width: terminalWidth }}
           >
             <div
@@ -2885,27 +2885,49 @@ export default function BuildWorkspace() {
               }}
               className="absolute -left-1 top-0 z-10 h-full w-2 cursor-col-resize"
             />
-            <div className="flex shrink-0 items-center justify-between border-b border-border p-2">
-              <span className="px-1 text-sm font-semibold text-foreground">Terminal</span>
+            {/* Permanently dark, same reasoning as the command-confirmation
+                dialog's code block -- a real terminal (VS Code's included)
+                is never theme-dependent, and switching this one to light
+                mode read as fake/decorative rather than a real shell. */}
+            <div className="flex shrink-0 items-center justify-between border-b border-[#2b2b2b] bg-[#1e1e1e] p-2">
+              <span className="px-1 text-sm font-semibold text-[#cccccc]">Terminal</span>
               <button
                 onClick={() => setTerminalPanelOpen(false)}
                 aria-label="Close"
-                className="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-[#cccccc] transition-colors hover:bg-white/10"
               >
                 {CloseIcon}
               </button>
             </div>
-            <div className="sidebar-scroll flex-1 overflow-y-auto p-3 font-mono text-xs">
+            <div
+              className="sidebar-scroll flex-1 overflow-y-auto bg-[#1e1e1e] p-3 text-[13px] leading-[1.5]"
+              style={{ fontFamily: "'Cascadia Code', Consolas, 'Courier New', monospace" }}
+            >
               {terminalHistory.length === 0 ? (
-                <p className="text-muted">No commands run yet this session.</p>
+                <p className="text-[#6a6a6a]">No commands run yet this session.</p>
               ) : (
                 terminalHistory.map((entry, i) => (
                   <div key={i} className="mb-3">
-                    <p className="text-foreground">
-                      <span className="text-muted">$ </span>
-                      {entry.command}
+                    <p>
+                      <span className="text-[#4ec9b0]">$</span> <span className="text-[#d4d4d4]">{entry.command}</span>
                     </p>
-                    <pre className="mt-1 whitespace-pre-wrap break-words text-muted">{entry.output}</pre>
+                    <pre className="mt-0.5 whitespace-pre-wrap break-words text-[#a0a0a0]">
+                      {entry.output.split("\n").map((line, li) => (
+                        <span
+                          key={li}
+                          className={
+                            /exit code:\s*0\b/i.test(line)
+                              ? "text-[#89d185]"
+                              : /(exit code:\s*[1-9]|command failed|error)/i.test(line)
+                                ? "text-[#f48771]"
+                                : undefined
+                          }
+                        >
+                          {line}
+                          {li < entry.output.split("\n").length - 1 ? "\n" : ""}
+                        </span>
+                      ))}
+                    </pre>
                   </div>
                 ))
               )}
