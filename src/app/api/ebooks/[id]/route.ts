@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getRequestUser } from "@/lib/requestUser";
-import { deleteEbookFile } from "@/lib/ebookStorage";
+import { deleteEbookFile, isOwnEbookUrl } from "@/lib/ebookStorage";
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_DESCRIPTION_LENGTH = 2000;
@@ -82,6 +82,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const updates: Record<string, string | EbookCover | null> = {};
+    // Lets a written book's PDF be replaced by one the writer already has,
+    // as an alternative to the page-by-page /export pipeline -- same
+    // ownership check as a normal upload (POST /api/ebooks), just applied
+    // to an existing book instead of a brand new one. Also flips status to
+    // 'ready' so the editor's own "View PDF" affordance picks it up.
+    if (typeof body?.fileUrl === "string") {
+      if (!isOwnEbookUrl(body.fileUrl)) {
+        return NextResponse.json({ error: "Invalid file" }, { status: 400 });
+      }
+      updates.file_url = body.fileUrl;
+      updates.status = "ready";
+    }
     if (typeof body?.title === "string") {
       const title = body.title.trim().slice(0, MAX_TITLE_LENGTH);
       if (!title) return NextResponse.json({ error: "A title is required" }, { status: 400 });

@@ -417,8 +417,11 @@ function CoverEditor({
   onChange,
   onGenerate,
   onUpload,
+  onUploadPdf,
   generating,
   uploading,
+  uploadingPdf,
+  pdfResult,
   saveStatus,
   error,
   onShareQuantara,
@@ -439,12 +442,17 @@ function CoverEditor({
   sellingChackall: boolean;
   chackallResult: string | null;
   onUpload: (file: File) => void;
+  onUploadPdf: (file: File) => void;
   generating: boolean;
   uploading: boolean;
+  uploadingPdf: boolean;
+  pdfResult: string | null;
   saveStatus: "idle" | "saving" | "saved";
   error: string | null;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+  const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
   const title = cover.title ?? ebook.title;
   const background = cover.background ?? COVER_BACKGROUNDS[0];
   const lightBg = background.toLowerCase() >= "#a" || ["#f4ede1", "#ece7de"].includes(background);
@@ -550,14 +558,43 @@ function CoverEditor({
           >
             {SparkleIcon} {generating ? "Generating…" : "Generate with AI"}
           </button>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="flex items-center gap-1.5 rounded-lg border border-border px-3.5 py-1.5 text-xs font-medium hover:bg-surface-2 disabled:opacity-50"
-          >
-            {UploadIcon} {uploading ? "Uploading…" : "Upload image"}
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setUploadMenuOpen((v) => !v)}
+              disabled={uploading || uploadingPdf}
+              className="flex items-center gap-1.5 rounded-lg border border-border px-3.5 py-1.5 text-xs font-medium hover:bg-surface-2 disabled:opacity-50"
+            >
+              {UploadIcon} {uploading ? "Uploading image…" : uploadingPdf ? "Uploading PDF…" : "Upload files"}
+            </button>
+            {uploadMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setUploadMenuOpen(false)} />
+                <div className="absolute left-0 top-full z-50 mt-1 w-48 overflow-hidden rounded-lg border border-border bg-surface shadow-2xl">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUploadMenuOpen(false);
+                      fileInputRef.current?.click();
+                    }}
+                    className="block w-full px-3 py-2 text-left text-xs font-medium hover:bg-surface-2"
+                  >
+                    Upload cover image
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUploadMenuOpen(false);
+                      pdfInputRef.current?.click();
+                    }}
+                    className="block w-full px-3 py-2 text-left text-xs font-medium hover:bg-surface-2"
+                  >
+                    Upload PDF
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
           {cover.imageUrl && (
             <button
               type="button"
@@ -578,8 +615,20 @@ function CoverEditor({
               e.target.value = "";
             }}
           />
+          <input
+            ref={pdfInputRef}
+            type="file"
+            accept="application/pdf"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) onUploadPdf(file);
+              e.target.value = "";
+            }}
+          />
         </div>
         {error && <p className="text-xs text-red-400">{error}</p>}
+        {pdfResult && <p className="text-xs text-muted">{pdfResult}</p>}
         <p className="text-xs text-muted">AI generates the artwork only -- title, subtitle, and author are drawn on top by this editor.</p>
 
         {/* Cross-posting into ChatGiZa's other two products -- Quantara
@@ -633,6 +682,8 @@ export default function EbookEditor({ ebookId, onBack }: { ebookId: string; onBa
   const [generatingCover, setGeneratingCover] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [coverError, setCoverError] = useState<string | null>(null);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [pdfResult, setPdfResult] = useState<string | null>(null);
   const [sharingQuantara, setSharingQuantara] = useState(false);
   const [quantaraResult, setQuantaraResult] = useState<string | null>(null);
   const [sellingChackall, setSellingChackall] = useState(false);
@@ -815,6 +866,33 @@ export default function EbookEditor({ ebookId, onBack }: { ebookId: string; onBa
       setCoverError(err instanceof Error ? err.message : "Failed to upload the image");
     } finally {
       setUploadingCover(false);
+    }
+  }
+
+  // Replaces this book's PDF with one the writer already has, as an
+  // alternative to writing pages here and exporting -- same signed-upload
+  // pattern as uploadCoverImage, just landing on the ebook row's file_url
+  // (via PATCH) instead of its cover.
+  async function uploadEbookPdf(file: File) {
+    setUploadingPdf(true);
+    setPdfResult(null);
+    try {
+      const slotRes = await fetch("/api/ebooks/upload-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: file.name }),
+      });
+      const slot = await slotRes.json();
+      if (!slotRes.ok) throw new Error(slot?.error || "Failed to prepare upload");
+      const { error } = await supabaseBrowser.storage.from("ebooks").uploadToSignedUrl(slot.path, slot.token, file);
+      if (error) throw new Error(error.message);
+      const data = await patchEbook(ebookId, { fileUrl: slot.publicUrl });
+      if (data?.error) throw new Error(data.error);
+      setPdfResult("PDF uploaded.");
+    } catch (err) {
+      setPdfResult(err instanceof Error ? err.message : "Failed to upload the PDF");
+    } finally {
+      setUploadingPdf(false);
     }
   }
 
@@ -1057,6 +1135,9 @@ export default function EbookEditor({ ebookId, onBack }: { ebookId: string; onBa
             onChange={saveCover}
             onGenerate={generateCover}
             onUpload={uploadCoverImage}
+            onUploadPdf={uploadEbookPdf}
+            uploadingPdf={uploadingPdf}
+            pdfResult={pdfResult}
             generating={generatingCover}
             uploading={uploadingCover}
             saveStatus={coverSaveStatus}
