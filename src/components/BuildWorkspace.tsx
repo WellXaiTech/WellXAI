@@ -888,7 +888,14 @@ export default function BuildWorkspace() {
     const others = Object.entries(panelWidthsRef.current)
       .filter(([key]) => key !== panel)
       .reduce((sum, [, w]) => sum + w, 0);
-    return Math.max(320, Math.min(hardCap, window.innerWidth - reserveForChat - others));
+    // rowRef's own width, not window.innerWidth -- this row sits to the
+    // right of ChatSidebar (roughly 260px), so window.innerWidth alone
+    // overstated how much room chat + every open panel actually had to
+    // share by that same ~260px. A panel dragged to this old ceiling
+    // physically ran off the right edge of the screen, hidden past the
+    // viewport rather than just "as wide as it could get".
+    const rowWidth = rowRef.current?.getBoundingClientRect().width ?? window.innerWidth;
+    return Math.max(320, Math.min(hardCap, rowWidth - reserveForChat - others));
   }
   // Drives the full-screen drag-overlay below. Live's own body is a real
   // IFRAME (a separate browsing context via srcDoc) -- once the cursor
