@@ -94,11 +94,13 @@ function computeBuildStats(allProjects: BuildProject[], windowDays: number | nul
 }
 
 function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
-  // "Overview" is the only real tab -- there's no per-model breakdown
-  // anywhere in this data (a project's messages don't record which model
-  // answered), so a "Models" tab is left out rather than added as a
-  // button that would just be empty. All/30d/7d, unlike that, is a real
-  // filter over real timestamps -- genuinely recomputes every stat below.
+  // Models is a real second tab now, but honest about what it can't show:
+  // nothing in this data records which model handled which project, so it
+  // says that plainly instead of rendering a per-model breakdown that
+  // would have to be invented. All/30d/7d is the one genuine filter --
+  // selecting it actually refilters projects by lastActivity and
+  // recomputes every stat and the heatmap below from real timestamps.
+  const [view, setView] = useState<"overview" | "models">("overview");
   const [windowDays, setWindowDays] = useState<number | null>(null);
   const stats = computeBuildStats(projects, windowDays);
   const cells: { label: string; value: number }[] = [
@@ -125,15 +127,31 @@ function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
       style={{ background: "linear-gradient(180deg, var(--surface-2), var(--surface))" }}
     >
       <div className="mb-4 flex items-center justify-between">
-        <span className="text-sm font-semibold text-foreground">Overview</span>
-        <div className="flex items-center gap-1 rounded-full border border-border bg-black/20 p-0.5">
+        <div className="flex items-center gap-4">
+          {(["overview", "models"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setView(v)}
+              className={`text-sm font-semibold capitalize transition-colors ${
+                view === v ? "text-foreground" : "text-muted hover:text-foreground"
+              }`}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+        {/* No enclosing pill/background here -- per feedback, these sit
+            directly on the card like the Overview/Models tabs beside them,
+            not inside their own separate panel. */}
+        <div className="flex items-center gap-3">
           {windowOptions.map((opt) => (
             <button
               key={opt.label}
               type="button"
               onClick={() => setWindowDays(opt.value)}
-              className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
-                windowDays === opt.value ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground"
+              className={`text-xs font-medium transition-colors ${
+                windowDays === opt.value ? "text-foreground" : "text-muted hover:text-foreground"
               }`}
             >
               {opt.label}
@@ -141,13 +159,21 @@ function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
           ))}
         </div>
       </div>
+      {view === "models" ? (
+        <p className="rounded-xl border border-white/10 bg-white/[0.06] p-4 text-sm text-muted">
+          Model breakdown isn't tracked yet -- Build doesn't currently record which model answered each project, so
+          there's nothing real to show here per-model.
+        </p>
+      ) : (
+        <>
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         {cells.map((c) => (
           // bg-white/[0.06] over the card's own gradient -- a plain
           // bg-surface here (the same token the gradient already fades
           // toward) blended into the card at its darker end instead of
           // reading as a distinctly lighter box the way the reference did.
-          <div key={c.label} className="min-w-0 rounded-xl border border-white/10 bg-white/[0.06] p-3">
+          // Shorter and wider now (px-3 py-2, not p-3) per feedback.
+          <div key={c.label} className="min-w-0 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2">
             <p className="truncate text-xs text-muted">{c.label}</p>
             <p className="mt-0.5 text-xl font-semibold text-foreground">{c.value}</p>
           </div>
@@ -173,6 +199,8 @@ function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
           </div>
         ))}
       </div>
+        </>
+      )}
     </div>
   );
 }
