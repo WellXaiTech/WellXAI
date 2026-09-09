@@ -2934,9 +2934,13 @@ export default function BuildWorkspace() {
                     </button>
                   </div>
                   {modelInfoOpen && (
+                    // Wider and a touch taller (w-96/p-4, was w-80/p-3) and
+                    // a specific dark shade (#20201F, not the --surface
+                    // token) -- per feedback, matching the reference
+                    // popup's own size and background more closely.
                     <div
                       onClick={(e) => e.stopPropagation()}
-                      className="absolute bottom-full right-0 z-20 mb-2 w-80 rounded-xl border border-border bg-surface p-3 text-xs shadow-lg"
+                      className="absolute bottom-full right-0 z-20 mb-2 w-96 rounded-xl border border-border bg-[#20201F] p-4 text-xs shadow-lg"
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-muted">Context window</span>
