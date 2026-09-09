@@ -668,11 +668,8 @@ const PlusTabIcon = (
   </svg>
 );
 const MicIcon = (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-    <path d="M19 10v1a7 7 0 0 1-14 0v-1" />
-    <path d="M12 18v4" />
-    <path d="M8 22h8" />
+  <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M8 11c1.654 0 3-1.346 3-3V4c0-1.654-1.346-3-3-3S5 2.346 5 4v4c0 1.654 1.346 3 3 3M6 4c0-1.103.897-2 2-2s2 .897 2 2v4c0 1.103-.897 2-2 2s-2-.897-2-2zm7 3.5V8c0 2.585-1.98 4.694-4.5 4.948V14.5a.5.5 0 0 1-1 0v-1.55C4.98 12.693 3 10.584 3 7.998v-.5a.5.5 0 0 1 1 0V8c0 2.207 1.794 4 4 4s4-1.793 4-4v-.5a.5.5 0 0 1 1 0" />
   </svg>
 );
 const KebabIcon = (
