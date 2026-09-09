@@ -71,13 +71,13 @@ function computeBuildStats(projects: BuildProject[]) {
     cursor.setDate(cursor.getDate() - 1);
   }
 
-  // Last 70 days (10 weeks), oldest first, for a compact GitHub-style
-  // activity grid -- binary (touched a project that day, or didn't),
-  // since day-level is all the data actually supports.
+  // Last 182 days (26 weeks / ~6 months), oldest first, for a GitHub-style
+  // activity grid -- binary (touched a project that day, or didn't), since
+  // day-level is all the data actually supports.
   const heatmapDays: { key: string; active: boolean }[] = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  for (let i = 69; i >= 0; i--) {
+  for (let i = 181; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     const key = toDayKey(d.getTime());
@@ -97,26 +97,39 @@ function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
     { label: "Longest streak", value: stats.longestStreak },
   ];
   return (
-    <div className="w-full rounded-2xl border border-border bg-surface-2 p-5">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+    // overflow-hidden -- a grid item's own minmax(0,1fr) column already
+    // stops it from overflowing in ordinary use, but this belt-and-braces
+    // clip means nothing can ever visibly escape this card's rounded
+    // corners even under some future edge case. Taller now (p-6, more gap
+    // above the heatmap) and a two-tone gradient instead of a flat
+    // bg-surface-2, per feedback that the flat panel looked bare.
+    <div
+      className="w-full max-w-md overflow-hidden rounded-2xl border border-border p-6 pb-8"
+      style={{ background: "linear-gradient(180deg, var(--surface-2), var(--surface))" }}
+    >
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         {cells.map((c) => (
-          <div key={c.label} className="rounded-xl border border-border bg-surface p-3">
-            <p className="text-xs text-muted">{c.label}</p>
+          <div key={c.label} className="min-w-0 rounded-xl border border-border bg-surface p-3">
+            <p className="truncate text-xs text-muted">{c.label}</p>
             <p className="mt-0.5 text-xl font-semibold text-foreground">{c.value}</p>
           </div>
         ))}
       </div>
-      {/* 10 weeks x 7 days, oldest at the left -- same GitHub-contributions
-          shape, just binary (a day either has activity or it doesn't) since
-          that's the granularity the underlying data actually supports. */}
-      <div className="mt-4 flex justify-center gap-[3px] overflow-x-auto py-1">
-        {Array.from({ length: 10 }, (_, week) => (
+      {/* 26 weeks x 7 days (6 months), oldest at the left -- same
+          GitHub-contributions shape, just binary (a day either has
+          activity or it doesn't) since that's the granularity the
+          underlying data actually supports. justify-between now genuinely
+          spreads to the card's full width edge-to-edge -- with 26 columns
+          instead of the original 10, the per-column gap that creates is
+          small, not the wide gaps a 10-column justify-between had. */}
+      <div className="mt-6 flex w-full justify-between overflow-x-auto py-1">
+        {Array.from({ length: 26 }, (_, week) => (
           <div key={week} className="flex flex-col gap-[3px]">
             {stats.heatmapDays.slice(week * 7, week * 7 + 7).map((d) => (
               <div
                 key={d.key}
                 title={d.key}
-                className={`h-2.5 w-2.5 rounded-[2px] ${d.active ? "bg-blue-500" : "bg-border"}`}
+                className={`h-3 w-3 rounded-[2px] ${d.active ? "bg-blue-500" : "bg-border"}`}
               />
             ))}
           </div>
