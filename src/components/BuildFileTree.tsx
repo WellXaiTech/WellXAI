@@ -433,7 +433,12 @@ export default function BuildFileTree({
               value={files[activePath]}
               onChange={(value) => onChange(activePath, value)}
               theme={vscodeDark}
-              extensions={[editorChrome, minimap, ...languageFor(activePath)]}
+              // Long lines wrap instead of running off the right edge -- per
+              // feedback, a line could get cut off with no way to read the
+              // rest of it even after dragging this panel as wide as the
+              // layout allows (the chat column still needs its own minimum
+              // width, so panel width alone was never a real fix for this).
+              extensions={[editorChrome, minimap, EditorView.lineWrapping, ...languageFor(activePath)]}
               height="100%"
               style={{ height: "100%" }}
               basicSetup={{ foldGutter: true, highlightActiveLine: true }}
