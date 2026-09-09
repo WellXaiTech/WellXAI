@@ -17,6 +17,16 @@ import { addUserTokens, addModelTokens } from "@/lib/tokenUsage";
 // was previously no limit here at all.
 const BUILD_TURN_LIMIT_PER_MINUTE = 40;
 
+// Real counters (not fabricated -- every turn genuinely increments these),
+// but the ceilings themselves are placeholders: high enough that no real
+// account should ever actually hit them, pending an actual product
+// decision on what these two windows should cap out at. Purely for the
+// usage popup's "5-hour limit"/"Weekly" percentages -- neither is checked
+// against `.allowed` below, so neither can ever reject a request the way
+// BUILD_TURN_LIMIT_PER_MINUTE above does.
+const FIVE_HOUR_LIMIT_PLACEHOLDER = 1000;
+const WEEKLY_LIMIT_PLACEHOLDER = 5000;
+
 // Without this, Vercel kills the function at its platform default (10s
 // on Hobby) -- generating a real multi-file website in one completion
 // routinely takes longer than that, especially through the DeepSeek
@@ -66,6 +76,9 @@ export async function POST(req: NextRequest) {
   if (!rate.allowed) {
     return NextResponse.json({ error: "You're sending requests too quickly -- please slow down." }, { status: 429 });
   }
+  // Tracked but not enforced -- see the placeholder-ceiling comment above.
+  void checkRateLimit(`build-5h:${user.id}`, FIVE_HOUR_LIMIT_PLACEHOLDER, 5 * 3600);
+  void checkRateLimit(`build-weekly:${user.id}`, WEEKLY_LIMIT_PLACEHOLDER, 7 * 24 * 3600);
 
   if (!process.env.OPENAI_API_KEY && !process.env.DEEPSEEK_API_KEY && !process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: "ChatGiZa's website builder isn't configured yet." }, { status: 503 });

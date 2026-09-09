@@ -868,7 +868,10 @@ export default function BuildWorkspace() {
   const [isListening, setIsListening] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [modelInfoOpen, setModelInfoOpen] = useState(false);
-  const [buildUsage, setBuildUsage] = useState<{ used: number; limit: number; resetsInSeconds: number } | null>(null);
+  const [buildUsage, setBuildUsage] = useState<{
+    fiveHour: { used: number; limit: number };
+    weekly: { used: number; limit: number };
+  } | null>(null);
   // The globe icon's "Browse" panel -- ported as-is from chatgiza/page.tsx.
   // A plain server-rendered screenshot of whatever URL is loaded (not an
   // iframe, which most real sites block via X-Frame-Options/CSP), or a
@@ -1727,7 +1730,8 @@ export default function BuildWorkspace() {
   }, [attachMenuOpen]);
 
   // Fetched fresh on every open -- a peek, not a consuming request, so
-  // just looking at this popover never itself counts toward the limit.
+  // just looking at this popover never itself counts toward either
+  // window.
   useEffect(() => {
     if (!modelInfoOpen) return;
     let cancelled = false;
@@ -2951,34 +2955,29 @@ export default function BuildWorkspace() {
 
                       <p className="text-[11px] font-medium text-muted">Plan usage limits</p>
 
+                      {/* Real counts from two genuine tracking windows
+                          api/build/turn now increments on every turn (see
+                          FIVE_HOUR_LIMIT_PLACEHOLDER there) -- neither
+                          ceiling is a finalized product decision yet (both
+                          are deliberately generous placeholders so this
+                          never actually blocks anyone), but the percentage
+                          shown is real usage divided by a real number, not
+                          a hardcoded string. */}
                       <div className="mt-3 flex items-center justify-between">
-                        <span className="font-semibold text-foreground">Messages</span>
-                        <span className="text-muted">Unlimited</span>
-                      </div>
-
-                      {/* Reads the same fixed-window KV counter
-                          /api/build/turn's own rate limiter checks (via a
-                          non-consuming peek) -- a real, live number, styled
-                          to match the reference app's own limit rows
-                          (bold label left, "resets in / percentage" right,
-                          progress bar underneath). */}
-                      <div className="mt-3 flex items-center justify-between">
-                        <span className="font-semibold text-foreground">Build requests</span>
+                        <span className="font-semibold text-foreground">5-hour limit</span>
                         <span className="text-muted">
                           {buildUsage
-                            ? `Resets in ${buildUsage.resetsInSeconds}s · ${Math.min(100, Math.round((buildUsage.used / buildUsage.limit) * 100))}%`
+                            ? `${Math.min(100, Math.round((buildUsage.fiveHour.used / buildUsage.fiveHour.limit) * 100))}%`
                             : "…"}
                         </span>
                       </div>
-                      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
-                        <div
-                          className="h-full rounded-full bg-blue-500"
-                          style={{
-                            width: buildUsage
-                              ? `${Math.min(100, (buildUsage.used / buildUsage.limit) * 100)}%`
-                              : "0%",
-                          }}
-                        />
+                      <div className="mt-3 flex items-center justify-between">
+                        <span className="font-semibold text-foreground">Weekly &middot; all models</span>
+                        <span className="text-muted">
+                          {buildUsage
+                            ? `${Math.min(100, Math.round((buildUsage.weekly.used / buildUsage.weekly.limit) * 100))}%`
+                            : "…"}
+                        </span>
                       </div>
                     </div>
                   )}
