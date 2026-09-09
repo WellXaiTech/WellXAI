@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { kv } from "@vercel/kv";
 import { auth } from "@/auth";
 import { getUserById } from "@/lib/userIndex";
-import { getUserTokens } from "@/lib/tokenUsage";
+import { getUserTokens, getModelTokenHistory } from "@/lib/tokenUsage";
 import { deriveUid } from "@/lib/uid";
 
 // Personal "Overview" tab in Settings -- everything here is either already
@@ -16,10 +16,14 @@ export async function GET() {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
 
-  const [user, tokensUsed, deletedIds] = await Promise.all([
+  const [user, tokensUsed, deletedIds, modelTokenHistory] = await Promise.all([
     getUserById(userId),
     getUserTokens(userId),
     kv.get<Record<string, number>>(`chatgiza:history-deleted:${userId}`),
+    // 45 days, fed only by the Build agent (see tokenUsage.ts) -- same
+    // partial-coverage caveat as tokensUsed above, just broken down by
+    // model and by day instead of one running total.
+    getModelTokenHistory(userId, 45),
   ]);
 
   return NextResponse.json({
@@ -30,6 +34,7 @@ export async function GET() {
     lastLogoutAt: user?.lastLogoutAt ?? null,
     platforms: user?.platforms ?? [],
     tokensUsed,
+    modelTokenHistory,
     deletedConversationsCount: deletedIds ? Object.keys(deletedIds).length : 0,
   });
 }

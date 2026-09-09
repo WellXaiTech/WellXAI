@@ -115,12 +115,22 @@ function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
   // a session), in which case the caption below just doesn't render
   // rather than showing a fabricated or zeroed-out number.
   const [tokensUsed, setTokensUsed] = useState<number | null>(null);
+  // Real per-model, per-day breakdown from the same endpoint (see
+  // tokenUsage.ts's addModelTokens/getModelTokenHistory) -- null until it
+  // loads, stays null for guests. Powers the Models tab's chart below;
+  // an empty/all-zero history just renders an empty chart rather than a
+  // fabricated one.
+  const [modelHistory, setModelHistory] = useState<{ day: string; models: Record<string, { in: number; out: number }> }[] | null>(
+    null
+  );
   useEffect(() => {
     let cancelled = false;
     fetch("/api/account/overview")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (!cancelled && data && typeof data.tokensUsed === "number") setTokensUsed(data.tokensUsed);
+        if (cancelled || !data) return;
+        if (typeof data.tokensUsed === "number") setTokensUsed(data.tokensUsed);
+        if (Array.isArray(data.modelTokenHistory)) setModelHistory(data.modelTokenHistory);
       })
       .catch(() => {});
     return () => {
@@ -141,6 +151,32 @@ function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
     { label: "7d", value: 7 },
   ];
   const multiplier = tokensUsed ? Math.round(tokensUsed / PRIDE_AND_PREJUDICE_TOKENS) : null;
+
+  // Real display names for the three models Build can actually route a
+  // turn to (see promptShared.ts's MODELS) -- falls back to the raw id
+  // for anything unrecognized rather than hiding it.
+  const MODEL_LABELS: Record<string, string> = {
+    "gpt-5.5": "GPT 5.5",
+    "deepseek-chat": "DeepSeek",
+    "claude-opus-5": "Opus 5",
+  };
+  const dayTotals = (modelHistory ?? []).map((d) =>
+    Object.values(d.models).reduce((sum, m) => sum + m.in + m.out, 0)
+  );
+  const maxDayTotal = Math.max(1, ...dayTotals);
+  const modelTotals: Record<string, { in: number; out: number }> = {};
+  for (const day of modelHistory ?? []) {
+    for (const [model, { in: inT, out: outT }] of Object.entries(day.models)) {
+      if (!modelTotals[model]) modelTotals[model] = { in: 0, out: 0 };
+      modelTotals[model].in += inT;
+      modelTotals[model].out += outT;
+    }
+  }
+  const grandTotal = Object.values(modelTotals).reduce((sum, m) => sum + m.in + m.out, 0);
+  const modelRows = Object.entries(modelTotals)
+    .map(([model, t]) => ({ model, ...t, total: t.in + t.out }))
+    .sort((a, b) => b.total - a.total);
+
   return (
     // overflow-hidden -- a grid item's own minmax(0,1fr) column already
     // stops it from overflowing in ordinary use, but this belt-and-braces
@@ -188,10 +224,59 @@ function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
         </div>
       </div>
       {view === "models" ? (
-        <p className="rounded-lg border border-white/10 bg-white/[0.06] p-4 text-sm text-muted">
-          Model breakdown isn't tracked yet -- Build doesn't currently record which model answered each project, so
-          there's nothing real to show here per-model.
-        </p>
+        modelHistory === null ? (
+          // Still loading (or a guest, who never gets real data here) --
+          // an empty shell instead of a chart with fabricated bars.
+          <div className="h-40 rounded-lg border border-white/10 bg-white/[0.06]" />
+        ) : grandTotal === 0 ? (
+          <p className="rounded-lg border border-white/10 bg-white/[0.06] p-4 text-sm text-muted">
+            No model usage recorded yet for the last 45 days -- this fills in the first time Build actually answers a
+            turn.
+          </p>
+        ) : (
+          <div>
+            {/* Real daily totals (input+output tokens, summed across
+                every model) for the last 45 days -- only fed by the
+                Build agent so far (see tokenUsage.ts), same partial-
+                coverage caveat as the token caption at the bottom of
+                Overview. Bar height is a plain percentage of the single
+                largest day in range, no library needed for a shape this
+                simple. */}
+            <div className="flex h-32 items-end gap-[3px]">
+              {(modelHistory ?? []).map((d, i) => (
+                <div
+                  key={d.day}
+                  title={`${d.day}: ${dayTotals[i].toLocaleString()} tokens`}
+                  className="min-w-0 flex-1 rounded-t-[2px] bg-blue-500"
+                  style={{ height: `${Math.max(2, (dayTotals[i] / maxDayTotal) * 100)}%` }}
+                />
+              ))}
+            </div>
+            <div className="mt-1 flex justify-between text-[10px] text-muted">
+              {(modelHistory ?? [])
+                .filter((_, i) => i % 5 === 0)
+                .map((d) => (
+                  <span key={d.day}>
+                    {new Date(d.day).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" })}
+                  </span>
+                ))}
+            </div>
+            <div className="mt-3 space-y-1.5 border-t border-white/10 pt-3">
+              {modelRows.map((r) => (
+                <div key={r.model} className="flex items-center gap-2 text-xs">
+                  <span className="h-2 w-2 shrink-0 rounded-sm bg-blue-500" />
+                  <span className="text-foreground">{MODEL_LABELS[r.model] ?? r.model}</span>
+                  <span className="flex-1 text-right text-muted">
+                    {(r.in / 1000).toFixed(1)}k in &middot; {(r.out / 1000).toFixed(1)}k out
+                  </span>
+                  <span className="w-12 text-right font-semibold text-foreground">
+                    {((r.total / grandTotal) * 100).toFixed(1)}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
       ) : (
         <>
       <div className="grid grid-cols-2 gap-1 sm:grid-cols-4">

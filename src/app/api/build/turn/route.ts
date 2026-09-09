@@ -7,7 +7,7 @@ import { sanitizeAgentMessages, hasImageContent } from "@/lib/agentMessages";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { MODELS } from "@/lib/promptShared";
 import { toAnthropicTools, toAnthropicMessages, fromAnthropicResponse } from "@/lib/anthropicToolBridge";
-import { addUserTokens } from "@/lib/tokenUsage";
+import { addUserTokens, addModelTokens } from "@/lib/tokenUsage";
 
 // A single "send" from the UI can legitimately trigger several turns in
 // a row (the agent loop calls this endpoint again after every tool
@@ -147,6 +147,12 @@ export async function POST(req: NextRequest) {
           usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number } | null;
         };
         let apiStream: AsyncIterable<ChatStreamChunk> | undefined;
+        // Tracks which model actually answered this turn -- apiStream alone
+        // doesn't say that, since it's the same variable regardless of
+        // which of the three tiers below set it. Needed so the per-model
+        // token record (see addModelTokens below) is tagged correctly
+        // instead of always assuming MODELS.primary.
+        let usedModel: string = MODELS.primary;
         if (process.env.OPENAI_API_KEY && !((await openAiLikelyDown()) && process.env.DEEPSEEK_API_KEY)) {
           try {
             const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -181,6 +187,7 @@ export async function POST(req: NextRequest) {
               stream: true,
               stream_options: { include_usage: true },
             })) as unknown as AsyncIterable<ChatStreamChunk>;
+            usedModel = MODELS.fallback;
           } catch (err) {
             if (!process.env.ANTHROPIC_API_KEY) throw err;
             console.error("Build agent: DeepSeek turn failed, falling back to Anthropic:", err);
@@ -217,7 +224,10 @@ export async function POST(req: NextRequest) {
                 }
               : null,
           });
-          if (response.usage) void addUserTokens(user.id, response.usage.input_tokens + response.usage.output_tokens);
+          if (response.usage) {
+            void addUserTokens(user.id, response.usage.input_tokens + response.usage.output_tokens);
+            void addModelTokens(user.id, MODELS.anthropicFallback, response.usage.input_tokens, response.usage.output_tokens);
+          }
           return;
         }
 
@@ -258,7 +268,10 @@ export async function POST(req: NextRequest) {
           .map((tc) => ({ id: tc.id, type: "function" as const, function: { name: tc.name, arguments: tc.arguments } }));
 
         send({ type: "done", toolCalls, content: contentBuffer || null, usage });
-        if (usage) void addUserTokens(user.id, usage.totalTokens);
+        if (usage) {
+          void addUserTokens(user.id, usage.totalTokens);
+          void addModelTokens(user.id, usedModel, usage.promptTokens, usage.completionTokens);
+        }
       } catch (err) {
         console.error("Build agent turn error:", err);
         const errMessage = err instanceof Error ? err.message : "Something went wrong.";
