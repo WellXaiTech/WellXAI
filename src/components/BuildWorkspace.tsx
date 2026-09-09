@@ -17,9 +17,22 @@ import { useChatGizaShell } from "@/components/ChatGizaShell";
 import AccountMenu from "@/components/AccountMenu";
 import LanguagePanel from "@/components/LanguagePanel";
 import { resolveAddressBarUrl } from "@/lib/addressBar";
+import TypingPlaceholder from "@/components/TypingPlaceholder";
 import type { SearchHit } from "@/lib/ai";
 
 const URL_PATTERN = /(https?:\/\/[^\s]+)/g;
+
+// Cycling example prompts for the pre-start composer's placeholder --
+// same fade-in/out TypingPlaceholder the main Ask composer's hero state
+// uses, just with Build-flavored examples instead of general chat ones.
+const BUILD_PLACEHOLDER_PHRASES = [
+  "Build a landing page for a bakery",
+  "Create a portfolio website for a photographer",
+  "Make a simple todo list app",
+  "Build a pricing page with three tiers",
+  "Create a signup form with validation",
+  "Tengeneza website ya duka la mtandaoni",
+];
 
 
 // A short kebab-case handle, same convention push_to_github already uses
@@ -2016,19 +2029,30 @@ export default function BuildWorkspace() {
               </div>
             </div>
             <form onSubmit={onSubmit} className="pb-6 pt-2">
-              <div className="flex items-center gap-2 rounded-2xl border border-composer-border bg-composer px-4 py-3 shadow-sm">
+              {/* py-2, not py-3 -- shorter box per feedback. The send
+                  button is bare now (no blue fill), just the icon in
+                  --muted/--foreground like the rest of the app's icon
+                  buttons -- per feedback, it read as too heavy filled in.
+                  Placeholder cycles through real Build example prompts
+                  (TypingPlaceholder, same fade the main Ask composer's
+                  hero state uses) instead of sitting on one static line. */}
+              <div className="relative flex items-center gap-2 rounded-2xl border border-composer-border bg-composer px-4 py-2 shadow-sm">
                 <input
                   autoFocus
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="e.g. Build a landing page for a bakery"
                   className="flex-1 bg-transparent text-sm outline-none"
                 />
+                {!input && (
+                  <div className="pointer-events-none absolute inset-y-0 left-4 right-14 flex items-center overflow-hidden text-sm text-muted">
+                    <TypingPlaceholder phrases={BUILD_PLACEHOLDER_PHRASES} />
+                  </div>
+                )}
                 <button
                   type="submit"
                   disabled={sending || !input.trim()}
                   aria-label="Send"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-40"
                 >
                   {SendIcon}
                 </button>
@@ -2074,19 +2098,23 @@ export default function BuildWorkspace() {
               </button>
             </div>
             <form onSubmit={onSubmit} className="mt-4 w-full">
-              <div className="flex items-center gap-2 rounded-2xl border border-composer-border bg-composer px-4 py-3 shadow-sm">
+              <div className="relative flex items-center gap-2 rounded-2xl border border-composer-border bg-composer px-4 py-2 shadow-sm">
                 <input
                   autoFocus
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Or describe your own idea -- e.g. Build a landing page for a bakery"
                   className="flex-1 bg-transparent text-sm outline-none"
                 />
+                {!input && (
+                  <div className="pointer-events-none absolute inset-y-0 left-4 right-14 flex items-center overflow-hidden text-sm text-muted">
+                    <TypingPlaceholder phrases={BUILD_PLACEHOLDER_PHRASES} />
+                  </div>
+                )}
                 <button
                   type="submit"
                   disabled={sending || !input.trim()}
                   aria-label="Send"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-40"
                 >
                   {SendIcon}
                 </button>
