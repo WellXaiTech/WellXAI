@@ -1898,8 +1898,17 @@ export default function BuildWorkspace() {
         // throughout like the rest of the app, each row's own icon circle
         // the only real ink change and pressed for its whole width, not
         // just a small button inside it.
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:p-6" role="alertdialog" aria-modal="true">
-          <div className="w-full max-w-2xl rounded-2xl border border-border bg-surface p-2 shadow-lg">
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center p-4 backdrop-blur-sm sm:p-6"
+          // A flat bg-black/60 read as a plain dimmer, not a backdrop --
+          // this radial glow instead pools soft light right behind where
+          // the card sits (bottom-center, per this modal's own anchoring)
+          // and fades to near-black at the edges, still pure monochrome.
+          style={{ background: "radial-gradient(circle at 50% 85%, rgba(255,255,255,0.07), rgba(0,0,0,0.82) 55%)" }}
+          role="alertdialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-2xl rounded-2xl border border-border bg-surface p-2 shadow-2xl ring-1 ring-white/[0.04]">
             <p className="px-3 pb-2 pt-3 text-base font-semibold text-foreground">Where should this project live?</p>
             {manualGroupMap.size > 0 && (
               <>
