@@ -461,6 +461,13 @@ const MIN_CHAT_WIDTH = 240;
 // Auto/model row below it) off the bottom of a short panel.
 const MAX_COMPOSER_HEIGHT = 240;
 
+// Purely the denominator for the usage popup's "Context window" progress
+// bar -- sessionTokens itself is real (tracked live as the session runs),
+// but this app has no actual fixed context-length ceiling anywhere to
+// measure it against, so 128k is a placeholder (a common real-world
+// figure) rather than a verified number for whichever model answered.
+const CONTEXT_WINDOW_PLACEHOLDER = 128_000;
+
 // The command-confirmation dialog's code snippet used to render as plain
 // muted text -- same font/color as the surrounding paragraph, no different
 // from any other sentence. Real syntax highlighting (same VS Code theme the
@@ -2950,10 +2957,29 @@ export default function BuildWorkspace() {
                         <span className="text-muted">Context window</span>
                         <span className="font-medium text-foreground">{sessionTokens.toLocaleString()} tokens</span>
                       </div>
+                      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
+                        <div
+                          className="h-full rounded-full bg-blue-500"
+                          style={{ width: `${Math.min(100, (sessionTokens / CONTEXT_WINDOW_PLACEHOLDER) * 100)}%` }}
+                        />
+                      </div>
 
                       <div className="my-3 border-t border-border" />
 
-                      <p className="text-[11px] font-medium text-muted">Plan usage limits</p>
+                      {/* A real link now, not inert text -- opens the
+                          actual Billing tab in Settings, where these
+                          limits and the account's real plan live. */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setModelInfoOpen(false);
+                          openSettingsTab("Billing");
+                        }}
+                        className="flex w-full items-center justify-between text-[11px] font-medium text-muted transition-colors hover:text-foreground"
+                      >
+                        <span>Plan usage limits</span>
+                        <span aria-hidden="true">&rarr;</span>
+                      </button>
 
                       {/* Real counts from two genuine tracking windows
                           api/build/turn now increments on every turn (see
@@ -2971,6 +2997,16 @@ export default function BuildWorkspace() {
                             : "…"}
                         </span>
                       </div>
+                      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
+                        <div
+                          className="h-full rounded-full bg-blue-500"
+                          style={{
+                            width: buildUsage
+                              ? `${Math.min(100, (buildUsage.fiveHour.used / buildUsage.fiveHour.limit) * 100)}%`
+                              : "0%",
+                          }}
+                        />
+                      </div>
                       <div className="mt-3 flex items-center justify-between">
                         <span className="font-semibold text-foreground">Weekly &middot; all models</span>
                         <span className="text-muted">
@@ -2978,6 +3014,16 @@ export default function BuildWorkspace() {
                             ? `${Math.min(100, Math.round((buildUsage.weekly.used / buildUsage.weekly.limit) * 100))}%`
                             : "…"}
                         </span>
+                      </div>
+                      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
+                        <div
+                          className="h-full rounded-full bg-blue-500"
+                          style={{
+                            width: buildUsage
+                              ? `${Math.min(100, (buildUsage.weekly.used / buildUsage.weekly.limit) * 100)}%`
+                              : "0%",
+                          }}
+                        />
                       </div>
                     </div>
                   )}
