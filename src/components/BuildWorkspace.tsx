@@ -152,13 +152,17 @@ function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
   ];
   const multiplier = tokensUsed ? Math.round(tokensUsed / PRIDE_AND_PREJUDICE_TOKENS) : null;
 
-  // Real display names for the three models Build can actually route a
-  // turn to (see promptShared.ts's MODELS) -- falls back to the raw id
-  // for anything unrecognized rather than hiding it.
+  // Every backend Build can route a turn to (see promptShared.ts's
+  // MODELS -- OpenAI, DeepSeek, or the Anthropic last resort) shows under
+  // one brand name, same as the model picker in the composer -- which
+  // actual API served a given turn is an internal implementation detail,
+  // not something to surface to users. Grouping happens right here, by
+  // label, so backends never appear as separate rows even though
+  // tokenUsage.ts still tracks them separately server-side.
   const MODEL_LABELS: Record<string, string> = {
-    "gpt-5.5": "GPT 5.5",
-    "deepseek-chat": "DeepSeek",
-    "claude-opus-5": "Opus 5",
+    "gpt-5.5": "GiZa 5.6",
+    "deepseek-chat": "GiZa 5.6",
+    "claude-opus-5": "GiZa 5.6",
   };
   const dayTotals = (modelHistory ?? []).map((d) =>
     Object.values(d.models).reduce((sum, m) => sum + m.in + m.out, 0)
@@ -167,14 +171,15 @@ function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
   const modelTotals: Record<string, { in: number; out: number }> = {};
   for (const day of modelHistory ?? []) {
     for (const [model, { in: inT, out: outT }] of Object.entries(day.models)) {
-      if (!modelTotals[model]) modelTotals[model] = { in: 0, out: 0 };
-      modelTotals[model].in += inT;
-      modelTotals[model].out += outT;
+      const label = MODEL_LABELS[model] ?? model;
+      if (!modelTotals[label]) modelTotals[label] = { in: 0, out: 0 };
+      modelTotals[label].in += inT;
+      modelTotals[label].out += outT;
     }
   }
   const grandTotal = Object.values(modelTotals).reduce((sum, m) => sum + m.in + m.out, 0);
   const modelRows = Object.entries(modelTotals)
-    .map(([model, t]) => ({ model, ...t, total: t.in + t.out }))
+    .map(([label, t]) => ({ label, ...t, total: t.in + t.out }))
     .sort((a, b) => b.total - a.total);
 
   return (
@@ -263,9 +268,9 @@ function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
             </div>
             <div className="mt-3 space-y-1.5 border-t border-white/10 pt-3">
               {modelRows.map((r) => (
-                <div key={r.model} className="flex items-center gap-2 text-xs">
+                <div key={r.label} className="flex items-center gap-2 text-xs">
                   <span className="h-2 w-2 shrink-0 rounded-sm bg-blue-500" />
-                  <span className="text-foreground">{MODEL_LABELS[r.model] ?? r.model}</span>
+                  <span className="text-foreground">{r.label}</span>
                   <span className="flex-1 text-right text-muted">
                     {(r.in / 1000).toFixed(1)}k in &middot; {(r.out / 1000).toFixed(1)}k out
                   </span>
