@@ -93,6 +93,14 @@ function computeBuildStats(allProjects: BuildProject[], windowDays: number | nul
   return { sessions, messages, activeDays: dayKeys.length, currentStreak, longestStreak, heatmapDays };
 }
 
+// Pride and Prejudice is ~122,685 words (Project Gutenberg's own word
+// count) -- at ~1.3 tokens/word for a typical GPT-style tokenizer, that's
+// roughly this many tokens. An estimate, not an exact count (nobody has
+// run the actual novel through a tokenizer here), but the real half of
+// this comparison -- the user's own tokensUsed -- comes straight from the
+// account's real, server-tracked total, not a guess.
+const PRIDE_AND_PREJUDICE_TOKENS = 160_000;
+
 function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
   // Models is a real second tab now, but honest about what it can't show:
   // nothing in this data records which model handled which project, so it
@@ -102,6 +110,23 @@ function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
   // recomputes every stat and the heatmap below from real timestamps.
   const [view, setView] = useState<"overview" | "models">("overview");
   const [windowDays, setWindowDays] = useState<number | null>(null);
+  // Real per-account total from the server (see tokenUsage.ts) -- null
+  // until it loads, and stays null for guests (the endpoint 401s without
+  // a session), in which case the caption below just doesn't render
+  // rather than showing a fabricated or zeroed-out number.
+  const [tokensUsed, setTokensUsed] = useState<number | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/account/overview")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data && typeof data.tokensUsed === "number") setTokensUsed(data.tokensUsed);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const stats = computeBuildStats(projects, windowDays);
   const cells: { label: string; value: number }[] = [
     { label: "Projects", value: stats.sessions },
@@ -115,18 +140,21 @@ function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
     { label: "30d", value: 30 },
     { label: "7d", value: 7 },
   ];
+  const multiplier = tokensUsed ? Math.round(tokensUsed / PRIDE_AND_PREJUDICE_TOKENS) : null;
   return (
     // overflow-hidden -- a grid item's own minmax(0,1fr) column already
     // stops it from overflowing in ordinary use, but this belt-and-braces
     // clip means nothing can ever visibly escape this card's rounded
-    // corners even under some future edge case. Taller now (p-6, more gap
-    // above the heatmap) and a two-tone gradient instead of a flat
-    // bg-surface-2, per feedback that the flat panel looked bare.
+    // corners even under some future edge case. A two-tone gradient
+    // instead of a flat bg-surface-2, per feedback that the flat panel
+    // looked bare. rounded-xl (not -2xl) and less top padding (pt-4, not
+    // a uniform p-6) -- both toned down per feedback that the corners read
+    // as too round and the gap above "Overview" as too tall.
     <div
-      className="w-full max-w-md overflow-hidden rounded-2xl border border-border p-6 pb-8"
+      className="w-full max-w-lg overflow-hidden rounded-xl border border-border px-5 pb-6 pt-4"
       style={{ background: "linear-gradient(180deg, var(--surface-2), var(--surface))" }}
     >
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
           {(["overview", "models"] as const).map((v) => (
             <button
@@ -160,7 +188,7 @@ function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
         </div>
       </div>
       {view === "models" ? (
-        <p className="rounded-xl border border-white/10 bg-white/[0.06] p-4 text-sm text-muted">
+        <p className="rounded-lg border border-white/10 bg-white/[0.06] p-4 text-sm text-muted">
           Model breakdown isn't tracked yet -- Build doesn't currently record which model answered each project, so
           there's nothing real to show here per-model.
         </p>
@@ -172,8 +200,9 @@ function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
           // bg-surface here (the same token the gradient already fades
           // toward) blended into the card at its darker end instead of
           // reading as a distinctly lighter box the way the reference did.
-          // Shorter and wider now (px-3 py-2, not p-3) per feedback.
-          <div key={c.label} className="min-w-0 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2">
+          // Shorter and wider now (px-3 py-1.5, rounded-lg not -xl) per
+          // feedback that these read as too tall and too round.
+          <div key={c.label} className="min-w-0 rounded-lg border border-white/10 bg-white/[0.06] px-3 py-1.5">
             <p className="truncate text-xs text-muted">{c.label}</p>
             <p className="mt-0.5 text-xl font-semibold text-foreground">{c.value}</p>
           </div>
@@ -199,6 +228,15 @@ function BuildStatsCard({ projects }: { projects: BuildProject[] }) {
           </div>
         ))}
       </div>
+      {/* Only renders once a real per-account token total has loaded --
+          guests (the endpoint 401s without a session) and the moment
+          before it loads both just show nothing here, never a fabricated
+          or zeroed-out number. */}
+      {multiplier !== null && multiplier >= 1 && (
+        <p className="mt-4 text-xs text-muted">
+          You&apos;ve used ~{multiplier}x more tokens than Pride and Prejudice.
+        </p>
+      )}
         </>
       )}
     </div>
