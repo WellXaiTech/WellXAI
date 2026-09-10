@@ -77,8 +77,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Create the repo if it doesn't exist yet; treat "already exists" as
-    // success rather than an error.
+    // success rather than an error. Captures the repo's REAL default
+    // branch along the way (an existing repo pushed here from GitHub's own
+    // UI, or created under an org with a different default-branch policy,
+    // isn't guaranteed to be "main") -- hardcoding "main" here used to
+    // silently create a divergent, empty-history "main" branch alongside
+    // a real "master" (or other) default, instead of actually reaching
+    // the repo's real history.
     const repoRes = await gh(primaryToken, `/repos/${owner}/${repoName}`);
+    let defaultBranch = "main";
     if (repoRes.status === 404) {
       const canCreateWithInstallationToken = installation?.accountType === "Organization";
       if (canCreateWithInstallationToken) {
@@ -91,6 +98,7 @@ export async function POST(req: NextRequest) {
           console.error("GitHub org repo creation failed:", createRes.status, errBody);
           return NextResponse.json({ error: "Could not create the GitHub repository." }, { status: 502 });
         }
+        defaultBranch = ((await createRes.json()).default_branch as string | undefined) ?? defaultBranch;
       } else if (classicToken) {
         // Personal account (or no App installation at all): only the
         // classic OAuth token's /user/repos can create it.
@@ -103,6 +111,7 @@ export async function POST(req: NextRequest) {
           console.error("GitHub repo creation failed:", createRes.status, errBody);
           return NextResponse.json({ error: "Could not create the GitHub repository." }, { status: 502 });
         }
+        defaultBranch = ((await createRes.json()).default_branch as string | undefined) ?? defaultBranch;
       } else {
         return NextResponse.json(
           {
@@ -114,6 +123,8 @@ export async function POST(req: NextRequest) {
       }
     } else if (!repoRes.ok) {
       return NextResponse.json({ error: "Could not reach that GitHub repository." }, { status: 502 });
+    } else {
+      defaultBranch = ((await repoRes.json()).default_branch as string | undefined) ?? defaultBranch;
     }
 
     // Everything from here on operates on a repo that's confirmed to
@@ -122,7 +133,7 @@ export async function POST(req: NextRequest) {
 
     // Look up the current default-branch ref, if one exists (brand new
     // repos have zero commits and no ref yet).
-    const branch = "main";
+    const branch = defaultBranch;
     let parentCommitSha: string | null = null;
     let baseTreeSha: string | undefined;
     const refRes = await gh(accessToken, `/repos/${owner}/${repoName}/git/ref/heads/${branch}`);
@@ -272,6 +283,13 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("GitHub push error:", err);
-    return NextResponse.json({ error: "Something went wrong pushing to GitHub." }, { status: 500 });
+    // The real message (a failed blob upload naming its path, a network
+    // error, whatever actually threw) instead of a bare generic line --
+    // whoever hits this has no access to this server's own logs, so a
+    // vague "something went wrong" with no detail leaves them unable to
+    // tell ChatGiZa's agent (or WellX AI) anything useful about what
+    // actually failed.
+    const detail = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: `Something went wrong pushing to GitHub: ${detail}` }, { status: 500 });
   }
 }
