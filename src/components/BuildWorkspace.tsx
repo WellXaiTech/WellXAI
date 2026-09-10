@@ -439,6 +439,23 @@ function DiffBlock({ lines }: { lines: DiffLine[] }) {
   );
 }
 
+// The real content behind a read_file/search_workspace/get_file_outline/
+// list_files/run_terminal_command step -- plain monospace text (no diff
+// coloring, there's nothing to diff), same click-to-expand idea as
+// DiffBlock above so every step type gets the same real detail view
+// instead of only file edits.
+const DETAIL_MAX_CHARS = 4000;
+function DetailBlock({ text }: { text: string }) {
+  const truncated = text.length > DETAIL_MAX_CHARS;
+  const shown = truncated ? text.slice(0, DETAIL_MAX_CHARS) : text;
+  return (
+    <div className="mt-1 max-h-72 overflow-auto rounded-lg border border-border bg-[#1e1e1e] p-3 font-mono text-xs leading-5 text-muted/90">
+      <pre className="whitespace-pre-wrap break-words">{shown}</pre>
+      {truncated && <p className="mt-1 text-muted">⋯ truncated ({text.length.toLocaleString()} characters total)</p>}
+    </div>
+  );
+}
+
 // Renders the full narration text every time, no "Show more" truncation --
 // the user explicitly asked for text to appear as-is rather than getting cut
 // with a toggle to expand it. Classes match the main chat's own assistant
@@ -3118,6 +3135,11 @@ export default function BuildWorkspace() {
                   // way a multi-step group's total is), so it maps 1:1 onto
                   // item.steps[0].diffLines.
                   const soloDiffLines = !canExpand ? item.steps[0].diffLines : undefined;
+                  // Same idea as soloDiffLines, for a step with no diff to
+                  // show (a read/search/outline/list/command) but a real
+                  // result behind it -- every step type gets the same
+                  // click-to-expand affordance, not just file edits.
+                  const soloDetail = !canExpand && !soloDiffLines ? item.steps[0].detail : undefined;
                   const soloDiffOpen = !canExpand && expandedDiffIds.has(item.steps[0].id ?? "");
                   // Chevron goes at the END of the line ("Used 3 tools ›"),
                   // not the front -- matches the reference transcript style
@@ -3142,6 +3164,20 @@ export default function BuildWorkspace() {
                         !soloReverted && summary.diffStat && <DiffStatBadge stat={summary.diffStat} />
                       )}
                       {soloReverted && <span className="shrink-0 text-xs no-underline">(reverted)</span>}
+                      {soloDetail && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleDiff(item.steps[0].id);
+                          }}
+                          className="shrink-0 rounded hover:bg-surface-2"
+                        >
+                          <span className={`inline-block transition-transform ${soloDiffOpen ? "rotate-90" : ""}`}>
+                            {ChevronRightIcon}
+                          </span>
+                        </button>
+                      )}
                       {canExpand && (
                         <span className={`shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`}>{ChevronRightIcon}</span>
                       )}
@@ -3171,6 +3207,7 @@ export default function BuildWorkspace() {
                             <p className="mt-0.5 pl-5 text-xs text-amber-500">{item.steps[0].warning}</p>
                           )}
                           {soloDiffOpen && soloDiffLines && <DiffBlock lines={soloDiffLines} />}
+                          {soloDiffOpen && soloDetail && <DetailBlock text={soloDetail} />}
                         </div>
                       )}
                       {/* Plain stacked lines, same font/weight as the header
@@ -3183,7 +3220,8 @@ export default function BuildWorkspace() {
                         <div className="ml-5 mt-0.5 space-y-1">
                           {item.steps.map((s, si) => {
                             const hasDiff = !s.reverted && s.diffStat && s.diffLines && s.diffLines.length > 0;
-                            const diffOpen = hasDiff && expandedDiffIds.has(s.id ?? "");
+                            const hasDetail = !s.reverted && !hasDiff && !!s.detail;
+                            const detailOpen = (hasDiff || hasDetail) && expandedDiffIds.has(s.id ?? "");
                             return (
                               <div key={si}>
                                 <p className={`flex items-center gap-1.5 text-sm ${s.reverted ? "text-muted line-through" : "text-muted"}`}>
@@ -3199,10 +3237,22 @@ export default function BuildWorkspace() {
                                   ) : (
                                     !s.reverted && s.diffStat && <DiffStatBadge stat={s.diffStat} />
                                   )}
+                                  {hasDetail && (
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleDiff(s.id)}
+                                      className="shrink-0 rounded hover:bg-surface-2"
+                                    >
+                                      <span className={`inline-block transition-transform ${detailOpen ? "rotate-90" : ""}`}>
+                                        {ChevronRightIcon}
+                                      </span>
+                                    </button>
+                                  )}
                                   {s.reverted && <span className="shrink-0 text-xs no-underline">(reverted)</span>}
                                 </p>
                                 {!s.reverted && s.warning && <p className="mt-0.5 text-xs text-amber-500">{s.warning}</p>}
-                                {diffOpen && s.diffLines && <DiffBlock lines={s.diffLines} />}
+                                {detailOpen && s.diffLines && <DiffBlock lines={s.diffLines} />}
+                                {detailOpen && hasDetail && s.detail && <DetailBlock text={s.detail} />}
                               </div>
                             );
                           })}

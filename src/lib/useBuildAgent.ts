@@ -58,6 +58,12 @@ export type BuildChatMessage = {
   // so a huge rewrite's message doesn't bloat localStorage with thousands
   // of unchanged lines nobody asked to see.
   diffLines?: DiffLine[];
+  // The real tool result behind a read_file/search_workspace/
+  // get_file_outline/list_files/run_terminal_command step -- click to
+  // expand (see BuildWorkspace.tsx), same idea as diffLines for a file
+  // edit. Without this there was no way to actually see what a read/
+  // search/outline step found, only a generic "Used a tool" label.
+  detail?: string;
   // Marks a generic step regardless of its specific label text ("command"
   // for run_terminal_command, "tool" for a read/search/outline call) so
   // summarizeSteps can still group/count these correctly once the label
@@ -318,7 +324,7 @@ function describeStep(
   name: string,
   args: Record<string, unknown>,
   result: string
-): { label: string; kind?: "command" | "tool" } | null {
+): { label: string; kind?: "command" | "tool"; detail?: string } | null {
   switch (name) {
     case "write_file":
       return { label: `Wrote ${String(args.path ?? "")}` };
@@ -332,12 +338,22 @@ function describeStep(
     case "run_supabase_sql":
       return { label: result };
     case "run_terminal_command":
-      return { label: describeCommand(typeof args.command === "string" ? args.command : ""), kind: "command" };
+      return { label: describeCommand(typeof args.command === "string" ? args.command : ""), kind: "command", detail: result };
+    // A specific, real label ("Read X", "Searched Y") instead of a generic
+    // "Used a tool" for every one of these -- and the real result kept as
+    // `detail` so a click can actually show what was read/found, not just
+    // that a tool ran. Previously the label was deliberately generic and
+    // the result thrown away entirely; per feedback, every step here
+    // should behave the same way a file edit's own diff does (a specific
+    // line, with a real detail view behind it).
     case "read_file":
+      return { label: `Read ${String(args.path ?? "")}`, kind: "tool", detail: result };
     case "list_files":
+      return { label: "Listed files", kind: "tool", detail: result };
     case "search_workspace":
+      return { label: `Searched ${String(args.query ?? "")}`, kind: "tool", detail: result };
     case "get_file_outline":
-      return { label: "Used a tool", kind: "tool" };
+      return { label: `Outlined ${String(args.path ?? "")}`, kind: "tool", detail: result };
     default:
       return null;
   }
@@ -1470,6 +1486,7 @@ export function useBuildAgent() {
                   warning,
                   diffStat: diff ? { added: diff.added, removed: diff.removed } : undefined,
                   diffLines: diff?.lines,
+                  detail: step.detail,
                   kind: step.kind,
                 },
               ]);
