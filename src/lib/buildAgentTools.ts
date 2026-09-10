@@ -211,6 +211,25 @@ export const BUILD_TOOLS = [
   {
     type: "function" as const,
     function: {
+      name: "reconnect_service",
+      description:
+        "Disconnect the current GitHub/Vercel/Supabase account for this browser and immediately open a fresh " +
+        "sign-in window so the user can connect a DIFFERENT account -- use this when the user says they want to " +
+        "switch accounts, use a different org, or connect a new/different one, instead of just calling push_to_github/" +
+        "deploy_to_vercel/create_supabase_project again (those would silently keep reusing whichever account is " +
+        "already connected, never re-prompting). The user never has to find a disconnect button themselves.",
+      parameters: {
+        type: "object",
+        properties: {
+          service: { type: "string", enum: ["github", "vercel", "supabase"], description: "Which connected service to switch accounts for." },
+        },
+        required: ["service"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
       name: "run_terminal_command",
       description:
         "Run a shell command (e.g. \"npm install\", \"npm test\", \"npm run build\") in a real sandboxed Node.js " +
@@ -302,6 +321,11 @@ export const BUILD_SYSTEM_PROMPT =
   "tools listed here (push_to_github, deploy_to_vercel, create_supabase_project, run_supabase_sql, " +
   "run_terminal_command against its own sandboxed environment -- never the user's own machine) and the connect " +
   "popups they open. Never describe a troubleshooting step, workaround, or capability that isn't one of these.\n" +
+  "- If the user says they want to use a different/new GitHub, Vercel, or Supabase account than whatever is " +
+  "already connected, call reconnect_service for that service -- don't just call push_to_github/deploy_to_vercel/" +
+  "create_supabase_project again, since those silently keep reusing the already-connected account and would never " +
+  "give them a chance to sign in as someone else. reconnect_service clears the old connection and opens a fresh " +
+  "sign-in window itself -- the user never needs to be told to find a disconnect button anywhere.\n" +
   "- If push_to_github, deploy_to_vercel, or create_supabase_project returns a \"not connected yet\" result, relay " +
   "its actual guidance to the user in your own words -- it already explains what to do (sign in or create an " +
   "account on the page that opened, and that closing that window early is fine, just ask again once they're " +

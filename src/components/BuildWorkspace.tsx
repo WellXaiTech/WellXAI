@@ -3505,9 +3505,11 @@ export default function BuildWorkspace() {
                             ? "This creates a real Supabase project (a real database)."
                             : pendingConfirmation.kind === "run_supabase_sql"
                               ? "This runs a real SQL change against the connected Supabase database."
-                              : pendingConfirmation.kind === "delete_file"
-                                ? "This removes the file from the project."
-                                : "This changes the project's files."}
+                              : pendingConfirmation.kind === "reconnect_service"
+                                ? "This disconnects the current account and opens a sign-in window for a different one."
+                                : pendingConfirmation.kind === "delete_file"
+                                  ? "This removes the file from the project."
+                                  : "This changes the project's files."}
                   </p>
                   {/* The exact command/path/name, not just the paraphrase
                       above -- same as the VS Code extension's own

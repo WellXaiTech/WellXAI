@@ -601,6 +601,7 @@ export type PendingBuildConfirmation = {
     | "deploy_to_vercel"
     | "create_supabase_project"
     | "run_supabase_sql"
+    | "reconnect_service"
     | "run_terminal_command"
     | "write_file"
     | "replace_in_file"
@@ -963,6 +964,24 @@ export function useBuildAgent() {
     return result;
   }, []);
 
+  // Lets the user switch to a DIFFERENT account for a service without
+  // hunting down a disconnect button first -- clears both layers that
+  // would otherwise make ensureConnected silently keep reusing the old
+  // account: connectedThisSession's in-memory cache (which would skip the
+  // popup entirely) and the actual stored token server-side (which would
+  // make the popup's own account-already-authorized shortcut re-select
+  // the same old account). Once both are cleared, ensureConnected behaves
+  // exactly like a first-ever connect, prompting fresh.
+  const reconnectService = useCallback(async (service: "github" | "vercel" | "supabase"): Promise<ConnectResult> => {
+    delete connectedThisSession[service];
+    try {
+      await fetch(`/api/connectors/${service}`, { method: "DELETE" });
+    } catch (err) {
+      console.error(`Failed to clear the old ${service} connection before reconnecting:`, err);
+    }
+    return ensureConnected(service);
+  }, []);
+
   // Which kinds the user has picked "Always allow" for -- checked before
   // ever showing the modal, so once granted for e.g. write_file, every
   // later write_file in the SAME session goes straight through with no
@@ -987,6 +1006,7 @@ export function useBuildAgent() {
       "deploy_to_vercel",
       "create_supabase_project",
       "run_supabase_sql",
+      "reconnect_service",
       "run_terminal_command",
     ];
     alwaysAllowedRef.current = new Set(mode === "auto" ? allKinds : mode === "acceptEdits" ? fileKinds : []);
@@ -1289,6 +1309,34 @@ export function useBuildAgent() {
         } catch {
           return "Database change failed: network error.";
         }
+      }
+      case "reconnect_service": {
+        const service = args.service as "github" | "vercel" | "supabase" | undefined;
+        if (service !== "github" && service !== "vercel" && service !== "supabase") {
+          return "service must be one of: github, vercel, supabase.";
+        }
+        const allowed = await requestConfirmation(
+          "reconnect_service",
+          `Allow ChatGiZa to disconnect the current ${service} account and connect a different one?`,
+          service
+        );
+        if (!allowed) return `The user declined to switch ${service} accounts. Do not retry; ask what they'd like instead if relevant.`;
+        const result = await reconnectService(service);
+        if (result === "blocked") {
+          return `The user's browser blocked the ${service} connect popup. Tell them to allow popups for this site (check the browser's address bar for a blocked-popup icon) and try again.`;
+        }
+        if (result === "not_configured") {
+          return `${service} isn't set up on ChatGiZa's side yet -- tell the user this feature isn't available right now.`;
+        }
+        if (result !== "connected") {
+          return (
+            `The old ${service} connection was cleared, and a fresh sign-in window should have opened -- tell the ` +
+            "user to sign in with the DIFFERENT account they want to use and approve the connection there. If the " +
+            "window closed before they finished, that's fine -- just ask you to try again once they're connected " +
+            "with the right account."
+          );
+        }
+        return `Connected to a new ${service} account. Ready to continue -- ask what they'd like to do with it (push, deploy, create a database, etc.).`;
       }
       case "run_terminal_command": {
         const command = (args.command as string) ?? "";
