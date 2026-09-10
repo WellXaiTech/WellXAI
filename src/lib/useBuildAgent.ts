@@ -77,6 +77,11 @@ export type BuildProject = {
   // confirmed) again by hand. Independent of githubRepoUrl -- a project
   // can be pushed to GitHub, deployed to Vercel, both, or neither.
   vercelProjectName?: string;
+  // Set once create_supabase_project succeeds for this project -- from
+  // then on, run_supabase_sql can be called against it without creating a
+  // new project first. Independent of githubRepoUrl/vercelProjectName --
+  // a project can have any combination of the three.
+  supabaseProjectRef?: string;
   // Set from the onboarding modal's mandatory "name your project" step --
   // only ever needed when the user got through onboarding without either
   // connecting GitHub or a folder, so the project would otherwise have no
@@ -237,6 +242,8 @@ function describeStep(
       return { label: `Deleted ${String(args.path ?? "")}` };
     case "push_to_github":
     case "deploy_to_vercel":
+    case "create_supabase_project":
+    case "run_supabase_sql":
       return { label: result };
     case "run_terminal_command":
       return { label: describeCommand(typeof args.command === "string" ? args.command : ""), kind: "command" };
@@ -272,6 +279,10 @@ function describeCurrentAction(name: string, args: Record<string, unknown>): str
       return "Pushing to GitHub…";
     case "deploy_to_vercel":
       return "Deploying to Vercel…";
+    case "create_supabase_project":
+      return "Creating Supabase project…";
+    case "run_supabase_sql":
+      return "Updating the database…";
     default:
       return null;
   }
@@ -292,6 +303,11 @@ type AgentMessage =
 const MAX_STEPS = 25;
 const DEPLOY_POLL_INTERVAL_MS = 3000;
 const DEPLOY_MAX_POLLS = 40; // ~2 minutes
+// A fresh Supabase project genuinely takes a few minutes to provision
+// (unlike a GitHub push or Vercel deployment) -- a longer interval and a
+// longer cap than the Vercel deploy poll above.
+const SUPABASE_POLL_INTERVAL_MS = 5000;
+const SUPABASE_MAX_POLLS = 48; // ~4 minutes
 
 function safeParseArgs(json: string): Record<string, unknown> {
   try {
@@ -380,9 +396,9 @@ export type ConnectResult = "connected" | "blocked" | "not_configured" | "failed
 // push_to_github/deploy_to_vercel more than once (on top of
 // syncFilesToGithub's own automatic push) flashed a blank tab open-and-
 // shut each time -- harmless, but read as something failing.
-const connectedThisSession: Partial<Record<"github" | "vercel", true>> = {};
+const connectedThisSession: Partial<Record<"github" | "vercel" | "supabase", true>> = {};
 
-async function ensureConnected(service: "github" | "vercel"): Promise<ConnectResult> {
+async function ensureConnected(service: "github" | "vercel" | "supabase"): Promise<ConnectResult> {
   if (connectedThisSession[service]) return "connected";
 
   // Deliberately WITHOUT noopener/noreferrer here, unlike a normal
@@ -471,7 +487,15 @@ async function ensureConnected(service: "github" | "vercel"): Promise<ConnectRes
 // (write_file, run_terminal_command) behind a real confirmation modal
 // before they run.
 export type PendingBuildConfirmation = {
-  kind: "push_to_github" | "deploy_to_vercel" | "run_terminal_command" | "write_file" | "replace_in_file" | "delete_file";
+  kind:
+    | "push_to_github"
+    | "deploy_to_vercel"
+    | "create_supabase_project"
+    | "run_supabase_sql"
+    | "run_terminal_command"
+    | "write_file"
+    | "replace_in_file"
+    | "delete_file";
   detail: string;
   // The exact command/path rendered in its own monospace block, separate
   // from `detail`'s human question -- matches the VS Code extension's own
@@ -637,6 +661,12 @@ export function useBuildAgent() {
       pinned: idx >= 0 ? prev[idx].pinned : undefined,
       githubRepoUrl,
       vercelProjectName,
+      // Never set via a "pending" ref like githubRepoUrl/vercelProjectName
+      // above -- a Supabase project is only ever created by the agent's
+      // own create_supabase_project tool mid-conversation, never as part
+      // of onboarding a brand-new project, so there's nothing to consume
+      // on the very first save.
+      supabaseProjectRef: idx >= 0 ? prev[idx]?.supabaseProjectRef : undefined,
       manualGroupName,
       customName,
       archived: idx >= 0 ? prev[idx].archived : undefined,
@@ -822,6 +852,8 @@ export function useBuildAgent() {
       ...fileKinds,
       "push_to_github",
       "deploy_to_vercel",
+      "create_supabase_project",
+      "run_supabase_sql",
       "run_terminal_command",
     ];
     alwaysAllowedRef.current = new Set(mode === "auto" ? allKinds : mode === "acceptEdits" ? fileKinds : []);
@@ -987,6 +1019,92 @@ export function useBuildAgent() {
           return "Deployment is taking longer than expected -- check Vercel directly.";
         } catch {
           return "Deploy failed: network error.";
+        }
+      }
+      case "create_supabase_project": {
+        const activeProject = projectsRef.current.find((p) => p.id === activeIdRef.current);
+        if (activeProject?.supabaseProjectRef) {
+          return `This project is already connected to Supabase project ${activeProject.supabaseProjectRef} -- use run_supabase_sql for schema changes instead of creating another one.`;
+        }
+        const name = args.name as string;
+        const connected = await ensureConnected("supabase");
+        if (connected === "blocked") {
+          return "The user's browser blocked the Supabase connect popup. Tell them to allow popups for this site (check the browser's address bar for a blocked-popup icon) and try again.";
+        }
+        if (connected === "not_configured") {
+          return "Supabase isn't set up on ChatGiZa's side yet -- tell the user this feature isn't available right now.";
+        }
+        if (connected !== "connected") return "The user needs to connect Supabase first -- a connect popup should have opened.";
+        const allowed = await requestConfirmation(
+          "create_supabase_project",
+          "Allow ChatGiZa to create a new Supabase project (a real database) for this app?",
+          name
+        );
+        if (!allowed) return `The user declined to create a Supabase project named "${name}". Do not retry; ask what they'd like instead if relevant.`;
+        try {
+          const res = await fetch("/api/build/supabase/create-project", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name }),
+          });
+          const data = await res.json();
+          if (!res.ok) return `Supabase project creation failed: ${data.error ?? "unknown error"}`;
+          const projectRef = data.projectRef as string;
+          if (activeIdRef.current) setProjectSupabaseRef(activeIdRef.current, projectRef);
+
+          for (let i = 0; i < SUPABASE_MAX_POLLS; i++) {
+            await new Promise((r) => setTimeout(r, SUPABASE_POLL_INTERVAL_MS));
+            const statusRes = await fetch(`/api/build/supabase/create-project/${projectRef}/status`);
+            const statusData = await statusRes.json();
+            if (!statusRes.ok) return `Supabase project creation failed while checking status: ${statusData.error ?? "unknown error"}`;
+            if (statusData.ready) {
+              const env = statusData.env as Record<string, string>;
+              const existing = filesRef.current[".env"] ?? "";
+              const keptLines = existing.split("\n").filter((line) => {
+                const key = line.split("=")[0]?.trim();
+                return key && !(key in env);
+              });
+              const newLines = Object.entries(env).map(([key, value]) => `${key}=${value}`);
+              const content = [...keptLines, ...newLines].filter((l) => l.length > 0).join("\n") + "\n";
+              const next = { ...filesRef.current, ".env": content };
+              filesRef.current = next;
+              setFiles(next);
+              void writeFileToLocalFolder(".env", content);
+              syncFilesToGithub();
+              syncFilesToVercel();
+              return (
+                `Created Supabase project (ref: ${projectRef}) in organization "${data.orgName}" and added its ` +
+                `connection details to .env. Use NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in ` +
+                `client-side code, SUPABASE_SERVICE_ROLE_KEY only in server-side code (never expose it to the ` +
+                `browser), and DATABASE_URL for any direct Postgres/ORM access. Use run_supabase_sql to create ` +
+                `tables or change the schema.`
+              );
+            }
+          }
+          return "The Supabase project is still provisioning -- this can take a few minutes. It's already linked to this project, so schema changes can be tried again shortly.";
+        } catch {
+          return "Supabase project creation failed: network error.";
+        }
+      }
+      case "run_supabase_sql": {
+        const activeProject = projectsRef.current.find((p) => p.id === activeIdRef.current);
+        const projectRef = activeProject?.supabaseProjectRef;
+        if (!projectRef) return "This project isn't connected to Supabase yet -- call create_supabase_project first.";
+        const sql = (args.sql as string) ?? "";
+        if (!sql.trim()) return "No SQL given.";
+        const allowed = await requestConfirmation("run_supabase_sql", "Allow ChatGiZa to run this database change on Supabase?", sql);
+        if (!allowed) return "The user declined to run this database change. Do not retry; ask what they'd like instead if relevant.";
+        try {
+          const res = await fetch("/api/build/supabase/sql", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ projectRef, sql }),
+          });
+          const data = await res.json();
+          if (!res.ok) return `Database change failed: ${data.error ?? "unknown error"}`;
+          return "Database change applied successfully.";
+        } catch {
+          return "Database change failed: network error.";
         }
       }
       case "run_terminal_command": {
@@ -1438,6 +1556,19 @@ export function useBuildAgent() {
     }
   }, []);
 
+  // Same idea as setProjectGithubRepo/setProjectVercelName, marking the
+  // project Supabase-backed once create_supabase_project succeeds.
+  const setProjectSupabaseRef = useCallback((id: string, ref: string) => {
+    const next = projectsRef.current.map((p) => (p.id === id ? { ...p, supabaseProjectRef: ref } : p));
+    projectsRef.current = next;
+    setProjects(next);
+    try {
+      if (typeof window !== "undefined") window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(next));
+    } catch {
+      // Non-fatal -- see selectProject above.
+    }
+  }, []);
+
   const renameProject = useCallback((id: string, name: string) => {
     const trimmed = name.trim();
     if (!trimmed) return;
@@ -1559,6 +1690,7 @@ export function useBuildAgent() {
       pendingVercelProjectNameRef.current = name;
     },
     setProjectVercelName,
+    setProjectSupabaseRef,
     permissionMode,
     setPermissionMode,
     projectName: deriveProjectName(files, messages),

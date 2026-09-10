@@ -165,6 +165,47 @@ export const BUILD_TOOLS = [
   {
     type: "function" as const,
     function: {
+      name: "create_supabase_project",
+      description:
+        "Create a new, real Supabase project (a real hosted Postgres database with auth/storage/APIs) for the current " +
+        "project, and automatically write its connection details into the project's own .env file (NEXT_PUBLIC_SUPABASE_URL, " +
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, DATABASE_URL). Only call this once per project -- if it " +
+        "already has a Supabase project, use run_supabase_sql for schema changes instead. Takes a couple of minutes to " +
+        "finish provisioning; this call waits for that before returning. If the user hasn't connected Supabase, this " +
+        "returns an error saying so instead of failing silently -- tell the user to connect Supabase (a popup will open " +
+        "automatically) and try again.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: "Short kebab-case project name based on the app, e.g. \"bakery-orders\".",
+          },
+        },
+        required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "run_supabase_sql",
+      description:
+        "Run a real SQL statement (CREATE TABLE, ALTER TABLE, RLS policies, seed data, etc.) against the project's " +
+        "already-created Supabase database, applied immediately -- there is no separate migration/apply step. Requires " +
+        "create_supabase_project to have been called for this project first.",
+      parameters: {
+        type: "object",
+        properties: {
+          sql: { type: "string", description: "The exact SQL to run." },
+        },
+        required: ["sql"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
       name: "run_terminal_command",
       description:
         "Run a shell command (e.g. \"npm install\", \"npm test\", \"npm run build\") in a real sandboxed Node.js " +
@@ -190,9 +231,11 @@ export const BUILD_SYSTEM_PROMPT =
   "get_file_outline, read_file, write_file, replace_in_file, delete_file), which operate on the project's actual " +
   "files -- there is no separate 'apply' step, whatever you write_file/replace_in_file appears immediately in the " +
   "live preview. You can also push_to_github and deploy_to_vercel directly -- there are no manual buttons for " +
-  "this in the UI, it all happens through you. run_terminal_command runs a real command in a real sandboxed " +
-  "environment (npm install/test/build, etc.) when the project has one -- use it to verify your own work, not to " +
-  "make changes.\n\n" +
+  "this in the UI, it all happens through you. When an app genuinely needs a real backend/database (user accounts, " +
+  "saved data, anything that must persist), create_supabase_project and run_supabase_sql give it a real Postgres " +
+  "database directly, with its keys wired into .env automatically -- no manual dashboard visit needed. " +
+  "run_terminal_command runs a real command in a real sandboxed environment (npm install/test/build, etc.) when " +
+  "the project has one -- use it to verify your own work, not to make changes.\n\n" +
   LANGUAGE_MATCH_PROMPT + "\n\n" +
   CHATGIZA_VOICE_PROMPT + " This applies to the short narration lines below too, not just longer replies -- they " +
   "should sound like the same voice thinking out loud, not a different, flatter tone reserved for status updates.\n\n" +
@@ -238,6 +281,13 @@ export const BUILD_SYSTEM_PROMPT =
   "- If push_to_github or deploy_to_vercel returns a \"connect GitHub/Vercel first\" error, tell the user in plain " +
   "language that a connection popup should have opened (or to try the action again if it didn't), then stop -- " +
   "don't retry the same call immediately, since it'll fail the same way until they actually connect.\n" +
+  "- When the user's request clearly needs persistent data or accounts (\"let people sign up\", \"save their orders\", " +
+  "\"add a database\", or explicitly says Supabase), call create_supabase_project once for that project, then " +
+  "run_supabase_sql for every table/column/policy it needs as the build progresses -- don't ask which database to " +
+  "use unless the user's own wording suggests they already have a specific one in mind (their own existing Supabase " +
+  "project, a different provider entirely). Never call create_supabase_project for a project that doesn't actually " +
+  "need a backend just because it was mentioned in passing. The same \"connect first\" handling as GitHub/Vercel " +
+  "above applies if it returns a connect error.\n" +
   "- After a successful deploy, always give the user the real URL you got back so they can open it.\n" +
   "- For a framework project with a package.json (not the default static-site case below), use " +
   "run_terminal_command to actually verify your work when it matters -- \"npm install\" after adding a " +

@@ -3095,9 +3095,13 @@ export default function BuildWorkspace() {
                         ? "This runs in a real sandboxed environment, not a simulation."
                         : pendingConfirmation.kind === "push_to_github"
                           ? "This creates or updates a real GitHub repository."
-                          : pendingConfirmation.kind === "delete_file"
-                            ? "This removes the file from the project."
-                            : "This changes the project's files."}
+                          : pendingConfirmation.kind === "create_supabase_project"
+                            ? "This creates a real Supabase project (a real database)."
+                            : pendingConfirmation.kind === "run_supabase_sql"
+                              ? "This runs a real SQL change against the connected Supabase database."
+                              : pendingConfirmation.kind === "delete_file"
+                                ? "This removes the file from the project."
+                                : "This changes the project's files."}
                   </p>
                   {/* The exact command/path/name, not just the paraphrase
                       above -- same as the VS Code extension's own
