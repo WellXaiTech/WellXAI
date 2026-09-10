@@ -1093,6 +1093,29 @@ export function useBuildAgent() {
       case "push_to_github": {
         const repoName = args.repoName as string;
         if (Object.keys(filesRef.current).length === 0) return "No files to push yet.";
+        // A DIFFERENT existing chat already owns this exact repo name --
+        // pushing from here anyway would silently send this chat's own,
+        // completely unrelated files into that repo's PR branch, diverging
+        // its real history with no warning anything was wrong. This is
+        // exactly what starting a brand-new chat (instead of reopening the
+        // existing one, or that repo's own "+" in History) and asking it
+        // to push looks like from the outside -- refuse instead of quietly
+        // corrupting the other chat's real repo.
+        const conflictingProject = projectsRef.current.find(
+          (p) =>
+            p.id !== activeIdRef.current &&
+            p.githubRepoUrl &&
+            p.githubRepoUrl.split("/").filter(Boolean).pop() === repoName
+        );
+        if (conflictingProject) {
+          return (
+            `"${repoName}" is already the GitHub repo for a different existing chat ("${conflictingProject.name}") -- ` +
+            "pushing from THIS chat would send this chat's own, different files into that same repo instead of " +
+            "continuing the real project. Tell the user this repo already belongs to another chat, and they should " +
+            "reopen that chat (or use that repo's own \"+\" in History) to continue it there instead of here. Do not " +
+            "push again unless they explicitly confirm they want to push a different, unrelated project to this same repo name."
+          );
+        }
         const connected = await ensureConnected("github");
         if (connected === "blocked") {
           return "The user's browser blocked the GitHub connect popup. Tell them to allow popups for this site (check the browser's address bar for a blocked-popup icon) and try again.";
