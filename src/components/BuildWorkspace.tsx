@@ -701,9 +701,9 @@ const PinIcon = (
     <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />
   </svg>
 );
-const DeleteRowIcon = (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect width="12" height="20" x="6" y="2" rx="2" />
+const UnreadDotRowIcon = (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+    <circle cx="12" cy="12" r="5" />
   </svg>
 );
 // Collapsed-by-default step group toggle -- points right, rotates down
@@ -853,6 +853,11 @@ export default function BuildWorkspace() {
     selectProject,
     deleteProject,
     togglePinProject,
+    renameProject,
+    setProjectGroup,
+    toggleArchiveProject,
+    toggleUnreadProject,
+    forkProject,
     pendingConfirmation,
     confirmPendingAction,
     localFolderName,
@@ -866,6 +871,25 @@ export default function BuildWorkspace() {
     activeProject,
     terminalHistory,
   } = useBuildAgent();
+
+  // Backs the History row menu's "Open in -> New tab" -- that just opens
+  // this same URL with ?project=<id> in a new tab; this is what makes the
+  // new tab actually land on that project once it mounts there, instead of
+  // the usual last-active one. Reads window.location directly (not
+  // useSearchParams) so this component doesn't need a Suspense boundary
+  // just for a one-time, client-only check.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const projectId = params.get("project");
+    if (!projectId) return;
+    selectProject(projectId);
+    params.delete("project");
+    const rest = params.toString();
+    window.history.replaceState(null, "", rest ? `${window.location.pathname}?${rest}` : window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [input, setInput] = useState("");
   const inputRef = useRef(input);
   inputRef.current = input;
@@ -1400,12 +1424,18 @@ export default function BuildWorkspace() {
   // confusing/unpredictable positioning, not helpful recency.
   const [historySortBy, setHistorySortBy] = useState<"activity" | "name">("name");
   const [historyGroupBy, setHistoryGroupBy] = useState<"folder" | "none">("folder");
+  // Archived projects stay saved (Archive is reversible, unlike Delete) but
+  // sit out of the normal list until this is switched on -- same idea as
+  // an email client's own Archive.
+  const [showArchived, setShowArchived] = useState(false);
   // Pinned projects float to the top (like a pinned chat/email) regardless
   // of sort choice, then everything else by the chosen sort.
-  const sortedProjects = [...projects].sort((a, b) => {
-    if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
-    return historySortBy === "name" ? a.name.localeCompare(b.name) : b.lastActivity - a.lastActivity;
-  });
+  const sortedProjects = [...projects]
+    .filter((p) => showArchived || !p.archived)
+    .sort((a, b) => {
+      if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
+      return historySortBy === "name" ? a.name.localeCompare(b.name) : b.lastActivity - a.lastActivity;
+    });
   // Groups are labeled with the REAL name the user gave -- the actual repo
   // name a GitHub-linked project pushed to, or the actual folder name
   // connected on this device -- never a generic "GitHub"/"Folder" label.
@@ -1510,49 +1540,211 @@ export default function BuildWorkspace() {
   }
   const [historyMenuOpen, setHistoryMenuOpen] = useState(false);
   const [historyMenuId, setHistoryMenuId] = useState<string | null>(null);
+  // "Open in" and "Move to group" expand inline (accordion-style) inside
+  // the same small popover rather than flying out a second panel -- with
+  // no floating-ui-style engine in this codebase, a true flyout risks
+  // landing off-screen near the rail's own edge; an inline expansion never
+  // can.
+  const [openSubmenu, setOpenSubmenu] = useState<"openIn" | "moveGroup" | null>(null);
+  const [newGroupDraft, setNewGroupDraft] = useState(false);
+  const [newGroupValue, setNewGroupValue] = useState("");
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  function closeProjectMenu() {
+    setHistoryMenuId(null);
+    setOpenSubmenu(null);
+    setNewGroupDraft(false);
+    setNewGroupValue("");
+  }
+  function commitRename() {
+    if (renamingId) renameProject(renamingId, renameValue);
+    setRenamingId(null);
+  }
   // One row inside a History group (either a repo-name group or the
   // folder group) -- shared so neither renders its own copy of this markup.
   function renderProjectRow(p: BuildProject) {
+    const isRenaming = renamingId === p.id;
+    const menuOpen = historyMenuId === p.id;
     return (
       <div key={p.id} className="group relative flex items-center gap-1 rounded-xl px-2 py-1.5 hover:bg-surface-2">
         {p.pinned && <span className="shrink-0 text-muted">{PinIcon}</span>}
-        <button onClick={() => selectProject(p.id)} className="min-w-0 flex-1 truncate text-left text-sm font-medium">
-          {p.name}
-        </button>
+        {/* A small filled dot -- the same idiom an inbox/chat list uses for
+            "you haven't opened this yet". Real state (unread?: boolean on
+            BuildProject), not a decoration: set only by "Mark as unread",
+            cleared automatically the moment the project is opened. */}
+        {p.unread && !isRenaming && <span className="shrink-0 text-blue-500">{UnreadDotRowIcon}</span>}
+        {isRenaming ? (
+          <input
+            autoFocus
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitRename();
+              if (e.key === "Escape") setRenamingId(null);
+            }}
+            onBlur={commitRename}
+            className="min-w-0 flex-1 rounded-md border border-border bg-background px-1.5 py-0.5 text-sm outline-none"
+          />
+        ) : (
+          <button onClick={() => selectProject(p.id)} className="min-w-0 flex-1 truncate text-left text-sm font-medium">
+            {p.name}
+          </button>
+        )}
         <button
           onClick={(e) => {
             e.stopPropagation();
-            setHistoryMenuId((cur) => (cur === p.id ? null : p.id));
+            if (menuOpen) closeProjectMenu();
+            else {
+              setHistoryMenuId(p.id);
+              setOpenSubmenu(null);
+            }
           }}
           aria-label="Project options"
           className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-border hover:text-foreground ${
-            historyMenuId === p.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
           }`}
         >
           {KebabIcon}
         </button>
-        {historyMenuId === p.id && (
+        {menuOpen && (
           <div
             onClick={(e) => e.stopPropagation()}
-            className="absolute right-0 top-full z-10 mt-1 w-32 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-lg"
+            className="absolute right-0 top-full z-10 mt-1 w-44 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-lg"
           >
+            <button
+              onClick={() => setOpenSubmenu((v) => (v === "openIn" ? null : "openIn"))}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium hover:bg-surface-2"
+            >
+              <span className="flex-1">Open in</span>
+              <span className={`transition-transform ${openSubmenu === "openIn" ? "rotate-90" : ""}`}>{ChevronRightIcon}</span>
+            </button>
+            {openSubmenu === "openIn" && (
+              <button
+                onClick={() => {
+                  window.open(`${window.location.pathname}?project=${p.id}`, "_blank", "noopener");
+                  closeProjectMenu();
+                }}
+                className="flex w-full items-center gap-2 py-1.5 pl-8 pr-3 text-left text-xs font-medium hover:bg-surface-2"
+              >
+                New tab
+              </button>
+            )}
             <button
               onClick={() => {
                 togglePinProject(p.id);
-                setHistoryMenuId(null);
+                closeProjectMenu();
               }}
               className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium hover:bg-surface-2"
             >
-              {PinIcon} {p.pinned ? "Unpin" : "Pin"}
+              {p.pinned ? "Unpin" : "Pin"}
+            </button>
+            <button
+              onClick={() => {
+                toggleUnreadProject(p.id);
+                closeProjectMenu();
+              }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium hover:bg-surface-2"
+            >
+              Mark as {p.unread ? "read" : "unread"}
+            </button>
+            <button
+              onClick={() => {
+                setRenamingId(p.id);
+                setRenameValue(p.name);
+                closeProjectMenu();
+              }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium hover:bg-surface-2"
+            >
+              Rename
+            </button>
+            <button
+              onClick={() => {
+                forkProject(p.id);
+                closeProjectMenu();
+              }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium hover:bg-surface-2"
+            >
+              Fork
+            </button>
+            <div className="my-1 border-t border-border" />
+            <button
+              onClick={() => setOpenSubmenu((v) => (v === "moveGroup" ? null : "moveGroup"))}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium hover:bg-surface-2"
+            >
+              <span className="flex-1">Move to group</span>
+              <span className={`transition-transform ${openSubmenu === "moveGroup" ? "rotate-90" : ""}`}>{ChevronRightIcon}</span>
+            </button>
+            {openSubmenu === "moveGroup" && (
+              <div className="pl-8 pr-2">
+                {Array.from(manualGroupMap.keys())
+                  .filter((name) => name.trim().toLowerCase() !== (p.manualGroupName ?? "").trim().toLowerCase())
+                  .map((name) => (
+                    <button
+                      key={name}
+                      onClick={() => {
+                        setProjectGroup(p.id, name);
+                        closeProjectMenu();
+                      }}
+                      className="flex w-full items-center rounded-lg py-1.5 pr-1 text-left text-xs font-medium hover:bg-surface-2"
+                    >
+                      <span className="min-w-0 flex-1 truncate">{name}</span>
+                    </button>
+                  ))}
+                {p.manualGroupName && (
+                  <button
+                    onClick={() => {
+                      setProjectGroup(p.id, null);
+                      closeProjectMenu();
+                    }}
+                    className="flex w-full items-center py-1.5 pr-1 text-left text-xs font-medium text-muted hover:bg-surface-2"
+                  >
+                    No group
+                  </button>
+                )}
+                {newGroupDraft ? (
+                  <input
+                    autoFocus
+                    value={newGroupValue}
+                    onChange={(e) => setNewGroupValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newGroupValue.trim()) {
+                        setProjectGroup(p.id, newGroupValue.trim());
+                        closeProjectMenu();
+                      }
+                      if (e.key === "Escape") setNewGroupDraft(false);
+                    }}
+                    placeholder="New group name"
+                    className="my-0.5 w-full rounded-md border border-border bg-background px-1.5 py-0.5 text-xs outline-none"
+                  />
+                ) : (
+                  <button
+                    onClick={() => setNewGroupDraft(true)}
+                    className="flex w-full items-center py-1.5 pr-1 text-left text-xs font-medium text-muted hover:bg-surface-2"
+                  >
+                    New group…
+                  </button>
+                )}
+              </div>
+            )}
+            <div className="my-1 border-t border-border" />
+            <button
+              onClick={() => {
+                toggleArchiveProject(p.id);
+                closeProjectMenu();
+              }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium hover:bg-surface-2"
+            >
+              {p.archived ? "Unarchive" : "Archive"}
             </button>
             <button
               onClick={() => {
                 deleteProject(p.id);
-                setHistoryMenuId(null);
+                closeProjectMenu();
               }}
               className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium text-red-500 hover:bg-surface-2"
             >
-              {DeleteRowIcon} Delete
+              Delete
             </button>
           </div>
         )}
@@ -1810,10 +2002,11 @@ export default function BuildWorkspace() {
   useEffect(() => {
     if (!historyMenuId) return;
     function onClick() {
-      setHistoryMenuId(null);
+      closeProjectMenu();
     }
     window.addEventListener("click", onClick);
     return () => window.removeEventListener("click", onClick);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historyMenuId]);
 
   useEffect(() => {
@@ -2065,6 +2258,14 @@ export default function BuildWorkspace() {
                   {historyGroupBy === opt && <span className="text-blue-500">✓</span>}
                 </button>
               ))}
+              <div className="my-1 border-t border-border" />
+              <button
+                onClick={() => setShowArchived((v) => !v)}
+                className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-surface-2"
+              >
+                Show archived
+                {showArchived && <span className="text-blue-500">✓</span>}
+              </button>
             </div>
           )}
         </div>

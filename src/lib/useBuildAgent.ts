@@ -76,6 +76,18 @@ export type BuildProject = {
   // connecting GitHub or a folder, so the project would otherwise have no
   // real identity at all for the sidebar's History groups to key off of.
   manualGroupName?: string;
+  // Set by the "Rename" menu action. Once present it overrides
+  // deriveProjectName() forever after (see the upsert effect below), the
+  // same way manualGroupName already overrides automatic grouping --
+  // without this, renaming a project would get silently clobbered back to
+  // its auto-derived name the next time a message is sent in it.
+  customName?: string;
+  // Set by "Archive" -- hidden from the main History list until "Show
+  // archived" is turned on (BuildWorkspace.tsx's sort/group menu).
+  archived?: boolean;
+  // Set by "Mark as unread"; cleared automatically the next time this
+  // project is actually opened (see selectProject).
+  unread?: boolean;
 };
 
 // Multiple build projects persist side by side (like Private Chat's
@@ -533,17 +545,22 @@ export function useBuildAgent() {
     // forever after, same as githubRepoUrl below.
     const manualGroupName = isNewProject ? pendingManualGroupNameRef.current ?? undefined : prev[idx]?.manualGroupName;
     if (isNewProject) pendingManualGroupNameRef.current = null;
-    // Carry the pin forward -- without this, every message sent in a
-    // pinned project would silently unpin it again on the next save.
+    // Carry the pin (and customName/archived/unread) forward -- without
+    // this, every message sent in a pinned/renamed/archived/unread project
+    // would silently reset it again on the next save.
+    const customName = idx >= 0 ? prev[idx].customName : undefined;
     const entry: BuildProject = {
       id,
-      name: deriveProjectName(files, messages),
+      name: customName ?? deriveProjectName(files, messages),
       files,
       messages,
       lastActivity: Date.now(),
       pinned: idx >= 0 ? prev[idx].pinned : undefined,
       githubRepoUrl: idx >= 0 ? prev[idx].githubRepoUrl : undefined,
       manualGroupName,
+      customName,
+      archived: idx >= 0 ? prev[idx].archived : undefined,
+      unread: idx >= 0 ? prev[idx].unread : undefined,
     };
     const next = idx >= 0 ? [...prev.slice(0, idx), entry, ...prev.slice(idx + 1)] : [entry, ...prev];
     projectsRef.current = next;
@@ -1160,6 +1177,17 @@ export function useBuildAgent() {
     setError(null);
     setTerminalHistory([]);
     sandboxIdRef.current = undefined;
+    // Opening a project always marks it read, same as any chat/email list.
+    if (found.unread) {
+      const next = projectsRef.current.map((p) => (p.id === id ? { ...p, unread: false } : p));
+      projectsRef.current = next;
+      setProjects(next);
+      try {
+        if (typeof window !== "undefined") window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(next));
+      } catch {
+        // Non-fatal -- see below.
+      }
+    }
     try {
       if (typeof window !== "undefined") window.localStorage.setItem(ACTIVE_ID_KEY, found.id);
     } catch {
@@ -1216,6 +1244,85 @@ export function useBuildAgent() {
     }
   }, []);
 
+  const renameProject = useCallback((id: string, name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const next = projectsRef.current.map((p) => (p.id === id ? { ...p, name: trimmed, customName: trimmed } : p));
+    projectsRef.current = next;
+    setProjects(next);
+    try {
+      if (typeof window !== "undefined") window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(next));
+    } catch {
+      // Non-fatal -- see selectProject above.
+    }
+  }, []);
+
+  // null clears the group (moves the project back to ungrouped).
+  const setProjectGroup = useCallback((id: string, groupName: string | null) => {
+    const next = projectsRef.current.map((p) => (p.id === id ? { ...p, manualGroupName: groupName ?? undefined } : p));
+    projectsRef.current = next;
+    setProjects(next);
+    try {
+      if (typeof window !== "undefined") window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(next));
+    } catch {
+      // Non-fatal -- see selectProject above.
+    }
+  }, []);
+
+  const toggleArchiveProject = useCallback((id: string) => {
+    const next = projectsRef.current.map((p) => (p.id === id ? { ...p, archived: !p.archived } : p));
+    projectsRef.current = next;
+    setProjects(next);
+    try {
+      if (typeof window !== "undefined") window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(next));
+    } catch {
+      // Non-fatal -- see selectProject above.
+    }
+  }, []);
+
+  const toggleUnreadProject = useCallback((id: string) => {
+    const next = projectsRef.current.map((p) => (p.id === id ? { ...p, unread: !p.unread } : p));
+    projectsRef.current = next;
+    setProjects(next);
+    try {
+      if (typeof window !== "undefined") window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(next));
+    } catch {
+      // Non-fatal -- see selectProject above.
+    }
+  }, []);
+
+  // Deep-copies a project's files and messages into a brand new one, then
+  // switches to it -- its own id/name/lastActivity, kept in the same
+  // group, but never the original's githubRepoUrl (a fork is an
+  // independent local copy, not something already pushed to that remote).
+  const forkProject = useCallback(
+    (id: string) => {
+      const found = projectsRef.current.find((p) => p.id === id);
+      if (!found) return;
+      const forkId = newId();
+      const forkedName = `${found.name} (copy)`;
+      const entry: BuildProject = {
+        id: forkId,
+        name: forkedName,
+        customName: forkedName,
+        files: { ...found.files },
+        messages: [...found.messages],
+        lastActivity: Date.now(),
+        manualGroupName: found.manualGroupName,
+      };
+      const next = [entry, ...projectsRef.current];
+      projectsRef.current = next;
+      setProjects(next);
+      try {
+        if (typeof window !== "undefined") window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(next));
+      } catch {
+        // Non-fatal -- see selectProject above.
+      }
+      selectProject(forkId);
+    },
+    [selectProject]
+  );
+
   return {
     files,
     messages,
@@ -1236,6 +1343,11 @@ export function useBuildAgent() {
     selectProject,
     deleteProject,
     togglePinProject,
+    renameProject,
+    setProjectGroup,
+    toggleArchiveProject,
+    toggleUnreadProject,
+    forkProject,
     pendingConfirmation,
     confirmPendingAction,
     localFolderName,
