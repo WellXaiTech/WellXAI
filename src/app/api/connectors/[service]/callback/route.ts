@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CONNECTOR_CONFIGS, type ConnectorId, getConnectorToken, saveConnectorToken, verifyConnectorState, requestToken } from "@/lib/connectors";
+import { fetchInstallationInfo, saveUserInstallation } from "@/lib/githubApp";
 
 // This tab only ever exists because ensureConnected() (useBuildAgent.ts)
 // opened it via window.open() and is polling popup.closed to know when to
@@ -36,10 +37,36 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ serv
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
+  const installationId = url.searchParams.get("installation_id");
+  const setupAction = url.searchParams.get("setup_action");
   const providerError = url.searchParams.get("error");
   if (providerError) {
     return resultPage("Connection cancelled", "This tab will close automatically.");
   }
+
+  // GitHub App installation callback -- this same URL is the app's fixed
+  // "Setup URL" (see api/admin/github-app/manifest), so an install lands
+  // here with installation_id/setup_action instead of the classic OAuth
+  // `code`. No token exchange needed at all: unlike OAuth there's no
+  // code-for-token step -- installation tokens are minted on demand
+  // later (see githubApp.ts's mintInstallationToken), from the
+  // installation id saved right here.
+  if (id === "github" && installationId && (setupAction === "install" || setupAction === "update")) {
+    if (!state) {
+      return resultPage("Connection failed", "Missing state. Please try again from the app.");
+    }
+    const decoded = await verifyConnectorState(state);
+    if (!decoded || decoded.service !== id) {
+      return resultPage("Connection failed", "This link expired or is invalid. Please try again from the app.");
+    }
+    const info = await fetchInstallationInfo(installationId);
+    if (!info) {
+      return resultPage("Connection failed", "Could not look up this installation. Please try again.");
+    }
+    await saveUserInstallation(decoded.userId, info);
+    return resultPage("GitHub connected", "This tab will close automatically.");
+  }
+
   if (!code || !state) {
     return resultPage("Connection failed", "Missing authorization code. Please try again from the app.");
   }

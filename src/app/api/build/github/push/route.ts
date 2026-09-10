@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getRequestUser } from "@/lib/requestUser";
 import { hasBuildAccess } from "@/lib/usageLimit";
 import { getFreshConnectorToken } from "@/lib/connectors";
+import { getUserInstallation, mintInstallationToken } from "@/lib/githubApp";
 import { validateBuildFiles } from "@/lib/buildFileLimits";
 
 const GITHUB_API = "https://api.github.com";
@@ -45,36 +46,79 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: sizeError }, { status: 400 });
   }
 
-  const token = await getFreshConnectorToken(user.id, "github");
-  if (!token) {
+  // The GitHub App installation (see githubApp.ts), if the user has one,
+  // is preferred for everything below -- it's the reliable, no-repeat-
+  // popup connection. The classic OAuth token is kept around purely as
+  // the fallback for the one thing a GitHub App genuinely cannot do:
+  // create a brand-new repo under a PERSONAL account (GitHub only
+  // allows app-token repo creation for organizations, regardless of the
+  // app's own permissions -- a platform limitation, not a ChatGiZa one).
+  const [installation, classicToken] = await Promise.all([
+    getUserInstallation(user.id),
+    getFreshConnectorToken(user.id, "github"),
+  ]);
+  const installationToken = installation ? await mintInstallationToken(installation.installationId) : null;
+  const primaryToken = installationToken ?? classicToken?.accessToken ?? null;
+  if (!primaryToken) {
     return NextResponse.json({ error: "Connect GitHub first." }, { status: 400 });
   }
-  const accessToken = token.accessToken;
 
   try {
-    const meRes = await gh(accessToken, "/user");
-    if (!meRes.ok) {
-      return NextResponse.json({ error: "GitHub rejected the stored connection. Please reconnect GitHub." }, { status: 400 });
+    let owner: string;
+    if (installation) {
+      owner = installation.accountLogin;
+    } else {
+      const meRes = await gh(primaryToken, "/user");
+      if (!meRes.ok) {
+        return NextResponse.json({ error: "GitHub rejected the stored connection. Please reconnect GitHub." }, { status: 400 });
+      }
+      const me = await meRes.json();
+      owner = me.login as string;
     }
-    const me = await meRes.json();
-    const owner = me.login as string;
 
     // Create the repo if it doesn't exist yet; treat "already exists" as
     // success rather than an error.
-    const repoRes = await gh(accessToken, `/repos/${owner}/${repoName}`);
+    const repoRes = await gh(primaryToken, `/repos/${owner}/${repoName}`);
     if (repoRes.status === 404) {
-      const createRes = await gh(accessToken, "/user/repos", {
-        method: "POST",
-        body: JSON.stringify({ name: repoName, private: isPrivate, auto_init: false }),
-      });
-      if (!createRes.ok) {
-        const errBody = await createRes.text();
-        console.error("GitHub repo creation failed:", createRes.status, errBody);
-        return NextResponse.json({ error: "Could not create the GitHub repository." }, { status: 502 });
+      const canCreateWithInstallationToken = installation?.accountType === "Organization";
+      if (canCreateWithInstallationToken) {
+        const createRes = await gh(primaryToken, `/orgs/${owner}/repos`, {
+          method: "POST",
+          body: JSON.stringify({ name: repoName, private: isPrivate, auto_init: false }),
+        });
+        if (!createRes.ok) {
+          const errBody = await createRes.text();
+          console.error("GitHub org repo creation failed:", createRes.status, errBody);
+          return NextResponse.json({ error: "Could not create the GitHub repository." }, { status: 502 });
+        }
+      } else if (classicToken) {
+        // Personal account (or no App installation at all): only the
+        // classic OAuth token's /user/repos can create it.
+        const createRes = await gh(classicToken.accessToken, "/user/repos", {
+          method: "POST",
+          body: JSON.stringify({ name: repoName, private: isPrivate, auto_init: false }),
+        });
+        if (!createRes.ok) {
+          const errBody = await createRes.text();
+          console.error("GitHub repo creation failed:", createRes.status, errBody);
+          return NextResponse.json({ error: "Could not create the GitHub repository." }, { status: 502 });
+        }
+      } else {
+        return NextResponse.json(
+          {
+            error:
+              "This GitHub account is personal, and ChatGiZa's GitHub App can't create new repos there (only push to existing ones) -- create the repo on GitHub yourself first, or also connect GitHub the classic way for repo creation.",
+          },
+          { status: 400 }
+        );
       }
     } else if (!repoRes.ok) {
       return NextResponse.json({ error: "Could not reach that GitHub repository." }, { status: 502 });
     }
+
+    // Everything from here on operates on a repo that's confirmed to
+    // exist -- back to the one primary token (installation-preferred).
+    const accessToken = primaryToken;
 
     // Look up the current default-branch ref, if one exists (brand new
     // repos have zero commits and no ref yet).

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRequestUser } from "@/lib/requestUser";
 import { CONNECTOR_CONFIGS, type ConnectorId, isConnectorConfigured, mintConnectorState, generatePkcePair } from "@/lib/connectors";
+import { isGithubAppConfigured, getGithubAppConfig } from "@/lib/githubApp";
 
 // Mints a one-time, 10-minute "state" token (see connectors.ts) and hands
 // back the provider's authorize URL for the app to open in an external
@@ -17,6 +18,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ser
     return NextResponse.json({ error: "Unknown connector" }, { status: 404 });
   }
   const id = service as ConnectorId;
+
+  // Once the GitHub App is set up (see api/admin/github-app), it's the
+  // preferred way to connect GitHub -- no popup ever needed again after
+  // this one install, unlike the classic OAuth connector below which
+  // this app still keeps around as-is, only for the one thing a GitHub
+  // App genuinely can't do (create a brand-new repo under a PERSONAL
+  // account -- see api/build/github/push/route.ts).
+  if (id === "github" && (await isGithubAppConfigured())) {
+    const cfg = await getGithubAppConfig();
+    const state = await mintConnectorState(user.id, id);
+    const installParams = new URLSearchParams({ state });
+    return NextResponse.json({ url: `https://github.com/apps/${cfg!.slug}/installations/new?${installParams.toString()}` });
+  }
+
   if (!isConnectorConfigured(id)) {
     return NextResponse.json({ error: "This connector isn't set up yet" }, { status: 400 });
   }
