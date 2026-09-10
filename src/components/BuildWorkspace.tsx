@@ -366,10 +366,22 @@ function summarizeSteps(steps: BuildChatMessage[]): { label: string; diffStat?: 
   );
   const diffStat = totalDiff.added > 0 || totalDiff.removed > 0 ? totalDiff : undefined;
   if (steps.length === 1) return { label: steps[0].content, diffStat };
-  // "Read and wrote/edited X" (a read immediately folded into the edit it
-  // preceded) counts the same as a plain "Wrote/Edited X" here.
-  const written = steps.filter((s) => s.content.startsWith("Wrote ") || s.content.startsWith("Read and wrote ")).length;
-  const edited = steps.filter((s) => s.content.startsWith("Edited ") || s.content.startsWith("Read and edited ")).length;
+  // A read immediately followed by an edit of that SAME file -- each kept
+  // as its own real, independently expandable step (see useBuildAgent.ts),
+  // but still summarized here as the one familiar "Read and edited X"
+  // line instead of "Read X, Edited X" or a generic 2-step count.
+  if (
+    steps.length === 2 &&
+    steps[0].content.startsWith("Read ") &&
+    steps[0].path &&
+    steps[0].path === steps[1].path &&
+    (steps[1].content.startsWith("Wrote ") || steps[1].content.startsWith("Edited "))
+  ) {
+    const editLabel = steps[1].content;
+    return { label: `Read and ${editLabel.charAt(0).toLowerCase()}${editLabel.slice(1)}`, diffStat };
+  }
+  const written = steps.filter((s) => s.content.startsWith("Wrote ")).length;
+  const edited = steps.filter((s) => s.content.startsWith("Edited ")).length;
   const deleted = steps.filter((s) => s.content.startsWith("Deleted ")).length;
   // Commands (run_terminal_command) and generic tool calls (read_file/
   // list_files/search_workspace/get_file_outline) are counted via `kind`,
@@ -514,6 +526,14 @@ function DiffHunk({ lines, path }: { lines: DiffLine[]; path?: string }) {
   );
 }
 
+// The real path a diff/detail block is about, shown as its own small
+// header line above the code -- matches the reference transcript, where
+// every expanded step shows exactly which file it's for before the
+// content itself, not just inside the (possibly truncated) label above it.
+function PathHeader({ path }: { path: string }) {
+  return <p className="truncate bg-[#1e1e1e] px-3 py-1.5 font-mono text-xs text-muted">{path}</p>;
+}
+
 // The real content behind a step's +N -M badge -- diffLines is already
 // windowed down to a couple of lines of context around each change (see
 // collapseToDiffHunks in useBuildAgent.ts); each contiguous run of real
@@ -538,6 +558,7 @@ function DiffBlock({ lines, path }: { lines: DiffLine[]; path?: string }) {
   if (current.length > 0) hunks.push(current);
   return (
     <div className="mt-1 overflow-hidden rounded-lg border border-border">
+      {path && <PathHeader path={path} />}
       {hunks.map((hunk, i) =>
         hunk.length === 1 && hunk[0].type === "context" && hunk[0].text.startsWith("⋯") ? (
           <p key={i} className="bg-[#1e1e1e] py-1 text-center font-mono text-xs text-muted">
@@ -566,6 +587,7 @@ function DetailBlock({ text, path }: { text: string; path?: string }) {
   if (lang.length > 0) {
     return (
       <div className="mt-1 overflow-hidden rounded-lg border border-border">
+        {path && <PathHeader path={path} />}
         <CodeMirror
           value={shown}
           theme={vscodeDark}

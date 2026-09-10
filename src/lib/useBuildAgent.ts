@@ -1322,10 +1322,22 @@ export function useBuildAgent() {
       // edit are almost always in two separate turns/steps, not the same
       // tool_calls batch -- resetting this per-turn meant the merge could
       // never actually fire.
-      let pendingRead: { path: string } | null = null;
+      // Holds a read_file's own result/path until it's clear whether the
+      // model's very next tool call is an edit of that SAME file -- not to
+      // merge them into one message (each keeps its own real, independently
+      // expandable detail/diff -- see BuildWorkspace.tsx's summarizeSteps
+      // special-casing a [read, matching edit] pair), but so the read still
+      // lands immediately before its edit in the transcript even when the
+      // model narrates a sentence in between the two tool calls, keeping
+      // them one consecutive (and so groupable) run of step messages.
+      let pendingRead: { path: string; detail: string } | null = null;
       const flushPendingRead = () => {
         if (!pendingRead) return;
-        setMessages((prev) => [...prev, { role: "assistant", content: "Used a tool", step: true, id: newId(), kind: "tool" as const }]);
+        const { path, detail } = pendingRead;
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: `Read ${path}`, step: true, id: newId(), kind: "tool" as const, detail, path },
+        ]);
         pendingRead = null;
       };
 
@@ -1448,15 +1460,20 @@ export function useBuildAgent() {
 
             if (call.function.name === "read_file" && path) {
               flushPendingRead();
-              pendingRead = { path };
+              pendingRead = { path, detail: result };
               continue;
             }
 
-            const mergesWithPendingRead =
-              pendingRead !== null &&
-              path === pendingRead.path &&
-              (call.function.name === "write_file" || call.function.name === "replace_in_file");
-            if (!mergesWithPendingRead) flushPendingRead();
+            // A pending read always flushes as ITS OWN real message right
+            // before whatever comes next (an edit of that same file or
+            // not) -- it never merges into the following step's message.
+            // The two end up consecutive, independently-expandable step
+            // messages; when the next one is a matching edit,
+            // BuildWorkspace.tsx's summarizeSteps recognizes that exact
+            // [read, matching edit] pair and gives the pair the combined
+            // "Read and edited X" summary label while keeping each step's
+            // own detail/diff intact underneath.
+            flushPendingRead();
 
             const step = describeStep(call.function.name, args, result);
             if (step) {
@@ -1478,15 +1495,11 @@ export function useBuildAgent() {
                 isDiffable && path && filesRef.current[path] !== undefined
                   ? computeLineDiff(prevContent, filesRef.current[path]) ?? undefined
                   : undefined;
-              const label = mergesWithPendingRead
-                ? `Read and ${step.label.charAt(0).toLowerCase()}${step.label.slice(1)}`
-                : step.label;
-              if (mergesWithPendingRead) pendingRead = null;
               setMessages((prev) => [
                 ...prev,
                 {
                   role: "assistant",
-                  content: label,
+                  content: step.label,
                   step: true,
                   id: newId(),
                   revert,
