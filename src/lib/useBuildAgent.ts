@@ -1120,7 +1120,14 @@ export function useBuildAgent() {
         if (connected === "blocked") {
           return "The user's browser blocked the GitHub connect popup. Tell them to allow popups for this site (check the browser's address bar for a blocked-popup icon) and try again.";
         }
-        if (connected !== "connected") return "The user needs to connect GitHub first -- a connect popup should have opened.";
+        if (connected !== "connected") {
+          return (
+            "GitHub isn't connected yet. A sign-in window should have opened -- tell the user: sign in there (or " +
+            "create a free GitHub account first if they don't have one), then approve the connection. If the " +
+            "window closed before they finished (or they weren't ready), that's fine -- just ask you to push again " +
+            "once they've connected, and it'll continue automatically from there with no further setup needed."
+          );
+        }
         const allowed = await requestConfirmation("push_to_github", "Allow ChatGiZa to push this project to GitHub?", repoName);
         if (!allowed) return `The user declined to push to GitHub as "${repoName}". Do not retry; ask what they'd like instead if relevant.`;
         try {
@@ -1146,7 +1153,14 @@ export function useBuildAgent() {
         if (connected === "blocked") {
           return "The user's browser blocked the Vercel connect popup. Tell them to allow popups for this site (check the browser's address bar for a blocked-popup icon) and try again.";
         }
-        if (connected !== "connected") return "The user needs to connect Vercel first -- a connect popup should have opened.";
+        if (connected !== "connected") {
+          return (
+            "Vercel isn't connected yet. A sign-in window should have opened -- tell the user: sign in there (or " +
+            "create a free Vercel account first if they don't have one), then approve the connection. If the " +
+            "window closed before they finished, that's fine -- just ask you to deploy again once they've " +
+            "connected, and it'll continue automatically from there with no further setup needed."
+          );
+        }
         const allowed = await requestConfirmation(
           "deploy_to_vercel",
           "Allow ChatGiZa to deploy this project to Vercel?",
@@ -1192,7 +1206,15 @@ export function useBuildAgent() {
         if (connected === "not_configured") {
           return "Supabase isn't set up on ChatGiZa's side yet -- tell the user this feature isn't available right now.";
         }
-        if (connected !== "connected") return "The user needs to connect Supabase first -- a connect popup should have opened.";
+        if (connected !== "connected") {
+          return (
+            "Supabase isn't connected yet. A sign-in window should have opened -- tell the user: if they don't " +
+            "already have a Supabase account, they can create one right there (it takes a minute, may need email " +
+            "verification), then sign in and approve the connection. If the window closed before they finished " +
+            "signing up or verifying, that's completely fine -- just ask you to create the database again once " +
+            "they're actually connected, and it'll continue automatically from there with no further setup needed."
+          );
+        }
         const allowed = await requestConfirmation(
           "create_supabase_project",
           "Allow ChatGiZa to create a new Supabase project (a real database) for this app?",

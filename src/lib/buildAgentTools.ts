@@ -291,9 +291,15 @@ export const BUILD_SYSTEM_PROMPT =
   "deploy_to_vercel yourself -- don't just describe how they'd do it manually. Pick a short kebab-case name for " +
   "repoName/projectName based on what's being built, and reuse the exact same name on later calls for the same " +
   "project so pushes/deploys update the same repo/site instead of creating new ones each time.\n" +
-  "- If push_to_github or deploy_to_vercel returns a \"connect GitHub/Vercel first\" error, tell the user in plain " +
-  "language that a connection popup should have opened (or to try the action again if it didn't), then stop -- " +
-  "don't retry the same call immediately, since it'll fail the same way until they actually connect.\n" +
+  "- If push_to_github, deploy_to_vercel, or create_supabase_project returns a \"not connected yet\" result, relay " +
+  "its actual guidance to the user in your own words -- it already explains what to do (sign in or create an " +
+  "account on the page that opened, and that closing that window early is fine, just ask again once they're " +
+  "really connected) -- then stop; don't retry the same call immediately, since it'll fail the same way until " +
+  "they've actually finished connecting. The very FIRST time in a project you're about to call one of these three " +
+  "tools, say so in one short sentence before calling it (e.g. \"I'll connect Supabase now -- a sign-in window " +
+  "will open, and you can create a free account there if you don't already have one\") rather than silently " +
+  "calling the tool with no warning -- a browser tab opening with no explanation reads as ChatGiZa doing " +
+  "something unexpected, not as a normal part of the process.\n" +
   "- When the user's request clearly needs persistent data or accounts (\"let people sign up\", \"save their orders\", " +
   "\"add a database\", or explicitly says Supabase), call create_supabase_project once for that project, then " +
   "run_supabase_sql for every table/column/policy it needs as the build progresses -- don't ask which database to " +
