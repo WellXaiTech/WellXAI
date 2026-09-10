@@ -23,7 +23,12 @@ async function gh(token: string, path: string, init?: RequestInit) {
 // Pushes the Build page's whole virtual file set to GitHub as ONE atomic
 // commit via the Git Data API (blob -> tree -> commit -> ref), rather
 // than sequential Contents-API PUTs per file -- a mid-way failure with
-// the Contents API would leave a half-written repo; this can't.
+// the Contents API would leave a half-written repo; this can't. The one
+// exception is bootstrapping a genuinely empty repo's very first commit
+// (see the parentCommitSha === null branch below), where the Git Data
+// API's blob endpoint doesn't work yet and the Contents API is the only
+// option -- every push after that first one goes through the atomic path
+// described here.
 export async function POST(req: NextRequest) {
   const user = await getRequestUser(req);
   if (!user) {
@@ -145,6 +150,41 @@ export async function POST(req: NextRequest) {
         const commitData = await commitRes.json();
         baseTreeSha = commitData.tree.sha as string;
       }
+    }
+
+    // A genuinely empty repo (zero commits, no ref at all) can't take Git
+    // Data API blob uploads yet -- GitHub 409s them with "Git Repository
+    // is empty" until a first commit exists by some other means. The
+    // Contents API doesn't have that restriction (it's what powers
+    // "create new file" on a brand-new repo in GitHub's own UI), so it
+    // bootstraps this one first commit; every push after this one
+    // (parentCommitSha will be set) goes through the normal atomic Git
+    // Data API flow below exactly as before, with no change in behavior.
+    if (parentCommitSha === null) {
+      for (const [path, content] of Object.entries(files)) {
+        const encodedPath = path.split("/").map(encodeURIComponent).join("/");
+        const putRes = await gh(accessToken, `/repos/${owner}/${repoName}/contents/${encodedPath}`, {
+          method: "PUT",
+          body: JSON.stringify({
+            message: commitMessage,
+            content: Buffer.from(content, "utf-8").toString("base64"),
+            branch,
+          }),
+        });
+        if (!putRes.ok) {
+          const errBody = await putRes.text();
+          console.error("GitHub initial content bootstrap failed:", path, putRes.status, errBody);
+          return NextResponse.json(
+            { error: `Could not create ${path} in the new repository (${putRes.status}): ${errBody}` },
+            { status: 502 }
+          );
+        }
+      }
+      return NextResponse.json({
+        repoUrl: `https://github.com/${owner}/${repoName}`,
+        htmlUrl: `https://github.com/${owner}/${repoName}`,
+        prUrl: null,
+      });
     }
 
     // Everything AFTER the repo's very first commit lands on a dedicated
