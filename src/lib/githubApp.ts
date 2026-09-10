@@ -125,8 +125,30 @@ function installationKey(userId: string) {
   return `chatgiza:github-app-installation:${userId}`;
 }
 
+function installationOwnerKey(installationId: string) {
+  return `chatgiza:github-app-installation-owner:${installationId}`;
+}
+
+// A durable reverse index (installation id -> ChatGiZa user id) --
+// unlike the per-user record above, this is NEVER deleted by
+// disconnectUserInstallation, so it survives a disconnect (or any other
+// accidental loss of the per-user record). It's what lets the webhook
+// handler (api/admin/github-app/webhook) self-heal a user's connection
+// automatically the next time GitHub sends an event for that
+// installation, instead of the only way back being a support request
+// with the installation id typed in by hand (see the manual
+// reconciliation endpoint, api/connectors/[service]/route.ts's POST).
+async function saveInstallationOwner(installationId: string, userId: string): Promise<void> {
+  await kv.set(installationOwnerKey(installationId), userId);
+}
+
+export async function getInstallationOwner(installationId: string): Promise<string | null> {
+  return (await kv.get<string>(installationOwnerKey(installationId))) ?? null;
+}
+
 export async function saveUserInstallation(userId: string, info: InstallationInfo): Promise<void> {
   await kv.set(installationKey(userId), info);
+  await saveInstallationOwner(info.installationId, userId);
 }
 
 export async function getUserInstallation(userId: string): Promise<InstallationInfo | null> {
@@ -134,5 +156,15 @@ export async function getUserInstallation(userId: string): Promise<InstallationI
 }
 
 export async function disconnectUserInstallation(userId: string): Promise<void> {
+  await kv.del(installationKey(userId));
+}
+
+// Webhook-driven equivalent of disconnectUserInstallation -- looks up
+// the owner via the reverse index (a disconnect from GitHub's own side
+// carries no ChatGiZa user id, only the installation id) rather than
+// requiring the caller to already know who owns it.
+export async function clearInstallationByInstallationId(installationId: string): Promise<void> {
+  const userId = await getInstallationOwner(installationId);
+  if (!userId) return;
   await kv.del(installationKey(userId));
 }
