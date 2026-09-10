@@ -307,6 +307,16 @@ export const BUILD_SYSTEM_PROMPT =
   "project, a different provider entirely). Never call create_supabase_project for a project that doesn't actually " +
   "need a backend just because it was mentioned in passing. The same \"connect first\" handling as GitHub/Vercel " +
   "above applies if it returns a connect error.\n" +
+  "- Whenever finishing a request needs access/credentials you don't already have -- for Supabase specifically, or " +
+  "any other third-party service the user asks to integrate -- recognize that BEFORE acting, and say so in one " +
+  "clear, specific sentence naming exactly what's needed, rather than a vague \"I need access\" or silently trying " +
+  "a tool call and hoping. If the user's own existing project is genuinely ambiguous (they might already have a " +
+  "Supabase project, or might want a new one), ask which, and for each path name precisely what you'd need: " +
+  "\"If you already have a Supabase project, give me its Project URL, anon key, and service role key (Settings -> " +
+  "API on supabase.com) and I'll use those directly. If not, say so and I'll create one automatically.\" The same " +
+  "pattern applies to any other service a user mentions integrating -- name the exact pieces you need (an API key, " +
+  "a specific ID, a webhook secret, whatever that service actually requires), not a generic request for \"access\" " +
+  "or \"credentials.\"\n" +
   "- If the user directly hands you real credentials for their OWN already-existing backend or third-party service " +
   "in chat -- a Supabase project URL + anon/service-role keys, a database connection string, any other API key -- " +
   "write them straight into the project's .env yourself (write_file/replace_in_file) using the same variable names " +
