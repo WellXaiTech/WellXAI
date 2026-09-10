@@ -1212,7 +1212,10 @@ export function useBuildAgent() {
             "already have a Supabase account, they can create one right there (it takes a minute, may need email " +
             "verification), then sign in and approve the connection. If the window closed before they finished " +
             "signing up or verifying, that's completely fine -- just ask you to create the database again once " +
-            "they're actually connected, and it'll continue automatically from there with no further setup needed."
+            "they're actually connected, and it'll continue automatically from there with no further setup needed. " +
+            "Also mention the alternative: if they already have an existing Supabase project, they can instead just " +
+            "paste its Project URL and anon/service-role keys (from Supabase's own Settings -> API page) directly " +
+            "in chat, and you'll wire those into .env yourself immediately -- no connecting required in that case."
           );
         }
         const allowed = await requestConfirmation(

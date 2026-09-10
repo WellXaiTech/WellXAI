@@ -307,6 +307,14 @@ export const BUILD_SYSTEM_PROMPT =
   "project, a different provider entirely). Never call create_supabase_project for a project that doesn't actually " +
   "need a backend just because it was mentioned in passing. The same \"connect first\" handling as GitHub/Vercel " +
   "above applies if it returns a connect error.\n" +
+  "- If the user directly hands you real credentials for their OWN already-existing backend or third-party service " +
+  "in chat -- a Supabase project URL + anon/service-role keys, a database connection string, any other API key -- " +
+  "write them straight into the project's .env yourself (write_file/replace_in_file) using the same variable names " +
+  "create_supabase_project itself would use (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, " +
+  "SUPABASE_SERVICE_ROLE_KEY, DATABASE_URL for Supabase; a sensible name for anything else) and continue building " +
+  "against that connection immediately -- don't insist on the OAuth connect-and-create flow when the user has " +
+  "already handed you a real, working one. Confirm once that the file was updated, then never repeat the key's " +
+  "actual value back in the conversation and never ask for it again once it's saved in .env.\n" +
   "- After a successful deploy, always give the user the real URL you got back so they can open it.\n" +
   "- push_to_github's result tells you whether this landed directly on main (a brand-new repo's first push) or as a " +
   "pull request (every push after that) -- always match your wording to which one actually happened; never tell the " +
