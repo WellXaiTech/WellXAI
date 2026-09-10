@@ -843,6 +843,7 @@ export default function BuildWorkspace() {
     sessionTokens,
     setFileContent,
     deleteFile,
+    loadImportedFiles,
     reset,
     projects,
     selectProject,
@@ -1286,6 +1287,11 @@ export default function BuildWorkspace() {
   // entirely instead of asking again for a connection that's already
   // decided.
   const skipOnboardOnceRef = useRef(false);
+  // True while startNewChatInGroup is pulling an existing repo's files
+  // in -- lets the "+" buttons disable themselves so a second click
+  // can't start a second import over the first one's still-in-flight
+  // loadImportedFiles call.
+  const [importingRepo, setImportingRepo] = useState(false);
   const folderSupported = typeof window !== "undefined" && "showDirectoryPicker" in window;
   // Closes on ANY click outside the card -- the backdrop itself, or
   // something else entirely like a History row in the rail (which isn't
@@ -2106,12 +2112,36 @@ export default function BuildWorkspace() {
   // setPendingManualGroupName), and skipOnboardOnceRef makes onSubmit
   // skip the identity picker for that one following message, since
   // where this project lives is already decided.
-  function startNewChatInGroup(entry: Extract<HistoryEntry, { kind: "group" }>) {
+  // For a GitHub group specifically, this also pulls the repo's CURRENT
+  // files in (see api/build/github/pull) before the user types anything --
+  // without this, "continuing" a real existing repo through ChatGiZa
+  // started from a blank slate with no idea what was already there, and
+  // the next auto-push (syncFilesToGithub) would have overwritten the
+  // repo's real content with that near-empty state.
+  async function startNewChatInGroup(entry: Extract<HistoryEntry, { kind: "group" }>) {
     const sample = entry.list[0];
     reset();
-    if (sample?.githubRepoUrl) setPendingGithubRepo(sample.githubRepoUrl);
-    else setPendingManualGroupName(entry.name);
     skipOnboardOnceRef.current = true;
+    if (!sample?.githubRepoUrl) {
+      setPendingManualGroupName(entry.name);
+      return;
+    }
+    setPendingGithubRepo(sample.githubRepoUrl);
+    setImportingRepo(true);
+    try {
+      const repoName = repoNameFromUrl(sample.githubRepoUrl);
+      const res = await fetch(`/api/build/github/pull?repoName=${encodeURIComponent(repoName)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.files && Object.keys(data.files).length > 0) loadImportedFiles(data.files);
+      } else {
+        console.error("Failed to import files from GitHub:", res.status, await res.text());
+      }
+    } catch (err) {
+      console.error("Failed to import files from GitHub:", err);
+    } finally {
+      setImportingRepo(false);
+    }
   }
 
   // The plain sidebar "New chat" button defaults straight into an
@@ -2359,8 +2389,9 @@ export default function BuildWorkspace() {
                   </button>
                   <button
                     onClick={() => startNewChatInGroup(entry)}
+                    disabled={importingRepo}
                     aria-label={`New chat in ${entry.name}`}
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted opacity-0 transition-colors hover:bg-border hover:text-foreground group-hover/header:opacity-100"
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted opacity-0 transition-colors hover:bg-border hover:text-foreground group-hover/header:opacity-100 disabled:pointer-events-none"
                   >
                     {PlusTabIcon}
                   </button>

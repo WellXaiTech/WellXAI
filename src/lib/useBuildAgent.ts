@@ -1266,6 +1266,15 @@ export function useBuildAgent() {
     });
   }, []);
 
+  // Replaces the whole file map at once, for loading a real GitHub repo's
+  // existing content into a just-reset project (see BuildWorkspace.tsx's
+  // startNewChatInGroup) -- unlike setFileContent/deleteFile, which only
+  // ever add or remove one file at a time as the agent works.
+  const loadImportedFiles = useCallback((imported: Record<string, string>) => {
+    filesRef.current = imported;
+    setFiles(imported);
+  }, []);
+
   // Starts a fresh, untitled project -- the previous one is already saved
   // in `projects` (via the upsert effect above), so nothing is lost, it
   // just stops being the active one until reopened from History.
@@ -1456,6 +1465,7 @@ export function useBuildAgent() {
     revertStep,
     setFileContent,
     deleteFile,
+    loadImportedFiles,
     reset,
     projects,
     historyOpen,
