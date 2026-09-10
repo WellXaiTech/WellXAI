@@ -598,6 +598,14 @@ const LearnIcon = (
     <path d="M6 12v5c0 1.66 2.69 3 6 3s6-1.34 6-3v-5" />
   </svg>
 );
+// "Add GitHub project" -- the standard GitHub mark, filled rather than
+// stroked like the outline icons around it (the octocat glyph doesn't
+// read as itself as a line drawing).
+const GithubIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.5 0-.24-.01-.87-.01-1.71-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1 .07 1.53 1.05 1.53 1.05.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.274 2.75 1.05a9.3 9.3 0 0 1 2.5-.34c.85 0 1.7.11 2.5.34 1.91-1.32 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.79-4.57 5.05.36.32.68.94.68 1.9 0 1.37-.01 2.48-.01 2.81 0 .27.18.6.69.5A10.26 10.26 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z" />
+  </svg>
+);
 // Sits in front of the project-name badge at the row's top-left corner.
 const ProjectBadgeIcon = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1292,29 +1300,86 @@ export default function BuildWorkspace() {
   // can't start a second import over the first one's still-in-flight
   // loadImportedFiles call.
   const [importingRepo, setImportingRepo] = useState(false);
-  // Every repo the current GitHub connection can see, fetched once on
-  // mount (see the effect below) -- lets History show a folder for a
-  // repo the user already has on GitHub even before they've ever opened
-  // it through ChatGiZa (see the githubEntries loop and
-  // startNewChatInGroup). Silently stays empty if GitHub isn't connected
-  // or the list fails to load -- this is a nice-to-have discovery aid,
-  // not something the rest of History depends on.
+  // Every repo the current GitHub connection can see -- fetched ONLY when
+  // the user explicitly opens the "Add GitHub project" picker below (see
+  // openGithubPicker), never automatically. Earlier this whole list was
+  // fetched on mount and every single repo it returned was silently
+  // turned into its own History folder -- per explicit feedback, that's
+  // the wrong default: a user connecting GitHub so ChatGiZa can push ONE
+  // project doesn't necessarily want every OTHER unrelated repo in that
+  // same account listed (and implicitly touchable) inside ChatGiZa too.
+  // Now the user picks one repo at a time; only that one becomes a real
+  // History folder (see linkedGithubRepos).
   const [remoteGithubRepos, setRemoteGithubRepos] = useState<{ name: string; url: string }[]>([]);
+  const [githubPickerOpen, setGithubPickerOpen] = useState(false);
+  const [githubPickerBusy, setGithubPickerBusy] = useState(false);
+  const [githubPickerError, setGithubPickerError] = useState<string | null>(null);
+  // Repos the user has explicitly chosen to add via that picker but
+  // hasn't opened yet (no real BuildProject/message sent in them yet) --
+  // an empty, ready-to-use History folder, same "+" affordance as any
+  // other group. Persisted locally so a chosen repo keeps showing up
+  // without needing to be re-picked on every reload. Once a real project
+  // actually gets pushed to that repo, the project's own githubRepoUrl
+  // takes over the group (see the dedup in the githubEntries loop below)
+  // -- this list only matters for repos nothing has been built in yet.
+  const LINKED_GITHUB_REPOS_KEY = "chatgiza_build_linked_github_repos_v1";
+  const [linkedGithubRepos, setLinkedGithubRepos] = useState<{ name: string; url: string }[]>([]);
   useEffect(() => {
-    let cancelled = false;
-    fetch("/api/build/github/repos")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!cancelled && data?.repos) setRemoteGithubRepos(data.repos);
-      })
-      .catch(() => {
-        // Not connected, or the list failed to load -- History just
-        // shows whatever repos ChatGiZa already knows about locally.
-      });
-    return () => {
-      cancelled = true;
-    };
+    try {
+      const raw = window.localStorage.getItem(LINKED_GITHUB_REPOS_KEY);
+      if (raw) setLinkedGithubRepos(JSON.parse(raw));
+    } catch {
+      // corrupted/unavailable storage -- start with an empty list
+    }
   }, []);
+  function addLinkedGithubRepo(repo: { name: string; url: string }) {
+    setLinkedGithubRepos((prev) => {
+      const next = [...prev, repo];
+      try {
+        window.localStorage.setItem(LINKED_GITHUB_REPOS_KEY, JSON.stringify(next));
+      } catch {
+        // Non-fatal -- the repo still shows for the rest of this session.
+      }
+      return next;
+    });
+  }
+  const githubPickerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!githubPickerOpen) return;
+    function onClick(e: MouseEvent) {
+      if (githubPickerRef.current && !githubPickerRef.current.contains(e.target as Node)) {
+        setGithubPickerOpen(false);
+      }
+    }
+    window.addEventListener("mousedown", onClick);
+    return () => window.removeEventListener("mousedown", onClick);
+  }, [githubPickerOpen]);
+  async function openGithubPicker() {
+    setGithubPickerError(null);
+    setGithubPickerBusy(true);
+    const connected = await connectGithubNow();
+    if (connected !== "connected") {
+      setGithubPickerBusy(false);
+      setGithubPickerError(
+        connected === "blocked"
+          ? "Your browser blocked the popup -- allow popups for this site and try again."
+          : connected === "not_configured"
+            ? "GitHub isn't set up on ChatGiZa's side yet."
+            : "Couldn't connect to GitHub. Try again."
+      );
+      setGithubPickerOpen(true);
+      return;
+    }
+    try {
+      const res = await fetch("/api/build/github/repos");
+      const data = res.ok ? await res.json() : null;
+      setRemoteGithubRepos(data?.repos ?? []);
+    } catch {
+      setGithubPickerError("Couldn't load your GitHub repositories. Try again.");
+    }
+    setGithubPickerBusy(false);
+    setGithubPickerOpen(true);
+  }
   const folderSupported = typeof window !== "undefined" && "showDirectoryPicker" in window;
   // Closes on ANY click outside the card -- the backdrop itself, or
   // something else entirely like a History row in the rail (which isn't
@@ -1566,12 +1631,14 @@ export default function BuildWorkspace() {
       const list = githubGroupMap.get(name)!;
       githubEntries.push({ kind: "group", name, list, githubRepoUrl: list[0]?.githubRepoUrl });
     }
-    // Repos that exist on GitHub but have no ChatGiZa conversation at all
-    // yet -- an empty, ready-to-use folder, the same "+" affordance as
-    // any other group. Skipped entirely in "Group by: None" the same way
-    // a real repo group already is there.
+    // Repos the user explicitly picked via "Add GitHub project" but
+    // hasn't opened yet -- an empty, ready-to-use folder, the same "+"
+    // affordance as any other group. NOT every repo the connection can
+    // see (see linkedGithubRepos' own comment) -- only ones the user
+    // chose one at a time. Skipped entirely in "Group by: None" the same
+    // way a real repo group already is there.
     if (historyGroupBy !== "none") {
-      for (const repo of remoteGithubRepos) {
+      for (const repo of linkedGithubRepos) {
         const key = repo.name.trim().toLowerCase();
         if (seenGroups.has(repo.name) || [...seenGroups].some((n) => n.trim().toLowerCase() === key)) continue;
         seenGroups.add(repo.name);
@@ -2335,6 +2402,56 @@ export default function BuildWorkspace() {
         <span className="flex h-5 w-5 shrink-0 items-center justify-center">{LearnIcon}</span>
         Learn to code
       </button>
+      {/* Explicit, one-at-a-time way to bring a specific existing GitHub
+          repo into History -- see linkedGithubRepos' own comment on why
+          this replaced automatically listing every repo the connection
+          can see. */}
+      <div className="relative" ref={githubPickerRef}>
+        <button
+          onClick={openGithubPicker}
+          disabled={githubPickerBusy}
+          className="flex h-10 w-full items-center gap-2 rounded-xl px-2 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-60"
+        >
+          <span className="flex h-5 w-5 shrink-0 items-center justify-center">{GithubIcon}</span>
+          {githubPickerBusy ? "Connecting…" : "Add GitHub project"}
+        </button>
+        {githubPickerOpen && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute left-0 top-full z-20 mt-1 w-64 overflow-hidden rounded-xl border border-border bg-surface p-1 shadow-lg"
+          >
+            {githubPickerError ? (
+              <p className="px-3 py-2 text-sm text-muted">{githubPickerError}</p>
+            ) : (
+              (() => {
+                const alreadyUsed = new Set(
+                  [...githubGroupMap.keys(), ...linkedGithubRepos.map((r) => r.name)].map((n) => n.trim().toLowerCase())
+                );
+                const options = remoteGithubRepos.filter((r) => !alreadyUsed.has(r.name.trim().toLowerCase()));
+                if (options.length === 0) {
+                  return <p className="px-3 py-2 text-sm text-muted">No other repositories to add.</p>;
+                }
+                return (
+                  <div className="max-h-64 overflow-y-auto">
+                    {options.map((repo) => (
+                      <button
+                        key={repo.url}
+                        onClick={() => {
+                          addLinkedGithubRepo(repo);
+                          setGithubPickerOpen(false);
+                        }}
+                        className="flex w-full items-center rounded-lg px-3 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-surface-2"
+                      >
+                        {repo.name}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Sort by / Group by for History below -- same idea as the
           reference menu's sort icon, cut down to only the two controls
