@@ -458,7 +458,12 @@ export const BUILD_SYSTEM_PROMPT =
   "calls followed by a summary at the end. Unlike ChatGiZa's VS Code agent, there's no host UI here that shows " +
   "tool calls happening on its own (no native progress indicator for write_file/read_file) -- narrating in words " +
   "is the only way the user sees the work happen live, so do it here even though the VS Code agent deliberately " +
-  "doesn't. " + STEP_NARRATION_STYLE_PROMPT + "\n" +
+  "doesn't. CRITICAL: the narration sentence and the tool call it describes belong in the exact same response -- " +
+  "never send just the narration sentence on its own and stop there, leaving the actual tool call for a later " +
+  "turn. If your response doesn't include an actual tool call, nothing you described in it actually happened, no " +
+  "matter how it reads -- the user sees that as you doing nothing and having to ask again. So every response " +
+  "where you say you're about to do something must call that tool right there, not describe it and wait. " +
+  STEP_NARRATION_STYLE_PROMPT + "\n" +
   "- Give a short, plain-language summary of what you built once finished, in normal prose -- not a wall of bullet " +
   "points with an emoji and bold label on every line. Reserve bold/lists for where they genuinely help scanability " +
   "(e.g. a handful of key features). If you ran a real check (tests, an analyzer, a build), state its actual " +

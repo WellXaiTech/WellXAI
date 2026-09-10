@@ -1622,23 +1622,32 @@ export function useBuildAgent() {
             // nothing left to push. A read that never got its matching
             // edit (the model narrated to a stop instead) still deserves
             // its own line rather than silently vanishing.
-            flushPendingRead();
             // Tagged noAction so the NEXT send() can tell the server this
             // reply ended without calling any tool -- see BuildChatMessage.
             // noAction's own comment for why this matters: without it, a
             // model that narrates "trying now" instead of acting looks
             // identical to a real finished answer, and the user has to
-            // keep manually nudging it.
+            // keep manually nudging it. Done BEFORE flushPendingRead() (and
+            // by scanning for the last non-step assistant message rather
+            // than assuming "the last message in the array") because
+            // flushPendingRead appends its own step message -- tagging
+            // after that flush, or by array position, would land noAction
+            // on that read step instead of the real narration, and
+            // stalledLastTurn's lookup filters step messages out entirely,
+            // so a mistagged flag there would silently never be seen.
             if (!streamedAny) {
               setMessages((prev) => [...prev, { role: "assistant", content: doneEvent!.content ?? "", noAction: true }]);
             } else {
               setMessages((prev) => {
+                const idx = [...prev].reverse().findIndex((m) => m.role === "assistant" && !m.step);
+                if (idx === -1) return prev;
+                const realIdx = prev.length - 1 - idx;
                 const next = [...prev];
-                const last = next[next.length - 1];
-                next[next.length - 1] = { ...last, noAction: true };
+                next[realIdx] = { ...next[realIdx], noAction: true };
                 return next;
               });
             }
+            flushPendingRead();
             return;
           }
 
