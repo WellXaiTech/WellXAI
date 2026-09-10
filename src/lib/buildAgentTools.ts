@@ -211,6 +211,46 @@ export const BUILD_TOOLS = [
   {
     type: "function" as const,
     function: {
+      name: "deploy_supabase_function",
+      description:
+        "Deploy a real Supabase Edge Function (server-side TypeScript/Deno code) to the project's already-created " +
+        "Supabase project -- the only real way to run server-side logic or hold a secret a browser client must " +
+        "never see (e.g. calling a third-party API with its own key). Requires create_supabase_project to have " +
+        "been called for this project first. A secret goes in the `secrets` map here, NEVER hardcoded into the " +
+        "function's own source and NEVER into the project's own .env (a Supabase Edge Function reads its secrets " +
+        "via Deno.env.get(name) from a completely separate runtime environment than the app's own build/frontend " +
+        "env) -- generated client-side code then calls the deployed function's URL instead of the third-party API " +
+        "directly, so the real key never reaches the browser. Calling this again with the same slug updates that " +
+        "same function instead of creating a new one.",
+      parameters: {
+        type: "object",
+        properties: {
+          slug: {
+            type: "string",
+            description: "Short kebab-case function name, e.g. \"chat-proxy\". Reuse the same slug on later deploys to update it.",
+          },
+          files: {
+            type: "object",
+            description: "Map of file path (e.g. \"index.ts\") to its full source content -- the function's own small set of files (usually just one).",
+            additionalProperties: { type: "string" },
+          },
+          entrypoint: {
+            type: "string",
+            description: "Which key in `files` is the entrypoint. Defaults to \"index.ts\" if omitted.",
+          },
+          secrets: {
+            type: "object",
+            description: "Optional map of secret name to value the function needs at runtime (e.g. a third-party API key) -- set as real Supabase project secrets, readable in the function via Deno.env.get(name).",
+            additionalProperties: { type: "string" },
+          },
+        },
+        required: ["slug", "files"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
       name: "reconnect_service",
       description:
         "Disconnect the current GitHub/Vercel/Supabase account for this browser and immediately open a fresh " +
@@ -257,7 +297,12 @@ export const BUILD_SYSTEM_PROMPT =
   "live preview. You can also push_to_github and deploy_to_vercel directly -- there are no manual buttons for " +
   "this in the UI, it all happens through you. When an app genuinely needs a real backend/database (user accounts, " +
   "saved data, anything that must persist), create_supabase_project and run_supabase_sql give it a real Postgres " +
-  "database directly, with its keys wired into .env automatically -- no manual dashboard visit needed. " +
+  "database directly, with its keys wired into .env automatically -- no manual dashboard visit needed. When it " +
+  "needs to hold a secret (a third-party API key) the browser must never see, or run real server-side logic, " +
+  "deploy_supabase_function ships an actual Edge Function for that -- the anon/service-role keys create_supabase_project " +
+  "already wired up are database-level credentials and cannot deploy a function no matter what, so never tell the " +
+  "user a function deploy needs a different key or a broader connection -- deploy_supabase_function is the one and " +
+  "only real mechanism for it, and it works with whatever Supabase connection is already there. " +
   "run_terminal_command runs a real command in a real sandboxed environment (npm install/test/build, etc.) when " +
   "the project has one -- use it to verify your own work, not to make changes.\n\n" +
   LANGUAGE_MATCH_PROMPT + "\n\n" +
@@ -341,7 +386,13 @@ export const BUILD_SYSTEM_PROMPT =
   "use unless the user's own wording suggests they already have a specific one in mind (their own existing Supabase " +
   "project, a different provider entirely). Never call create_supabase_project for a project that doesn't actually " +
   "need a backend just because it was mentioned in passing. The same \"connect first\" handling as GitHub/Vercel " +
-  "above applies if it returns a connect error.\n" +
+  "above applies if it returns a connect error. Right after create_supabase_project succeeds (or right after the " +
+  "user pastes their own working credentials, per the rule below), call search_workspace for any placeholder " +
+  "Supabase values already sitting in other files from earlier in the build (\"your-project-ref\", " +
+  "\"YOUR_SUPABASE_URL\", an example .supabase.co domain, a fake key) and replace_in_file them to actually read " +
+  "from the real env vars instead -- code that still shows a placeholder ref, even in a spot that technically " +
+  "doesn't affect runtime because something else reads the real .env value, reads as broken/unfinished to anyone " +
+  "looking at it and should be cleaned up, not left with a note that it \"doesn't matter.\"\n" +
   "- Whenever finishing a request needs access/credentials you don't already have -- for Supabase specifically, or " +
   "any other third-party service the user asks to integrate -- recognize that BEFORE acting, and say so in one " +
   "clear, specific sentence naming exactly what's needed, rather than a vague \"I need access\" or silently trying " +

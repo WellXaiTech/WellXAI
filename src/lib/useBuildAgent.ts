@@ -601,6 +601,7 @@ export type PendingBuildConfirmation = {
     | "deploy_to_vercel"
     | "create_supabase_project"
     | "run_supabase_sql"
+    | "deploy_supabase_function"
     | "reconnect_service"
     | "run_terminal_command"
     | "write_file"
@@ -1006,6 +1007,7 @@ export function useBuildAgent() {
       "deploy_to_vercel",
       "create_supabase_project",
       "run_supabase_sql",
+      "deploy_supabase_function",
       "reconnect_service",
       "run_terminal_command",
     ];
@@ -1308,6 +1310,40 @@ export function useBuildAgent() {
           return "Database change applied successfully.";
         } catch {
           return "Database change failed: network error.";
+        }
+      }
+      case "deploy_supabase_function": {
+        const activeProject = projectsRef.current.find((p) => p.id === activeIdRef.current);
+        const projectRef = activeProject?.supabaseProjectRef;
+        if (!projectRef) return "This project isn't connected to Supabase yet -- call create_supabase_project first.";
+        const slug = args.slug as string;
+        const files = args.files as Record<string, string> | undefined;
+        const entrypoint = (args.entrypoint as string | undefined) || "index.ts";
+        const secrets = args.secrets as Record<string, string> | undefined;
+        if (!slug || !files || Object.keys(files).length === 0) return "slug and files are required.";
+        const allowed = await requestConfirmation(
+          "deploy_supabase_function",
+          `Allow ChatGiZa to deploy the "${slug}" Edge Function to Supabase?`,
+          Object.entries(files)
+            .map(([path, content]) => `// ${path}\n${content}`)
+            .join("\n\n")
+        );
+        if (!allowed) return `The user declined to deploy the "${slug}" function. Do not retry; ask what they'd like instead if relevant.`;
+        try {
+          const res = await fetch("/api/build/supabase/deploy-function", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ projectRef, slug, files, entrypoint, secrets }),
+          });
+          const data = await res.json();
+          if (!res.ok) return `Function deploy failed: ${data.error ?? "unknown error"}`;
+          return (
+            `Deployed the "${data.slug}" Edge Function: ${data.url} . Any secrets passed were set as real Supabase ` +
+            "project secrets (Deno.env.get in the function), not written anywhere the browser can read. Write the " +
+            "app's own client-side code to call this URL instead of the third-party API directly."
+          );
+        } catch {
+          return "Function deploy failed: network error.";
         }
       }
       case "reconnect_service": {

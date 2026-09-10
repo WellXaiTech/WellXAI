@@ -71,11 +71,62 @@ export async function getProjectApiKeys(token: string, ref: string) {
   return sm<SupabaseApiKey[]>(token, `/projects/${ref}/api-keys?reveal=true`);
 }
 
+// Sets Edge Function runtime secrets (Deno.env.get(name) inside a
+// deployed function) -- a DIFFERENT env layer entirely from the
+// project's own .env (that's for the app's own build/frontend; this is
+// what a deployed Edge Function can actually read at runtime). This is
+// the real mechanism for "hide a third-party API key behind a backend
+// call" -- the key goes in here, never into the function's own deployed
+// source code or the app's own .env, so the browser never sees it.
+export async function setSecrets(token: string, ref: string, secrets: Record<string, string>) {
+  return sm<unknown>(token, `/projects/${ref}/secrets`, {
+    method: "POST",
+    body: JSON.stringify(Object.entries(secrets).map(([name, value]) => ({ name, value }))),
+  });
+}
+
 export async function runSql(token: string, ref: string, query: string) {
   return sm<unknown>(token, `/projects/${ref}/database/query`, {
     method: "POST",
     body: JSON.stringify({ query }),
   });
+}
+
+// A real Edge Function deploy, via the Management API's own multipart
+// endpoint -- NOT routed through the sm() helper above, since that always
+// forces a JSON content-type; a multipart body needs fetch to set its own
+// Content-Type (with the real boundary) instead. This is what actually
+// lets generated code do things like proxy a third-party API call from a
+// public client without shipping that API's own secret key to the
+// browser -- something create_supabase_project/run_supabase_sql alone
+// (project creation and schema/SQL only) never could.
+export async function deployFunction(
+  token: string,
+  ref: string,
+  slug: string,
+  files: Record<string, string>,
+  entrypointPath: string
+): Promise<{ ok: true; data: { id: string; slug: string } } | { ok: false; status: number; body: string }> {
+  const form = new FormData();
+  form.append(
+    "metadata",
+    new Blob([JSON.stringify({ entrypoint_path: entrypointPath, name: slug, verify_jwt: true })], {
+      type: "application/json",
+    })
+  );
+  for (const [path, content] of Object.entries(files)) {
+    form.append("file", new Blob([content], { type: "text/typescript" }), path);
+  }
+  const res = await fetch(`${MANAGEMENT_API}/projects/${ref}/functions/deploy?slug=${encodeURIComponent(slug)}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    body: form,
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, body: await res.text() };
+  }
+  const data = (await res.json()) as { id: string; slug: string };
+  return { ok: true, data };
 }
 
 export function generateDbPassword(): string {
