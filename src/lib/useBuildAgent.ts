@@ -201,6 +201,35 @@ function extractOpener(text: string): string {
   return firstWord.replace(/[.,:;!?]+$/, "");
 }
 
+// Detects the model repeating the same SUBSTANCE across replies (not just
+// the same opening word extractOpener/openerHint already discourage) --
+// e.g. insisting on the same wrong claim/workaround a second time after
+// the user has already pushed back on it once. A prompt instruction alone
+// asking the model not to do this isn't reliable once it's already
+// anchored on an earlier answer in the same conversation (observed live:
+// it kept repeating a claim, then doubled down harder each time asked
+// again) -- this is a real, code-level check the system does FOR the
+// model, not something left entirely to it noticing on its own. Cheap
+// word-overlap on purpose (not a real diff/embedding) -- this only needs
+// to catch "restated most of the same paragraph again", not judge
+// nuanced rewording.
+function wordOverlapRatio(a: string, b: string): number {
+  const words = (s: string) =>
+    new Set(
+      s
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}\s]/gu, " ")
+        .split(/\s+/)
+        .filter((w) => w.length > 0)
+    );
+  const setA = words(a);
+  const setB = words(b);
+  if (setA.size < 8 || setB.size < 8) return 0; // too short a reply to judge meaningfully
+  let shared = 0;
+  for (const w of setA) if (setB.has(w)) shared++;
+  return shared / Math.max(setA.size, setB.size);
+}
+
 // A real +N -M line count (same idea as `git diff --stat`), computed via
 // standard LCS -- not just a length/character comparison, which would
 // call a one-line change at the top of a long file "the whole file
@@ -1444,6 +1473,20 @@ export function useBuildAgent() {
         .map((m) => extractOpener(m.content))
         .filter(Boolean);
 
+      // True when the model's last two real replies (before this new user
+      // message) were substantially the same -- see wordOverlapRatio's own
+      // comment. Checked BEFORE this turn's request goes out (not after
+      // the response streams back) since a streamed reply is already on
+      // screen by the time it finishes -- there's no "decide whether to
+      // show it" moment after the fact, so the only place to actually stop
+      // a third repeat is by warning the model before it generates one.
+      const recentFinalAnswers = messages
+        .filter((m) => m.role === "assistant" && !m.step && m.content.trim())
+        .slice(-2)
+        .map((m) => m.content);
+      const possibleRepeat =
+        recentFinalAnswers.length === 2 && wordOverlapRatio(recentFinalAnswers[0], recentFinalAnswers[1]) > 0.6;
+
       // A read_file immediately followed by an edit to the SAME file reads
       // as one action ("Read and edited X"), not a generic "Used a tool"
       // line right before the edit that was the actual point of it --
@@ -1483,7 +1526,7 @@ export function useBuildAgent() {
           const res = await fetch("/api/build/turn", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ messages: agentMessages, files: filesRef.current, recentOpeners }),
+            body: JSON.stringify({ messages: agentMessages, files: filesRef.current, recentOpeners, possibleRepeat }),
             signal: controller.signal,
           });
           if (!res.ok || !res.body) {

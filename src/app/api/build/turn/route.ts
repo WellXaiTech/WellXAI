@@ -126,6 +126,25 @@ export async function POST(req: NextRequest) {
       ? `Your last ${recentOpeners.length} narration line(s) opened with: ${recentOpeners.map((o) => `"${o}"`).join(", ")}. Do not open your next narration line with any of these words (or with "Now"/"First"/"Next"/"Then" generally) -- start it differently.`
       : null;
 
+  // Same idea as openerHint, but for SUBSTANCE rather than phrasing: the
+  // client detected that the model's last two real replies in this
+  // conversation were largely the same text (see wordOverlapRatio in
+  // useBuildAgent.ts). Confirmed live that a system-prompt instruction
+  // alone ("don't repeat yourself") isn't reliable once a model has
+  // already anchored on an earlier claim -- observed it double down
+  // harder the more times it had already said something, instead of
+  // reconsidering. This is the real, code-driven backstop: a concrete,
+  // per-request fact about what just happened, not a general rule left
+  // entirely to the model to self-enforce.
+  const repeatHint = body?.possibleRepeat === true
+    ? "Your last two replies in this conversation were largely the same text repeated. If the user is still " +
+      "asking about the same thing, do NOT give that same answer a third time. Re-check what tools are actually " +
+      "available to you on THIS request and use a real one if it applies, or say plainly and briefly that you're " +
+      "not sure rather than restating the same paragraph again. If the user pushed back or corrected you, believe " +
+      "them and drop your earlier claim entirely -- do not defend it or repeat it, no matter how many times you " +
+      "already said it."
+    : null;
+
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({
@@ -140,6 +159,7 @@ export async function POST(req: NextRequest) {
           { role: "system", content: BUILD_SYSTEM_PROMPT },
           { role: "system", content: fileManifest },
           ...(openerHint ? [{ role: "system" as const, content: openerHint }] : []),
+          ...(repeatHint ? [{ role: "system" as const, content: repeatHint }] : []),
           ...clientMessages,
         ];
 
