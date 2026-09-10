@@ -127,14 +127,10 @@ const ModelCloseIcon = (
 const ArrowUpIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24">
     <path d="M0 0h24v24H0z" fill="none" />
-    <g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
-      <path strokeDasharray="20" d="M12 21l0 -17.5">
-        <animate fill="freeze" attributeName="stroke-dashoffset" dur="0.3s" values="20;0" />
-      </path>
-      <path strokeDasharray="12" strokeDashoffset="12" d="M12 3l7 7M12 3l-7 7">
-        <animate fill="freeze" attributeName="stroke-dashoffset" begin="0.3s" dur="0.2s" to="0" />
-      </path>
-    </g>
+    <path
+      fill="currentColor"
+      d="M21.25 4a.75.75 0 0 1 .75.75v6.5A3.75 3.75 0 0 1 18.25 15H4.587l3.72 3.72a.75.75 0 0 1 .072.976l-.072.084a.75.75 0 0 1-.977.073l-.084-.073l-5-5a.75.75 0 0 1-.073-.976l.073-.084l5-5a.75.75 0 0 1 1.133.976l-.072.084l-3.72 3.72h13.665a2.25 2.25 0 0 0 2.244-2.096l.006-.154v-6.5a.75.75 0 0 1 .75-.75"
+    />
   </svg>
 );
 
