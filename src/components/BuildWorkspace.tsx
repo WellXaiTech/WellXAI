@@ -1610,7 +1610,7 @@ export default function BuildWorkspace() {
         {menuOpen && (
           <div
             onClick={(e) => e.stopPropagation()}
-            className="absolute right-0 top-full z-10 mt-1 w-44 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-lg"
+            className="absolute right-0 top-full z-10 mt-1 w-44 overflow-hidden rounded-xl border border-border bg-[#20201F] py-1 shadow-lg"
           >
             <button
               onClick={() => setOpenSubmenu((v) => (v === "openIn" ? null : "openIn"))}
