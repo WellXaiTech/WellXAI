@@ -349,37 +349,75 @@ function getFileOutlineHeuristic(content: string): string {
     : "No top-level functions/classes detected (this is a regex heuristic, not a real parser -- read_file to see the raw contents).";
 }
 
+export type ConnectResult = "connected" | "blocked" | "not_configured" | "failed";
+
 // Opens the OAuth popup for `service` if it isn't already connected, and
 // waits for it to close before resolving -- lets push_to_github/
 // deploy_to_vercel ask for the connection only when actually needed,
 // triggered by the agent itself rather than a manual "Connect" button.
-async function ensureConnected(service: "github" | "vercel"): Promise<boolean> {
-  const statusRes = await fetch("/api/connectors");
-  const statusData = await statusRes.json();
-  const entry = (statusData.connectors ?? []).find((c: { id: string }) => c.id === service);
-  if (entry?.connected) return true;
-  if (!entry?.configured) return false;
+//
+// The popup is opened blank, SYNCHRONOUSLY, before any of this function's
+// own awaits -- not after the /api/connectors and /start round trips
+// resolve (the previous order). Every browser's popup blocker only
+// allows window.open() when it judges the call a direct, immediate
+// response to a user gesture (the click that invoked this); two network
+// round trips' worth of delay was often enough for that judgment to
+// expire, so the exact same click would open the popup some of the time
+// and get silently blocked other times, depending on nothing more than
+// how fast those two requests happened to come back. Opening a blank
+// window first and only pointing it at the real URL once /start resolves
+// keeps the whole thing inside that same synchronous click.
+async function ensureConnected(service: "github" | "vercel"): Promise<ConnectResult> {
+  const popup = window.open("", "_blank", "noopener,noreferrer");
 
-  const startRes = await fetch(`/api/connectors/${service}/start`, { method: "POST" });
-  const startData = await startRes.json();
-  if (!startRes.ok || !startData.url) return false;
+  // A network hiccup, a cold-start blip, KV briefly unavailable -- any of
+  // these throwing used to leave the caller's await hanging forever (an
+  // unhandled rejection never resolves), which from the user's side looks
+  // exactly like a popup that quietly vanished: the button just says
+  // "Connecting..." indefinitely with no way out short of a refresh. Now
+  // it resolves to "failed" instead, same as a clean failure would.
+  try {
+    const statusRes = await fetch("/api/connectors");
+    const statusData = await statusRes.json();
+    const entry = (statusData.connectors ?? []).find((c: { id: string }) => c.id === service);
+    if (entry?.connected) {
+      popup?.close();
+      return "connected";
+    }
+    if (!entry?.configured) {
+      popup?.close();
+      return "not_configured";
+    }
+    // Only NOW can a null popup be trusted as a genuine block -- earlier
+    // than this it could just as easily have been the timing issue above.
+    if (!popup) return "blocked";
 
-  const popup = window.open(startData.url, "_blank", "noopener,noreferrer");
-  if (!popup) return false;
+    const startRes = await fetch(`/api/connectors/${service}/start`, { method: "POST" });
+    const startData = await startRes.json();
+    if (!startRes.ok || !startData.url) {
+      popup.close();
+      return "failed";
+    }
+    popup.location.href = startData.url;
 
-  await new Promise<void>((resolve) => {
-    const interval = setInterval(() => {
-      if (popup.closed) {
-        clearInterval(interval);
-        resolve();
-      }
-    }, 1000);
-  });
+    await new Promise<void>((resolve) => {
+      const interval = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(interval);
+          resolve();
+        }
+      }, 1000);
+    });
 
-  const recheckRes = await fetch("/api/connectors");
-  const recheckData = await recheckRes.json();
-  const recheckEntry = (recheckData.connectors ?? []).find((c: { id: string }) => c.id === service);
-  return !!recheckEntry?.connected;
+    const recheckRes = await fetch("/api/connectors");
+    const recheckData = await recheckRes.json();
+    const recheckEntry = (recheckData.connectors ?? []).find((c: { id: string }) => c.id === service);
+    return recheckEntry?.connected ? "connected" : "failed";
+  } catch (err) {
+    console.error(`ensureConnected(${service}) failed:`, err);
+    popup?.close();
+    return "failed";
+  }
 }
 
 // Client-driven agent loop shared by the Build workspace (both the
@@ -637,10 +675,10 @@ export function useBuildAgent() {
     }
   }, [writeFileToLocalFolder]);
 
-  const connectGithubNow = useCallback(async (): Promise<boolean> => {
-    const connected = await ensureConnected("github");
-    setGithubConnected(connected);
-    return connected;
+  const connectGithubNow = useCallback(async (): Promise<ConnectResult> => {
+    const result = await ensureConnected("github");
+    setGithubConnected(result === "connected");
+    return result;
   }, []);
 
   // Which kinds the user has picked "Always allow" for -- checked before
@@ -766,7 +804,10 @@ export function useBuildAgent() {
         const repoName = args.repoName as string;
         if (Object.keys(filesRef.current).length === 0) return "No files to push yet.";
         const connected = await ensureConnected("github");
-        if (!connected) return "The user needs to connect GitHub first -- a connect popup should have opened.";
+        if (connected === "blocked") {
+          return "The user's browser blocked the GitHub connect popup. Tell them to allow popups for this site (check the browser's address bar for a blocked-popup icon) and try again.";
+        }
+        if (connected !== "connected") return "The user needs to connect GitHub first -- a connect popup should have opened.";
         const allowed = await requestConfirmation("push_to_github", "Allow ChatGiZa to push this project to GitHub?", repoName);
         if (!allowed) return `The user declined to push to GitHub as "${repoName}". Do not retry; ask what they'd like instead if relevant.`;
         try {
@@ -787,7 +828,10 @@ export function useBuildAgent() {
         const projectName = args.projectName as string;
         if (Object.keys(filesRef.current).length === 0) return "No files to deploy yet.";
         const connected = await ensureConnected("vercel");
-        if (!connected) return "The user needs to connect Vercel first -- a connect popup should have opened.";
+        if (connected === "blocked") {
+          return "The user's browser blocked the Vercel connect popup. Tell them to allow popups for this site (check the browser's address bar for a blocked-popup icon) and try again.";
+        }
+        if (connected !== "connected") return "The user needs to connect Vercel first -- a connect popup should have opened.";
         const allowed = await requestConfirmation(
           "deploy_to_vercel",
           "Allow ChatGiZa to deploy this project to Vercel?",

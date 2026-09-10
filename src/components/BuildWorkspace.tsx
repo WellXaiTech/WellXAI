@@ -911,6 +911,7 @@ export default function BuildWorkspace() {
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const [connectorsOpen, setConnectorsOpen] = useState(false);
+  const [connectorError, setConnectorError] = useState<string | null>(null);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
   const uploadNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
@@ -1277,6 +1278,12 @@ export default function BuildWorkspace() {
   const [onboardOpen, setOnboardOpen] = useState(false);
   const [onboardNameInput, setOnboardNameInput] = useState("");
   const [onboardBusy, setOnboardBusy] = useState<"github" | "folder" | null>(null);
+  // Was silently empty before -- a blocked/failed connect popup just put
+  // the button back to "Connect GitHub" with no sign anything had gone
+  // wrong at all. Real, distinguishable reasons now (see ConnectResult in
+  // useBuildAgent.ts): a popup blocker specifically is fixable by the
+  // user right there, so it gets its own message instead of a generic one.
+  const [onboardError, setOnboardError] = useState<string | null>(null);
   const pendingSubmitRef = useRef<{ text: string; images: { dataUrl: string; name: string }[] } | null>(null);
   const folderSupported = typeof window !== "undefined" && "showDirectoryPicker" in window;
   // Closes on ANY click outside the card -- the backdrop itself, or
@@ -1309,9 +1316,18 @@ export default function BuildWorkspace() {
 
   async function handleOnboardGithub() {
     setOnboardBusy("github");
-    const ok = await connectGithubNow();
+    setOnboardError(null);
+    const result = await connectGithubNow();
     setOnboardBusy(null);
-    if (ok) finishOnboarding();
+    if (result === "connected") {
+      finishOnboarding();
+      return;
+    }
+    setOnboardError(
+      result === "blocked"
+        ? "Your browser blocked the popup -- allow popups for this site and try again."
+        : "Couldn't connect to GitHub. Try again."
+    );
   }
 
   async function handleOnboardFolder() {
@@ -2479,7 +2495,9 @@ export default function BuildWorkspace() {
               <span className="block text-sm font-medium text-foreground">
                 {onboardBusy === "github" ? "Connecting…" : "Connect GitHub"}
               </span>
-              <span className="block text-xs text-muted">Saves to a real repository as you build</span>
+              <span className={`block text-xs ${onboardError ? "text-red-500" : "text-muted"}`}>
+                {onboardError ?? "Saves to a real repository as you build"}
+              </span>
             </span>
             <span className="shrink-0 text-muted">{ChevronRightIcon}</span>
           </button>
@@ -3939,14 +3957,21 @@ export default function BuildWorkspace() {
           <div className="mt-3 flex items-center justify-between rounded-xl border border-border p-3">
             <div>
               <p className="text-sm font-medium text-foreground">GitHub</p>
-              <p className="text-xs text-muted">{githubConnected ? "Connected" : "Not connected"}</p>
+              <p className={`text-xs ${connectorError ? "text-red-500" : "text-muted"}`}>
+                {connectorError ?? (githubConnected ? "Connected" : "Not connected")}
+              </p>
             </div>
             {githubConnected ? (
               <span className="rounded-full bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-600">Connected</span>
             ) : (
               <button
                 type="button"
-                onClick={() => connectGithubNow()}
+                onClick={async () => {
+                  setConnectorError(null);
+                  const result = await connectGithubNow();
+                  if (result === "blocked") setConnectorError("Popup blocked -- allow popups and try again");
+                  else if (result !== "connected") setConnectorError("Couldn't connect -- try again");
+                }}
                 className="btn-primary rounded-full px-3 py-1.5 text-xs font-medium"
               >
                 Connect
