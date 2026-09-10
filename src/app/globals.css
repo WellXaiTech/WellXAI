@@ -646,6 +646,15 @@ textarea::placeholder {
   100% { -webkit-mask-position: -100% -100%; mask-position: -100% -100%; }
 }
 
+/* A pasted block of unbroken text (a long code line with no spaces, a raw
+   URL, a giant token) can otherwise force this element -- and everything
+   around it, since nothing upstream constrains width against overflowing
+   content -- wider than the chat column itself. Doesn't touch `pre`
+   (code blocks keep their own `white-space: pre` + horizontal scrollbar
+   above), only ordinary flowed text. */
+.markdown {
+  overflow-wrap: anywhere;
+}
 .markdown p {
   margin: 0 0 0.75em;
 }

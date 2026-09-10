@@ -2759,7 +2759,11 @@ export default function BuildWorkspace() {
                           </div>
                         )}
                         {m.content && (
-                          <p className="chat-text user-bubble max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-3">
+                          // break-words -- same overflow guard as the Ask
+                          // page's own user bubble (ChatMessageBubble.tsx):
+                          // a pasted line with no natural wrap points would
+                          // otherwise overflow this bubble's max-width.
+                          <p className="chat-text user-bubble max-w-[80%] whitespace-pre-wrap break-words rounded-2xl px-4 py-3">
                             {renderWithLinks(m.content)}
                           </p>
                         )}

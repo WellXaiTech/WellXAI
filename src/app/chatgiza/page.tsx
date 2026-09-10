@@ -1952,7 +1952,13 @@ function ChatGizaInner() {
               // Per feedback: the thin .sidebar-scroll treatment already
               // used elsewhere in the app (nav sidebar, etc.) is the actual
               // target here, not the browser's own wide native scrollbar.
-              className="sidebar-scroll w-full flex-1 overflow-y-auto"
+              //
+              // overflow-x-hidden -- a hard clip matching Build's own chat
+              // scroll container (BuildWorkspace.tsx), so pasted content
+              // that manages to overflow a message bubble anyway (despite
+              // the break-words guards on it) still can't drag this column,
+              // and the layout around it, wider than the viewport.
+              className="sidebar-scroll w-full flex-1 overflow-y-auto overflow-x-hidden"
             >
               {/* The scroll container itself spans the full column width so
                   its scrollbar rides the true right edge next to the

@@ -730,7 +730,10 @@ export default function ChatMessageBubble({
       <div className="group flex flex-col items-end">
         {attachments && attachments.length > 0 && <MessageAttachments attachments={attachments} />}
         {content && (
-          <div className="chat-text user-bubble max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-3">
+          // break-words -- a pasted block with no natural wrap points (a
+          // long code line, a raw URL) would otherwise overflow this
+          // bubble's own max-width instead of wrapping inside it.
+          <div className="chat-text user-bubble max-w-[80%] whitespace-pre-wrap break-words rounded-2xl px-4 py-3">
             {content}
           </div>
         )}
