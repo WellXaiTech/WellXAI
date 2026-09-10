@@ -2114,6 +2114,27 @@ export default function BuildWorkspace() {
     skipOnboardOnceRef.current = true;
   }
 
+  // The plain sidebar "New chat" button defaults straight into an
+  // already-connected LOCAL folder (device File System Access) without
+  // asking again -- only one folder can ever be connected at a time
+  // (see connectLocalFolder's own comment), so there's no ambiguity
+  // about which one "New chat" should mean. GitHub is different: a
+  // connection there can mean any number of different repos, so picking
+  // one automatically would risk landing work in the wrong repo -- that
+  // one still requires the explicit choice of clicking that specific
+  // repo group's own "+" (startNewChatInGroup above). Falls back to the
+  // normal onboarding picker when no folder is connected yet.
+  function startNewChat() {
+    const folderProject = sortedProjects.find((p) => p.manualGroupName && !p.githubRepoUrl);
+    if (folderProject?.manualGroupName) {
+      reset();
+      setPendingManualGroupName(folderProject.manualGroupName);
+      skipOnboardOnceRef.current = true;
+      return;
+    }
+    reset();
+  }
+
   // Unlike attachedImages (staged, sent as a chat message part on submit),
   // an uploaded file lands directly in the project's file map -- there's
   // no equivalent "generic file" chat attachment type on the wire (see
@@ -2230,7 +2251,7 @@ export default function BuildWorkspace() {
         </span>
       </div>
       <button
-        onClick={reset}
+        onClick={startNewChat}
         className="flex h-10 w-full items-center gap-2 rounded-xl border border-border px-2 text-sm font-medium shadow-sm transition-all hover:bg-surface-2 hover:shadow-md"
       >
         <span className="flex h-5 w-5 shrink-0 items-center justify-center">{PencilIcon}</span>
