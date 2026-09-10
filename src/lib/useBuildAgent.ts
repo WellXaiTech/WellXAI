@@ -368,7 +368,15 @@ export type ConnectResult = "connected" | "blocked" | "not_configured" | "failed
 // window first and only pointing it at the real URL once /start resolves
 // keeps the whole thing inside that same synchronous click.
 async function ensureConnected(service: "github" | "vercel"): Promise<ConnectResult> {
-  const popup = window.open("", "_blank", "noopener,noreferrer");
+  // Deliberately WITHOUT noopener/noreferrer here, unlike a normal
+  // external link -- both make window.open() return null even though a
+  // window really did open (that's the whole point of noopener: deny the
+  // opener a handle back). This function needs that handle to point the
+  // still-blank window at the real URL once /start resolves below; opened
+  // this way, the popup was blank forever, with no error and no visible
+  // sign anything had gone wrong. The destination (github.com/vercel.com)
+  // is trusted, so skipping these here is a fair trade.
+  const popup = window.open("", "_blank");
 
   // A network hiccup, a cold-start blip, KV briefly unavailable -- any of
   // these throwing used to leave the caller's await hanging forever (an
