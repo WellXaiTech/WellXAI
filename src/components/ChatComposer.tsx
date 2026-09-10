@@ -756,7 +756,9 @@ export default function ChatComposer({
       type="submit"
       aria-label="Send"
       disabled={disabled || (!value.trim() && attachments.length === 0)}
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-40 ${
+        isHero ? "bg-blue-600 text-white hover:bg-blue-500" : "text-muted hover:bg-surface-2 hover:text-foreground"
+      }`}
     >
       {ArrowUpIcon}
     </button>
