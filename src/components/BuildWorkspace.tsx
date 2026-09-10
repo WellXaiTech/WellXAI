@@ -591,11 +591,6 @@ const ExistingFolderIcon = (
 );
 // "Or just give it a name" row's own pencil -- the exact glyph the user
 // provided, separate from the plain PencilIcon "New chat" etc. use.
-const NamePencilIcon = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3.5 18.985V20.5h1.514c1.227 0 1.84 0 2.391-.228c.551-.229.985-.662 1.852-1.53l9.864-9.863c.883-.883 1.324-1.324 1.373-1.866q.012-.135 0-.269c-.05-.541-.49-.983-1.373-1.865c-.883-.883-1.324-1.324-1.865-1.373a1.5 1.5 0 0 0-.27 0c-.541.049-.982.49-1.865 1.373l-9.864 9.864c-.867.867-1.3 1.3-1.529 1.852c-.228.55-.228 1.164-.228 2.39M13.5 6.5l4 4" />
-  </svg>
-);
 // Graduation cap -- the "Learn to code" rail button, right below "New chat".
 const LearnIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1277,7 +1272,6 @@ export default function BuildWorkspace() {
   }
 
   const [onboardOpen, setOnboardOpen] = useState(false);
-  const [onboardNameInput, setOnboardNameInput] = useState("");
   const [onboardBusy, setOnboardBusy] = useState<"github" | "folder" | null>(null);
   // Was silently empty before -- a blocked/failed connect popup just put
   // the button back to "Connect GitHub" with no sign anything had gone
@@ -1317,7 +1311,6 @@ export default function BuildWorkspace() {
 
   function finishOnboarding() {
     setOnboardOpen(false);
-    setOnboardNameInput("");
     runPendingSubmit();
   }
 
@@ -1348,13 +1341,6 @@ export default function BuildWorkspace() {
     // would silently un-group every folder project the moment the page
     // reloads, even though the same real folder would reconnect fine.
     setPendingManualGroupName(folderName);
-    finishOnboarding();
-  }
-
-  function handleOnboardName() {
-    const name = onboardNameInput.trim();
-    if (!name) return;
-    setPendingManualGroupName(name);
     finishOnboarding();
   }
 
@@ -1476,10 +1462,11 @@ export default function BuildWorkspace() {
   // capitalization or stray whitespace -- always lands in the ONE existing
   // group instead of quietly spawning a second, near-identical-looking
   // one. The group keeps whichever exact casing it first appeared with.
-  function groupByName(list: BuildProject[]): Map<string, BuildProject[]> {
+  function groupByName(list: BuildProject[], nameOf?: (p: BuildProject) => string): Map<string, BuildProject[]> {
+    const resolve = nameOf ?? ((p: BuildProject) => (p.githubRepoUrl ? repoNameFromUrl(p.githubRepoUrl) : (p.manualGroupName as string)));
     const map = new Map<string, { displayName: string; projects: BuildProject[] }>();
     for (const p of list) {
-      const displayName = p.githubRepoUrl ? repoNameFromUrl(p.githubRepoUrl) : (p.manualGroupName as string);
+      const displayName = resolve(p);
       const key = displayName.trim().toLowerCase();
       const existing = map.get(key);
       if (existing) existing.projects.push(p);
@@ -1493,30 +1480,33 @@ export default function BuildWorkspace() {
   // when it was started via the "Learn to code" button -- no separate
   // persisted flag needed, this is real and stable (the first message
   // never changes after the fact) without touching BuildProject's own
-  // saved shape. Pulled out of GitHub/Files below into their own "Learn"
-  // section, per feedback that History should separate all three.
+  // saved shape. No longer split into its own generic "Learn" section --
+  // per feedback, it gets a real folder of its own ("Learn to code") the
+  // same way any named folder does, chevron/"+" and all, rather than a
+  // separately-styled label wrapping it.
   const isLearnProject = (p: BuildProject) => p.messages[0]?.content === LEARN_TO_CODE_PROMPT;
-  const learnProjects = sortedProjects.filter(isLearnProject);
-  const githubGroupMap = groupByName(sortedProjects.filter((p) => p.githubRepoUrl && !isLearnProject(p)));
+  const LEARN_GROUP_NAME = "Learn to code";
+  const githubGroupMap = groupByName(sortedProjects.filter((p) => p.githubRepoUrl));
   // Everything else groups by manualGroupName -- set from onboarding's
   // "name this project" step for a typed name, or (just as often) from the
-  // real connected-folder name once handleOnboardFolder stamps it there.
-  // Either way it's a real, project-owned value stored once and carried
-  // forward forever after (see the upsert effect in useBuildAgent.ts), so
-  // it survives a reload instead of depending on the live localFolderName
-  // state, which resets to null every time. Onboarding is meant to make
-  // this mandatory going forward, so a plain ungrouped row below should
-  // really only ever be a project saved before this existed.
-  const manualGroupMap = groupByName(sortedProjects.filter((p) => !p.githubRepoUrl && p.manualGroupName && !isLearnProject(p)));
+  // real connected-folder name once handleOnboardFolder stamps it there --
+  // or, for a learn-to-code session, the fixed LEARN_GROUP_NAME above.
+  // Either way it's stable, so it survives a reload instead of depending
+  // on the live localFolderName state, which resets to null every time.
+  // Onboarding is meant to make this mandatory going forward, so a plain
+  // ungrouped row below should really only ever be a project saved before
+  // this existed.
+  const manualGroupMap = groupByName(
+    sortedProjects.filter((p) => !p.githubRepoUrl && (p.manualGroupName || isLearnProject(p))),
+    (p) => p.manualGroupName ?? LEARN_GROUP_NAME
+  );
   // No generic "GitHub"/"Files" wrapper label above these -- per feedback,
   // a repo or a named folder already has its own real name (the thing the
   // wrapper labels were standing in for), so wrapping it in one more
   // generic label just to say "here are some real names" was the
   // redundant layer, not helpful grouping. Each real-named group (GitHub
   // repo or manual/folder name) stands on its own directly, same as a
-  // plain ungrouped row -- Learn is the one exception that keeps a
-  // generic section label, since a learn-to-code session genuinely has no
-  // project-given name to show instead.
+  // plain ungrouped row.
   //
   // GitHub and Folder render as two separate blocks now (GitHub entries
   // always first, Folder entries always after), never interleaved with
@@ -1530,7 +1520,7 @@ export default function BuildWorkspace() {
   {
     const seenGroups = new Set<string>();
     for (const p of sortedProjects) {
-      if (isLearnProject(p) || !p.githubRepoUrl) continue;
+      if (!p.githubRepoUrl) continue;
       if (historyGroupBy === "none") {
         githubEntries.push({ kind: "row", project: p });
         continue;
@@ -1545,8 +1535,9 @@ export default function BuildWorkspace() {
   {
     const seenGroups = new Set<string>();
     for (const p of sortedProjects) {
-      if (isLearnProject(p) || p.githubRepoUrl) continue;
-      if (historyGroupBy === "none" || !p.manualGroupName) {
+      if (p.githubRepoUrl) continue;
+      const hasGroup = p.manualGroupName || isLearnProject(p);
+      if (historyGroupBy === "none" || !hasGroup) {
         folderEntries.push({ kind: "row", project: p });
         continue;
       }
@@ -2258,7 +2249,7 @@ export default function BuildWorkspace() {
           this app's project data can actually back for real (see the
           state declarations' own comment): no fake Status/Environment/PR
           filters that would have nothing real behind them. */}
-      {(learnProjects.length > 0 || historyEntries.length > 0) && (
+      {historyEntries.length > 0 && (
         <div className="relative flex items-center justify-end px-1 pt-1">
           <button
             type="button"
@@ -2326,25 +2317,6 @@ export default function BuildWorkspace() {
           separate blocks. */}
       {historyEntries.length > 0 && (
         <div className="sidebar-scroll flex min-h-0 flex-1 flex-col overflow-y-auto">
-          {/* Learn only shows once a real GitHub repo or named folder
-              exists elsewhere in History -- per feedback, a brand-new
-              account with nothing but tutorial sessions shouldn't have
-              Learn sitting there as if it were real project history;
-              hidden entirely (not just deprioritized) until historyEntries
-              has something real in it. */}
-          {learnProjects.length > 0 && historyEntries.length > 0 && (
-            <div className="flex shrink-0 flex-col">
-              <button
-                onClick={() => toggleGroup("__section_learn")}
-                className="flex items-center gap-1.5 px-2 pb-1 pt-2 text-left text-xs font-semibold uppercase tracking-wide text-muted"
-              >
-                <span>Learn</span>
-                <span className={`shrink-0 transition-transform ${!collapsedGroups["__section_learn"] ? "rotate-90" : ""}`}>{ChevronRightIcon}</span>
-              </button>
-              {!collapsedGroups["__section_learn"] && <div className="space-y-0.5 pb-1">{learnProjects.map(renderProjectRow)}</div>}
-            </div>
-          )}
-
           {historyEntries.map((entry) =>
             entry.kind === "row" ? (
               <div key={entry.project.id} className="space-y-0.5 pb-1">
@@ -2543,28 +2515,6 @@ export default function BuildWorkspace() {
               <span className="shrink-0 text-muted">{ChevronRightIcon}</span>
             </button>
           )}
-          <div className="flex w-full items-center gap-3 px-3 py-2">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-foreground">{NamePencilIcon}</span>
-            <input
-              autoFocus
-              value={onboardNameInput}
-              onChange={(e) => setOnboardNameInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleOnboardName();
-              }}
-              placeholder="Or just give it a name -- e.g. Bakery landing page"
-              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted"
-            />
-            <button
-              type="button"
-              disabled={!onboardNameInput.trim()}
-              onClick={handleOnboardName}
-              aria-label="Continue"
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-30"
-            >
-              {ChevronRightIcon}
-            </button>
-          </div>
         </div>
       </div>
     </div>
