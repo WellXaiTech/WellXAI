@@ -190,11 +190,21 @@ export async function POST(req: NextRequest) {
     // final ref update succeeds.
     const blobEntries = await Promise.all(
       Object.entries(files).map(async ([path, content]) => {
+        // Base64, not encoding: "utf-8" -- GitHub's blob API is stricter
+        // about what counts as valid UTF-8 text than a browser's own
+        // string handling is (a lone surrogate half, certain control
+        // characters, etc. -- easy for generated HTML/JS to end up with
+        // by accident), and it silently 422s on content it rejects. A
+        // base64 blob is byte-safe regardless of what's actually inside.
         const blobRes = await gh(accessToken, `/repos/${owner}/${repoName}/git/blobs`, {
           method: "POST",
-          body: JSON.stringify({ content, encoding: "utf-8" }),
+          body: JSON.stringify({ content: Buffer.from(content, "utf-8").toString("base64"), encoding: "base64" }),
         });
-        if (!blobRes.ok) throw new Error(`Failed to create blob for ${path}`);
+        if (!blobRes.ok) {
+          const errBody = await blobRes.text();
+          console.error("GitHub blob creation failed:", path, blobRes.status, errBody);
+          throw new Error(`Failed to create blob for ${path} (${blobRes.status}): ${errBody}`);
+        }
         const blob = await blobRes.json();
         return { path, mode: "100644" as const, type: "blob" as const, sha: blob.sha as string };
       })
