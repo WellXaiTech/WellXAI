@@ -1292,6 +1292,29 @@ export default function BuildWorkspace() {
   // can't start a second import over the first one's still-in-flight
   // loadImportedFiles call.
   const [importingRepo, setImportingRepo] = useState(false);
+  // Every repo the current GitHub connection can see, fetched once on
+  // mount (see the effect below) -- lets History show a folder for a
+  // repo the user already has on GitHub even before they've ever opened
+  // it through ChatGiZa (see the githubEntries loop and
+  // startNewChatInGroup). Silently stays empty if GitHub isn't connected
+  // or the list fails to load -- this is a nice-to-have discovery aid,
+  // not something the rest of History depends on.
+  const [remoteGithubRepos, setRemoteGithubRepos] = useState<{ name: string; url: string }[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/build/github/repos")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.repos) setRemoteGithubRepos(data.repos);
+      })
+      .catch(() => {
+        // Not connected, or the list failed to load -- History just
+        // shows whatever repos ChatGiZa already knows about locally.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const folderSupported = typeof window !== "undefined" && "showDirectoryPicker" in window;
   // Closes on ANY click outside the card -- the backdrop itself, or
   // something else entirely like a History row in the rail (which isn't
@@ -1521,7 +1544,13 @@ export default function BuildWorkspace() {
   // grouping. Each block is internally stable/sorted by the chosen Sort
   // by, but a GitHub group can never end up sitting between two Folder
   // entries or vice versa.
-  type HistoryEntry = { kind: "row"; project: BuildProject } | { kind: "group"; name: string; list: BuildProject[] };
+  // githubRepoUrl lives on the entry itself (not just inferred from
+  // list[0]) so a repo with zero ChatGiZa conversations yet -- listed via
+  // remoteGithubRepos below, not backed by any real project -- can still
+  // be a real, clickable group (see startNewChatInGroup).
+  type HistoryEntry =
+    | { kind: "row"; project: BuildProject }
+    | { kind: "group"; name: string; list: BuildProject[]; githubRepoUrl?: string };
   const githubEntries: HistoryEntry[] = [];
   {
     const seenGroups = new Set<string>();
@@ -1534,7 +1563,20 @@ export default function BuildWorkspace() {
       const name = [...githubGroupMap.keys()].find((k) => githubGroupMap.get(k)!.includes(p))!;
       if (seenGroups.has(name)) continue;
       seenGroups.add(name);
-      githubEntries.push({ kind: "group", name, list: githubGroupMap.get(name)! });
+      const list = githubGroupMap.get(name)!;
+      githubEntries.push({ kind: "group", name, list, githubRepoUrl: list[0]?.githubRepoUrl });
+    }
+    // Repos that exist on GitHub but have no ChatGiZa conversation at all
+    // yet -- an empty, ready-to-use folder, the same "+" affordance as
+    // any other group. Skipped entirely in "Group by: None" the same way
+    // a real repo group already is there.
+    if (historyGroupBy !== "none") {
+      for (const repo of remoteGithubRepos) {
+        const key = repo.name.trim().toLowerCase();
+        if (seenGroups.has(repo.name) || [...seenGroups].some((n) => n.trim().toLowerCase() === key)) continue;
+        seenGroups.add(repo.name);
+        githubEntries.push({ kind: "group", name: repo.name, list: [], githubRepoUrl: repo.url });
+      }
     }
   }
   const folderEntries: HistoryEntry[] = [];
@@ -2119,17 +2161,16 @@ export default function BuildWorkspace() {
   // the next auto-push (syncFilesToGithub) would have overwritten the
   // repo's real content with that near-empty state.
   async function startNewChatInGroup(entry: Extract<HistoryEntry, { kind: "group" }>) {
-    const sample = entry.list[0];
     reset();
     skipOnboardOnceRef.current = true;
-    if (!sample?.githubRepoUrl) {
+    if (!entry.githubRepoUrl) {
       setPendingManualGroupName(entry.name);
       return;
     }
-    setPendingGithubRepo(sample.githubRepoUrl);
+    setPendingGithubRepo(entry.githubRepoUrl);
     setImportingRepo(true);
     try {
-      const repoName = repoNameFromUrl(sample.githubRepoUrl);
+      const repoName = repoNameFromUrl(entry.githubRepoUrl);
       const res = await fetch(`/api/build/github/pull?repoName=${encodeURIComponent(repoName)}`);
       if (res.ok) {
         const data = await res.json();
