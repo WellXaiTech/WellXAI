@@ -11,7 +11,7 @@ import { normalizeSpacing } from "@/lib/pdfMarkers";
 import remarkGfm from "remark-gfm";
 import BuildPreviewFrame from "@/components/BuildPreviewFrame";
 import BuildFileTree from "@/components/BuildFileTree";
-import { useBuildAgent, type BuildChatMessage, type BuildProject } from "@/lib/useBuildAgent";
+import { useBuildAgent, type BuildChatMessage, type BuildProject, type DiffLine } from "@/lib/useBuildAgent";
 import { validateBuildFiles, MAX_BUILD_SINGLE_FILE_BYTES } from "@/lib/buildFileLimits";
 import { useChatGizaShell } from "@/components/ChatGizaShell";
 import AccountMenu from "@/components/AccountMenu";
@@ -403,6 +403,39 @@ function DiffStatBadge({ stat }: { stat: { added: number; removed: number } }) {
       {stat.added > 0 && stat.removed > 0 && " "}
       {stat.removed > 0 && <span className="text-red-500 dark:text-red-400">-{stat.removed}</span>}
     </span>
+  );
+}
+
+// The real content behind a step's +N -M badge -- a monospace, per-line
+// colored diff (green add / red remove, muted unchanged context), same
+// idea as a real code review diff. diffLines is already windowed down to
+// a couple of lines of context around each change (see collapseToDiffHunks
+// in useBuildAgent.ts), so this never has to render a whole file's worth
+// of unchanged lines just to show a one-line edit.
+function DiffBlock({ lines }: { lines: DiffLine[] }) {
+  return (
+    <div className="mt-1 overflow-x-auto rounded-lg border border-border bg-[#1e1e1e] py-1 font-mono text-xs leading-5">
+      {lines.map((line, i) => {
+        const isPlaceholder = line.type === "context" && line.text.startsWith("⋯");
+        return (
+          <div
+            key={i}
+            className={`whitespace-pre px-3 ${
+              line.type === "add"
+                ? "bg-green-500/10 text-green-400"
+                : line.type === "remove"
+                  ? "bg-red-500/10 text-red-400"
+                  : isPlaceholder
+                    ? "py-0.5 text-center text-muted"
+                    : "text-muted/80"
+            }`}
+          >
+            {!isPlaceholder && (line.type === "add" ? "+ " : line.type === "remove" ? "- " : "  ")}
+            {line.text}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -1907,6 +1940,22 @@ export default function BuildWorkspace() {
   // every step as it happens, the way a coding-agent's own transcript
   // does, not a summary that has to be clicked open every time.
   const [collapsedStepGroups, setCollapsedStepGroups] = useState<Set<number>>(new Set());
+  // Which individual steps (keyed by their own message id) are showing
+  // their real diff content -- independent of collapsedStepGroups, which
+  // only ever expands/collapses a whole GROUP's list of step labels. A
+  // step's diff starts collapsed even inside an already-expanded group;
+  // clicking its own +N -M badge reveals the real added/removed lines
+  // underneath it.
+  const [expandedDiffIds, setExpandedDiffIds] = useState<Set<string>>(new Set());
+  function toggleDiff(id: string | undefined) {
+    if (!id) return;
+    setExpandedDiffIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   // Consecutive step messages ("Wrote index.html", "Wrote styles.css", ...)
   // collapse into one group with a single summary header -- computed fresh
@@ -3063,6 +3112,13 @@ export default function BuildWorkspace() {
                   // reverted single write still shows struck-through with
                   // "(reverted)", same as it would inside an expanded group.
                   const soloReverted = !canExpand && item.steps[0].reverted;
+                  // A solo step's own diff is directly clickable via its
+                  // badge -- summary.diffStat here is literally that one
+                  // step's stat (nothing summed across multiple steps the
+                  // way a multi-step group's total is), so it maps 1:1 onto
+                  // item.steps[0].diffLines.
+                  const soloDiffLines = !canExpand ? item.steps[0].diffLines : undefined;
+                  const soloDiffOpen = !canExpand && expandedDiffIds.has(item.steps[0].id ?? "");
                   // Chevron goes at the END of the line ("Used 3 tools ›"),
                   // not the front -- matches the reference transcript style
                   // the user pointed to, where every line's arrow trails
@@ -3071,7 +3127,20 @@ export default function BuildWorkspace() {
                     <>
                       {hasWarning && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" aria-label="Warning" />}
                       <span className={`min-w-0 flex-1 truncate ${soloReverted ? "line-through" : ""}`}>{summary.label}</span>
-                      {!soloReverted && summary.diffStat && <DiffStatBadge stat={summary.diffStat} />}
+                      {!soloReverted && summary.diffStat && soloDiffLines && soloDiffLines.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleDiff(item.steps[0].id);
+                          }}
+                          className="shrink-0 rounded hover:bg-surface-2"
+                        >
+                          <DiffStatBadge stat={summary.diffStat} />
+                        </button>
+                      ) : (
+                        !soloReverted && summary.diffStat && <DiffStatBadge stat={summary.diffStat} />
+                      )}
                       {soloReverted && <span className="shrink-0 text-xs no-underline">(reverted)</span>}
                       {canExpand && (
                         <span className={`shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`}>{ChevronRightIcon}</span>
@@ -3101,6 +3170,7 @@ export default function BuildWorkspace() {
                           {hasWarning && !item.steps[0].reverted && (
                             <p className="mt-0.5 pl-5 text-xs text-amber-500">{item.steps[0].warning}</p>
                           )}
+                          {soloDiffOpen && soloDiffLines && <DiffBlock lines={soloDiffLines} />}
                         </div>
                       )}
                       {/* Plain stacked lines, same font/weight as the header
@@ -3111,16 +3181,31 @@ export default function BuildWorkspace() {
                           app's own tool-call transcript) doesn't have. */}
                       {canExpand && isExpanded && (
                         <div className="ml-5 mt-0.5 space-y-1">
-                          {item.steps.map((s, si) => (
-                            <div key={si}>
-                              <p className={`flex items-center gap-1.5 text-sm ${s.reverted ? "text-muted line-through" : "text-muted"}`}>
-                                <span>{renderWithLinks(s.content)}</span>
-                                {!s.reverted && s.diffStat && <DiffStatBadge stat={s.diffStat} />}
-                                {s.reverted && <span className="shrink-0 text-xs no-underline">(reverted)</span>}
-                              </p>
-                              {!s.reverted && s.warning && <p className="mt-0.5 text-xs text-amber-500">{s.warning}</p>}
-                            </div>
-                          ))}
+                          {item.steps.map((s, si) => {
+                            const hasDiff = !s.reverted && s.diffStat && s.diffLines && s.diffLines.length > 0;
+                            const diffOpen = hasDiff && expandedDiffIds.has(s.id ?? "");
+                            return (
+                              <div key={si}>
+                                <p className={`flex items-center gap-1.5 text-sm ${s.reverted ? "text-muted line-through" : "text-muted"}`}>
+                                  <span>{renderWithLinks(s.content)}</span>
+                                  {hasDiff ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleDiff(s.id)}
+                                      className="shrink-0 rounded hover:bg-surface-2"
+                                    >
+                                      <DiffStatBadge stat={s.diffStat!} />
+                                    </button>
+                                  ) : (
+                                    !s.reverted && s.diffStat && <DiffStatBadge stat={s.diffStat} />
+                                  )}
+                                  {s.reverted && <span className="shrink-0 text-xs no-underline">(reverted)</span>}
+                                </p>
+                                {!s.reverted && s.warning && <p className="mt-0.5 text-xs text-amber-500">{s.warning}</p>}
+                                {diffOpen && s.diffLines && <DiffBlock lines={s.diffLines} />}
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>

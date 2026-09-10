@@ -35,6 +35,8 @@ interface FsDirHandle {
 // write_file that replaced an existing file with much shorter content --
 // the concrete shape of the model "forgetting" the rest of the file and
 // silently dropping it.
+export type DiffLine = { type: "add" | "remove" | "context"; text: string };
+
 export type BuildChatMessage = {
   role: "user" | "assistant";
   content: string;
@@ -49,6 +51,13 @@ export type BuildChatMessage = {
   // it across a whole collapsed step group, instead of having to re-parse
   // numbers back out of a label string.
   diffStat?: { added: number; removed: number };
+  // The actual added/removed/context lines behind diffStat's counts, for
+  // a step's own real diff view (click to expand -- see BuildWorkspace.tsx)
+  // instead of just the +N -M count. Windowed down to a couple of lines of
+  // context around each change (collapseToDiffHunks), NOT the whole file,
+  // so a huge rewrite's message doesn't bloat localStorage with thousands
+  // of unchanged lines nobody asked to see.
+  diffLines?: DiffLine[];
   // Marks a generic step regardless of its specific label text ("command"
   // for run_terminal_command, "tool" for a read/search/outline call) so
   // summarizeSteps can still group/count these correctly once the label
@@ -190,9 +199,54 @@ function extractOpener(text: string): string {
 // Wrapped defensively: this is a label enhancement, not something that
 // should ever be able to take down a build turn if it misbehaves on some
 // unanticipated file content.
-function lineDiffStat(before: string | undefined, after: string): { added: number; removed: number } | null {
+// Collapses a full line-by-line diff down to just the changed lines plus a
+// couple lines of surrounding context (same idea as `git diff`'s default
+// context window) -- a step's message is what actually gets persisted to
+// localStorage as part of the project, so a one-line change deep inside a
+// 2,000-line file should cost a few lines here, not the whole file.
+const DIFF_CONTEXT_LINES = 2;
+function collapseToDiffHunks(lines: DiffLine[]): DiffLine[] {
+  const keep = new Array<boolean>(lines.length).fill(false);
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].type === "context") continue;
+    for (let k = Math.max(0, i - DIFF_CONTEXT_LINES); k <= Math.min(lines.length - 1, i + DIFF_CONTEXT_LINES); k++) {
+      keep[k] = true;
+    }
+  }
+  const result: DiffLine[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (keep[i]) {
+      result.push(lines[i]);
+      i++;
+      continue;
+    }
+    let j = i;
+    while (j < lines.length && !keep[j]) j++;
+    const skipped = j - i;
+    result.push({ type: "context", text: `⋯ ${skipped} unchanged line${skipped === 1 ? "" : "s"} ⋯` });
+    i = j;
+  }
+  return result;
+}
+
+// A real +N -M line count (same idea as `git diff --stat`) AND the actual
+// diff lines behind it (windowed via collapseToDiffHunks above), computed
+// via standard LCS -- not just a length/character comparison, which would
+// call a one-line change at the top of a long file "the whole file
+// changed". O(n*m) time and space, so skipped above a size guard where
+// that stops being worth it -- this runs synchronously on the main thread
+// during an active multi-step build, so it needs to stay cheap, not just
+// correct. Wrapped defensively: this is a label/UI enhancement, not
+// something that should ever be able to take down a build turn if it
+// misbehaves on some unanticipated file content.
+function computeLineDiff(before: string | undefined, after: string): { added: number; removed: number; lines: DiffLine[] } | null {
   try {
-    const beforeLines = (before ?? "").split("\n");
+    // undefined (brand-new file) means zero lines, NOT one empty line --
+    // "".split("\n") returns [""], which used to make a new file's diff
+    // count a phantom removed line (an empty string LCS-matching nothing
+    // in the new content) on top of every real added line.
+    const beforeLines = before === undefined ? [] : before.split("\n");
     const afterLines = after.split("\n");
     const n = beforeLines.length;
     const m = afterLines.length;
@@ -204,9 +258,33 @@ function lineDiffStat(before: string | undefined, after: string): { added: numbe
       }
     }
     const lcsLength = dp[0][0];
-    return { added: m - lcsLength, removed: n - lcsLength };
+    const lines: DiffLine[] = [];
+    let i = 0;
+    let j = 0;
+    while (i < n && j < m) {
+      if (beforeLines[i] === afterLines[j]) {
+        lines.push({ type: "context", text: beforeLines[i] });
+        i++;
+        j++;
+      } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+        lines.push({ type: "remove", text: beforeLines[i] });
+        i++;
+      } else {
+        lines.push({ type: "add", text: afterLines[j] });
+        j++;
+      }
+    }
+    while (i < n) {
+      lines.push({ type: "remove", text: beforeLines[i] });
+      i++;
+    }
+    while (j < m) {
+      lines.push({ type: "add", text: afterLines[j] });
+      j++;
+    }
+    return { added: m - lcsLength, removed: n - lcsLength, lines: collapseToDiffHunks(lines) };
   } catch (err) {
-    console.error("lineDiffStat failed, skipping the diff badge for this step:", err);
+    console.error("computeLineDiff failed, skipping the diff view for this step:", err);
     return null;
   }
 }
@@ -1373,15 +1451,28 @@ export function useBuildAgent() {
                 }
               }
               const isDiffable = call.function.name === "write_file" || call.function.name === "replace_in_file";
-              const diffStat =
+              const diff =
                 isDiffable && path && filesRef.current[path] !== undefined
-                  ? lineDiffStat(prevContent, filesRef.current[path]) ?? undefined
+                  ? computeLineDiff(prevContent, filesRef.current[path]) ?? undefined
                   : undefined;
               const label = mergesWithPendingRead
                 ? `Read and ${step.label.charAt(0).toLowerCase()}${step.label.slice(1)}`
                 : step.label;
               if (mergesWithPendingRead) pendingRead = null;
-              setMessages((prev) => [...prev, { role: "assistant", content: label, step: true, id: newId(), revert, warning, diffStat, kind: step.kind }]);
+              setMessages((prev) => [
+                ...prev,
+                {
+                  role: "assistant",
+                  content: label,
+                  step: true,
+                  id: newId(),
+                  revert,
+                  warning,
+                  diffStat: diff ? { added: diff.added, removed: diff.removed } : undefined,
+                  diffLines: diff?.lines,
+                  kind: step.kind,
+                },
+              ]);
             }
           }
           // Deliberately NOT flushing any still-pending read here at the
