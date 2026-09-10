@@ -1650,6 +1650,17 @@ export function useBuildAgent() {
     [selectProject]
   );
 
+  // Injects a plain assistant chat bubble without going through a real
+  // model turn -- used for a deterministic, non-LLM question ChatGiZa
+  // needs an answer to before it can proceed (e.g. "which of your
+  // existing GitHub projects should I use?" -- see BuildWorkspace.tsx's
+  // handleOnboardGithub). Goes through the exact same messages state
+  // every real assistant reply does, so it saves/reloads with the
+  // project like any other message.
+  const addAssistantMessage = useCallback((content: string) => {
+    setMessages((prev) => [...prev, { role: "assistant", content }]);
+  }, []);
+
   return {
     files,
     messages,
@@ -1691,8 +1702,10 @@ export function useBuildAgent() {
     setPendingVercelProject: (name: string) => {
       pendingVercelProjectNameRef.current = name;
     },
+    setProjectGithubRepo,
     setProjectVercelName,
     setProjectSupabaseRef,
+    addAssistantMessage,
     permissionMode,
     setPermissionMode,
     projectName: deriveProjectName(files, messages),
