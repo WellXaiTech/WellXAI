@@ -1534,6 +1534,19 @@ export function useBuildAgent() {
         pendingRead = null;
       };
 
+      // Mutable copy of stalledLastTurn -- starts at the historical value
+      // (computed above from the LAST send() call's outcome) but flips to
+      // true the moment a stall is observed within THIS loop too, so a
+      // second consecutive stall is recognized immediately rather than
+      // only on some future call. autoStallRetries bounds how many times
+      // the loop is allowed to silently retry a stall on the user's
+      // behalf (see the toolCalls.length === 0 branch below) -- capped so
+      // a genuinely stuck request still hands control back instead of
+      // burning turns forever.
+      let stalledForFetch = stalledLastTurn;
+      let autoStallRetries = 0;
+      const MAX_AUTO_STALL_RETRIES = 2;
+
       try {
         for (let step = 0; step < MAX_STEPS; step++) {
           // filesRef.current is read fresh on every loop iteration (not
@@ -1544,7 +1557,7 @@ export function useBuildAgent() {
           const res = await fetch("/api/build/turn", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ messages: agentMessages, files: filesRef.current, recentOpeners, possibleRepeat, stalledLastTurn }),
+            body: JSON.stringify({ messages: agentMessages, files: filesRef.current, recentOpeners, possibleRepeat, stalledLastTurn: stalledForFetch }),
             signal: controller.signal,
           });
           if (!res.ok || !res.body) {
@@ -1648,8 +1661,34 @@ export function useBuildAgent() {
               });
             }
             flushPendingRead();
+            // If the turn we're about to end is ALREADY a repeat stall
+            // (stalledForFetch was true going into this very fetch --
+            // meaning a previous turn, whether from an earlier user
+            // message or an earlier auto-retry right here, also ended
+            // with no tool call), don't hand control back to the user for
+            // a third/fourth time -- silently retry with the same
+            // corrective hint, live-verified necessary because the hint
+            // alone didn't reliably stop a repeat in production. Bounded
+            // by MAX_AUTO_STALL_RETRIES so a genuinely stuck request still
+            // surfaces to the user instead of looping forever. The FIRST
+            // stall in a fresh request still just ends normally here --
+            // plenty of zero-tool-call replies are legitimate (a finished
+            // answer, a real clarifying question), so only a repeat is
+            // treated as a stall worth fighting automatically.
+            if (stalledForFetch && autoStallRetries < MAX_AUTO_STALL_RETRIES) {
+              autoStallRetries++;
+              agentMessages.push({ role: "assistant", content: doneEvent.content ?? "" });
+              continue;
+            }
             return;
           }
+
+          // A real tool call happened -- this turn is no longer stalled,
+          // and any earlier stall in this same loop is resolved, so later
+          // steps get a clean slate instead of being auto-retried off the
+          // back of a problem that's already been fixed.
+          stalledForFetch = false;
+          autoStallRetries = 0;
 
           // tool_calls: execute each locally against the virtual file map
           // (or, for push_to_github/deploy_to_vercel, against the real
