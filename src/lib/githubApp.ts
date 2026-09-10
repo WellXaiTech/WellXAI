@@ -1,4 +1,5 @@
 import { kv } from "@vercel/kv";
+import { createPrivateKey } from "crypto";
 import { SignJWT, importPKCS8 } from "jose";
 
 // A GitHub App, once a user installs it, needs no further popup ever
@@ -46,7 +47,16 @@ export async function isGithubAppConfigured(): Promise<boolean> {
 // tolerate clock drift between this server and GitHub's; capped at 9
 // minutes, under GitHub's hard 10-minute limit for these.
 async function signAppJwt(cfg: GithubAppConfig): Promise<string> {
-  const key = await importPKCS8(cfg.privateKey, "RS256");
+  // GitHub's manifest-conversion endpoint returns the private key in
+  // PKCS#1 form ("BEGIN RSA PRIVATE KEY"), but jose's importPKCS8 only
+  // parses PKCS#8 ("BEGIN PRIVATE KEY") -- feeding it the raw PKCS#1 PEM
+  // directly throws, which is what was surfacing as a bare 500 on the
+  // install callback instead of ever reaching a real error message.
+  // Node's own createPrivateKey auto-detects the input format, so
+  // round-tripping through it first works regardless of which form
+  // GitHub (or a future manifest response) actually returns.
+  const pkcs8Pem = createPrivateKey(cfg.privateKey).export({ format: "pem", type: "pkcs8" }) as string;
+  const key = await importPKCS8(pkcs8Pem, "RS256");
   const now = Math.floor(Date.now() / 1000);
   return new SignJWT({})
     .setProtectedHeader({ alg: "RS256" })

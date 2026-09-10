@@ -55,16 +55,25 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ serv
     if (!state) {
       return resultPage("Connection failed", "Missing state. Please try again from the app.");
     }
-    const decoded = await verifyConnectorState(state);
-    if (!decoded || decoded.service !== id) {
-      return resultPage("Connection failed", "This link expired or is invalid. Please try again from the app.");
+    try {
+      const decoded = await verifyConnectorState(state);
+      if (!decoded || decoded.service !== id) {
+        return resultPage("Connection failed", "This link expired or is invalid. Please try again from the app.");
+      }
+      const info = await fetchInstallationInfo(installationId);
+      if (!info) {
+        return resultPage("Connection failed", "Could not look up this installation. Please try again.");
+      }
+      await saveUserInstallation(decoded.userId, info);
+      return resultPage("GitHub connected", "This tab will close automatically.");
+    } catch (err) {
+      // A bare, unhandled 500 here (e.g. the PKCS#1/PKCS#8 key-format
+      // mismatch this once was, see githubApp.ts) is a dead end for the
+      // user -- Next's own crash page instead of anything actionable, and
+      // it never even reaches window.close() so the popup lingers open.
+      console.error("GitHub App installation callback error:", err);
+      return resultPage("Connection failed", "Something went wrong finishing the install. Please try again.");
     }
-    const info = await fetchInstallationInfo(installationId);
-    if (!info) {
-      return resultPage("Connection failed", "Could not look up this installation. Please try again.");
-    }
-    await saveUserInstallation(decoded.userId, info);
-    return resultPage("GitHub connected", "This tab will close automatically.");
   }
 
   if (!code || !state) {
