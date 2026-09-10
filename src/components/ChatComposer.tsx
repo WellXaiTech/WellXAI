@@ -347,6 +347,14 @@ export default function ChatComposer({
     return { left: rect.left, bottom: window.innerHeight - rect.top + 8 };
   }
 
+  function openToolMenu() {
+    setToolMenuOpen((v) => {
+      const next = !v;
+      if (next) setToolMenuCoords(computeDropdownCoords(240));
+      return next;
+    });
+  }
+
   useEffect(() => {
     if (!menuOpen) return;
     function handleClickOutside(e: MouseEvent) {
@@ -583,26 +591,35 @@ export default function ChatComposer({
     </div>
   );
 
+  // Hero keeps the full pill (icon + name + chevron, in the row next to the
+  // "+" button). The bar composer -- once a chat is actually under way --
+  // drops that pill from the row entirely and shows just the model name as
+  // small muted text underneath the box instead, mirroring how Claude
+  // Code's own composer tucks "Opus 5 High" below the input rather than
+  // giving it a button of its own inline. Same trigger/dropdown either way,
+  // just a different button so the row it belongs in doesn't shift.
   const toolSelector = (
     <div className="relative shrink-0" ref={toolMenuRef}>
-      <button
-        type="button"
-        onClick={() => {
-          setToolMenuOpen((v) => {
-            const next = !v;
-            if (next) setToolMenuCoords(computeDropdownCoords(240));
-            return next;
-          });
-        }}
-        className={`flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-2 ${
-          isHero ? "h-10" : "h-8"
-        }`}
-      >
-        {!activeTool && LightningIcon}
-        {activeTool === "deep_think" && BrainIcon}
-        {activeTool ? TOOL_LABELS[activeTool] : "GiZa 5.6"}
-        {ChevronDownIcon}
-      </button>
+      {isHero ? (
+        <button
+          type="button"
+          onClick={openToolMenu}
+          className="flex h-10 items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-2"
+        >
+          {!activeTool && LightningIcon}
+          {activeTool === "deep_think" && BrainIcon}
+          {activeTool ? TOOL_LABELS[activeTool] : "GiZa 5.6"}
+          {ChevronDownIcon}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={openToolMenu}
+          className="text-xs font-medium text-muted transition-colors hover:text-foreground"
+        >
+          {activeTool ? TOOL_LABELS[activeTool] : "GiZa 5.6"}
+        </button>
+      )}
 
       {toolMenuOpen &&
         toolMenuCoords &&
@@ -783,7 +800,7 @@ export default function ChatComposer({
 
       <div className="flex items-center gap-2">
         {attachMenu}
-        {toolSelector}
+        {isHero && toolSelector}
         <div className="flex-1" />
         {secondaryMicButton}
         {disabled && onStop ? stopButton : value.trim() || attachments.length > 0 ? sendButton : micButton}
@@ -828,6 +845,10 @@ export default function ChatComposer({
       )}
 
       <div className="box mx-auto">{formEl}</div>
+
+      {!isHero && (
+        <div className="mt-1.5 flex justify-end px-1">{toolSelector}</div>
+      )}
 
       {externalSearchOpen &&
         createPortal(
