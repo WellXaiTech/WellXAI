@@ -79,6 +79,14 @@ export type BuildChatMessage = {
   // only. The actual image_url content parts sent to the model live only
   // in that one turn's API payload, not in this stored/displayed history.
   imageUrls?: string[];
+  // True when this reply ended its turn with zero tool calls -- i.e. the
+  // model described/promised an action ("deploying now", "let me try")
+  // without actually invoking the matching tool. Read back on the NEXT
+  // send() as stalledLastTurn so the server can nudge the model to act
+  // instead of narrating the same promise again (see wordOverlapRatio's
+  // comment for the same "give it a concrete fact, not just a prompt
+  // rule" approach applied to a different repeat failure mode).
+  noAction?: boolean;
 };
 
 export type BuildProject = {
@@ -1487,6 +1495,16 @@ export function useBuildAgent() {
       const possibleRepeat =
         recentFinalAnswers.length === 2 && wordOverlapRatio(recentFinalAnswers[0], recentFinalAnswers[1]) > 0.6;
 
+      // True when the model's last real reply ended its turn without
+      // calling any tool at all -- see BuildChatMessage.noAction's comment.
+      // Unlike possibleRepeat, this doesn't need a word-overlap check: a
+      // short "I'll try now"/"deploying..." stall is exactly the failure
+      // case wordOverlapRatio's own length guard (>=8 words each side) was
+      // built to ignore, since it targets long fabricated-explanation
+      // repeats, not short stalls that vary their wording every time.
+      const lastRealAssistant = [...messages].reverse().find((m) => m.role === "assistant" && !m.step);
+      const stalledLastTurn = lastRealAssistant?.noAction === true;
+
       // A read_file immediately followed by an edit to the SAME file reads
       // as one action ("Read and edited X"), not a generic "Used a tool"
       // line right before the edit that was the actual point of it --
@@ -1526,7 +1544,7 @@ export function useBuildAgent() {
           const res = await fetch("/api/build/turn", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ messages: agentMessages, files: filesRef.current, recentOpeners, possibleRepeat }),
+            body: JSON.stringify({ messages: agentMessages, files: filesRef.current, recentOpeners, possibleRepeat, stalledLastTurn }),
             signal: controller.signal,
           });
           if (!res.ok || !res.body) {
@@ -1605,8 +1623,21 @@ export function useBuildAgent() {
             // edit (the model narrated to a stop instead) still deserves
             // its own line rather than silently vanishing.
             flushPendingRead();
+            // Tagged noAction so the NEXT send() can tell the server this
+            // reply ended without calling any tool -- see BuildChatMessage.
+            // noAction's own comment for why this matters: without it, a
+            // model that narrates "trying now" instead of acting looks
+            // identical to a real finished answer, and the user has to
+            // keep manually nudging it.
             if (!streamedAny) {
-              setMessages((prev) => [...prev, { role: "assistant", content: doneEvent!.content ?? "" }]);
+              setMessages((prev) => [...prev, { role: "assistant", content: doneEvent!.content ?? "", noAction: true }]);
+            } else {
+              setMessages((prev) => {
+                const next = [...prev];
+                const last = next[next.length - 1];
+                next[next.length - 1] = { ...last, noAction: true };
+                return next;
+              });
             }
             return;
           }

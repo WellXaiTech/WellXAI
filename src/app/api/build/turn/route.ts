@@ -145,6 +145,22 @@ export async function POST(req: NextRequest) {
       "already said it."
     : null;
 
+  // Same "concrete fact, not just a prompt rule" pattern as repeatHint,
+  // aimed at a different failure signature: the model ended its LAST turn
+  // with plain narration ("deploying now", "let me try") and zero tool
+  // calls, then the user had to prompt again. The client can't tell from
+  // the outside whether that was a deliberate stop (the model needs more
+  // info) or a stall (it meant to act but never actually called the
+  // tool), so give it back the one fact it needs to self-correct instead
+  // of narrating the same promise a second time.
+  const stallHint = body?.stalledLastTurn === true
+    ? "Your previous reply in this conversation described or promised an action (deploying, trying, connecting, " +
+      "etc.) but did not actually call the matching tool -- so nothing happened. If the user is asking you to " +
+      "proceed with that same action now, actually call the real tool in THIS response instead of describing it " +
+      "again. Only reply with text and no tool call if you genuinely cannot proceed yet, in which case say exactly " +
+      "why (a real missing piece of information or a real failure), not another promise to try."
+    : null;
+
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({
@@ -160,6 +176,7 @@ export async function POST(req: NextRequest) {
           { role: "system", content: fileManifest },
           ...(openerHint ? [{ role: "system" as const, content: openerHint }] : []),
           ...(repeatHint ? [{ role: "system" as const, content: repeatHint }] : []),
+          ...(stallHint ? [{ role: "system" as const, content: stallHint }] : []),
           ...clientMessages,
         ];
 
