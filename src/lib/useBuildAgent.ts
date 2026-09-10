@@ -71,6 +71,12 @@ export type BuildProject = {
   // group it under "GitHub Projects" instead of "Folder Projects" (see
   // BuildWorkspace.tsx's History rail).
   githubRepoUrl?: string;
+  // Set once deploy_to_vercel succeeds for this project -- from then on,
+  // every write_file/replace_in_file/delete_file auto-redeploys (see
+  // syncFilesToVercel) instead of needing deploy_to_vercel called (and
+  // confirmed) again by hand. Independent of githubRepoUrl -- a project
+  // can be pushed to GitHub, deployed to Vercel, both, or neither.
+  vercelProjectName?: string;
   // Set from the onboarding modal's mandatory "name your project" step --
   // only ever needed when the user got through onboarding without either
   // connecting GitHub or a folder, so the project would otherwise have no
@@ -539,6 +545,8 @@ export function useBuildAgent() {
   // new project is born already tied to that repo, so it skips the
   // "Where should this project live?" onboarding entirely.
   const pendingGithubRepoUrlRef = useRef<string | null>(null);
+  // Same idea, for a Vercel-project group's own "+".
+  const pendingVercelProjectNameRef = useRef<string | null>(null);
   // Set once run_terminal_command creates a real E2B sandbox, so a later
   // call in the same session reuses it (keeping node_modules from an
   // earlier "npm install" around for a later "npm test") instead of
@@ -614,6 +622,8 @@ export function useBuildAgent() {
     if (isNewProject) pendingManualGroupNameRef.current = null;
     const githubRepoUrl = isNewProject ? pendingGithubRepoUrlRef.current ?? undefined : prev[idx]?.githubRepoUrl;
     if (isNewProject) pendingGithubRepoUrlRef.current = null;
+    const vercelProjectName = isNewProject ? pendingVercelProjectNameRef.current ?? undefined : prev[idx]?.vercelProjectName;
+    if (isNewProject) pendingVercelProjectNameRef.current = null;
     // Carry the pin (and customName/archived/unread) forward -- without
     // this, every message sent in a pinned/renamed/archived/unread project
     // would silently reset it again on the next save.
@@ -626,6 +636,7 @@ export function useBuildAgent() {
       lastActivity: Date.now(),
       pinned: idx >= 0 ? prev[idx].pinned : undefined,
       githubRepoUrl,
+      vercelProjectName,
       manualGroupName,
       customName,
       archived: idx >= 0 ? prev[idx].archived : undefined,
@@ -698,6 +709,40 @@ export function useBuildAgent() {
         console.error("Auto-sync to GitHub failed:", err);
       } finally {
         githubSyncPushingRef.current = false;
+      }
+    }, 2500);
+  }, []);
+
+  // Same idea as syncFilesToGithub, for a project that's already
+  // Vercel-deployed (vercelProjectName set) -- a fresh production
+  // deployment per debounced burst of edits, with no confirmation and no
+  // separate deploy_to_vercel call needed. Fire-and-forget: unlike the
+  // agent's own deploy_to_vercel tool call, nothing here waits for the
+  // build to finish or reports a URL back into the conversation -- this
+  // is a background sync, not something the user asked to see the
+  // result of right now.
+  const vercelSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const vercelSyncDeployingRef = useRef(false);
+  const syncFilesToVercel = useCallback(() => {
+    const project = projectsRef.current.find((p) => p.id === activeIdRef.current);
+    const projectName = project?.vercelProjectName;
+    if (!projectName) return;
+    if (vercelSyncTimeoutRef.current) clearTimeout(vercelSyncTimeoutRef.current);
+    vercelSyncTimeoutRef.current = setTimeout(async () => {
+      vercelSyncTimeoutRef.current = null;
+      if (vercelSyncDeployingRef.current) return;
+      vercelSyncDeployingRef.current = true;
+      try {
+        const res = await fetch("/api/build/vercel/deploy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ files: filesRef.current, projectName }),
+        });
+        if (!res.ok) console.error("Auto-deploy to Vercel failed:", res.status, await res.text());
+      } catch (err) {
+        console.error("Auto-deploy to Vercel failed:", err);
+      } finally {
+        vercelSyncDeployingRef.current = false;
       }
     }, 2500);
   }, []);
@@ -838,6 +883,7 @@ export function useBuildAgent() {
         setFiles(next);
         void writeFileToLocalFolder(path, content);
         syncFilesToGithub();
+        syncFilesToVercel();
         return `Wrote ${path} (${content.length} characters).`;
       }
       case "delete_file": {
@@ -850,6 +896,7 @@ export function useBuildAgent() {
         setFiles(next);
         void deleteFileFromLocalFolder(path);
         syncFilesToGithub();
+        syncFilesToVercel();
         return `Deleted ${path}.`;
       }
       case "replace_in_file": {
@@ -875,6 +922,7 @@ export function useBuildAgent() {
         setFiles(next);
         void writeFileToLocalFolder(path, content);
         syncFilesToGithub();
+        syncFilesToVercel();
         return `Edited ${path} (${content.length} characters).`;
       }
       case "push_to_github": {
@@ -924,6 +972,7 @@ export function useBuildAgent() {
           const data = await res.json();
           if (!res.ok) return `Deploy failed: ${data.error ?? "unknown error"}`;
           const deploymentId = data.deploymentId as string;
+          if (activeIdRef.current) setProjectVercelName(activeIdRef.current, projectName);
 
           for (let i = 0; i < DEPLOY_MAX_POLLS; i++) {
             await new Promise((r) => setTimeout(r, DEPLOY_POLL_INTERVAL_MS));
@@ -1374,6 +1423,21 @@ export function useBuildAgent() {
     }
   }, []);
 
+  // Same idea as setProjectGithubRepo, marking the project Vercel-backed
+  // once deploy_to_vercel succeeds -- from then on every file write
+  // auto-redeploys (syncFilesToVercel) instead of needing another
+  // confirmed deploy_to_vercel call.
+  const setProjectVercelName = useCallback((id: string, name: string) => {
+    const next = projectsRef.current.map((p) => (p.id === id ? { ...p, vercelProjectName: name } : p));
+    projectsRef.current = next;
+    setProjects(next);
+    try {
+      if (typeof window !== "undefined") window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(next));
+    } catch {
+      // Non-fatal -- see selectProject above.
+    }
+  }, []);
+
   const renameProject = useCallback((id: string, name: string) => {
     const trimmed = name.trim();
     if (!trimmed) return;
@@ -1491,6 +1555,10 @@ export function useBuildAgent() {
     setPendingGithubRepo: (url: string) => {
       pendingGithubRepoUrlRef.current = url;
     },
+    setPendingVercelProject: (name: string) => {
+      pendingVercelProjectNameRef.current = name;
+    },
+    setProjectVercelName,
     permissionMode,
     setPermissionMode,
     projectName: deriveProjectName(files, messages),
