@@ -92,7 +92,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Could not reach that GitHub repository." }, { status: 502 });
     }
     const repoData = await repoRes.json();
-    const branch = repoData.default_branch as string;
+    // Prefer the "chatgiza-updates" review branch (see api/build/github/
+    // push/route.ts) over the default branch when it exists -- it holds
+    // whatever ChatGiZa most recently built, including changes still
+    // waiting in an unmerged PR. Importing only ever from the default
+    // branch would make reopening a project look like the AI's last
+    // round of edits had vanished, when really they're just pending
+    // review on GitHub.
+    const REVIEW_BRANCH = "chatgiza-updates";
+    let branch = repoData.default_branch as string;
+    const reviewRefCheck = await gh(token, `/repos/${owner}/${repoName}/git/ref/heads/${REVIEW_BRANCH}`);
+    if (reviewRefCheck.ok) branch = REVIEW_BRANCH;
 
     const refRes = await gh(token, `/repos/${owner}/${repoName}/git/ref/heads/${branch}`);
     if (!refRes.ok) return NextResponse.json({ files: {} }); // empty repo, no commits yet

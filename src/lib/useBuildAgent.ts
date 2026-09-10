@@ -976,7 +976,9 @@ export function useBuildAgent() {
           const data = await res.json();
           if (!res.ok) return `Push failed: ${data.error ?? "unknown error"}`;
           if (activeIdRef.current) setProjectGithubRepo(activeIdRef.current, data.repoUrl);
-          return `Pushed to GitHub: ${data.repoUrl}`;
+          return data.prUrl
+            ? `Pushed to GitHub as a pull request for review: ${data.prUrl} (repo: ${data.repoUrl}). Tell the user their existing repo already has content, so this update is waiting on a PR instead of landing on main directly -- merging it is their call.`
+            : `Pushed to GitHub: ${data.repoUrl}`;
         } catch {
           return "Push failed: network error.";
         }

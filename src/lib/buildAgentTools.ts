@@ -128,8 +128,13 @@ export const BUILD_TOOLS = [
       name: "push_to_github",
       description:
         "Push the current project files to a GitHub repository as one commit (creating the repo if it doesn't exist yet). " +
-        "If the user hasn't connected GitHub, this returns an error saying so instead of failing silently -- tell the user " +
-        "to connect GitHub (a popup will open automatically) and try again.",
+        "The very first push to a brand-new repo lands directly on its main branch. Every push after that (the repo " +
+        "already has content) instead lands on a \"chatgiza-updates\" branch with a pull request into main kept open " +
+        "and updated automatically -- so the repo's real owner reviews and merges ChatGiZa's changes themselves rather " +
+        "than them landing on main unreviewed. If the result mentions a pull request, tell the user that in plain " +
+        "language and give them the PR link -- don't imply the change is already live on main. If the user hasn't " +
+        "connected GitHub, this returns an error saying so instead of failing silently -- tell the user to connect " +
+        "GitHub (a popup will open automatically) and try again.",
       parameters: {
         type: "object",
         properties: {
@@ -289,6 +294,9 @@ export const BUILD_SYSTEM_PROMPT =
   "need a backend just because it was mentioned in passing. The same \"connect first\" handling as GitHub/Vercel " +
   "above applies if it returns a connect error.\n" +
   "- After a successful deploy, always give the user the real URL you got back so they can open it.\n" +
+  "- push_to_github's result tells you whether this landed directly on main (a brand-new repo's first push) or as a " +
+  "pull request (every push after that) -- always match your wording to which one actually happened; never tell the " +
+  "user changes are \"live on GitHub\" when they're really sitting in an unmerged PR waiting on the user's review.\n" +
   "- For a framework project with a package.json (not the default static-site case below), use " +
   "run_terminal_command to actually verify your work when it matters -- \"npm install\" after adding a " +
   "dependency, \"npm run build\" or a lint/typecheck script after real structural changes -- and fix what it " +

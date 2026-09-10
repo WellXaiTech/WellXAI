@@ -136,6 +136,44 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Everything AFTER the repo's very first commit lands on a dedicated
+    // review branch + pull request instead of straight onto main, so the
+    // real human who owns this GitHub repo gets a chance to see and
+    // approve AI-made changes before they reach the branch their own CI/
+    // deploys actually watch -- the same protection a PR gives a human
+    // engineer, applied to ChatGiZa's own end users, not to how ChatGiZa
+    // itself is developed. The very first commit (parentCommitSha still
+    // null, i.e. a brand-new/empty repo) still goes straight onto main --
+    // there is nothing yet to diff against, and this is the same "create
+    // the repo" moment that was always instant.
+    const REVIEW_BRANCH = "chatgiza-updates";
+    let targetBranch = branch;
+    // Whether targetBranch already has a ref to PATCH, vs needing to be
+    // created fresh with a POST -- independent of parentCommitSha, which
+    // (for a brand-new review branch) is set to main's tip as the base to
+    // branch off of, not proof the review branch itself already exists.
+    let targetBranchExists = parentCommitSha !== null;
+    const usePullRequest = parentCommitSha !== null;
+    if (usePullRequest) {
+      targetBranch = REVIEW_BRANCH;
+      const reviewRefRes = await gh(accessToken, `/repos/${owner}/${repoName}/git/ref/heads/${REVIEW_BRANCH}`);
+      targetBranchExists = reviewRefRes.ok;
+      if (reviewRefRes.ok) {
+        // The review branch already has commits ChatGiZa made since the
+        // user last merged its PR -- build on top of those, not back on
+        // main's tip, so this sync doesn't discard them.
+        const reviewRefData = await reviewRefRes.json();
+        parentCommitSha = reviewRefData.object.sha as string;
+        const reviewCommitRes = await gh(accessToken, `/repos/${owner}/${repoName}/git/commits/${parentCommitSha}`);
+        if (reviewCommitRes.ok) {
+          baseTreeSha = (await reviewCommitRes.json()).tree.sha as string;
+        }
+      }
+      // If reviewRefRes 404s, the review branch doesn't exist yet --
+      // parentCommitSha/baseTreeSha stay pointed at main's tip from
+      // above, and the ref-creation step below branches off from there.
+    }
+
     // Create a blob per file, then one tree, one commit, one ref update --
     // this is the atomic part: nothing is visible on the branch until the
     // final ref update succeeds.
@@ -175,23 +213,62 @@ export async function POST(req: NextRequest) {
     }
     const commit = await commitRes.json();
 
-    const updateRefRes = parentCommitSha
-      ? await gh(accessToken, `/repos/${owner}/${repoName}/git/refs/heads/${branch}`, {
+    const updateRefRes = targetBranchExists
+      ? await gh(accessToken, `/repos/${owner}/${repoName}/git/refs/heads/${targetBranch}`, {
           method: "PATCH",
           body: JSON.stringify({ sha: commit.sha, force: false }),
         })
       : await gh(accessToken, `/repos/${owner}/${repoName}/git/refs`, {
           method: "POST",
-          body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: commit.sha }),
+          body: JSON.stringify({ ref: `refs/heads/${targetBranch}`, sha: commit.sha }),
         });
     if (!updateRefRes.ok) {
       console.error("GitHub ref update failed:", await updateRefRes.text());
       return NextResponse.json({ error: "Could not update the branch." }, { status: 502 });
     }
 
+    // Make sure a PR from the review branch into main is open once it has
+    // commits on it -- created once, then just accumulates new commits
+    // (and diff) on every later sync until the user reviews and merges
+    // it, rather than opening a new PR per sync.
+    let prUrl: string | null = null;
+    if (usePullRequest) {
+      const existingPrRes = await gh(
+        accessToken,
+        `/repos/${owner}/${repoName}/pulls?head=${owner}:${REVIEW_BRANCH}&base=${branch}&state=open`
+      );
+      const existingPrs = existingPrRes.ok ? await existingPrRes.json() : [];
+      if (Array.isArray(existingPrs) && existingPrs.length > 0) {
+        prUrl = existingPrs[0].html_url as string;
+      } else {
+        const createPrRes = await gh(accessToken, `/repos/${owner}/${repoName}/pulls`, {
+          method: "POST",
+          body: JSON.stringify({
+            title: "ChatGiZa: latest changes",
+            head: REVIEW_BRANCH,
+            base: branch,
+            body:
+              "Changes made by ChatGiZa's Build agent, waiting for review. New updates from ChatGiZa will keep " +
+              "landing on this same branch/PR until it's merged -- merge it whenever you're ready to bring them " +
+              `into \`${branch}\`.`,
+          }),
+        });
+        if (createPrRes.ok) {
+          prUrl = (await createPrRes.json()).html_url as string;
+        } else {
+          // Non-fatal -- the commit itself already succeeded and is safely
+          // sitting on the review branch; the PR is just a convenience on
+          // top of that, and can be opened by hand on GitHub if this ever
+          // fails (a permissions hiccup, a rate limit, etc.).
+          console.error("GitHub PR creation failed:", await createPrRes.text());
+        }
+      }
+    }
+
     return NextResponse.json({
       repoUrl: `https://github.com/${owner}/${repoName}`,
       htmlUrl: `https://github.com/${owner}/${repoName}`,
+      prUrl,
     });
   } catch (err) {
     console.error("GitHub push error:", err);
