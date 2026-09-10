@@ -26,10 +26,9 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Variable | Required? | Purpose |
 |---|---|---|
-| `OPENAI_API_KEY` | Recommended | Primary provider key. Powers real chat replies, image generation, video generation, and web search / deep research modes. Checked first. |
-| `ANTHROPIC_API_KEY` | Optional | Fallback text-chat provider key if the primary key isn't set. Image/video/web-search only work on the primary provider's path. |
-| `AUTH_SECRET` | Required for sign-in | Any random string (`openssl rand -base64 32`). |
-| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Required for sign-in | Google OAuth "Web application" client — needs `http://localhost:3000/api/auth/callback/google` (and the production equivalent) as an authorized redirect URI. |
+| | Recommended | Primary provider key. Powers real chat replies, image generation, video generation, and web search / deep research modes. Checked first. |
+|  | Optional | Fallback text-chat provider key if the primary key isn't set. Image/video/web-search only work on the primary provider's path. |
+| `AUTH_SECRET` | Required for sign-in | Any random string (`openssl rand -base64 32`) | Required for sign-in | Google OAuth "Web application" client — needs `http://localhost:3000/api/auth/callback/google` (and the production equivalent) as an authorized redirect URI. |
 | `STRIPE_SECRET_KEY` | Optional | Powers the "Upgrade plan" checkout flow (`/api/checkout`). Not set → the Upgrade panel will fail to start checkout. |
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` (etc.) | Optional | Auto-populated by Vercel when a KV store is linked to the project. Enables account-synced chat history (`/api/history`); without it, history stays local to each browser only. |
 
