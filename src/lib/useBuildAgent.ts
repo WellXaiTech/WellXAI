@@ -367,7 +367,18 @@ export type ConnectResult = "connected" | "blocked" | "not_configured" | "failed
 // how fast those two requests happened to come back. Opening a blank
 // window first and only pointing it at the real URL once /start resolves
 // keeps the whole thing inside that same synchronous click.
+// Once a service is confirmed connected in this page session, every later
+// call skips the popup dance below entirely instead of re-opening (and
+// immediately closing) a blank tab just to re-confirm what's already
+// known. Without this, a repo-scoped project whose agent turn calls
+// push_to_github/deploy_to_vercel more than once (on top of
+// syncFilesToGithub's own automatic push) flashed a blank tab open-and-
+// shut each time -- harmless, but read as something failing.
+const connectedThisSession: Partial<Record<"github" | "vercel", true>> = {};
+
 async function ensureConnected(service: "github" | "vercel"): Promise<ConnectResult> {
+  if (connectedThisSession[service]) return "connected";
+
   // Deliberately WITHOUT noopener/noreferrer here, unlike a normal
   // external link -- both make window.open() return null even though a
   // window really did open (that's the whole point of noopener: deny the
@@ -389,6 +400,7 @@ async function ensureConnected(service: "github" | "vercel"): Promise<ConnectRes
     const statusData = await statusRes.json();
     const entry = (statusData.connectors ?? []).find((c: { id: string }) => c.id === service);
     if (entry?.connected) {
+      connectedThisSession[service] = true;
       popup?.close();
       return "connected";
     }
@@ -420,7 +432,11 @@ async function ensureConnected(service: "github" | "vercel"): Promise<ConnectRes
     const recheckRes = await fetch("/api/connectors");
     const recheckData = await recheckRes.json();
     const recheckEntry = (recheckData.connectors ?? []).find((c: { id: string }) => c.id === service);
-    return recheckEntry?.connected ? "connected" : "failed";
+    if (recheckEntry?.connected) {
+      connectedThisSession[service] = true;
+      return "connected";
+    }
+    return "failed";
   } catch (err) {
     console.error(`ensureConnected(${service}) failed:`, err);
     popup?.close();
