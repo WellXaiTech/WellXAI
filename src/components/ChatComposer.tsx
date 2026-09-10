@@ -42,7 +42,7 @@ type SpeechWindow = Window & {
 };
 
 const PlusIcon = (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M12 5v14" />
     <path d="M5 12h14" />
   </svg>
@@ -546,8 +546,8 @@ export default function ChatComposer({
             return next;
           });
         }}
-        className={`flex items-center justify-center rounded-full border border-white/10 bg-white/5 text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent ${
-          isHero ? "h-10 w-10" : "h-8 w-8"
+        className={`flex items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent ${
+          isHero ? "h-10 w-10 border border-white/10 bg-white/5" : "h-8 w-8"
         }`}
       >
         {PlusIcon}
@@ -715,9 +715,18 @@ export default function ChatComposer({
       onPointerLeave={stopListening}
       onPointerCancel={stopListening}
       disabled={disabled}
-      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-500 disabled:opacity-40 ${
-        isListening ? "ring-2 ring-blue-300" : ""
-      }`}
+      className={
+        isHero
+          ? `flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-500 disabled:opacity-40 ${
+              isListening ? "ring-2 ring-blue-300" : ""
+            }`
+          // No blue fill in the bar composer -- per feedback, only the
+          // hero's own hold-to-talk button keeps it; here it's just
+          // another plain muted icon like the rest of the row.
+          : `flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-40 ${
+              isListening ? "ring-2 ring-blue-300" : ""
+            }`
+      }
     >
       {WaveformIcon}
     </button>
@@ -734,7 +743,9 @@ export default function ChatComposer({
       onPointerLeave={stopListening}
       onPointerCancel={stopListening}
       disabled={disabled}
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-40"
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-40 ${
+        isHero ? "border border-white/10 bg-white/5" : ""
+      }`}
     >
       {MicIcon}
     </button>
@@ -756,42 +767,58 @@ export default function ChatComposer({
       type="button"
       aria-label="Stop generating"
       onClick={onStop}
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-blue-600 transition-colors hover:text-blue-500"
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ${
+        isHero ? "text-blue-600 hover:text-blue-500" : "text-muted hover:text-foreground"
+      }`}
     >
       {StopIcon}
     </button>
   );
 
-  const formEl = (
+  const messageTextarea = (
+    <textarea
+      ref={messageInputRef}
+      value={value}
+      onChange={(e) => onValueChange(e.target.value)}
+      onKeyDown={(e) => {
+        // Enter sends, same as the <input> this replaced -- Shift+Enter
+        // (or any IME composition, e.g. typing in Japanese/Chinese)
+        // still inserts a real newline instead, which a plain <input>
+        // could never do at all. Calls the same onSubmit the Send
+        // button's own type="submit" triggers, directly -- rather than
+        // form.requestSubmit(), which (at least in some embedded/
+        // automated contexts) can dispatch a submit event that never
+        // actually reaches this form's onSubmit handler.
+        if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+          e.preventDefault();
+          onSubmit(e as unknown as React.FormEvent);
+        }
+      }}
+      placeholder={isHero ? undefined : disabled ? "ChatGiZa is typing…" : "Write a message…"}
+      autoComplete="off"
+      rows={1}
+      style={{ maxHeight: MAX_COMPOSER_HEIGHT }}
+      className="sidebar-scroll w-full resize-none overflow-y-auto bg-transparent px-1 py-1 text-sm text-foreground outline-none"
+    />
+  );
+
+  const actionButton = disabled && onStop ? stopButton : value.trim() || attachments.length > 0 ? sendButton : micButton;
+
+  // The hero composer keeps its own two-row shell (.box/.inner, from
+  // globals.css) -- message on top, icon row below -- since that's the
+  // large landing-page composer. The bar composer (once a chat is
+  // actually under way) instead mirrors Build's single-row composer
+  // exactly (same rounded-2xl/border-composer-border/bg-composer/px-4
+  // py-2 box, everything -- attach, textarea, mic, send -- inline in one
+  // slim row) rather than the taller two-row shell, which read as
+  // needlessly thick next to a reference like Claude Code's own composer.
+  const formEl = isHero ? (
     <form onSubmit={onSubmit} className="inner flex flex-col justify-between gap-2 px-4 pt-3 pb-2">
       {fileInputEl}
 
       <div className="relative w-full">
-        <textarea
-          ref={messageInputRef}
-          value={value}
-          onChange={(e) => onValueChange(e.target.value)}
-          onKeyDown={(e) => {
-            // Enter sends, same as the <input> this replaced -- Shift+Enter
-            // (or any IME composition, e.g. typing in Japanese/Chinese)
-            // still inserts a real newline instead, which a plain <input>
-            // could never do at all. Calls the same onSubmit the Send
-            // button's own type="submit" triggers, directly -- rather than
-            // form.requestSubmit(), which (at least in some embedded/
-            // automated contexts) can dispatch a submit event that never
-            // actually reaches this form's onSubmit handler.
-            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-              e.preventDefault();
-              onSubmit(e as unknown as React.FormEvent);
-            }
-          }}
-          placeholder={isHero ? undefined : disabled ? "ChatGiZa is typing…" : "Ask anything"}
-          autoComplete="off"
-          rows={1}
-          style={{ maxHeight: MAX_COMPOSER_HEIGHT }}
-          className="sidebar-scroll w-full resize-none overflow-y-auto bg-transparent px-1 py-1 text-sm text-foreground outline-none"
-        />
-        {isHero && !value && (
+        {messageTextarea}
+        {!value && (
           <div className="pointer-events-none absolute inset-0 flex items-center px-1 text-sm font-bold text-muted">
             <TypingPlaceholder />
           </div>
@@ -800,11 +827,22 @@ export default function ChatComposer({
 
       <div className="flex items-center gap-2">
         {attachMenu}
-        {isHero && toolSelector}
+        {toolSelector}
         <div className="flex-1" />
         {secondaryMicButton}
-        {disabled && onStop ? stopButton : value.trim() || attachments.length > 0 ? sendButton : micButton}
+        {actionButton}
       </div>
+    </form>
+  ) : (
+    <form
+      onSubmit={onSubmit}
+      className="relative flex items-end gap-2 rounded-2xl border border-composer-border bg-composer px-4 py-2 shadow-sm"
+    >
+      {fileInputEl}
+      {attachMenu}
+      {messageTextarea}
+      {secondaryMicButton}
+      {actionButton}
     </form>
   );
 
@@ -844,7 +882,7 @@ export default function ChatComposer({
         <p className="mb-2 text-xs text-red-500">{error ?? voiceError}</p>
       )}
 
-      <div className="box mx-auto">{formEl}</div>
+      <div className={isHero ? "box mx-auto" : "mx-auto"}>{formEl}</div>
 
       {!isHero && (
         <div className="mt-1.5 flex justify-end px-1">{toolSelector}</div>
