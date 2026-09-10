@@ -3148,7 +3148,13 @@ export default function BuildWorkspace() {
                   const headerContent = (
                     <>
                       {hasWarning && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" aria-label="Warning" />}
-                      <span className={`min-w-0 flex-1 truncate ${soloReverted ? "line-through" : ""}`}>{summary.label}</span>
+                      {/* No flex-1 here -- the badge/chevron sits right after
+                          the label instead of being pushed to the far end of
+                          the full-width row. The trailing flex-1 spacer
+                          below (after the badge/chevron) is what keeps the
+                          row's whole width clickable without visually
+                          separating the label from its badge. */}
+                      <span className={`min-w-0 max-w-[70%] truncate ${soloReverted ? "line-through" : ""}`}>{summary.label}</span>
                       {!soloReverted && summary.diffStat && soloDiffLines && soloDiffLines.length > 0 ? (
                         <button
                           type="button"
@@ -3156,9 +3162,12 @@ export default function BuildWorkspace() {
                             e.stopPropagation();
                             toggleDiff(item.steps[0].id);
                           }}
-                          className="shrink-0 rounded hover:bg-surface-2"
+                          className="flex shrink-0 items-center rounded hover:bg-surface-2"
                         >
                           <DiffStatBadge stat={summary.diffStat} />
+                          <span className={`inline-block transition-transform ${soloDiffOpen ? "rotate-90" : ""}`}>
+                            {ChevronRightIcon}
+                          </span>
                         </button>
                       ) : (
                         !soloReverted && summary.diffStat && <DiffStatBadge stat={summary.diffStat} />
@@ -3181,6 +3190,7 @@ export default function BuildWorkspace() {
                       {canExpand && (
                         <span className={`shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`}>{ChevronRightIcon}</span>
                       )}
+                      <span className="flex-1" />
                     </>
                   );
                   return (
@@ -3196,13 +3206,13 @@ export default function BuildWorkspace() {
                               return next;
                             })
                           }
-                          className="flex w-full items-center gap-1.5 rounded-lg px-1 py-1.5 text-left text-sm text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                          className="chat-text flex w-full items-center gap-1.5 rounded-lg px-1 py-1.5 text-left text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
                         >
                           {headerContent}
                         </button>
                       ) : (
                         <div className="px-1 py-1.5">
-                          <div className="flex w-full items-center gap-1.5 text-sm text-muted">{headerContent}</div>
+                          <div className="chat-text flex w-full items-center gap-1.5 text-muted">{headerContent}</div>
                           {hasWarning && !item.steps[0].reverted && (
                             <p className="mt-0.5 pl-5 text-xs text-amber-500">{item.steps[0].warning}</p>
                           )}
@@ -3224,15 +3234,18 @@ export default function BuildWorkspace() {
                             const detailOpen = (hasDiff || hasDetail) && expandedDiffIds.has(s.id ?? "");
                             return (
                               <div key={si}>
-                                <p className={`flex items-center gap-1.5 text-sm ${s.reverted ? "text-muted line-through" : "text-muted"}`}>
+                                <p className={`chat-text flex items-center gap-1.5 ${s.reverted ? "text-muted line-through" : "text-muted"}`}>
                                   <span>{renderWithLinks(s.content)}</span>
                                   {hasDiff ? (
                                     <button
                                       type="button"
                                       onClick={() => toggleDiff(s.id)}
-                                      className="shrink-0 rounded hover:bg-surface-2"
+                                      className="flex shrink-0 items-center rounded hover:bg-surface-2"
                                     >
                                       <DiffStatBadge stat={s.diffStat!} />
+                                      <span className={`inline-block transition-transform ${detailOpen ? "rotate-90" : ""}`}>
+                                        {ChevronRightIcon}
+                                      </span>
                                     </button>
                                   ) : (
                                     !s.reverted && s.diffStat && <DiffStatBadge stat={s.diffStat} />

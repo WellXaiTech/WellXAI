@@ -111,14 +111,21 @@
 
 :root {
   --assistant-color: var(--foreground);
+  --inline-code-color: #b3541e;
 }
 @media (prefers-color-scheme: dark) {
   :root[data-assistant-color="warm"] {
     --assistant-color: #dcc7a1;
   }
+  :root {
+    --inline-code-color: #e2a05a;
+  }
 }
 :root[data-theme="dark"][data-assistant-color="warm"] {
   --assistant-color: #dcc7a1;
+}
+:root[data-theme="dark"] {
+  --inline-code-color: #e2a05a;
 }
 .assistant-reply {
   color: var(--assistant-color);
@@ -752,6 +759,12 @@ textarea::placeholder {
   padding: 0.15em 0.4em;
   font-size: 0.85em;
   font-family: var(--font-mono), monospace;
+  /* Makes an inline mention like `index.html` actually stand out from the
+     surrounding prose instead of just sitting in the same text color with
+     a faint background pill. Cancelled below for a real multi-line code
+     block (.markdown pre code) -- an accent color makes sense for a short
+     inline filename/identifier, not for a whole block of real code. */
+  color: var(--inline-code-color);
 }
 .markdown pre {
   background: var(--surface-2);
@@ -787,6 +800,10 @@ textarea::placeholder {
 .markdown pre code {
   background: none;
   padding: 0;
+  /* A real multi-line code block stays the normal text color -- the accent
+     above is for a short inline mention standing out in prose, not for
+     recoloring actual code. */
+  color: inherit;
 }
 .markdown a {
   text-decoration: underline;
