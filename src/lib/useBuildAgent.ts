@@ -107,6 +107,14 @@ export type BuildProject = {
 // lets the user come back and reopen any of them.
 const PROJECTS_KEY = "chatgiza_build_projects_v1";
 const ACTIVE_ID_KEY = "chatgiza_build_active_id_v1";
+// Every GitHub repo a project of this user's has EVER been linked to,
+// remembered even after every project under it gets deleted -- without
+// this, deleting the last chat in a repo's History group made the whole
+// group vanish (the group is otherwise derived purely from currently-
+// existing projects), which read as ChatGiZa forgetting the repo itself
+// rather than just that one conversation. Only ever added to, never
+// pruned by deleteProject -- see the upsert effect below.
+const KNOWN_GITHUB_REPOS_KEY = "chatgiza_build_known_github_repos_v1";
 // One-time migration source: the earlier version of this hook persisted
 // a single project under this key with no history at all.
 const LEGACY_STATE_KEY = "chatgiza_build_state_v1";
@@ -532,6 +540,29 @@ export function useBuildAgent() {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [projects, setProjects] = useState<BuildProject[]>([]);
+  const [knownGithubRepos, setKnownGithubRepos] = useState<{ name: string; url: string }[]>([]);
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(KNOWN_GITHUB_REPOS_KEY);
+      if (raw) setKnownGithubRepos(JSON.parse(raw));
+    } catch {
+      // corrupted/unavailable storage -- start with an empty list
+    }
+  }, []);
+  const rememberGithubRepo = useCallback((url: string) => {
+    const name = url.split("/").filter(Boolean).pop() || url;
+    setKnownGithubRepos((prev) => {
+      if (prev.some((r) => r.url === url)) return prev;
+      const next = [...prev, { name, url }];
+      try {
+        window.localStorage.setItem(KNOWN_GITHUB_REPOS_KEY, JSON.stringify(next));
+      } catch {
+        // Non-fatal -- the repo's group just won't survive a reload after
+        // its last project is deleted, same as before this existed.
+      }
+      return next;
+    });
+  }, []);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [pendingConfirmation, setPendingConfirmation] = useState<PendingBuildConfirmation | null>(null);
   const pendingConfirmationRef = useRef<PendingBuildConfirmation | null>(null);
@@ -676,7 +707,8 @@ export function useBuildAgent() {
     projectsRef.current = next;
     setProjects(next);
     persistProjects(next, id);
-  }, [files, messages]);
+    if (githubRepoUrl) rememberGithubRepo(githubRepoUrl);
+  }, [files, messages, rememberGithubRepo]);
 
   // Mirrors write_file/replace_in_file/delete_file to a real local folder
   // once one is connected -- best-effort, logged not thrown, so a failed
@@ -1541,7 +1573,8 @@ export function useBuildAgent() {
     } catch {
       // Non-fatal -- see selectProject above.
     }
-  }, []);
+    rememberGithubRepo(url);
+  }, [rememberGithubRepo]);
 
   // Same idea as setProjectGithubRepo, marking the project Vercel-backed
   // once deploy_to_vercel succeeds -- from then on every file write
@@ -1706,6 +1739,7 @@ export function useBuildAgent() {
     setProjectVercelName,
     setProjectSupabaseRef,
     addAssistantMessage,
+    knownGithubRepos,
     permissionMode,
     setPermissionMode,
     projectName: deriveProjectName(files, messages),

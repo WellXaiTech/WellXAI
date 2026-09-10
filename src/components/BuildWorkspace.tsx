@@ -864,6 +864,7 @@ export default function BuildWorkspace() {
     setPendingGithubRepo,
     setProjectGithubRepo,
     addAssistantMessage,
+    knownGithubRepos,
     permissionMode,
     setPermissionMode,
     projectName,
@@ -1385,7 +1386,9 @@ export default function BuildWorkspace() {
       // than blocking onboarding on a discovery call that isn't required.
     }
     // A repo already tied to a real project doesn't need asking about.
-    const alreadyUsed = new Set([...githubGroupMap.keys()].map((n) => n.trim().toLowerCase()));
+    const alreadyUsed = new Set(
+      [...githubGroupMap.keys(), ...knownGithubRepos.map((r) => r.name)].map((n) => n.trim().toLowerCase())
+    );
     candidates = candidates.filter((r) => !alreadyUsed.has(r.name.trim().toLowerCase()));
 
     if (candidates.length === 0) {
@@ -1595,9 +1598,10 @@ export default function BuildWorkspace() {
   // grouping. Each block is internally stable/sorted by the chosen Sort
   // by, but a GitHub group can never end up sitting between two Folder
   // entries or vice versa.
-  // githubRepoUrl lives on the entry itself, not just inferred from
-  // list[0] (kept even though every group here is backed by a real
-  // project -- see handleOnboardGithub).
+  // githubRepoUrl lives on the entry itself (not just inferred from
+  // list[0]) so a repo with zero CURRENT ChatGiZa conversations -- every
+  // one that was ever linked was deleted -- can still be a real,
+  // clickable group (see knownGithubRepos below and startNewChatInGroup).
   type HistoryEntry =
     | { kind: "row"; project: BuildProject }
     | { kind: "group"; name: string; list: BuildProject[]; githubRepoUrl?: string };
@@ -1616,12 +1620,23 @@ export default function BuildWorkspace() {
       const list = githubGroupMap.get(name)!;
       githubEntries.push({ kind: "group", name, list, githubRepoUrl: list[0]?.githubRepoUrl });
     }
-    // No placeholder entries for repos nothing has been built in yet --
-    // every GitHub group here is backed by a real project (see
-    // handleOnboardGithub: connecting GitHub either auto-picks a single
-    // existing repo, asks in chat which one when there's more than one,
-    // or starts blank -- in every case a real project (and its first
-    // message) exists by the time a repo shows up in History at all).
+    // A repo ChatGiZa has ever worked in stays a real, clickable group
+    // even after every chat under it gets deleted (knownGithubRepos is
+    // only ever added to, never pruned by deleteProject) -- otherwise
+    // deleting the last conversation in a repo made the whole folder
+    // disappear, which read as ChatGiZa forgetting the repo entirely
+    // rather than just that one chat. This is NOT every repo the GitHub
+    // connection can see (that auto-discovery was removed per feedback)
+    // -- only ones a real project of this user's has actually been
+    // linked to at some point.
+    if (historyGroupBy !== "none") {
+      for (const repo of knownGithubRepos) {
+        const key = repo.name.trim().toLowerCase();
+        if (seenGroups.has(repo.name) || [...seenGroups].some((n) => n.trim().toLowerCase() === key)) continue;
+        seenGroups.add(repo.name);
+        githubEntries.push({ kind: "group", name: repo.name, list: [], githubRepoUrl: repo.url });
+      }
+    }
   }
   const folderEntries: HistoryEntry[] = [];
   {
@@ -1656,11 +1671,17 @@ export default function BuildWorkspace() {
   const [newGroupValue, setNewGroupValue] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  // Which project's kebab menu (if any) is showing the "Delete this
+  // project?" confirm step in place of the normal menu items -- same
+  // pattern as ChatSidebar.tsx's own confirmDelete, so deleting a chat
+  // asks the same way everywhere in the app rather than acting instantly.
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   function closeProjectMenu() {
     setHistoryMenuId(null);
     setOpenSubmenu(null);
     setNewGroupDraft(false);
     setNewGroupValue("");
+    setConfirmDeleteId(null);
   }
   function commitRename() {
     if (renamingId) renameProject(renamingId, renameValue);
@@ -1718,6 +1739,30 @@ export default function BuildWorkspace() {
             onClick={(e) => e.stopPropagation()}
             className="absolute right-0 top-full z-10 mt-1 w-44 overflow-hidden rounded-xl border border-border bg-[#20201F] py-1 shadow-lg"
           >
+            {confirmDeleteId === p.id ? (
+              <div className="p-1">
+                <p className="truncate px-2 pb-0.5 text-xs font-medium text-foreground">Delete &quot;{p.name}&quot;?</p>
+                <p className="px-2 pb-1.5 text-[11px] text-muted">This can&apos;t be undone.</p>
+                <div className="flex gap-1.5 px-1">
+                  <button
+                    onClick={() => setConfirmDeleteId(null)}
+                    className="flex-1 rounded-lg border border-border px-2 py-1 text-xs transition-colors hover:bg-surface-2"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      deleteProject(p.id);
+                      closeProjectMenu();
+                    }}
+                    className="flex-1 rounded-lg bg-[#b3413e] px-2 py-1 text-xs font-medium text-white transition-opacity hover:opacity-90"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
             <button
               onClick={() => setOpenSubmenu((v) => (v === "openIn" ? null : "openIn"))}
               className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium hover:bg-surface-2"
@@ -1844,14 +1889,13 @@ export default function BuildWorkspace() {
               {p.archived ? "Unarchive" : "Archive"}
             </button>
             <button
-              onClick={() => {
-                deleteProject(p.id);
-                closeProjectMenu();
-              }}
+              onClick={() => setConfirmDeleteId(p.id)}
               className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium text-red-500 hover:bg-surface-2"
             >
               Delete
             </button>
+              </>
+            )}
           </div>
         )}
       </div>
