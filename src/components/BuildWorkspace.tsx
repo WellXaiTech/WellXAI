@@ -865,6 +865,7 @@ export default function BuildWorkspace() {
     githubConnected,
     connectGithubNow,
     setPendingManualGroupName,
+    setPendingGithubRepo,
     permissionMode,
     setPermissionMode,
     projectName,
@@ -1285,6 +1286,12 @@ export default function BuildWorkspace() {
   // user right there, so it gets its own message instead of a generic one.
   const [onboardError, setOnboardError] = useState<string | null>(null);
   const pendingSubmitRef = useRef<{ text: string; images: { dataUrl: string; name: string }[] } | null>(null);
+  // Set by a History group's own "+" (see historyEntries render below) --
+  // that project is already tied to the group's repo/folder before the
+  // first message even goes out, so onSubmit skips the identity picker
+  // entirely instead of asking again for a connection that's already
+  // decided.
+  const skipOnboardOnceRef = useRef(false);
   const folderSupported = typeof window !== "undefined" && "showDirectoryPicker" in window;
   // Closes on ANY click outside the card -- the backdrop itself, or
   // something else entirely like a History row in the rail (which isn't
@@ -2090,12 +2097,30 @@ export default function BuildWorkspace() {
     // sends normally, same as before. Always opens it fresh rather than
     // silently reusing a still-active GitHub/folder connection from a
     // previous project -- see startWithPrompt's comment for why.
-    if (!started) {
+    if (!started && !skipOnboardOnceRef.current) {
       pendingSubmitRef.current = { text, images };
       setOnboardOpen(true);
       return;
     }
+    skipOnboardOnceRef.current = false;
     send(text, images.length > 0 ? images : undefined);
+  }
+
+  // Starts a brand-new chat that's already tied to an existing History
+  // group -- a repo-linked GitHub group, or a manually-named folder
+  // group -- instead of a fully blank one. reset() clears the active
+  // project the normal way; the group's repo/name is stamped onto
+  // whatever gets created next via the same pending-ref mechanism the
+  // onboarding modal itself uses (setPendingGithubRepo/
+  // setPendingManualGroupName), and skipOnboardOnceRef makes onSubmit
+  // skip the identity picker for that one following message, since
+  // where this project lives is already decided.
+  function startNewChatInGroup(entry: Extract<HistoryEntry, { kind: "group" }>) {
+    const sample = entry.list[0];
+    reset();
+    if (sample?.githubRepoUrl) setPendingGithubRepo(sample.githubRepoUrl);
+    else setPendingManualGroupName(entry.name);
+    skipOnboardOnceRef.current = true;
   }
 
   // Unlike attachedImages (staged, sent as a chat message part on submit),
@@ -2340,7 +2365,7 @@ export default function BuildWorkspace() {
                     <span className={`shrink-0 transition-transform ${!collapsedGroups[entry.name] ? "rotate-90" : ""}`}>{ChevronRightIcon}</span>
                   </button>
                   <button
-                    onClick={reset}
+                    onClick={() => startNewChatInGroup(entry)}
                     aria-label={`New chat in ${entry.name}`}
                     className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted opacity-0 transition-colors hover:bg-border hover:text-foreground group-hover/header:opacity-100"
                   >

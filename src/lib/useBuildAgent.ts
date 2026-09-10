@@ -518,6 +518,11 @@ export function useBuildAgent() {
   // reads it exactly once, when it mints a brand-new project id, then
   // clears it so it never leaks onto some later, unrelated project.
   const pendingManualGroupNameRef = useRef<string | null>(null);
+  // Same idea as pendingManualGroupNameRef, for starting a fresh chat
+  // from a GitHub-repo group's own "+" (see BuildWorkspace.tsx) -- the
+  // new project is born already tied to that repo, so it skips the
+  // "Where should this project live?" onboarding entirely.
+  const pendingGithubRepoUrlRef = useRef<string | null>(null);
   // Set once run_terminal_command creates a real E2B sandbox, so a later
   // call in the same session reuses it (keeping node_modules from an
   // earlier "npm install" around for a later "npm test") instead of
@@ -591,6 +596,8 @@ export function useBuildAgent() {
     // forever after, same as githubRepoUrl below.
     const manualGroupName = isNewProject ? pendingManualGroupNameRef.current ?? undefined : prev[idx]?.manualGroupName;
     if (isNewProject) pendingManualGroupNameRef.current = null;
+    const githubRepoUrl = isNewProject ? pendingGithubRepoUrlRef.current ?? undefined : prev[idx]?.githubRepoUrl;
+    if (isNewProject) pendingGithubRepoUrlRef.current = null;
     // Carry the pin (and customName/archived/unread) forward -- without
     // this, every message sent in a pinned/renamed/archived/unread project
     // would silently reset it again on the next save.
@@ -602,7 +609,7 @@ export function useBuildAgent() {
       messages,
       lastActivity: Date.now(),
       pinned: idx >= 0 ? prev[idx].pinned : undefined,
-      githubRepoUrl: idx >= 0 ? prev[idx].githubRepoUrl : undefined,
+      githubRepoUrl,
       manualGroupName,
       customName,
       archived: idx >= 0 ? prev[idx].archived : undefined,
@@ -634,6 +641,49 @@ export function useBuildAgent() {
     } catch (err) {
       console.error(`Failed to mirror ${path} to the local folder:`, err);
     }
+  }, []);
+
+  // Mirrors every file write to the connected GitHub repo too, the same
+  // spirit as writeFileToLocalFolder mirroring to a connected local
+  // folder -- except a project only gets a githubRepoUrl by being
+  // started from that repo's own "+" in History (see
+  // BuildWorkspace.tsx's group header), never as a side effect of the
+  // agent's own push_to_github tool (that one stays an explicit,
+  // confirmed, one-time action for a project that ISN'T already
+  // repo-scoped this way). Debounced a couple seconds so a burst of
+  // several write_file/replace_in_file/delete_file calls in the same
+  // turn becomes one commit, not one per file -- still best-effort:
+  // logged, never thrown, same as the local-folder mirror.
+  const githubSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const githubSyncPushingRef = useRef(false);
+  const syncFilesToGithub = useCallback(() => {
+    const project = projectsRef.current.find((p) => p.id === activeIdRef.current);
+    const repoUrl = project?.githubRepoUrl;
+    if (!repoUrl) return;
+    if (githubSyncTimeoutRef.current) clearTimeout(githubSyncTimeoutRef.current);
+    githubSyncTimeoutRef.current = setTimeout(async () => {
+      githubSyncTimeoutRef.current = null;
+      // A push from an even earlier burst is still in flight -- that one
+      // will already carry these same latest files once it starts
+      // (filesRef.current is read fresh inside it), so there's nothing
+      // for this tick to do; the timeout firing at all already means no
+      // newer write has come in since.
+      if (githubSyncPushingRef.current) return;
+      githubSyncPushingRef.current = true;
+      try {
+        const repoName = repoUrl.split("/").filter(Boolean).pop() || repoUrl;
+        const res = await fetch("/api/build/github/push", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ files: filesRef.current, repoName, commitMessage: "Update from ChatGiZa Build" }),
+        });
+        if (!res.ok) console.error("Auto-sync to GitHub failed:", res.status, await res.text());
+      } catch (err) {
+        console.error("Auto-sync to GitHub failed:", err);
+      } finally {
+        githubSyncPushingRef.current = false;
+      }
+    }, 2500);
   }, []);
 
   const deleteFileFromLocalFolder = useCallback(async (path: string) => {
@@ -771,6 +821,7 @@ export function useBuildAgent() {
         filesRef.current = next;
         setFiles(next);
         void writeFileToLocalFolder(path, content);
+        syncFilesToGithub();
         return `Wrote ${path} (${content.length} characters).`;
       }
       case "delete_file": {
@@ -782,6 +833,7 @@ export function useBuildAgent() {
         filesRef.current = next;
         setFiles(next);
         void deleteFileFromLocalFolder(path);
+        syncFilesToGithub();
         return `Deleted ${path}.`;
       }
       case "replace_in_file": {
@@ -806,6 +858,7 @@ export function useBuildAgent() {
         filesRef.current = next;
         setFiles(next);
         void writeFileToLocalFolder(path, content);
+        syncFilesToGithub();
         return `Edited ${path} (${content.length} characters).`;
       }
       case "push_to_github": {
@@ -1408,6 +1461,9 @@ export function useBuildAgent() {
     connectGithubNow,
     setPendingManualGroupName: (name: string) => {
       pendingManualGroupNameRef.current = name;
+    },
+    setPendingGithubRepo: (url: string) => {
+      pendingGithubRepoUrlRef.current = url;
     },
     permissionMode,
     setPermissionMode,
