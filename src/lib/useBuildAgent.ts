@@ -64,6 +64,12 @@ export type BuildChatMessage = {
   // edit. Without this there was no way to actually see what a read/
   // search/outline step found, only a generic "Used a tool" label.
   detail?: string;
+  // The specific file this step is about (read_file/write_file/
+  // replace_in_file/delete_file/get_file_outline) -- lets a detail/diff
+  // view pick real syntax highlighting for that file's language. Not the
+  // same thing as revert.path: this is set for every path-bearing step,
+  // not just mutating ones a revert makes sense for.
+  path?: string;
   // Marks a generic step regardless of its specific label text ("command"
   // for run_terminal_command, "tool" for a read/search/outline call) so
   // summarizeSteps can still group/count these correctly once the label
@@ -324,14 +330,15 @@ function describeStep(
   name: string,
   args: Record<string, unknown>,
   result: string
-): { label: string; kind?: "command" | "tool"; detail?: string } | null {
+): { label: string; kind?: "command" | "tool"; detail?: string; path?: string } | null {
+  const path = typeof args.path === "string" ? args.path : undefined;
   switch (name) {
     case "write_file":
-      return { label: `Wrote ${String(args.path ?? "")}` };
+      return { label: `Wrote ${String(args.path ?? "")}`, path };
     case "replace_in_file":
-      return result.startsWith("Edited ") ? { label: `Edited ${String(args.path ?? "")}` } : null;
+      return result.startsWith("Edited ") ? { label: `Edited ${String(args.path ?? "")}`, path } : null;
     case "delete_file":
-      return { label: `Deleted ${String(args.path ?? "")}` };
+      return { label: `Deleted ${String(args.path ?? "")}`, path };
     case "push_to_github":
     case "deploy_to_vercel":
     case "create_supabase_project":
@@ -347,13 +354,13 @@ function describeStep(
     // should behave the same way a file edit's own diff does (a specific
     // line, with a real detail view behind it).
     case "read_file":
-      return { label: `Read ${String(args.path ?? "")}`, kind: "tool", detail: result };
+      return { label: `Read ${String(args.path ?? "")}`, kind: "tool", detail: result, path };
     case "list_files":
       return { label: "Listed files", kind: "tool", detail: result };
     case "search_workspace":
       return { label: `Searched ${String(args.query ?? "")}`, kind: "tool", detail: result };
     case "get_file_outline":
-      return { label: `Outlined ${String(args.path ?? "")}`, kind: "tool", detail: result };
+      return { label: `Outlined ${String(args.path ?? "")}`, kind: "tool", detail: result, path };
     default:
       return null;
   }
@@ -1487,6 +1494,7 @@ export function useBuildAgent() {
                   diffStat: diff ? { added: diff.added, removed: diff.removed } : undefined,
                   diffLines: diff?.lines,
                   detail: step.detail,
+                  path: step.path,
                   kind: step.kind,
                 },
               ]);

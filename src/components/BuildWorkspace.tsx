@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import CodeMirror from "@uiw/react-codemirror";
 import { vscodeDark } from "@uiw/codemirror-theme-vscode";
 import { javascript } from "@codemirror/lang-javascript";
-import { EditorView } from "@codemirror/view";
+import { html } from "@codemirror/lang-html";
+import { css } from "@codemirror/lang-css";
+import { json } from "@codemirror/lang-json";
+import { EditorView, Decoration, type DecorationSet, gutter, GutterMarker } from "@codemirror/view";
+import { StateField, RangeSetBuilder, type Extension } from "@codemirror/state";
 import { normalizeSpacing } from "@/lib/pdfMarkers";
 import remarkGfm from "remark-gfm";
 import BuildPreviewFrame from "@/components/BuildPreviewFrame";
@@ -398,56 +402,184 @@ function summarizeSteps(steps: BuildChatMessage[]): { label: string; diffStat?: 
 // weight and color to differentiate it.
 function DiffStatBadge({ stat }: { stat: { added: number; removed: number } }) {
   return (
-    <span className="ml-1 shrink-0 whitespace-nowrap text-sm font-semibold">
-      {stat.added > 0 && <span className="text-green-600 dark:text-green-500">+{stat.added}</span>}
-      {stat.added > 0 && stat.removed > 0 && " "}
-      {stat.removed > 0 && <span className="text-red-500 dark:text-red-400">-{stat.removed}</span>}
+    <span className="ml-1 inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-dashed border-border px-2 py-0.5 text-sm font-bold">
+      {stat.added > 0 && <span className="text-green-400 dark:text-green-400">+{stat.added}</span>}
+      {stat.removed > 0 && <span className="text-red-400 dark:text-red-400">-{stat.removed}</span>}
     </span>
   );
 }
 
-// The real content behind a step's +N -M badge -- a monospace, per-line
-// colored diff (green add / red remove, muted unchanged context), same
-// idea as a real code review diff. diffLines is already windowed down to
-// a couple of lines of context around each change (see collapseToDiffHunks
-// in useBuildAgent.ts), so this never has to render a whole file's worth
-// of unchanged lines just to show a one-line edit.
-function DiffBlock({ lines }: { lines: DiffLine[] }) {
+// Picks a real CodeMirror language extension from a file's extension --
+// same idea as the confirmation modal's own CodeMirror block just below,
+// so a diff/detail view gets real multi-color syntax highlighting instead
+// of a single flat color for the whole line. Empty array (plain text) for
+// anything unrecognized rather than guessing wrong.
+function langExtensionFor(path?: string): Extension[] {
+  const ext = path?.split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "html":
+      return [html()];
+    case "css":
+      return [css()];
+    case "json":
+      return [json()];
+    case "js":
+    case "jsx":
+      return [javascript({ jsx: true })];
+    case "ts":
+      return [javascript({ typescript: true })];
+    case "tsx":
+      return [javascript({ jsx: true, typescript: true })];
+    default:
+      return [];
+  }
+}
+
+// A line-background + gutter-marker pair of extensions driven by a plain
+// per-line add/remove/context array -- the diff itself is already computed
+// (see computeLineDiff in useBuildAgent.ts), this just paints it onto a
+// real CodeMirror document so the CODE part of each line still gets real
+// syntax highlighting instead of being swallowed into one flat diff color.
+// Static (the `update` binding never recomputes) since a historical step's
+// diff never changes after the fact.
+function diffLineExtensions(lineTypes: ("add" | "remove" | "context")[]): Extension[] {
+  const addLine = Decoration.line({ attributes: { class: "cm-diff-add-line" } });
+  const removeLine = Decoration.line({ attributes: { class: "cm-diff-remove-line" } });
+  const decorations = StateField.define<DecorationSet>({
+    create(state) {
+      const builder = new RangeSetBuilder<Decoration>();
+      for (let i = 0; i < lineTypes.length && i < state.doc.lines; i++) {
+        const type = lineTypes[i];
+        if (type === "context") continue;
+        const line = state.doc.line(i + 1);
+        builder.add(line.from, line.from, type === "add" ? addLine : removeLine);
+      }
+      return builder.finish();
+    },
+    update: (value) => value,
+    provide: (field) => EditorView.decorations.from(field),
+  });
+  class MarkerGutter extends GutterMarker {
+    constructor(private symbol: string) {
+      super();
+    }
+    toDOM() {
+      const span = document.createElement("span");
+      span.textContent = this.symbol;
+      span.style.cssText =
+        this.symbol === "+" ? "color:#4ade80" : this.symbol === "-" ? "color:#f87171" : "color:transparent";
+      return span;
+    }
+  }
+  const diffGutter = gutter({
+    class: "cm-diff-gutter",
+    lineMarker(view, block) {
+      const lineNo = view.state.doc.lineAt(block.from).number;
+      const type = lineTypes[lineNo - 1];
+      return new MarkerGutter(type === "add" ? "+" : type === "remove" ? "-" : " ");
+    },
+    initialSpacer: () => new MarkerGutter(" "),
+  });
+  return [
+    decorations,
+    diffGutter,
+    EditorView.theme({
+      ".cm-diff-add-line": { backgroundColor: "rgba(34, 197, 94, 0.12)" },
+      ".cm-diff-remove-line": { backgroundColor: "rgba(248, 113, 113, 0.12)" },
+      ".cm-diff-gutter": { paddingRight: "6px" },
+    }),
+  ];
+}
+
+// One contiguous run of real lines (between collapsed-context markers) --
+// a real, syntax-highlighted, read-only CodeMirror document with a
+// diff gutter/line-background layered on top, capped at a fixed height
+// with its own internal scrollbar for a long hunk rather than growing the
+// whole page.
+function DiffHunk({ lines, path }: { lines: DiffLine[]; path?: string }) {
+  const code = useMemo(() => lines.map((l) => l.text).join("\n"), [lines]);
+  const extensions = useMemo(
+    () => [...langExtensionFor(path), EditorView.lineWrapping, ...diffLineExtensions(lines.map((l) => l.type))],
+    [code, path]
+  );
   return (
-    <div className="mt-1 overflow-x-auto rounded-lg border border-border bg-[#1e1e1e] py-1 font-mono text-xs leading-5">
-      {lines.map((line, i) => {
-        const isPlaceholder = line.type === "context" && line.text.startsWith("⋯");
-        return (
-          <div
-            key={i}
-            className={`whitespace-pre px-3 ${
-              line.type === "add"
-                ? "bg-green-500/10 text-green-400"
-                : line.type === "remove"
-                  ? "bg-red-500/10 text-red-400"
-                  : isPlaceholder
-                    ? "py-0.5 text-center text-muted"
-                    : "text-muted/80"
-            }`}
-          >
-            {!isPlaceholder && (line.type === "add" ? "+ " : line.type === "remove" ? "- " : "  ")}
-            {line.text}
-          </div>
-        );
-      })}
+    <CodeMirror
+      value={code}
+      theme={vscodeDark}
+      extensions={extensions}
+      editable={false}
+      maxHeight="380px"
+      basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false }}
+    />
+  );
+}
+
+// The real content behind a step's +N -M badge -- diffLines is already
+// windowed down to a couple of lines of context around each change (see
+// collapseToDiffHunks in useBuildAgent.ts); each contiguous run of real
+// lines becomes its own DiffHunk, with the "⋯ N unchanged lines ⋯"
+// placeholders rendered as plain separators between them rather than fed
+// into the syntax highlighter as if they were code.
+function DiffBlock({ lines, path }: { lines: DiffLine[]; path?: string }) {
+  const hunks: DiffLine[][] = [];
+  let current: DiffLine[] = [];
+  for (const line of lines) {
+    const isPlaceholder = line.type === "context" && line.text.startsWith("⋯");
+    if (isPlaceholder) {
+      if (current.length > 0) {
+        hunks.push(current);
+        current = [];
+      }
+      hunks.push([line]);
+    } else {
+      current.push(line);
+    }
+  }
+  if (current.length > 0) hunks.push(current);
+  return (
+    <div className="mt-1 overflow-hidden rounded-lg border border-border">
+      {hunks.map((hunk, i) =>
+        hunk.length === 1 && hunk[0].type === "context" && hunk[0].text.startsWith("⋯") ? (
+          <p key={i} className="bg-[#1e1e1e] py-1 text-center font-mono text-xs text-muted">
+            {hunk[0].text}
+          </p>
+        ) : (
+          <DiffHunk key={i} lines={hunk} path={path} />
+        )
+      )}
     </div>
   );
 }
 
 // The real content behind a read_file/search_workspace/get_file_outline/
-// list_files/run_terminal_command step -- plain monospace text (no diff
-// coloring, there's nothing to diff), same click-to-expand idea as
-// DiffBlock above so every step type gets the same real detail view
-// instead of only file edits.
-const DETAIL_MAX_CHARS = 4000;
-function DetailBlock({ text }: { text: string }) {
+// list_files/run_terminal_command step. When `path` names a recognized
+// language (a read_file result), it renders through the same real,
+// syntax-highlighted, height-capped CodeMirror view as DiffBlock -- there's
+// no diff to show, just the file's real content. Otherwise (a search/
+// outline/list/command result -- not one coherent language) falls back to
+// a plain monospace block.
+const DETAIL_MAX_CHARS = 20000;
+function DetailBlock({ text, path }: { text: string; path?: string }) {
   const truncated = text.length > DETAIL_MAX_CHARS;
   const shown = truncated ? text.slice(0, DETAIL_MAX_CHARS) : text;
+  const lang = path ? langExtensionFor(path) : [];
+  if (lang.length > 0) {
+    return (
+      <div className="mt-1 overflow-hidden rounded-lg border border-border">
+        <CodeMirror
+          value={shown}
+          theme={vscodeDark}
+          extensions={[...lang, EditorView.lineWrapping]}
+          editable={false}
+          maxHeight="380px"
+          basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false }}
+        />
+        {truncated && (
+          <p className="bg-[#1e1e1e] px-3 py-1 text-xs text-muted">⋯ truncated ({text.length.toLocaleString()} characters total)</p>
+        )}
+      </div>
+    );
+  }
   return (
     <div className="mt-1 max-h-72 overflow-auto rounded-lg border border-border bg-[#1e1e1e] p-3 font-mono text-xs leading-5 text-muted/90">
       <pre className="whitespace-pre-wrap break-words">{shown}</pre>
@@ -3216,8 +3348,10 @@ export default function BuildWorkspace() {
                           {hasWarning && !item.steps[0].reverted && (
                             <p className="mt-0.5 pl-5 text-xs text-amber-500">{item.steps[0].warning}</p>
                           )}
-                          {soloDiffOpen && soloDiffLines && <DiffBlock lines={soloDiffLines} />}
-                          {soloDiffOpen && soloDetail && <DetailBlock text={soloDetail} />}
+                          {soloDiffOpen && soloDiffLines && (
+                            <DiffBlock lines={soloDiffLines} path={item.steps[0].path ?? item.steps[0].revert?.path} />
+                          )}
+                          {soloDiffOpen && soloDetail && <DetailBlock text={soloDetail} path={item.steps[0].path} />}
                         </div>
                       )}
                       {/* Plain stacked lines, same font/weight as the header
@@ -3264,8 +3398,8 @@ export default function BuildWorkspace() {
                                   {s.reverted && <span className="shrink-0 text-xs no-underline">(reverted)</span>}
                                 </p>
                                 {!s.reverted && s.warning && <p className="mt-0.5 text-xs text-amber-500">{s.warning}</p>}
-                                {detailOpen && s.diffLines && <DiffBlock lines={s.diffLines} />}
-                                {detailOpen && hasDetail && s.detail && <DetailBlock text={s.detail} />}
+                                {detailOpen && s.diffLines && <DiffBlock lines={s.diffLines} path={s.path ?? s.revert?.path} />}
+                                {detailOpen && hasDetail && s.detail && <DetailBlock text={s.detail} path={s.path} />}
                               </div>
                             );
                           })}
