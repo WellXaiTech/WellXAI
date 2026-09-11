@@ -3126,13 +3126,14 @@ export default function BuildWorkspace() {
                 this is a local-only preview (no live URL yet) rather than
                 showing a fake "localhost:3000" for a page that isn't
                 actually being served anywhere. */}
-            <div className="flex shrink-0 items-center gap-1.5 border-b border-border px-3 py-1.5 text-xs">
-              <span className="text-muted">{GlobeIcon}</span>
-              {devServerUrl ? (
-                <span className="min-w-0 truncate font-mono text-foreground">{devServerUrl.replace(/^https?:\/\//, "")}</span>
-              ) : (
-                <span className="min-w-0 truncate text-muted">Local preview (no live server running)</span>
-              )}
+            <div className="flex shrink-0 items-center border-b border-border bg-surface px-2 py-2">
+              <div className="flex w-full min-w-0 items-center justify-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs">
+                {devServerUrl ? (
+                  <span className="min-w-0 truncate font-mono text-foreground">{devServerUrl.replace(/^https?:\/\//, "")}</span>
+                ) : (
+                  <span className="min-w-0 truncate text-muted">localhost:3000/{slugify(projectName)}</span>
+                )}
+              </div>
             </div>
             <div className="min-h-0 flex-1">
               <BuildPreviewFrame files={files} devServerUrl={devServerUrl} devServerStarting={devServerStarting} />
@@ -4067,12 +4068,14 @@ export default function BuildWorkspace() {
                   says plainly that this is a local-only preview rather than
                   showing a fake "localhost:3000" for a page that isn't
                   actually being served anywhere. */}
-              <div className="flex shrink-0 items-center gap-1.5 border-b border-border px-3 py-1.5 text-xs">
-                {devServerUrl ? (
-                  <span className="min-w-0 truncate font-mono text-foreground">{devServerUrl.replace(/^https?:\/\//, "")}</span>
-                ) : (
-                  <span className="min-w-0 truncate text-muted">Local preview (no live server running)</span>
-                )}
+              <div className="flex shrink-0 items-center border-b border-border bg-surface px-2 py-2">
+                <div className="flex w-full min-w-0 items-center justify-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs">
+                  {devServerUrl ? (
+                    <span className="min-w-0 truncate font-mono text-foreground">{devServerUrl.replace(/^https?:\/\//, "")}</span>
+                  ) : (
+                    <span className="min-w-0 truncate text-muted">localhost:3000/{slugify(projectName)}</span>
+                  )}
+                </div>
               </div>
               <div className="min-h-0 flex-1">
                 <BuildPreviewFrame key={previewReloadKey} files={files} devServerUrl={devServerUrl} devServerStarting={devServerStarting} />
@@ -4395,12 +4398,14 @@ export default function BuildWorkspace() {
                 this panel already made, this only adds the one line that
                 was actually asked for. */}
             {showLiveInBrowse && (
-              <div className="flex items-center gap-1.5 border-b border-border px-3 py-1.5">
-                {devServerUrl ? (
-                  <span className="min-w-0 truncate font-mono text-xs text-muted">{devServerUrl.replace(/^https?:\/\//, "")}</span>
-                ) : (
-                  <span className="min-w-0 truncate text-xs text-muted">Local preview (no live server running)</span>
-                )}
+              <div className="flex shrink-0 items-center border-b border-border bg-surface px-2 py-2">
+                <div className="flex w-full min-w-0 items-center justify-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs">
+                  {devServerUrl ? (
+                    <span className="min-w-0 truncate font-mono text-foreground">{devServerUrl.replace(/^https?:\/\//, "")}</span>
+                  ) : (
+                    <span className="min-w-0 truncate text-muted">localhost:3000/{slugify(projectName)}</span>
+                  )}
+                </div>
               </div>
             )}
             <div className={showLiveInBrowse ? "min-h-0 flex-1" : "sidebar-scroll flex-1 overflow-y-auto"}>
