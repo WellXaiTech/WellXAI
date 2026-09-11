@@ -3135,7 +3135,7 @@ export default function BuildWorkspace() {
             wide by default, not the same modest size as Progress/Terminal. */}
         {livePanelOpen && (
           <div
-            className="relative flex min-w-0 shrink-0 flex-col overflow-hidden rounded-r-2xl border-r border-border bg-surface mr-4"
+            className="relative flex min-w-0 shrink-0 flex-col overflow-hidden rounded-r-lg border-r border-border bg-surface mr-4"
             style={{ width: liveWidth }}
           >
             <div
@@ -3168,11 +3168,14 @@ export default function BuildWorkspace() {
                 showing a fake "localhost:3000" for a page that isn't
                 actually being served anywhere. */}
             <div className="flex shrink-0 items-center border-b border-border bg-surface px-2 py-2">
-              <div className="flex w-full min-w-0 items-center justify-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs">
+              <div className="flex w-full min-w-0 items-center justify-center gap-2 rounded-lg border border-foreground/25 px-3 py-0.5 text-xs" style={{ background: "#262625" }}>
                 {devServerUrl ? (
                   <span className="min-w-0 truncate font-mono text-sm font-bold text-foreground">{devServerUrl.replace(/^https?:\/\//, "")}</span>
                 ) : (
-                  <span className="min-w-0 truncate text-sm font-bold text-muted">localhost:3000/{addressSlug(projectName)}</span>
+                  <span className="min-w-0 truncate text-sm">
+                    <span className="font-bold text-foreground">localhost:3000</span>
+                    <span className="font-normal text-muted">/{addressSlug(projectName)}</span>
+                  </span>
                 )}
               </div>
             </div>
@@ -4080,7 +4083,7 @@ export default function BuildWorkspace() {
             style={{ flex: `1 1 min(${previewWidth}px, calc(100% - ${MIN_CHAT_WIDTH}px))` }}
             className="flex min-h-0 flex-col p-3 pl-0"
           >
-            <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+            <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-sm">
               <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
                 <span className="flex min-w-0 items-center gap-1.5 truncate text-xs font-semibold text-foreground">
                   <span className="text-muted">{GlobeIcon}</span>
@@ -4110,11 +4113,14 @@ export default function BuildWorkspace() {
                   showing a fake "localhost:3000" for a page that isn't
                   actually being served anywhere. */}
               <div className="flex shrink-0 items-center border-b border-border bg-surface px-2 py-2">
-                <div className="flex w-full min-w-0 items-center justify-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs">
+                <div className="flex w-full min-w-0 items-center justify-center gap-2 rounded-lg border border-foreground/25 px-3 py-0.5 text-xs" style={{ background: "#262625" }}>
                   {devServerUrl ? (
                     <span className="min-w-0 truncate font-mono text-sm font-bold text-foreground">{devServerUrl.replace(/^https?:\/\//, "")}</span>
                   ) : (
-                    <span className="min-w-0 truncate text-sm font-bold text-muted">localhost:3000/{addressSlug(projectName)}</span>
+                    <span className="min-w-0 truncate text-sm">
+                    <span className="font-bold text-foreground">localhost:3000</span>
+                    <span className="font-normal text-muted">/{addressSlug(projectName)}</span>
+                  </span>
                   )}
                 </div>
               </div>
@@ -4168,7 +4174,7 @@ export default function BuildWorkspace() {
             shows here the same way. */}
         {progressPanelOpen && (
           <div
-            className="relative flex shrink-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface m-3 ml-0 shadow-sm"
+            className="relative flex shrink-0 flex-col overflow-hidden rounded-lg border border-border bg-surface m-3 ml-0 shadow-sm"
             style={{ width: progressWidth }}
           >
             <div
@@ -4255,7 +4261,7 @@ export default function BuildWorkspace() {
             being a special case. */}
         {filesPanelOpen && (
           <div
-            className="relative flex min-w-0 shrink-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface m-3 ml-0 shadow-sm"
+            className="relative flex min-w-0 shrink-0 flex-col overflow-hidden rounded-lg border border-border bg-surface m-3 ml-0 shadow-sm"
             style={{ width: filesWidth }}
           >
             <div
@@ -4292,7 +4298,7 @@ export default function BuildWorkspace() {
             open together, each taking its own share of the row. */}
         {terminalPanelOpen && (
           <div
-            className="relative flex shrink-0 flex-col overflow-hidden rounded-2xl border border-border shadow-sm m-3 ml-0"
+            className="relative flex shrink-0 flex-col overflow-hidden rounded-lg border border-border shadow-sm m-3 ml-0"
             style={{ width: terminalWidth }}
           >
             <div
@@ -4364,7 +4370,7 @@ export default function BuildWorkspace() {
             Object.keys(files).length > 0 && !browseUrl && !browseSearchResults && !browseSearchLoading;
           return browsePanelOpen && (
           <div
-            className="relative flex shrink-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface m-3 ml-0 shadow-sm"
+            className="relative flex shrink-0 flex-col overflow-hidden rounded-lg border border-border bg-surface m-3 ml-0 shadow-sm"
             style={{ width: browseWidth }}
           >
             <div
@@ -4440,11 +4446,14 @@ export default function BuildWorkspace() {
                 was actually asked for. */}
             {showLiveInBrowse && (
               <div className="flex shrink-0 items-center border-b border-border bg-surface px-2 py-2">
-                <div className="flex w-full min-w-0 items-center justify-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs">
+                <div className="flex w-full min-w-0 items-center justify-center gap-2 rounded-lg border border-foreground/25 px-3 py-0.5 text-xs" style={{ background: "#262625" }}>
                   {devServerUrl ? (
                     <span className="min-w-0 truncate font-mono text-sm font-bold text-foreground">{devServerUrl.replace(/^https?:\/\//, "")}</span>
                   ) : (
-                    <span className="min-w-0 truncate text-sm font-bold text-muted">localhost:3000/{addressSlug(projectName)}</span>
+                    <span className="min-w-0 truncate text-sm">
+                    <span className="font-bold text-foreground">localhost:3000</span>
+                    <span className="font-normal text-muted">/{addressSlug(projectName)}</span>
+                  </span>
                   )}
                 </div>
               </div>
