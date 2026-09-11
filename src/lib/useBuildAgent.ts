@@ -1536,13 +1536,15 @@ export function useBuildAgent() {
 
       // Mutable copy of stalledLastTurn -- starts at the historical value
       // (computed above from the LAST send() call's outcome) but flips to
-      // true the moment a stall is observed within THIS loop too, so a
-      // second consecutive stall is recognized immediately rather than
-      // only on some future call. autoStallRetries bounds how many times
-      // the loop is allowed to silently retry a stall on the user's
-      // behalf (see the toolCalls.length === 0 branch below) -- capped so
-      // a genuinely stuck request still hands control back instead of
-      // burning turns forever.
+      // true the moment ANY stall is observed within THIS loop, so the
+      // very next retry already carries the corrective hint instead of
+      // only some future call. autoStallRetries bounds how many times the
+      // loop is allowed to silently retry a stall on the user's behalf
+      // (see the toolCalls.length === 0 branch below) -- every stall gets
+      // retried automatically now (not just a second consecutive one --
+      // see that branch's comment for why), capped so a genuinely stuck
+      // request still hands control back instead of burning turns
+      // forever.
       let stalledForFetch = stalledLastTurn;
       let autoStallRetries = 0;
       const MAX_AUTO_STALL_RETRIES = 2;
@@ -1661,21 +1663,23 @@ export function useBuildAgent() {
               });
             }
             flushPendingRead();
-            // If the turn we're about to end is ALREADY a repeat stall
-            // (stalledForFetch was true going into this very fetch --
-            // meaning a previous turn, whether from an earlier user
-            // message or an earlier auto-retry right here, also ended
-            // with no tool call), don't hand control back to the user for
-            // a third/fourth time -- silently retry with the same
-            // corrective hint, live-verified necessary because the hint
-            // alone didn't reliably stop a repeat in production. Bounded
-            // by MAX_AUTO_STALL_RETRIES so a genuinely stuck request still
-            // surfaces to the user instead of looping forever. The FIRST
-            // stall in a fresh request still just ends normally here --
-            // plenty of zero-tool-call replies are legitimate (a finished
-            // answer, a real clarifying question), so only a repeat is
-            // treated as a stall worth fighting automatically.
-            if (stalledForFetch && autoStallRetries < MAX_AUTO_STALL_RETRIES) {
+            // Retry immediately and silently, every time -- live-verified
+            // that waiting for a SECOND consecutive stall before retrying
+            // still left a real, reported case stuck (the model narrated
+            // "let me check", produced nothing, and the conversation just
+            // sat there with no further action and no automatic recovery,
+            // since that was still only the first stall in its own chain).
+            // The user should never have to manually type "endelea" to
+            // unstick this -- so now every zero-tool-call reply gets an
+            // automatic in-loop retry with the corrective hint, up to
+            // MAX_AUTO_STALL_RETRIES, before control ever goes back to the
+            // user. This does cost an extra call on the rare genuine
+            // finished-answer/question case (the model just gets a chance
+            // to confirm "no further action needed" and that becomes the
+            // shown reply instead), but a spurious extra turn is a far
+            // smaller cost than a build silently going nowhere.
+            stalledForFetch = true;
+            if (autoStallRetries < MAX_AUTO_STALL_RETRIES) {
               autoStallRetries++;
               agentMessages.push({ role: "assistant", content: doneEvent.content ?? "" });
               continue;
@@ -2125,7 +2129,17 @@ export function useBuildAgent() {
     knownGithubRepos,
     permissionMode,
     setPermissionMode,
-    projectName: deriveProjectName(files, messages),
+    // A user rename (renameProject) only ever wrote to the saved
+    // BuildProject record's own customName/name fields -- this was
+    // computed as a totally separate, parallel derivation from the site's
+    // own <title> tag or first message, so renaming never touched it and
+    // the header kept showing the old derived name forever after. customName
+    // wins here for the same reason it already does when a project record
+    // is first saved (see the upsert effect below) -- an explicit rename
+    // is a deliberate choice that should stick, not get overwritten by
+    // whatever the page's own <title> happens to say.
+    projectName:
+      (projects.find((p) => p.id === activeIdRef.current)?.customName) || deriveProjectName(files, messages),
     // The saved BuildProject record behind whatever's currently loaded --
     // lets a caller show which group (repo/folder/manual name) this chat
     // belongs to, not just its own derived title. null before the very
