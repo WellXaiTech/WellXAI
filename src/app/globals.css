@@ -806,12 +806,12 @@ textarea::placeholder {
   color: inherit;
 }
 .markdown a {
-  color: #3b82f6;
+  color: #39506b;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 .markdown a:hover {
-  color: #60a5fa;
+  color: #39506b;
 }
 .markdown blockquote {
   border-left: 2px solid var(--border);
@@ -877,12 +877,12 @@ textarea::placeholder {
   margin: 0.2em 0;
 }
 .tiptap-editor a {
-  color: #3b82f6;
+  color: #39506b;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 .tiptap-editor a:hover {
-  color: #60a5fa;
+  color: #39506b;
 }
 .tiptap-editor blockquote {
   border-left: 2px solid var(--border);

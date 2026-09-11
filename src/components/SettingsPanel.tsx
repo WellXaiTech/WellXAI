@@ -2797,7 +2797,7 @@ export default function SettingsPanel({
                           </span>
                           <span className="capitalize text-muted">{inv.status}</span>
                           {inv.hostedUrl ? (
-                            <a href={inv.hostedUrl} target="_blank" rel="noreferrer" className="text-blue-500 underline hover:text-blue-400">
+                            <a href={inv.hostedUrl} target="_blank" rel="noreferrer" className="text-[#39506b] underline hover:text-[#39506b]">
                               View
                             </a>
                           ) : (
