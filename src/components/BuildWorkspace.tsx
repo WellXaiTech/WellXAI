@@ -51,6 +51,23 @@ function slugify(name: string): string {
   return slug || "project";
 }
 
+// A shorter handle than slugify() above specifically for the address-bar
+// display -- per feedback, the full slugify() (used for GitHub repo names
+// elsewhere, where a longer, fuller name is the right call) read as way
+// too long/awkwardly truncated once actually shown in a compact address
+// bar. Takes just the part before a real business name's own tagline
+// separator ("Ushindi Bakery — Mkate wa Moto Kila Siku" -> "Ushindi
+// Bakery") when there is one, then caps much shorter.
+function addressSlug(name: string): string {
+  const short = name.split(/[—–|:]/)[0]?.trim() || name;
+  const slug = short
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 16);
+  return slug || "project";
+}
+
 // Real numbers only -- every stat here is derived from Build's own stored
 // project history (localStorage), nothing fabricated to look impressive.
 // That does mean some things a richer dashboard might show (total tokens
@@ -3129,9 +3146,9 @@ export default function BuildWorkspace() {
             <div className="flex shrink-0 items-center border-b border-border bg-surface px-2 py-2">
               <div className="flex w-full min-w-0 items-center justify-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs">
                 {devServerUrl ? (
-                  <span className="min-w-0 truncate font-mono text-foreground">{devServerUrl.replace(/^https?:\/\//, "")}</span>
+                  <span className="min-w-0 truncate font-mono text-sm font-bold text-foreground">{devServerUrl.replace(/^https?:\/\//, "")}</span>
                 ) : (
-                  <span className="min-w-0 truncate text-muted">localhost:3000/{slugify(projectName)}</span>
+                  <span className="min-w-0 truncate text-sm font-bold text-muted">localhost:3000/{addressSlug(projectName)}</span>
                 )}
               </div>
             </div>
@@ -4071,9 +4088,9 @@ export default function BuildWorkspace() {
               <div className="flex shrink-0 items-center border-b border-border bg-surface px-2 py-2">
                 <div className="flex w-full min-w-0 items-center justify-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs">
                   {devServerUrl ? (
-                    <span className="min-w-0 truncate font-mono text-foreground">{devServerUrl.replace(/^https?:\/\//, "")}</span>
+                    <span className="min-w-0 truncate font-mono text-sm font-bold text-foreground">{devServerUrl.replace(/^https?:\/\//, "")}</span>
                   ) : (
-                    <span className="min-w-0 truncate text-muted">localhost:3000/{slugify(projectName)}</span>
+                    <span className="min-w-0 truncate text-sm font-bold text-muted">localhost:3000/{addressSlug(projectName)}</span>
                   )}
                 </div>
               </div>
@@ -4401,9 +4418,9 @@ export default function BuildWorkspace() {
               <div className="flex shrink-0 items-center border-b border-border bg-surface px-2 py-2">
                 <div className="flex w-full min-w-0 items-center justify-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs">
                   {devServerUrl ? (
-                    <span className="min-w-0 truncate font-mono text-foreground">{devServerUrl.replace(/^https?:\/\//, "")}</span>
+                    <span className="min-w-0 truncate font-mono text-sm font-bold text-foreground">{devServerUrl.replace(/^https?:\/\//, "")}</span>
                   ) : (
-                    <span className="min-w-0 truncate text-muted">localhost:3000/{slugify(projectName)}</span>
+                    <span className="min-w-0 truncate text-sm font-bold text-muted">localhost:3000/{addressSlug(projectName)}</span>
                   )}
                 </div>
               </div>
