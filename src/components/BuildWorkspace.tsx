@@ -38,6 +38,18 @@ const BUILD_PLACEHOLDER_PHRASES = [
   "Tengeneza website ya duka la mtandaoni",
 ];
 
+// The status line's own fallback for the gap before the model's first real
+// tool call, where sendingStats.currentAction is still null -- per
+// feedback, a plain static "Running…" the whole time read as frozen/
+// inattentive, unlike a real coding agent's own status line that visibly
+// changes while it's still reading the request and deciding what to do.
+// Cycled by elapsed time below (not randomized per render) so it settles
+// into a real "the model is still working on it" read, not a jittery one.
+// Every phrase here has to stay honestly generic -- describing plausible
+// real model activity, never a specific claim (a file name, a tool) this
+// line has no actual evidence for.
+const THINKING_PHRASES = ["Thinking…", "Reading the request…", "Planning the approach…", "Working on it…"];
+
 
 // A short kebab-case handle, same convention push_to_github already uses
 // for repoName -- "Shure | Professional Audio Equipment" as a folder/tab
@@ -3529,7 +3541,7 @@ export default function BuildWorkspace() {
                     {sendingStats.tokens > 0 &&
                       ` · ${sendingStats.tokens >= 1000 ? `${(sendingStats.tokens / 1000).toFixed(1)}k` : sendingStats.tokens} tokens`}
                     {sendingStats.tasksRun > 0 && ` · ${sendingStats.tasksRun} task${sendingStats.tasksRun === 1 ? "" : "s"}`}
-                    {` · ${sendingStats.currentAction ?? "Running…"}`}
+                    {` · ${sendingStats.currentAction ?? THINKING_PHRASES[Math.floor(elapsedSeconds / 3) % THINKING_PHRASES.length]}`}
                   </span>
                 </p>
               )}
