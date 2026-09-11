@@ -442,8 +442,16 @@ function summarizeSteps(steps: BuildChatMessage[]): { label: string; diffStat?: 
 // live, so this settles on the same size as the label with just semibold
 // weight and color to differentiate it.
 function DiffStatBadge({ stat }: { stat: { added: number; removed: number } }) {
+  // Plain text, no pill/badge background -- per feedback, the numbers
+  // shouldn't sit inside a rounded shape at all, just colored text like
+  // `git diff --stat`'s own +N -M convention.
+  // font-mono, not the app's default sans-serif -- per feedback (clarified
+  // over several rounds with a zoomed-in screenshot of the digit itself):
+  // this was never about a CSS underline, it's that the default font's "1"
+  // has no base serif/foot, and a monospace font's "1" does -- the flat
+  // line at the bottom of the digit that was being asked for.
   return (
-    <span className="ml-1 inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-dashed border-border px-2 py-0.5 text-sm font-bold">
+    <span className="ml-1 inline-flex shrink-0 items-center gap-1 whitespace-nowrap font-mono text-sm font-medium">
       {stat.added > 0 && <span className="text-green-400 dark:text-green-400">+{stat.added}</span>}
       {stat.removed > 0 && <span className="text-red-400 dark:text-red-400">-{stat.removed}</span>}
     </span>
@@ -3446,14 +3454,22 @@ export default function BuildWorkspace() {
                           common single-step case, and added visual weight
                           the collapsed-action-log style (matching the host
                           app's own tool-call transcript) doesn't have. */}
+                      {/* One shared outer box with a divider between each
+                          row -- per feedback with a real reference
+                          screenshot (this host app's own "Ran an agent,
+                          used N tools" summary: one shared background,
+                          each sub-item -- "Loaded tools", "Started
+                          planning", etc. -- its own visually delineated
+                          row within it). Replaces the earlier plain-
+                          stacked-lines-with-no-box version. */}
                       {canExpand && isExpanded && (
-                        <div className="ml-5 mt-0.5 space-y-1">
+                        <div className="ml-1 mt-1 overflow-hidden rounded-lg border border-border">
                           {item.steps.map((s, si) => {
                             const hasDiff = !s.reverted && s.diffStat && s.diffLines && s.diffLines.length > 0;
                             const hasDetail = !s.reverted && !hasDiff && !!s.detail;
                             const detailOpen = (hasDiff || hasDetail) && expandedDiffIds.has(s.id ?? "");
                             return (
-                              <div key={si}>
+                              <div key={si} className={`px-2 py-0.5 ${si > 0 ? "border-t border-border" : ""}`}>
                                 <p className={`chat-text flex items-center gap-1.5 ${s.reverted ? "text-muted line-through" : "text-muted"}`}>
                                   <span>{renderWithLinks(s.content)}</span>
                                   {hasDiff ? (
