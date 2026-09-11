@@ -1164,17 +1164,29 @@ export default function BuildWorkspace() {
   // right after it finishes, and on reopening an older chat that already
   // has a site), not just the narrow moment `sending` happens to be true.
   const [browsePanelOpen, setBrowsePanelOpen] = useState(false);
+  // A fresh turn starting clears out any manual browse/search the user
+  // left this panel in -- otherwise a chat reopened mid-search would keep
+  // showing that stale search instead of snapping back to the live build
+  // the moment new work starts. Deliberately does NOT open the panel by
+  // itself -- per feedback, opening the instant a message is sent (before
+  // the agent has actually produced anything) showed an empty/premature
+  // panel. Opening now happens below, gated on there actually being
+  // something real to show.
   useEffect(() => {
-    // A fresh turn starting is also what should clear out any manual
-    // browse/search the user left this panel in -- otherwise a chat
-    // reopened mid-search would keep showing that stale search instead of
-    // snapping back to the live build the moment new work starts.
     if (sending) {
-      setBrowsePanelOpen(true);
       setBrowseUrl("");
       setBrowseSearchResults(null);
     }
   }, [sending]);
+  // Opens the panel once the project actually has real content -- either
+  // the agent has written at least one file, or a live dev server is up.
+  // This is the actual fix for the premature-open case above: a brand-new
+  // chat's first message no longer pops the panel open onto nothing.
+  useEffect(() => {
+    if (Object.keys(files).length > 0 || devServerUrl) {
+      setBrowsePanelOpen(true);
+    }
+  }, [files, devServerUrl]);
   // The Terminal icon's own panel -- independent of Browse (both can be
   // open at once), sliding up from the bottom of the chat column instead
   // of sharing Browse's side-panel space. Shows the real transcript of
