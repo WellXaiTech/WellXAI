@@ -3485,16 +3485,23 @@ export default function BuildWorkspace() {
                 </p>
               )}
               {error && <p className="px-1 py-1 text-[13px] font-medium text-red-500">{error}</p>}
-              {/* Inline, full-width, no dark backdrop -- not the floating
-                  centered/bottom-sheet dialog it used to be, which read as
-                  a disconnected popup rather than part of the conversation.
-                  Renders right where a new step would naturally land, at
-                  the bottom of the same scrolling list every other message
-                  and step lives in. */}
-              {pendingConfirmation && (
-                <div className="rounded-xl border border-border bg-surface-2 p-3">
+            </div>
+            </div>
+            {/* Fixed in ONE place, always -- pinned right above the
+                composer instead of rendering inline wherever it happened
+                to land in the scrolling message list. Per feedback (and a
+                real live incident earlier where a pending confirmation
+                sat unnoticed off-screen): a spot the user has to scroll to
+                find is functionally invisible, the same problem the
+                previous inline placement was originally trying to solve
+                by NOT floating -- fixing it here instead keeps it always
+                visible without going back to a disconnected floating
+                dialog either. */}
+            {pendingConfirmation && (
+              <div className="mx-auto w-full max-w-[960px] px-4">
+                <div className="rounded-xl border border-border p-2" style={{ background: "#1A1A19" }}>
                   <p className="text-sm font-medium text-foreground">{pendingConfirmation.detail}</p>
-                  <p className="mt-1 text-xs text-muted">
+                  <p className="mt-0.5 text-xs text-muted">
                     {pendingConfirmation.kind === "deploy_to_vercel"
                       ? "This creates a real, public deployment."
                       : pendingConfirmation.kind === "run_terminal_command"
@@ -3518,7 +3525,7 @@ export default function BuildWorkspace() {
                       confirmation always showing the real thing about to
                       run, in its own monospace block. */}
                   {pendingConfirmation.code && (
-                    <div className="mt-2 overflow-hidden rounded-lg bg-[#1e1e1e] px-3 py-2">
+                    <div className="mt-1 overflow-hidden rounded-lg bg-[#1e1e1e] px-3 py-1">
                       <CodeMirror
                         value={pendingConfirmation.code}
                         theme={vscodeDark}
@@ -3528,38 +3535,39 @@ export default function BuildWorkspace() {
                       />
                     </div>
                   )}
-                  <div className="mt-3 flex flex-wrap justify-end gap-2">
+                  <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
                     <button
                       type="button"
                       onClick={() => confirmPendingAction(false)}
-                      className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                      className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
                     >
                       Deny
                       <span className="rounded border border-border px-1 py-px text-[10px] font-normal text-muted">Esc</span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => confirmPendingAction(true, true)}
-                      className="flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-2"
-                    >
-                      Always allow
-                      <span className="rounded border border-border px-1 py-px text-[10px] font-normal text-muted">Ctrl ⇧ Enter</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => confirmPendingAction(true)}
-                      className="btn-primary flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium"
-                    >
-                      Allow once
-                      <span className="rounded border border-background/30 px-1 py-px text-[10px] font-normal text-background/80">
-                        Ctrl Enter
-                      </span>
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => confirmPendingAction(true, true)}
+                        className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-2"
+                      >
+                        Always allow
+                        <span className="rounded border border-border px-1 py-px text-[10px] font-normal text-muted">Ctrl ⇧ Enter</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => confirmPendingAction(true)}
+                        className="btn-primary flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium"
+                      >
+                        Allow once
+                        <span className="rounded border border-background/30 px-1 py-px text-[10px] font-normal text-background/80">
+                          Ctrl Enter
+                        </span>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              )}
-            </div>
-            </div>
+              </div>
+            )}
             <form onSubmit={onSubmit} className="mx-auto w-full max-w-[800px] p-3 pb-4">
               <input
                 ref={imageInputRef}
