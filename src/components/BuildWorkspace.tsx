@@ -3498,7 +3498,7 @@ export default function BuildWorkspace() {
                 visible without going back to a disconnected floating
                 dialog either. */}
             {pendingConfirmation && (
-              <div className="mx-auto w-full max-w-[960px] px-4">
+              <div className="mx-auto w-full max-w-[800px] px-4">
                 <div className="rounded-xl border border-border p-2" style={{ background: "#1A1A19" }}>
                   <p className="text-sm font-medium text-foreground">{pendingConfirmation.detail}</p>
                   <p className="mt-0.5 text-xs text-muted">
@@ -3539,7 +3539,7 @@ export default function BuildWorkspace() {
                     <button
                       type="button"
                       onClick={() => confirmPendingAction(false)}
-                      className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                      className="flex items-center gap-1.5 rounded-md px-5 py-1 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
                     >
                       Deny
                       <span className="rounded border border-border px-1 py-px text-[10px] font-normal text-muted">Esc</span>
@@ -3548,7 +3548,7 @@ export default function BuildWorkspace() {
                       <button
                         type="button"
                         onClick={() => confirmPendingAction(true, true)}
-                        className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-2"
+                        className="flex items-center gap-1.5 rounded-md border border-border px-5 py-1 text-sm font-medium text-foreground transition-colors hover:bg-surface-2"
                       >
                         Always allow
                         <span className="rounded border border-border px-1 py-px text-[10px] font-normal text-muted">Ctrl ⇧ Enter</span>
@@ -3556,7 +3556,7 @@ export default function BuildWorkspace() {
                       <button
                         type="button"
                         onClick={() => confirmPendingAction(true)}
-                        className="btn-primary flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium"
+                        className="btn-primary flex items-center gap-1.5 rounded-md px-5 py-1 text-sm font-medium"
                       >
                         Allow once
                         <span className="rounded border border-background/30 px-1 py-px text-[10px] font-normal text-background/80">
