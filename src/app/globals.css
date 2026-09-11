@@ -111,21 +111,21 @@
 
 :root {
   --assistant-color: var(--foreground);
-  --inline-code-color: #b3541e;
+  --inline-code-color: #c96d6d;
 }
 @media (prefers-color-scheme: dark) {
   :root[data-assistant-color="warm"] {
     --assistant-color: #dcc7a1;
   }
   :root {
-    --inline-code-color: #e2a05a;
+    --inline-code-color: #c96d6d;
   }
 }
 :root[data-theme="dark"][data-assistant-color="warm"] {
   --assistant-color: #dcc7a1;
 }
 :root[data-theme="dark"] {
-  --inline-code-color: #e2a05a;
+  --inline-code-color: #c96d6d;
 }
 .assistant-reply {
   color: var(--assistant-color);
@@ -755,8 +755,14 @@ textarea::placeholder {
 }
 .markdown code {
   background: var(--surface-2);
-  border-radius: 4px;
-  padding: 0.15em 0.4em;
+  /* Fully rounded pill with a dashed border -- matches the same shape
+     used by the diff-stat "+N -M" badge (DiffStatBadge in
+     BuildWorkspace.tsx: rounded-full border border-dashed border-border)
+     per feedback that every small inline badge in the app should read
+     as the same shape, not a barely-rounded rectangle. */
+  border: 1px dashed var(--border);
+  border-radius: 9999px;
+  padding: 0.15em 0.6em;
   font-size: 0.85em;
   font-family: var(--font-mono), monospace;
   /* Makes an inline mention like `index.html` actually stand out from the
