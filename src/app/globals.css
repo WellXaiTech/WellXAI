@@ -813,6 +813,7 @@ textarea::placeholder {
 }
 .markdown a {
   color: #39506b;
+  font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -884,6 +885,7 @@ textarea::placeholder {
 }
 .tiptap-editor a {
   color: #39506b;
+  font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 2px;
 }

@@ -693,7 +693,7 @@ const confirmationCodeChrome = EditorView.theme({
 function renderWithLinks(text: string) {
   return text.split(URL_PATTERN).map((part, i) =>
     i % 2 === 1 ? (
-      <a key={i} href={part} target="_blank" rel="noreferrer" className="text-[#39506b] underline hover:text-[#39506b]">
+      <a key={i} href={part} target="_blank" rel="noreferrer" className="font-semibold text-[#39506b] underline hover:text-[#39506b]">
         {part}
       </a>
     ) : (
