@@ -151,7 +151,14 @@ textarea:-webkit-autofill:focus {
 :root {
   --chat-font-size: 16px;
   --chat-line-height: 1.6;
-  --chat-font-family: inherit;
+  /* Per feedback (a screenshot of Claude's own chat text as the
+     reference): the native OS UI font, not the app's own Roboto
+     webfont -- most AI chat interfaces render conversation text in the
+     system's own default font rather than a custom one, which is what
+     gave that screenshot its distinct look. Scoped to .chat-text only
+     (chat/narration text specifically) -- buttons, headers, and the
+     rest of the app keep the existing Roboto --font-sans untouched. */
+  --chat-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 :root[data-font-size="small"] {
   --chat-font-size: 13px;
