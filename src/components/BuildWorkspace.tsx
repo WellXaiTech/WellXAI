@@ -3120,6 +3120,20 @@ export default function BuildWorkspace() {
                 {CloseIcon}
               </button>
             </div>
+            {/* A real address, not a decorative one -- per feedback asking
+                for this to always be visible. Shows the real dev-server URL
+                once start_dev_server has one; otherwise says plainly that
+                this is a local-only preview (no live URL yet) rather than
+                showing a fake "localhost:3000" for a page that isn't
+                actually being served anywhere. */}
+            <div className="flex shrink-0 items-center gap-1.5 border-b border-border px-3 py-1.5 text-xs">
+              <span className="text-muted">{GlobeIcon}</span>
+              {devServerUrl ? (
+                <span className="min-w-0 truncate font-mono text-foreground">{devServerUrl.replace(/^https?:\/\//, "")}</span>
+              ) : (
+                <span className="min-w-0 truncate text-muted">Local preview (no live server running)</span>
+              )}
+            </div>
             <div className="min-h-0 flex-1">
               <BuildPreviewFrame files={files} devServerUrl={devServerUrl} devServerStarting={devServerStarting} />
             </div>
@@ -4047,6 +4061,19 @@ export default function BuildWorkspace() {
                   </button>
                 </div>
               </div>
+              {/* A real address, not a decorative one -- per feedback
+                  asking for this to always be visible. Shows the real
+                  dev-server URL once start_dev_server has one; otherwise
+                  says plainly that this is a local-only preview rather than
+                  showing a fake "localhost:3000" for a page that isn't
+                  actually being served anywhere. */}
+              <div className="flex shrink-0 items-center gap-1.5 border-b border-border px-3 py-1.5 text-xs">
+                {devServerUrl ? (
+                  <span className="min-w-0 truncate font-mono text-foreground">{devServerUrl.replace(/^https?:\/\//, "")}</span>
+                ) : (
+                  <span className="min-w-0 truncate text-muted">Local preview (no live server running)</span>
+                )}
+              </div>
               <div className="min-h-0 flex-1">
                 <BuildPreviewFrame key={previewReloadKey} files={files} devServerUrl={devServerUrl} devServerStarting={devServerStarting} />
               </div>
@@ -4357,7 +4384,26 @@ export default function BuildWorkspace() {
               </form>
             </div>
             )}
-            <div className={showLiveInBrowse ? "h-full" : "sidebar-scroll flex-1 overflow-y-auto"}>
+            {/* A real address, not a decorative one -- per feedback asking
+                for this to always be visible, same idea as the browseUrl
+                line just below for an external site. Shows the real
+                dev-server URL once start_dev_server has one; otherwise says
+                plainly that this is a local-only preview rather than
+                showing a fake "localhost:3000" for a page that isn't
+                actually being served anywhere. Still no close/reload/label
+                chrome here -- that's the deliberate "just the site" choice
+                this panel already made, this only adds the one line that
+                was actually asked for. */}
+            {showLiveInBrowse && (
+              <div className="flex items-center gap-1.5 border-b border-border px-3 py-1.5">
+                {devServerUrl ? (
+                  <span className="min-w-0 truncate font-mono text-xs text-muted">{devServerUrl.replace(/^https?:\/\//, "")}</span>
+                ) : (
+                  <span className="min-w-0 truncate text-xs text-muted">Local preview (no live server running)</span>
+                )}
+              </div>
+            )}
+            <div className={showLiveInBrowse ? "min-h-0 flex-1" : "sidebar-scroll flex-1 overflow-y-auto"}>
               {showLiveInBrowse ? (
                 <BuildPreviewFrame files={files} devServerUrl={devServerUrl} devServerStarting={devServerStarting} />
               ) : browseUrl ? (
