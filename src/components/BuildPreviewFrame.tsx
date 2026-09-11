@@ -208,13 +208,42 @@ function buildDocument(files: Files): string {
   return isReactProject(files) ? buildReactDocument(files) : buildStaticDocument(files);
 }
 
-function BuildPreviewFrame({ files }: { files: Files }) {
+function BuildPreviewFrame({ files, devServerUrl, devServerStarting }: { files: Files; devServerUrl?: string | null; devServerStarting?: boolean }) {
   // Re-derives the HTML document only when the `files` object reference
   // actually changes -- useBuildAgent only ever replaces (never mutates)
   // that reference when a tool call writes/edits/deletes something, so
   // this stays cheap during the many re-renders that happen while the
-  // model is just streaming narration text between tool calls.
-  const html = useMemo(() => buildDocument(files), [files]);
+  // model is just streaming narration text between tool calls. Skipped
+  // entirely once a real dev server is live -- nothing here can render a
+  // genuinely multi-file/framework project anyway (see module comment).
+  const html = useMemo(() => (devServerUrl ? "" : buildDocument(files)), [files, devServerUrl]);
+
+  // A real running dev server (start_dev_server) -- loaded directly instead
+  // of the srcDoc reconstruction below, since that reconstruction has no
+  // real bundler and can't resolve cross-file imports at all. allow-same-
+  // origin is added here specifically because this iframe's origin is
+  // genuinely cross-origin (an *.e2b.dev host, unlike the same-document
+  // srcDoc case below which deliberately omits it) -- without it the dev
+  // server's own HMR websocket, cookies, and localStorage inside the
+  // generated app would all break. Same trust boundary run_terminal_command
+  // already accepts: arbitrary code, but only ever inside the user's own
+  // sandboxed environment.
+  if (devServerUrl) {
+    return (
+      <iframe
+        src={devServerUrl}
+        title="Live preview"
+        className="h-full w-full border-0 bg-white"
+        sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin"
+      />
+    );
+  }
+
+  if (devServerStarting) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-muted">Starting live server…</div>
+    );
+  }
 
   if (!html) {
     return (

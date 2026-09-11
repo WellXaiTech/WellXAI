@@ -429,6 +429,8 @@ function describeCurrentAction(name: string, args: Record<string, unknown>): str
       return "Creating Supabase project…";
     case "run_supabase_sql":
       return "Updating the database…";
+    case "start_dev_server":
+      return "Starting live dev server…";
     default:
       return null;
   }
@@ -641,6 +643,7 @@ export type PendingBuildConfirmation = {
     | "deploy_supabase_function"
     | "reconnect_service"
     | "run_terminal_command"
+    | "start_dev_server"
     | "write_file"
     | "replace_in_file"
     | "delete_file";
@@ -747,6 +750,21 @@ export function useBuildAgent() {
   // earlier "npm install" around for a later "npm test") instead of
   // starting fresh every time. Reset on New chat (see reset() below).
   const sandboxIdRef = useRef<string | undefined>(undefined);
+  // Deliberately a SEPARATE sandbox/id from sandboxIdRef above -- a running
+  // dev server needs a long timeout set once at start, but
+  // sandbox.setTimeout() sets an absolute kill time, not an idle timer, so
+  // sharing sandboxIdRef would mean a later one-shot run_terminal_command
+  // call resets that timeout back down to the short one-shot-command window
+  // and silently kills the dev server out from under the user. Reset on New
+  // chat and on project switch (see reset()/selectProject() below).
+  const devServerSandboxIdRef = useRef<string | undefined>(undefined);
+  // The real public URL of a running dev server (see start_dev_server in
+  // executeTool below) -- when set, BuildPreviewFrame loads this directly
+  // instead of its own static/CDN-React srcDoc reconstruction. In-memory
+  // only, same lifecycle as sandboxIdRef -- never persisted to localStorage
+  // or the project record, since the underlying sandbox is inherently
+  // ephemeral either way.
+  const [devServerUrl, setDevServerUrl] = useState<string | null>(null);
 
   // Restored one tick after mount (not as the initial useState value) so
   // server-rendered HTML and the client's first hydration pass agree --
@@ -949,6 +967,38 @@ export function useBuildAgent() {
     }, 2500);
   }, []);
 
+  // Same idea as syncFilesToGithub/syncFilesToVercel above, for a project
+  // with a live dev server running (devServerSandboxIdRef set by
+  // start_dev_server) -- without this, the dev-server iframe would keep
+  // showing whatever it had at start_dev_server time, silently diverging
+  // from what the agent believes it just wrote on the very next edit. The
+  // dev server's own file watcher (Vite, etc.) picks up the resynced files
+  // and hot-reloads the iframe on its own -- nothing else needed client-side.
+  const sandboxSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sandboxSyncingRef = useRef(false);
+  const syncFilesToSandbox = useCallback(() => {
+    const sandboxId = devServerSandboxIdRef.current;
+    if (!sandboxId) return;
+    if (sandboxSyncTimeoutRef.current) clearTimeout(sandboxSyncTimeoutRef.current);
+    sandboxSyncTimeoutRef.current = setTimeout(async () => {
+      sandboxSyncTimeoutRef.current = null;
+      if (sandboxSyncingRef.current) return;
+      sandboxSyncingRef.current = true;
+      try {
+        const res = await fetch("/api/build/dev-server/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ files: filesRef.current, sandboxId }),
+        });
+        if (!res.ok) console.error("Auto-sync to dev server failed:", res.status, await res.text());
+      } catch (err) {
+        console.error("Auto-sync to dev server failed:", err);
+      } finally {
+        sandboxSyncingRef.current = false;
+      }
+    }, 2500);
+  }, []);
+
   const deleteFileFromLocalFolder = useCallback(async (path: string) => {
     const dir = localDirHandleRef.current;
     if (!dir) return;
@@ -1047,6 +1097,7 @@ export function useBuildAgent() {
       "deploy_supabase_function",
       "reconnect_service",
       "run_terminal_command",
+      "start_dev_server",
     ];
     alwaysAllowedRef.current = new Set(mode === "auto" ? allKinds : mode === "acceptEdits" ? fileKinds : []);
     setPermissionModeState(mode);
@@ -1108,6 +1159,7 @@ export function useBuildAgent() {
         void writeFileToLocalFolder(path, content);
         syncFilesToGithub();
         syncFilesToVercel();
+        syncFilesToSandbox();
         return `Wrote ${path} (${content.length} characters).`;
       }
       case "delete_file": {
@@ -1121,6 +1173,7 @@ export function useBuildAgent() {
         void deleteFileFromLocalFolder(path);
         syncFilesToGithub();
         syncFilesToVercel();
+        syncFilesToSandbox();
         return `Deleted ${path}.`;
       }
       case "replace_in_file": {
@@ -1147,6 +1200,7 @@ export function useBuildAgent() {
         void writeFileToLocalFolder(path, content);
         syncFilesToGithub();
         syncFilesToVercel();
+        syncFilesToSandbox();
         return `Edited ${path} (${content.length} characters).`;
       }
       case "push_to_github": {
@@ -1314,6 +1368,7 @@ export function useBuildAgent() {
               void writeFileToLocalFolder(".env", content);
               syncFilesToGithub();
               syncFilesToVercel();
+              syncFilesToSandbox();
               return (
                 `Created Supabase project (ref: ${projectRef}) in organization "${data.orgName}" and added its ` +
                 `connection details to .env. Use NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in ` +
@@ -1434,6 +1489,26 @@ export function useBuildAgent() {
         } catch {
           setTerminalHistory((prev) => [...prev, { command, output: "Command failed: network error." }]);
           return "Command failed: network error.";
+        }
+      }
+      case "start_dev_server": {
+        const command = (typeof args.command === "string" && args.command.trim()) || "npm run dev";
+        const port = typeof args.port === "number" && Number.isFinite(args.port) ? args.port : 5173;
+        const allowed = await requestConfirmation("start_dev_server", "Allow ChatGiZa to start a live dev server?", command);
+        if (!allowed) return `The user declined to start the dev server. Do not retry; ask what they'd like instead if relevant.`;
+        try {
+          const res = await fetch("/api/build/dev-server", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ files: filesRef.current, command, port, sandboxId: devServerSandboxIdRef.current }),
+          });
+          const data = await res.json();
+          if (!res.ok) return `Dev server failed to start: ${data.error ?? "unknown error"}`;
+          devServerSandboxIdRef.current = data.sandboxId;
+          setDevServerUrl(data.url);
+          return `Dev server is live at ${data.url}. The live preview now shows this real running server -- every further write_file/replace_in_file/delete_file automatically syncs into it and hot-reloads the preview, no need to call this again.`;
+        } catch {
+          return "Dev server failed to start: network error.";
         }
       }
       default:
@@ -1874,6 +1949,8 @@ export function useBuildAgent() {
     setError(null);
     setTerminalHistory([]);
     sandboxIdRef.current = undefined;
+    devServerSandboxIdRef.current = undefined;
+    setDevServerUrl(null);
     try {
       if (typeof window !== "undefined") window.localStorage.removeItem(ACTIVE_ID_KEY);
     } catch {
@@ -1895,6 +1972,8 @@ export function useBuildAgent() {
     setError(null);
     setTerminalHistory([]);
     sandboxIdRef.current = undefined;
+    devServerSandboxIdRef.current = undefined;
+    setDevServerUrl(null);
     // Opening a project always marks it read, same as any chat/email list.
     if (found.unread) {
       const next = projectsRef.current.map((p) => (p.id === id ? { ...p, unread: false } : p));
@@ -2146,5 +2225,6 @@ export function useBuildAgent() {
     // first save (see the upsert effect) or right after reset().
     activeProject: projects.find((p) => p.id === activeIdRef.current) ?? null,
     terminalHistory,
+    devServerUrl,
   };
 }

@@ -1074,7 +1074,12 @@ export default function BuildWorkspace() {
     projectName,
     activeProject,
     terminalHistory,
+    devServerUrl,
   } = useBuildAgent();
+  // Drives BuildPreviewFrame's "Starting live server…" state -- derived
+  // from the same live status line the rest of the UI already shows while
+  // a tool call is running, rather than a second, separately-tracked flag.
+  const devServerStarting = sending && sendingStats?.currentAction === "Starting live dev server…";
 
   // Backs the History row menu's "Open in -> New tab" -- that just opens
   // this same URL with ?project=<id> in a new tab; this is what makes the
@@ -3116,7 +3121,7 @@ export default function BuildWorkspace() {
               </button>
             </div>
             <div className="min-h-0 flex-1">
-              <BuildPreviewFrame files={files} />
+              <BuildPreviewFrame files={files} devServerUrl={devServerUrl} devServerStarting={devServerStarting} />
             </div>
           </div>
         )}
@@ -3506,19 +3511,21 @@ export default function BuildWorkspace() {
                       ? "This creates a real, public deployment."
                       : pendingConfirmation.kind === "run_terminal_command"
                         ? "This runs in a real sandboxed environment, not a simulation."
-                        : pendingConfirmation.kind === "push_to_github"
-                          ? "This creates or updates a real GitHub repository."
-                          : pendingConfirmation.kind === "create_supabase_project"
-                            ? "This creates a real Supabase project (a real database)."
-                            : pendingConfirmation.kind === "run_supabase_sql"
-                              ? "This runs a real SQL change against the connected Supabase database."
-                              : pendingConfirmation.kind === "deploy_supabase_function"
-                                ? "This deploys real server-side code (an Edge Function) to Supabase."
-                                : pendingConfirmation.kind === "reconnect_service"
-                                  ? "This disconnects the current account and opens a sign-in window for a different one."
-                                  : pendingConfirmation.kind === "delete_file"
-                                    ? "This removes the file from the project."
-                                    : "This changes the project's files."}
+                        : pendingConfirmation.kind === "start_dev_server"
+                          ? "This starts a real, persistent development server in a sandboxed environment."
+                          : pendingConfirmation.kind === "push_to_github"
+                            ? "This creates or updates a real GitHub repository."
+                            : pendingConfirmation.kind === "create_supabase_project"
+                              ? "This creates a real Supabase project (a real database)."
+                              : pendingConfirmation.kind === "run_supabase_sql"
+                                ? "This runs a real SQL change against the connected Supabase database."
+                                : pendingConfirmation.kind === "deploy_supabase_function"
+                                  ? "This deploys real server-side code (an Edge Function) to Supabase."
+                                  : pendingConfirmation.kind === "reconnect_service"
+                                    ? "This disconnects the current account and opens a sign-in window for a different one."
+                                    : pendingConfirmation.kind === "delete_file"
+                                      ? "This removes the file from the project."
+                                      : "This changes the project's files."}
                   </p>
                   {/* The exact command/path/name, not just the paraphrase
                       above -- same as the VS Code extension's own
@@ -4041,7 +4048,7 @@ export default function BuildWorkspace() {
                 </div>
               </div>
               <div className="min-h-0 flex-1">
-                <BuildPreviewFrame key={previewReloadKey} files={files} />
+                <BuildPreviewFrame key={previewReloadKey} files={files} devServerUrl={devServerUrl} devServerStarting={devServerStarting} />
               </div>
               {/* Full-height resize strip along the LEFT edge -- grab it
                   anywhere along its height, not just one corner. Dragging
@@ -4352,7 +4359,7 @@ export default function BuildWorkspace() {
             )}
             <div className={showLiveInBrowse ? "h-full" : "sidebar-scroll flex-1 overflow-y-auto"}>
               {showLiveInBrowse ? (
-                <BuildPreviewFrame files={files} />
+                <BuildPreviewFrame files={files} devServerUrl={devServerUrl} devServerStarting={devServerStarting} />
               ) : browseUrl ? (
                 <div className="flex h-full flex-col">
                   <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-1.5">

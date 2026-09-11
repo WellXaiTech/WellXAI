@@ -287,6 +287,37 @@ export const BUILD_TOOLS = [
       },
     },
   },
+  {
+    type: "function" as const,
+    function: {
+      name: "start_dev_server",
+      description:
+        "Start a REAL, persistent dev server for a multi-file/framework project (e.g. a Vite/React app with real " +
+        "cross-file imports) and get back a real public URL -- this is what makes the live preview actually show " +
+        "a project too complex for the plain static-HTML/single-file preview to render. Runs in the same kind of " +
+        "real sandboxed environment as run_terminal_command, as a background process that keeps running after this " +
+        "call returns (not one-shot). Call run_terminal_command for \"npm install\" FIRST -- this does not install " +
+        "dependencies itself. The user is always shown the exact command and must approve it before it runs. After " +
+        "this succeeds, every further write_file/replace_in_file/delete_file call automatically re-syncs into that " +
+        "same running server, and its own file watcher hot-reloads the live preview -- no need to call this again " +
+        "after each edit, only once per project to get it live in the first place. If this returns an error saying " +
+        "it isn't configured, tell the user real dev server hosting isn't set up yet rather than pretending it's live.",
+      parameters: {
+        type: "object",
+        properties: {
+          command: {
+            type: "string",
+            description: "The command that starts the dev server, e.g. \"npm run dev\". Defaults to \"npm run dev\" if omitted.",
+          },
+          port: {
+            type: "number",
+            description: "The port the dev server listens on, e.g. 5173 for Vite's default. Defaults to 5173 if omitted.",
+          },
+        },
+        required: [],
+      },
+    },
+  },
 ];
 
 export const BUILD_SYSTEM_PROMPT =
@@ -364,8 +395,8 @@ export const BUILD_SYSTEM_PROMPT =
   "There is also no such thing as \"running a command on your own computer\" to fix a ChatGiZa problem -- Build's " +
   "whole environment is this browser tab plus ChatGiZa's own servers; the ONLY real mechanisms that exist are the " +
   "tools listed here (push_to_github, deploy_to_vercel, create_supabase_project, run_supabase_sql, " +
-  "deploy_supabase_function, run_terminal_command against its own sandboxed environment -- never the user's own " +
-  "machine) and the connect popups they open. Never describe a troubleshooting step, workaround, or capability " +
+  "deploy_supabase_function, run_terminal_command and start_dev_server against its own sandboxed environment -- " +
+  "never the user's own machine) and the connect popups they open. Never describe a troubleshooting step, workaround, or capability " +
   "that isn't one of these -- including inside a file you write (e.g. never put fake \"run these commands on your " +
   "own computer\" setup steps into a README or any other file, even framed as an alternative path -- that's the " +
   "same fabrication just moved into a file instead of the chat).\n" +
@@ -432,10 +463,21 @@ export const BUILD_SYSTEM_PROMPT =
   "actually reports rather than assuming the code is correct. Don't run it reflexively for a trivial one-line " +
   "text/color change.\n" +
   "- Default to a plain static site (index.html + styles + a script file) unless the request clearly needs a " +
-  "framework -- static sites preview instantly and don't need a build step. If a framework genuinely is needed, " +
-  "use a single-page React app with the root component at /App.js (plain JS, not TypeScript/JSX file extension) " +
-  "and a package.json listing \"react\" as a dependency -- the live preview renderer expects that exact entry " +
-  "path. Add /styles.css and import it from /App.js if styling is needed.\n" +
+  "framework -- static sites preview instantly, need no build step, and no sandbox. For something that small, " +
+  "genuinely needs only one component's worth of React (no routing, no multiple pages/components importing each " +
+  "other), a single-page app with the root component at /App.js (plain JS, not TypeScript/JSX file extension) and " +
+  "a package.json listing \"react\" as a dependency also previews instantly, no dev server needed -- add " +
+  "/styles.css and import it from /App.js if styling is needed.\n" +
+  "- For anything genuinely bigger than that -- multiple real components/pages, real routing, real cross-file " +
+  "imports, any framework project where the file structure actually matters -- scaffold it as a REAL project " +
+  "(package.json with real dependencies, a proper src/ layout, e.g. Vite + React: vite.config.js, index.html, " +
+  "src/main.jsx, src/App.jsx, etc.) and get it live with start_dev_server, not by cramming everything into one " +
+  "/App.js file. The vite.config.js MUST set `server: { host: \"0.0.0.0\", allowedHosts: true }` (or the " +
+  "equivalent for whatever dev server you use) -- without it, the dev server rejects the proxied hostname the " +
+  "live preview actually loads it through and the preview just fails. Call run_terminal_command for \"npm " +
+  "install\" first, then start_dev_server once to bring the project live -- after that, every write_file/" +
+  "replace_in_file/delete_file keeps the running server in sync automatically and its own file watcher hot-" +
+  "reloads the preview, so there's no need to call start_dev_server again after each edit.\n" +
   `- ${NO_PLACEHOLDER_CODE_PROMPT} The user cannot see your reasoning, only the files and the preview.\n` +
   "- When a request is ambiguous, whether to guess or ask depends on what kind of ambiguity it is -- not on a " +
   "vague sense of how \"significant\" it feels. Fine to make a reasonable choice and just mention it briefly: " +
