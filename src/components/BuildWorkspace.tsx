@@ -2998,7 +2998,7 @@ export default function BuildWorkspace() {
           // "build a prototype" style starting points) go first; the
           // composer right below still covers "I have my own idea" for
           // anyone who'd rather just type it themselves.
-          <div className="relative mx-auto flex w-full max-w-[var(--max-w-chat)] flex-1 flex-col items-center justify-center px-4">
+          <div className="relative mx-auto flex w-full max-w-[var(--max-w-chat)] flex-1 flex-col items-center justify-end px-4 pb-12">
             <h1 className="text-3xl font-semibold tracking-tight">What should ChatGiZa build?</h1>
             <div className="mt-6 grid w-full gap-2.5 sm:grid-cols-3">
               <button
