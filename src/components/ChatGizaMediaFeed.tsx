@@ -433,7 +433,17 @@ function PostCard({ post, myId, onLike, onDelete }: {
   );
 }
 
-export default function ChatGizaMediaFeed({ onClose }: { onClose: () => void }) {
+export default function ChatGizaMediaFeed({
+  onClose,
+  onWidthChange,
+}: {
+  onClose: () => void;
+  // Reports how much horizontal space this panel actually occupies (0 when
+  // it isn't docked, e.g. full-screen expanded or below the dock breakpoint)
+  // so the chat column in page.tsx can push over by exactly that much
+  // instead of covering/being covered by it.
+  onWidthChange?: (width: number) => void;
+}) {
   const { data: session } = useSession();
   // Opens docked to the side by default so Ask stays usable and visible
   // alongside it -- expanded is an explicit opt-in, not persisted, so it
@@ -449,6 +459,7 @@ export default function ChatGizaMediaFeed({ onClose }: { onClose: () => void }) 
   // Only docks (and so is only resizable) at xl+ -- below that the panel is
   // always full-width, same breakpoint the Tailwind classes below use.
   const [canDock, setCanDock] = useState(true);
+  const [is2xl, setIs2xl] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem("chatgiza:quantara-panel-width");
@@ -463,6 +474,20 @@ export default function ChatGizaMediaFeed({ onClose }: { onClose: () => void }) 
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);
   }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1536px)");
+    const update = () => setIs2xl(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  const dockedWidth = panelWidth ?? (is2xl ? 720 : 600);
+  useEffect(() => {
+    onWidthChange?.(!expanded && canDock ? dockedWidth : 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expanded, canDock, dockedWidth]);
 
   function onResizeMove(e: PointerEvent) {
     const drag = dragRef.current;

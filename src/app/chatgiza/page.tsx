@@ -404,6 +404,12 @@ function ChatGizaInner() {
   const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [mediaFeedOpen, setMediaFeedOpen] = useState(false);
+  // How much space the docked Quantara panel actually occupies right now --
+  // reported live by ChatGizaMediaFeed itself (0 while it's not docked, e.g.
+  // full-screen expanded or below its dock breakpoint) so the chat column's
+  // margin below always matches its real, user-resized width instead of a
+  // fixed guess.
+  const [quantaraWidth, setQuantaraWidth] = useState(0);
   const [ebookView, setEbookView] = useState<{ type: "library" } | { type: "editor"; id: string } | null>(null);
   const [liveVisionOpen, setLiveVisionOpen] = useState(false);
   const [projectsOpen, setProjectsOpen] = useState(false);
@@ -1372,7 +1378,9 @@ function ChatGizaInner() {
         />
       )}
 
-      {mediaFeedOpen && <ChatGizaMediaFeed onClose={() => setMediaFeedOpen(false)} />}
+      {mediaFeedOpen && (
+        <ChatGizaMediaFeed onClose={() => setMediaFeedOpen(false)} onWidthChange={setQuantaraWidth} />
+      )}
 
       {liveVisionOpen && <LiveVisionPanel onClose={() => setLiveVisionOpen(false)} />}
 
@@ -1424,19 +1432,22 @@ function ChatGizaInner() {
       )}
 
       <div
-        className={`relative flex flex-1 flex-col overflow-hidden transition-[margin] duration-300 ${
-          mediaFeedOpen ? "xl:mr-[600px] 2xl:mr-[720px]" : ""
-        }`}
-        // Opening Browse or the Task panel shrinks this column by that
-        // panel's own width (plus its edge gap) instead of letting the
-        // fixed-position panel just float on top and cover the composer --
-        // closing it (or dragging Browse narrower) gives that space back.
+        className="relative flex flex-1 flex-col overflow-hidden transition-[margin] duration-300"
+        // Opening Browse, the Task panel, or Quantara shrinks this column by
+        // that panel's own current width (plus its edge gap, where it has
+        // one) instead of letting the fixed-position panel just float on top
+        // and cover the composer -- closing it (or dragging it narrower)
+        // gives that space back. Quantara reports 0 while it isn't actually
+        // docked (full-screen expanded, or below its own dock breakpoint),
+        // so no margin is added in those cases.
         style={
           browsePanelOpen
             ? { marginRight: browseWidth + 8 }
             : taskPanelOpen
               ? { marginRight: 340 }
-              : undefined
+              : mediaFeedOpen && quantaraWidth
+                ? { marginRight: quantaraWidth }
+                : undefined
         }
       >
         {!standalone && (
