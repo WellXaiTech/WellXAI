@@ -1296,10 +1296,6 @@ function ChatGizaInner() {
         onDelete={deleteConversation}
         onShare={shareConversation}
         onOpenLibrary={() => setLibraryOpen(true)}
-        // Quantara no longer has its own close button in the panel itself
-        // (removed along with its old header row), so clicking its sidebar
-        // entry again while it's open is now the only way to close it.
-        onOpenMedia={() => setMediaFeedOpen((v) => !v)}
         onOpenEbook={() => setEbookView({ type: "library" })}
         onOpenLiveVision={() => setLiveVisionOpen(true)}
         onOpenCode={() => setCodeOpen(true)}

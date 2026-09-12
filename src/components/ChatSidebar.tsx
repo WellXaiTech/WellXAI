@@ -290,22 +290,34 @@ const MoreDotsIcon = (
 function NavItem({
   icon,
   label,
+  href,
   onClick,
   trailing,
 }: {
   icon: React.ReactNode;
   label: string;
+  // A real link (e.g. Quantara's own standalone page) instead of an
+  // in-app action -- renders as an <a> so it's a genuine navigable URL
+  // (open in new tab, copy link, etc.) rather than a button.
+  href?: string;
   onClick?: () => void;
   trailing?: React.ReactNode;
 }) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex h-10 w-full items-center gap-2.5 rounded-xl px-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-2"
-    >
+  const className = "flex h-10 w-full items-center gap-2.5 rounded-xl px-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-2";
+  const content = (
+    <>
       <span className="flex h-5 w-5 shrink-0 items-center justify-center text-muted">{icon}</span>
       {label}
       {trailing && <span className="ml-auto">{trailing}</span>}
+    </>
+  );
+  return href ? (
+    <Link href={href} onClick={onClick} className={className}>
+      {content}
+    </Link>
+  ) : (
+    <button onClick={onClick} className={className}>
+      {content}
     </button>
   );
 }
@@ -1126,7 +1138,6 @@ export default function ChatSidebar({
   onNewChat,
   onRename,
   onOpenLibrary,
-  onOpenMedia,
   onOpenEbook,
   onOpenLiveVision,
   onOpenCode,
@@ -1168,7 +1179,6 @@ export default function ChatSidebar({
   onNewChat: () => void;
   onRename: (id: string, title: string) => void;
   onOpenLibrary: () => void;
-  onOpenMedia: () => void;
   onOpenEbook: () => void;
   onOpenLiveVision: () => void;
   onOpenCode: () => void;
@@ -1485,7 +1495,9 @@ export default function ChatSidebar({
             <NavItem icon={SearchIcon} label="Search chats" onClick={closeMobileThen(onOpenSearch)} />
             <NavItem icon={AutomationIcon} label="Automations" onClick={closeMobileThen(onOpenScheduled)} />
             <NavItem icon={BookIcon} label="E-book" onClick={closeMobileThen(onOpenEbook)} />
-            <NavItem icon={QuantaraIcon} label="Quantara" onClick={closeMobileThen(onOpenMedia)} />
+            {/* Its own real page (chatgiza.com/quantara) now, not the
+                in-chat docked panel -- a genuine link, not a button action. */}
+            <NavItem icon={QuantaraIcon} label="Quantara" href="/quantara" onClick={closeMobileThen(() => {})} />
           </div>
 
         <div className="mt-3 pt-1">
