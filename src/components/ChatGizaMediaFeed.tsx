@@ -37,82 +37,6 @@ const MAX_IMAGE_DIMENSION = 1080;
 const MAX_IMAGES_PER_POST = 10;
 const ALLOWED_VIDEO_MIME = new Set(["video/mp4", "video/webm", "video/quicktime"]);
 
-const BackIcon = (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M15 18l-6-6 6-6" />
-  </svg>
-);
-const SettingsGearIcon = (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
-    <circle cx="12" cy="12" r="3" />
-  </svg>
-);
-const ProfileIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17.925 20.056a6 6 0 0 0-11.851.001" />
-    <circle cx="12" cy="11" r="4" />
-    <circle cx="12" cy="12" r="10" />
-  </svg>
-);
-const PremiumIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z" />
-    <path d="M5 21h14" />
-  </svg>
-);
-const CommunitiesIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-    <path d="M16 3.128a4 4 0 0 1 0 7.744" />
-    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-    <circle cx="9" cy="7" r="4" />
-  </svg>
-);
-const BookmarksIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z" />
-  </svg>
-);
-const ListsIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 5h.01" />
-    <path d="M3 12h.01" />
-    <path d="M3 19h.01" />
-    <path d="M8 5h13" />
-    <path d="M8 12h13" />
-    <path d="M8 19h13" />
-  </svg>
-);
-const CreatorStudioIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="m12.296 3.464 3.02 3.956" />
-    <path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3z" />
-    <path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-    <path d="m6.18 5.276 3.1 3.899" />
-  </svg>
-);
-const MoonIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
-  </svg>
-);
-const ExpandIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M15 3h6v6" />
-    <path d="M9 21H3v-6" />
-    <path d="M21 3l-7 7" />
-    <path d="M3 21l7-7" />
-  </svg>
-);
-const CollapseIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 3H3v6" />
-    <path d="M15 21h6v-6" />
-    <path d="M3 3l7 7" />
-    <path d="M21 21l-7-7" />
-  </svg>
-);
 const ImageIcon = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -489,22 +413,15 @@ function PostCard({ post, myId, onLike, onDelete }: {
 }
 
 export default function ChatGizaMediaFeed({
-  onClose,
   onWidthChange,
 }: {
-  onClose: () => void;
   // Reports how much horizontal space this panel actually occupies (0 when
-  // it isn't docked, e.g. full-screen expanded or below the dock breakpoint)
-  // so the chat column in page.tsx can push over by exactly that much
-  // instead of covering/being covered by it.
+  // it isn't docked, e.g. below the dock breakpoint) so the chat column in
+  // page.tsx can push over by exactly that much instead of
+  // covering/being covered by it.
   onWidthChange?: (width: number) => void;
 }) {
   const { data: session } = useSession();
-  // Opens docked to the side by default so Ask stays usable and visible
-  // alongside it -- expanded is an explicit opt-in, not persisted, so it
-  // always starts back in the side-panel mode next time it's opened.
-  const [expanded, setExpanded] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   // Docked-mode width is user-resizable (drag the left edge) and remembered
   // per-device, same as quantaraDark below -- null means "use the default
   // xl:/2xl: Tailwind width" until the user drags it at least once.
@@ -540,9 +457,9 @@ export default function ChatGizaMediaFeed({
 
   const dockedWidth = panelWidth ?? (is2xl ? 720 : 600);
   useEffect(() => {
-    onWidthChange?.(!expanded && canDock ? dockedWidth : 0);
+    onWidthChange?.(canDock ? dockedWidth : 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expanded, canDock, dockedWidth]);
+  }, [canDock, dockedWidth]);
 
   function onResizeMove(e: PointerEvent) {
     const drag = dragRef.current;
@@ -614,11 +531,6 @@ export default function ChatGizaMediaFeed({
     const stored = localStorage.getItem("chatgiza:quantara-dark");
     if (stored !== null) setQuantaraDark(stored === "true");
   }, []);
-
-  function toggleQuantaraDark(next: boolean) {
-    setQuantaraDark(next);
-    localStorage.setItem("chatgiza:quantara-dark", String(next));
-  }
 
   function showComingSoon(label: string) {
     setToast(`${label} — coming soon`);
@@ -757,16 +669,11 @@ export default function ChatGizaMediaFeed({
     // throughout this file and its child components for free.
     <div
       ref={panelRef}
-      className={
-        expanded
-          ? "fixed inset-0 z-50 flex flex-col bg-background"
-          // Side-panel mode only kicks in once the viewport is wide enough
-          // for a docked panel to leave the chat genuinely usable next to
-          // it (see the matching xl:/2xl: margin on the chat column in
-          // page.tsx) -- below that it falls through to the same full-width
-          // "w-full" as expanded mode, since there's no room to dock.
-          : "fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border bg-background shadow-2xl xl:w-[600px] 2xl:w-[720px]"
-      }
+      // Side-panel mode only docks once the viewport is wide enough to
+      // leave the chat genuinely usable next to it (see the matching
+      // reported width read by page.tsx) -- below that it falls through to
+      // full-width, since there's no room to dock.
+      className="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border bg-background shadow-2xl xl:w-[600px] 2xl:w-[720px]"
       style={{
         ...(quantaraDark
           ? ({
@@ -785,10 +692,10 @@ export default function ChatGizaMediaFeed({
               "--border": "#dde0e8",
               "--muted": "#6b7280",
             } as React.CSSProperties)),
-        ...(canDock && !expanded && panelWidth ? { width: panelWidth } : {}),
+        ...(canDock && panelWidth ? { width: panelWidth } : {}),
       }}
     >
-      {canDock && !expanded && (
+      {canDock && (
         <div
           onPointerDown={beginResize}
           aria-hidden="true"
@@ -814,8 +721,7 @@ export default function ChatGizaMediaFeed({
         <div className="flex items-center gap-3 overflow-x-auto sm:gap-4">
           <button
             type="button"
-            onClick={() => setSettingsOpen(false)}
-            className="flex shrink-0 flex-col items-center gap-0.5 border-b-2 border-foreground px-1 pb-1.5 pt-1 text-foreground"
+            className="flex shrink-0 flex-col items-center gap-0.5 border-b-2 border-transparent px-1 pb-1.5 pt-1 text-foreground"
           >
             {NavHomeIcon}
             <span className="text-[11px] font-medium">Home</span>
@@ -847,11 +753,8 @@ export default function ChatGizaMediaFeed({
           <button
             type="button"
             onClick={() => showComingSoon("Notifications")}
-            className="relative flex shrink-0 flex-col items-center gap-0.5 border-b-2 border-transparent px-1 pb-1.5 pt-1 text-muted transition-colors hover:text-foreground"
+            className="flex shrink-0 flex-col items-center gap-0.5 border-b-2 border-transparent px-1 pb-1.5 pt-1 text-muted transition-colors hover:text-foreground"
           >
-            <span className="absolute -top-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold text-white">
-              11
-            </span>
             {NavBellIcon}
             <span className="text-[11px]">Notifications</span>
           </button>
@@ -886,77 +789,9 @@ export default function ChatGizaMediaFeed({
             </span>
           </button>
         </div>
-        <div className="ml-auto flex shrink-0 items-center gap-1">
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            aria-label={expanded ? "Dock to side" : "Expand to full screen"}
-            className="rounded-full p-2 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
-          >
-            {expanded ? CollapseIcon : ExpandIcon}
-          </button>
-          {!settingsOpen && (
-            <button
-              onClick={() => setSettingsOpen(true)}
-              aria-label="Quantara settings"
-              className="rounded-full p-2 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
-            >
-              {SettingsGearIcon}
-            </button>
-          )}
-          <button
-            onClick={settingsOpen ? () => setSettingsOpen(false) : onClose}
-            aria-label={settingsOpen ? "Back to Quantara" : "Close Quantara"}
-            className="rounded-full p-2 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
-          >
-            {BackIcon}
-          </button>
-        </div>
       </div>
 
-      {settingsOpen ? (
-        <div className={`flex-1 overflow-y-auto py-4 ${expanded ? "px-6 sm:px-10" : "px-4"}`}>
-          <div className="mx-auto max-w-2xl">
-            {[
-              { icon: ProfileIcon, label: "Profile" },
-              { icon: PremiumIcon, label: "Premium" },
-              { icon: CommunitiesIcon, label: "Communities" },
-              { icon: BookmarksIcon, label: "Bookmarks" },
-              { icon: ListsIcon, label: "Lists" },
-              { icon: CreatorStudioIcon, label: "Creator Studio" },
-            ].map((row) => (
-              <button
-                key={row.label}
-                onClick={() => showComingSoon(row.label)}
-                className="flex w-full items-center gap-4 rounded-xl px-2 py-3.5 text-left transition-colors hover:bg-surface-2"
-              >
-                <span className="text-foreground">{row.icon}</span>
-                <span className="text-[15px] font-medium">{row.label}</span>
-              </button>
-            ))}
-
-            <div className="my-2 border-t border-border" />
-
-            <div className="flex w-full items-center gap-4 px-2 py-3.5">
-              <span className="text-foreground">{MoonIcon}</span>
-              <span className="flex-1 text-[15px] font-medium">Dark Mode</span>
-              <button
-                onClick={() => toggleQuantaraDark(!quantaraDark)}
-                role="switch"
-                aria-checked={quantaraDark}
-                aria-label="Toggle Quantara dark mode"
-                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${quantaraDark ? "bg-foreground" : "bg-surface-2"}`}
-              >
-                <span
-                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-background transition-transform ${
-                    quantaraDark ? "translate-x-[22px]" : "translate-x-0.5"
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : (
-      <div className={`flex-1 overflow-y-auto py-6 ${expanded ? "px-6 sm:px-10" : "px-4"}`}>
+      <div className="flex-1 overflow-y-auto px-4 py-6">
         <div className="mx-auto max-w-2xl space-y-4">
           <div className="rounded-2xl border border-border p-4">
             <textarea
@@ -1064,7 +899,6 @@ export default function ChatGizaMediaFeed({
           )}
         </div>
       </div>
-      )}
 
       {toast && (
         <div className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-surface-2 px-4 py-2 text-sm shadow-lg">
