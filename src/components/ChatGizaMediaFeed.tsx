@@ -657,7 +657,9 @@ export default function ChatGizaMediaFeed({
     return () => mq.removeEventListener("change", update);
   }, []);
 
-  const dockedWidth = panelWidth ?? (is2xl ? 720 : 600);
+  // Wider defaults -- this panel is where photos/videos on posts actually
+  // get seen and posted, so it needs real room, not a cramped strip.
+  const dockedWidth = panelWidth ?? (is2xl ? 1000 : 800);
   useEffect(() => {
     onWidthChange?.(canDock ? dockedWidth : 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -674,7 +676,7 @@ export default function ChatGizaMediaFeed({
     if (!drag) return;
     // Right-docked panel -- dragging the left edge further left (smaller
     // clientX) should widen it.
-    const next = Math.min(1000, Math.max(420, drag.startWidth + (drag.startX - e.clientX)));
+    const next = Math.min(1400, Math.max(420, drag.startWidth + (drag.startX - e.clientX)));
     setPanelWidth(next);
   }
 
@@ -879,7 +881,7 @@ export default function ChatGizaMediaFeed({
       className={
         standalone
           ? "relative flex min-h-screen w-full flex-col bg-background text-foreground"
-          : "fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border bg-background text-foreground shadow-2xl xl:w-[600px] 2xl:w-[720px]"
+          : "fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border bg-background text-foreground shadow-2xl xl:w-[800px] 2xl:w-[1000px]"
       }
       style={{
         ...(quantaraDark
@@ -999,7 +1001,10 @@ export default function ChatGizaMediaFeed({
       </div>
 
       <div className="flex-1 overflow-y-auto bg-surface-2 px-3 py-6">
-        <div className={`mx-auto flex items-start gap-2 ${showSidebars ? "" : "max-w-2xl"}`}>
+        {/* No max-width cap -- the feed (and the photos/videos in it) should
+            use the panel's full real width, not sit in a narrow
+            reading-width column with dead space on either side. */}
+        <div className="mx-auto flex items-start gap-2">
           {showSidebars && (
             <ProfileSidebarCard
               name={session?.user?.name ?? "Guest"}
