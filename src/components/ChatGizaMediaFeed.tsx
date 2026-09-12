@@ -799,17 +799,19 @@ export default function ChatGizaMediaFeed({
           Decorative placeholder for now -- every tab besides Home (which
           already has a real destination: back to the feed) shows a
           "coming soon" toast rather than claiming a feature that doesn't
-          exist yet. */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-border bg-surface px-3 py-2">
+          exist yet. Close/settings/expand -- previously their own separate
+          header row -- now live in the compact cluster at the far right of
+          this same bar instead, the standard spot for panel controls. */}
+      <div className="flex shrink-0 items-center gap-3 border-b border-border bg-surface px-3 pb-2 pt-3">
         <button
           type="button"
           onClick={() => showComingSoon("Search")}
-          className="flex h-9 min-w-0 max-w-[220px] flex-1 items-center gap-2 rounded-full border border-border bg-background px-3 text-sm text-muted transition-colors hover:border-foreground/30"
+          className="flex h-9 min-w-0 max-w-[360px] flex-1 items-center gap-2 rounded-full border border-border bg-background px-3 text-sm text-muted transition-colors hover:border-foreground/30"
         >
           {NavSearchIcon}
           <span className="truncate">Search</span>
         </button>
-        <div className="ml-auto flex items-center gap-3 overflow-x-auto sm:gap-4">
+        <div className="flex items-center gap-3 overflow-x-auto sm:gap-4">
           <button
             type="button"
             onClick={() => setSettingsOpen(false)}
@@ -884,32 +886,31 @@ export default function ChatGizaMediaFeed({
             </span>
           </button>
         </div>
-      </div>
-      <div className={`flex items-center gap-3 border-b border-border py-4 ${expanded ? "px-6 sm:px-10" : "px-4"}`}>
-        <button
-          onClick={settingsOpen ? () => setSettingsOpen(false) : onClose}
-          aria-label={settingsOpen ? "Back to Quantara" : "Close Quantara"}
-          className="rounded-full p-2 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
-        >
-          {BackIcon}
-        </button>
-        <h1 className="flex-1 font-serif text-2xl">{settingsOpen ? "Quantara Settings" : "Quantara"}</h1>
-        {!settingsOpen && (
+        <div className="ml-auto flex shrink-0 items-center gap-1">
           <button
-            onClick={() => setSettingsOpen(true)}
-            aria-label="Quantara settings"
+            onClick={() => setExpanded((v) => !v)}
+            aria-label={expanded ? "Dock to side" : "Expand to full screen"}
             className="rounded-full p-2 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
           >
-            {SettingsGearIcon}
+            {expanded ? CollapseIcon : ExpandIcon}
           </button>
-        )}
-        <button
-          onClick={() => setExpanded((v) => !v)}
-          aria-label={expanded ? "Dock to side" : "Expand to full screen"}
-          className="rounded-full p-2 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
-        >
-          {expanded ? CollapseIcon : ExpandIcon}
-        </button>
+          {!settingsOpen && (
+            <button
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Quantara settings"
+              className="rounded-full p-2 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+            >
+              {SettingsGearIcon}
+            </button>
+          )}
+          <button
+            onClick={settingsOpen ? () => setSettingsOpen(false) : onClose}
+            aria-label={settingsOpen ? "Back to Quantara" : "Close Quantara"}
+            className="rounded-full p-2 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+          >
+            {BackIcon}
+          </button>
+        </div>
       </div>
 
       {settingsOpen ? (
