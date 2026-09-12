@@ -500,7 +500,6 @@ function PostCard({ post, myId, onLike, onDelete }: {
   onDelete: (id: string) => void;
 }) {
   const [commentsOpen, setCommentsOpen] = useState(false);
-  const [following, setFollowing] = useState(false);
   const sentiment = SENTIMENTS.find((s) => s.key === post.sentiment);
   const isOwnPost = post.authorId === myId;
 
@@ -518,7 +517,7 @@ function PostCard({ post, myId, onLike, onDelete }: {
           {sentiment && (
             <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${sentiment.className}`}>{sentiment.label}</span>
           )}
-          {isOwnPost ? (
+          {isOwnPost && (
             <button
               onClick={() => {
                 if (confirm("Delete this post?")) onDelete(post.id);
@@ -527,15 +526,6 @@ function PostCard({ post, myId, onLike, onDelete }: {
               className="rounded-md p-1.5 text-muted transition-colors hover:text-[#b3413e]"
             >
               {TrashIcon}
-            </button>
-          ) : (
-            <button
-              onClick={() => setFollowing((v) => !v)}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
-                following ? "bg-surface-2 text-muted" : "bg-foreground text-background"
-              }`}
-            >
-              {following ? "Following" : "Follow"}
             </button>
           )}
         </div>
@@ -680,7 +670,6 @@ export default function ChatGizaMediaFeed({
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
-  const [sentiment, setSentiment] = useState<Sentiment | null>(null);
   const [posting, setPosting] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
 
@@ -786,7 +775,7 @@ export default function ChatGizaMediaFeed({
       const res = await fetch("/api/media/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: text.trim(), imageDataUrls: imagePreviews, videoUrl, sentiment }),
+        body: JSON.stringify({ text: text.trim(), imageDataUrls: imagePreviews, videoUrl, sentiment: null }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to post");
@@ -795,7 +784,6 @@ export default function ChatGizaMediaFeed({
       setText("");
       setImagePreviews([]);
       clearVideo();
-      setSentiment(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to post");
     } finally {
@@ -1011,20 +999,6 @@ export default function ChatGizaMediaFeed({
               </div>
             )}
 
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              {SENTIMENTS.map((s) => (
-                <button
-                  key={s.key}
-                  onClick={() => setSentiment((prev) => (prev === s.key ? null : s.key))}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                    sentiment === s.key ? s.className : "border-border text-muted hover:text-foreground"
-                  }`}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-
             <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
               <div className="flex items-center gap-1">
                 <input
@@ -1070,7 +1044,7 @@ export default function ChatGizaMediaFeed({
           ) : posts.length === 0 ? (
             <p className="py-16 text-center text-sm text-muted">No posts yet — be the first to share something.</p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-2">
               {posts.map((post) => (
                 <PostCard key={post.id} post={post} myId={session?.user?.id} onLike={handleLike} onDelete={handleDelete} />
               ))}
