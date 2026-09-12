@@ -440,10 +440,10 @@ export default function ChatGizaMediaFeed({ onClose }: { onClose: () => void }) 
   // always starts back in the side-panel mode next time it's opened.
   const [expanded, setExpanded] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  // Quantara's own light/dark toggle, independent of the main site's theme
-  // -- mirrors the Android app's ExtraDarkMode preference (also on by
-  // default, also stored per-device rather than synced to the account).
-  const [quantaraDark, setQuantaraDark] = useState(true);
+  // Quantara's own light/dark toggle, independent of the main site's theme.
+  // Defaults to light/white now (still toggleable, and still overridden by
+  // any previously-stored per-device preference below).
+  const [quantaraDark, setQuantaraDark] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [posts, setPosts] = useState<MediaPost[] | null>(null);
   const [error, setError] = useState<string | null>(null);
