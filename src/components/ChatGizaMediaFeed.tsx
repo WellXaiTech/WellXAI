@@ -950,8 +950,8 @@ export default function ChatGizaMediaFeed({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto bg-surface-2 px-4 py-6">
-        <div className={`mx-auto flex items-start gap-4 ${showSidebars ? "max-w-4xl" : "max-w-2xl"}`}>
+      <div className="flex-1 overflow-y-auto bg-surface-2 px-3 py-6">
+        <div className={`mx-auto flex items-start gap-3 ${showSidebars ? "" : "max-w-2xl"}`}>
           {showSidebars && (
             <ProfileSidebarCard
               name={session?.user?.name ?? "Guest"}
