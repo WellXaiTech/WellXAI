@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
-import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 type Sentiment = "bullish" | "neutral" | "bearish";
 
@@ -32,24 +31,6 @@ type Comment = {
   createdAt: number;
 };
 
-const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
-const MAX_IMAGE_DIMENSION = 1080;
-const MAX_IMAGES_PER_POST = 10;
-const ALLOWED_VIDEO_MIME = new Set(["video/mp4", "video/webm", "video/quicktime"]);
-
-const ImageIcon = (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <rect x="3" y="3" width="18" height="18" rx="2" />
-    <circle cx="8.5" cy="8.5" r="1.5" />
-    <path d="M21 15l-5-5L5 21" />
-  </svg>
-);
-const VideoIcon = (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <rect x="3" y="5" width="14" height="14" rx="2" />
-    <path d="M17 9l4-2v10l-4-2Z" />
-  </svg>
-);
 const HeartIcon = ({ filled }: { filled: boolean }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
     <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8Z" />
@@ -77,11 +58,6 @@ const SendIcon = (
 const BookmarkIcon = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M19 21 12 16l-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16Z" />
-  </svg>
-);
-const CloseSmallIcon = (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-    <path d="M18 6 6 18M6 6l12 12" />
   </svg>
 );
 const TrashIcon = (
@@ -204,36 +180,6 @@ function timeAgo(ts: number): string {
   return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-// Downscales + re-encodes as JPEG so a phone camera photo doesn't blow past
-// the post size cap -- same maxDim/quality approach as the Android app's
-// uriToPostImageDataUrl.
-async function compressImageFile(file: File): Promise<string> {
-  const original = await readFileAsDataUrl(file);
-  const img = new Image();
-  await new Promise((resolve, reject) => {
-    img.onload = resolve;
-    img.onerror = reject;
-    img.src = original;
-  });
-  const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(img.width, img.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(img.width * scale);
-  canvas.height = Math.round(img.height * scale);
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return original;
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL("image/jpeg", 0.85);
-}
-
 function Avatar({ src, name }: { src: string | null; name: string }) {
   return src ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -261,15 +207,15 @@ function ProfileSidebarCard({
   onAction: (label: string) => void;
 }) {
   return (
-    <div className="w-[240px] shrink-0 space-y-2">
+    <div className="space-y-2">
       <div className="overflow-hidden rounded-lg border border-border bg-background">
-        <div className="h-14 bg-gradient-to-r from-amber-300 to-orange-500" />
-        <div className="-mt-7 px-3 pb-3">
+        <div className="h-2 bg-gradient-to-r from-amber-300 to-orange-500" />
+        <div className="px-3 pb-3 pt-2">
           {image ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={image} alt="" className="h-14 w-14 rounded-full border-4 border-background object-cover" />
+            <img src={image} alt="" className="h-12 w-12 rounded-full object-cover" />
           ) : (
-            <span className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-background bg-surface-2 text-lg font-semibold">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-lg font-semibold">
               {name[0]?.toUpperCase() ?? "?"}
             </span>
           )}
@@ -327,7 +273,7 @@ function ProfileSidebarCard({
 
 function SuggestionsSidebarCard({ onAction }: { onAction: (label: string) => void }) {
   return (
-    <div className="w-[240px] shrink-0 space-y-2">
+    <div className="space-y-2">
       <div className="rounded-lg border border-border bg-background p-3">
         <p className="mb-1.5 text-sm font-semibold">Today&apos;s puzzles</p>
         <div className="space-y-1">
@@ -667,14 +613,7 @@ export default function ChatGizaMediaFeed({
   const [error, setError] = useState<string | null>(null);
 
   const [text, setText] = useState("");
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
-
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
 
   function loadFeed() {
     fetch("/api/media/posts")
@@ -697,98 +636,25 @@ export default function ChatGizaMediaFeed({
     setTimeout(() => setToast(null), 2000);
   }
 
-  async function handlePickImages(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []).slice(0, MAX_IMAGES_PER_POST - imagePreviews.length);
-    e.target.value = "";
-    if (files.length === 0) return;
-    clearVideo();
-    try {
-      const compressed = await Promise.all(files.map(compressImageFile));
-      setImagePreviews((prev) => [...prev, ...compressed].slice(0, MAX_IMAGES_PER_POST));
-    } catch {
-      setError("Couldn't read one of those photos");
-    }
-  }
-
-  function removeImageAt(index: number) {
-    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  function handlePickVideo(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    if (!ALLOWED_VIDEO_MIME.has(file.type)) {
-      setError("Video must be MP4, WebM, or MOV");
-      return;
-    }
-    if (file.size > MAX_VIDEO_BYTES) {
-      setError("Video must be under 50MB");
-      return;
-    }
-    setImagePreviews([]);
-    setVideoFile(file);
-    setVideoPreviewUrl(URL.createObjectURL(file));
-  }
-
-  function clearVideo() {
-    if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl);
-    setVideoFile(null);
-    setVideoPreviewUrl(null);
-  }
-
-  async function uploadVideoAndGetUrl(file: File): Promise<string | null> {
-    setUploadStatus("Uploading video…");
-    const slotRes = await fetch("/api/media/video-upload-url", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mime: file.type }),
-    });
-    if (!slotRes.ok) return null;
-    const slot = await slotRes.json();
-
-    const { error } = await supabaseBrowser.storage.from("media-video").uploadToSignedUrl(slot.path, slot.token, file);
-    if (error) {
-      console.error("video upload error:", error);
-      return null;
-    }
-    return slot.publicUrl as string;
-  }
-
   async function handlePost() {
-    if (!text.trim() && imagePreviews.length === 0 && !videoFile) return;
+    if (!text.trim()) return;
     setPosting(true);
     setError(null);
     try {
-      let videoUrl: string | null = null;
-      if (videoFile) {
-        videoUrl = await uploadVideoAndGetUrl(videoFile);
-        if (!videoUrl) {
-          setError("Couldn't upload that video, try again");
-          setPosting(false);
-          setUploadStatus(null);
-          return;
-        }
-      }
-      setUploadStatus(null);
-
       const res = await fetch("/api/media/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: text.trim(), imageDataUrls: imagePreviews, videoUrl, sentiment: null }),
+        body: JSON.stringify({ text: text.trim(), imageDataUrls: [], videoUrl: null, sentiment: null }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to post");
 
       setPosts((prev) => [data.post, ...(prev ?? [])]);
       setText("");
-      setImagePreviews([]);
-      clearVideo();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to post");
     } finally {
       setPosting(false);
-      setUploadStatus(null);
     }
   }
 
@@ -817,8 +683,6 @@ export default function ChatGizaMediaFeed({
       loadFeed();
     }
   }
-
-  const canPost = (text.trim() || imagePreviews.length > 0 || videoFile) && !posting;
 
   return (
     // Independent of the site's light/dark theme setting -- quantaraDark
@@ -951,90 +815,25 @@ export default function ChatGizaMediaFeed({
       </div>
 
       <div className="flex-1 overflow-y-auto bg-surface-2 px-3 py-6">
-        <div className={`mx-auto flex items-start gap-3 ${showSidebars ? "" : "max-w-2xl"}`}>
-          {showSidebars && (
-            <ProfileSidebarCard
-              name={session?.user?.name ?? "Guest"}
-              image={session?.user?.image ?? null}
-              onAction={showComingSoon}
-            />
-          )}
-          <div className="min-w-0 flex-1 space-y-4">
+        <div className={`mx-auto flex items-start gap-2 ${showSidebars ? "" : "max-w-2xl"}`}>
+          <div className="min-w-0 flex-1 space-y-2">
           <div className="rounded-2xl border border-border bg-background p-4">
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                // Enter posts, Shift+Enter still inserts a newline -- no
+                // separate Post button anymore.
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handlePost();
+                }
+              }}
               placeholder="Share something with Quantara…"
               rows={3}
               className="w-full resize-none bg-transparent text-[15px] outline-none placeholder:text-muted"
             />
-
-            {imagePreviews.length > 0 && (
-              <div className="mt-2 flex gap-2 overflow-x-auto">
-                {imagePreviews.map((src, i) => (
-                  <div key={i} className="relative shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={src} alt="" className="h-24 w-24 rounded-xl object-cover" />
-                    <button
-                      onClick={() => removeImageAt(i)}
-                      aria-label="Remove photo"
-                      className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
-                    >
-                      {CloseSmallIcon}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            {videoPreviewUrl && (
-              <div className="relative mt-2 inline-block">
-                <video src={videoPreviewUrl} controls className="max-h-64 rounded-xl bg-black" />
-                <button
-                  onClick={clearVideo}
-                  aria-label="Remove video"
-                  className="absolute right-2 top-2 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
-                >
-                  {CloseSmallIcon}
-                </button>
-              </div>
-            )}
-
-            <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-              <div className="flex items-center gap-1">
-                <input
-                  ref={imageInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={handlePickImages}
-                />
-                <button
-                  onClick={() => imageInputRef.current?.click()}
-                  aria-label="Attach photos"
-                  disabled={imagePreviews.length >= MAX_IMAGES_PER_POST}
-                  className="rounded-full p-2 text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-40"
-                >
-                  {ImageIcon}
-                </button>
-                <input ref={videoInputRef} type="file" accept="video/mp4,video/webm,video/quicktime" className="hidden" onChange={handlePickVideo} />
-                <button
-                  onClick={() => videoInputRef.current?.click()}
-                  aria-label="Attach video"
-                  className="rounded-full p-2 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
-                >
-                  {VideoIcon}
-                </button>
-                {uploadStatus && <span className="ml-1 text-xs text-muted">{uploadStatus}</span>}
-              </div>
-              <button
-                onClick={handlePost}
-                disabled={!canPost}
-                className="rounded-full bg-foreground px-5 py-2 text-sm font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-40"
-              >
-                {posting ? "Posting…" : "Post"}
-              </button>
-            </div>
+            {posting && <p className="mt-2 text-xs text-muted">Posting…</p>}
           </div>
 
           {error && <p className="text-sm text-red-500">{error}</p>}
@@ -1051,7 +850,16 @@ export default function ChatGizaMediaFeed({
             </div>
           )}
           </div>
-          {showSidebars && <SuggestionsSidebarCard onAction={showComingSoon} />}
+          {showSidebars && (
+            <div className="flex w-[240px] shrink-0 flex-col gap-2">
+              <ProfileSidebarCard
+                name={session?.user?.name ?? "Guest"}
+                image={session?.user?.image ?? null}
+                onAction={showComingSoon}
+              />
+              <SuggestionsSidebarCard onAction={showComingSoon} />
+            </div>
+          )}
         </div>
       </div>
 
