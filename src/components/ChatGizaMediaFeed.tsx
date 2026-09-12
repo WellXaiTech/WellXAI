@@ -70,6 +70,11 @@ const ChevronRightIcon = (
     <path d="M9 18l6-6-6-6" />
   </svg>
 );
+const CloseIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <path d="M18 6 6 18M6 6l12 12" />
+  </svg>
+);
 const BriefcaseIcon = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="7" width="18" height="13" rx="2" />
@@ -395,42 +400,102 @@ function CommentsPanel({ postId }: { postId: string }) {
 
 function MediaCarousel({ imageUrls }: { imageUrls: string[] }) {
   const [index, setIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   if (imageUrls.length === 0) return null;
-  if (imageUrls.length === 1) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={imageUrls[0]} alt="" className="mt-3 max-h-[520px] w-full rounded-xl bg-surface-2 object-contain" />;
-  }
+  const multi = imageUrls.length > 1;
+
   return (
-    <div className="relative mt-3">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={imageUrls[index]} alt="" className="max-h-[520px] w-full rounded-xl bg-surface-2 object-contain" />
-      <span className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-xs font-medium text-white">
-        {index + 1}/{imageUrls.length}
-      </span>
-      {index > 0 && (
-        <button
-          onClick={() => setIndex((i) => i - 1)}
-          aria-label="Previous photo"
-          className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-1.5 text-white hover:bg-black/70"
-        >
-          {ChevronLeftIcon}
-        </button>
-      )}
-      {index < imageUrls.length - 1 && (
-        <button
-          onClick={() => setIndex((i) => i + 1)}
-          aria-label="Next photo"
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-1.5 text-white hover:bg-black/70"
-        >
-          {ChevronRightIcon}
-        </button>
-      )}
-      <div className="mt-2 flex justify-center gap-1.5">
-        {imageUrls.map((_, i) => (
-          <span key={i} className={`h-1.5 w-1.5 rounded-full ${i === index ? "bg-foreground" : "bg-border"}`} />
-        ))}
+    <>
+      <div className="relative mt-3 flex justify-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={imageUrls[index]}
+          alt=""
+          onClick={() => setLightboxOpen(true)}
+          // No w-full here on purpose -- sizing to the image's own
+          // dimensions (capped by max-w/max-h) instead of stretching a
+          // fixed-width box is what stops narrower photos from leaving big
+          // empty bars on either side.
+          className="max-h-[520px] max-w-full cursor-zoom-in rounded-xl object-contain"
+        />
+        {multi && (
+          <span className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-xs font-medium text-white">
+            {index + 1}/{imageUrls.length}
+          </span>
+        )}
+        {multi && index > 0 && (
+          <button
+            onClick={() => setIndex((i) => i - 1)}
+            aria-label="Previous photo"
+            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-1.5 text-white hover:bg-black/70"
+          >
+            {ChevronLeftIcon}
+          </button>
+        )}
+        {multi && index < imageUrls.length - 1 && (
+          <button
+            onClick={() => setIndex((i) => i + 1)}
+            aria-label="Next photo"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-1.5 text-white hover:bg-black/70"
+          >
+            {ChevronRightIcon}
+          </button>
+        )}
       </div>
-    </div>
+      {multi && (
+        <div className="mt-2 flex justify-center gap-1.5">
+          {imageUrls.map((_, i) => (
+            <span key={i} className={`h-1.5 w-1.5 rounded-full ${i === index ? "bg-foreground" : "bg-border"}`} />
+          ))}
+        </div>
+      )}
+
+      {lightboxOpen && (
+        <div
+          onClick={() => setLightboxOpen(false)}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-6"
+        >
+          <button
+            onClick={() => setLightboxOpen(false)}
+            aria-label="Close"
+            className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+          >
+            {CloseIcon}
+          </button>
+          {multi && index > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIndex((i) => i - 1);
+              }}
+              aria-label="Previous photo"
+              className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+            >
+              {ChevronLeftIcon}
+            </button>
+          )}
+          {multi && index < imageUrls.length - 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIndex((i) => i + 1);
+              }}
+              aria-label="Next photo"
+              className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+            >
+              {ChevronRightIcon}
+            </button>
+          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageUrls[index]}
+            alt=""
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
+          />
+        </div>
+      )}
+    </>
   );
 }
 
