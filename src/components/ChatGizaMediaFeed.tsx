@@ -60,11 +60,6 @@ const BookmarkIcon = (
     <path d="M19 21 12 16l-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16Z" />
   </svg>
 );
-const TrashIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-    <path d="m19.5 5.5l-.62 10.025c-.158 2.561-.237 3.842-.88 4.763a4 4 0 0 1-1.2 1.128c-.957.584-2.24.584-4.806.584c-2.57 0-3.855 0-4.814-.585a4 4 0 0 1-1.2-1.13c-.642-.922-.72-2.205-.874-4.77L4.5 5.5M3 5.5h18m-4.944 0l-.683-1.408c-.453-.936-.68-1.403-1.071-1.695a2 2 0 0 0-.275-.172C13.594 2 13.074 2 12.035 2c-1.066 0-1.599 0-2.04.234a2 2 0 0 0-.278.18c-.395.303-.616.788-1.058 1.757L8.053 5.5m1.447 11v-6m5 6v-6" />
-  </svg>
-);
 const ChevronLeftIcon = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M15 18l-6-6 6-6" />
@@ -403,12 +398,12 @@ function MediaCarousel({ imageUrls }: { imageUrls: string[] }) {
   if (imageUrls.length === 0) return null;
   if (imageUrls.length === 1) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={imageUrls[0]} alt="" className="mt-3 aspect-[4/5] w-full rounded-xl object-cover" />;
+    return <img src={imageUrls[0]} alt="" className="mt-3 max-h-[520px] w-full rounded-xl bg-surface-2 object-contain" />;
   }
   return (
     <div className="relative mt-3">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={imageUrls[index]} alt="" className="aspect-[4/5] w-full rounded-xl object-cover" />
+      <img src={imageUrls[index]} alt="" className="max-h-[520px] w-full rounded-xl bg-surface-2 object-contain" />
       <span className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-xs font-medium text-white">
         {index + 1}/{imageUrls.length}
       </span>
@@ -439,15 +434,12 @@ function MediaCarousel({ imageUrls }: { imageUrls: string[] }) {
   );
 }
 
-function PostCard({ post, myId, onLike, onDelete }: {
+function PostCard({ post, onLike }: {
   post: MediaPost;
-  myId: string | undefined;
   onLike: (id: string) => void;
-  onDelete: (id: string) => void;
 }) {
   const [commentsOpen, setCommentsOpen] = useState(false);
   const sentiment = SENTIMENTS.find((s) => s.key === post.sentiment);
-  const isOwnPost = post.authorId === myId;
 
   return (
     <div className="rounded-2xl border border-border bg-background p-4">
@@ -459,22 +451,9 @@ function PostCard({ post, myId, onLike, onDelete }: {
             <p className="text-xs text-muted">{timeAgo(post.createdAt)}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {sentiment && (
-            <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${sentiment.className}`}>{sentiment.label}</span>
-          )}
-          {isOwnPost && (
-            <button
-              onClick={() => {
-                if (confirm("Delete this post?")) onDelete(post.id);
-              }}
-              aria-label="Delete post"
-              className="rounded-md p-1.5 text-muted transition-colors hover:text-[#b3413e]"
-            >
-              {TrashIcon}
-            </button>
-          )}
-        </div>
+        {sentiment && (
+          <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${sentiment.className}`}>{sentiment.label}</span>
+        )}
       </div>
 
       {post.text && <p className="mt-3 whitespace-pre-wrap break-words text-[15px]">{post.text}</p>}
@@ -487,7 +466,7 @@ function PostCard({ post, myId, onLike, onDelete }: {
         // means several full videos competing for bandwidth at once. That
         // reads as "spinning a lot" regardless of how fast the connection
         // is, since it's simultaneous-download contention, not throughput.
-        <video src={post.videoUrl} controls preload="metadata" className="mt-3 aspect-[4/5] w-full rounded-xl bg-black object-cover" />
+        <video src={post.videoUrl} controls preload="metadata" className="mt-3 max-h-[520px] w-full rounded-xl bg-black object-contain" />
       )}
 
       <div className="mt-3 flex items-center gap-4 border-t border-border pt-3">
@@ -675,15 +654,6 @@ export default function ChatGizaMediaFeed({
     }
   }
 
-  async function handleDelete(postId: string) {
-    setPosts((prev) => prev?.filter((p) => p.id !== postId) ?? null);
-    try {
-      await fetch(`/api/media/posts/${postId}`, { method: "DELETE" });
-    } catch {
-      loadFeed();
-    }
-  }
-
   return (
     // Independent of the site's light/dark theme setting -- quantaraDark
     // above controls this instead. Overriding these CSS vars here (instead
@@ -696,7 +666,13 @@ export default function ChatGizaMediaFeed({
       // leave the chat genuinely usable next to it (see the matching
       // reported width read by page.tsx) -- below that it falls through to
       // full-width, since there's no room to dock.
-      className="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border bg-background shadow-2xl xl:w-[600px] 2xl:w-[720px]"
+      // text-foreground here (not just on individual elements) matters:
+      // color is inherited, but only elements that re-declare it actually
+      // re-resolve --foreground at this scope -- without this, any text
+      // below that doesn't set its own text color falls back to the outer
+      // app's (dark-mode) --foreground instead of Quantara's own, showing
+      // up as near-invisible light-gray text on these light cards.
+      className="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border bg-background text-foreground shadow-2xl xl:w-[600px] 2xl:w-[720px]"
       style={{
         ...(quantaraDark
           ? ({
@@ -845,7 +821,7 @@ export default function ChatGizaMediaFeed({
           ) : (
             <div className="space-y-2">
               {posts.map((post) => (
-                <PostCard key={post.id} post={post} myId={session?.user?.id} onLike={handleLike} onDelete={handleDelete} />
+                <PostCard key={post.id} post={post} onLike={handleLike} />
               ))}
             </div>
           )}
