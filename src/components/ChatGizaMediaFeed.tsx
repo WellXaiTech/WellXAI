@@ -99,6 +99,40 @@ const ChevronRightIcon = (
     <path d="M9 18l6-6-6-6" />
   </svg>
 );
+const BriefcaseIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="7" width="18" height="13" rx="2" />
+    <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    <path d="M3 12.5h18" />
+  </svg>
+);
+const StarIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z" />
+  </svg>
+);
+const PeopleIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="9" cy="7" r="4" />
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+    <path d="M16 3.128a4 4 0 0 1 0 7.744" />
+    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+  </svg>
+);
+const CalendarIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="5" width="18" height="16" rx="2" />
+    <path d="M3 10h18" />
+    <path d="M8 3v4" />
+    <path d="M16 3v4" />
+  </svg>
+);
+const PlusSmallIcon = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 5v14" />
+    <path d="M5 12h14" />
+  </svg>
+);
 
 // Top nav bar icons -- LinkedIn-style structure requested as a visual
 // reference; these tabs are decorative placeholders for now (showComingSoon
@@ -208,6 +242,139 @@ function Avatar({ src, name }: { src: string | null; name: string }) {
     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-sm">
       {name?.[0]?.toUpperCase() ?? "?"}
     </span>
+  );
+}
+
+// Left/right sidebar cards -- LinkedIn's 3-column layout, requested as a
+// visual reference. Real where Quantara actually has the data (name,
+// avatar); everywhere else (Connections count, Premium, Saved
+// items/Groups/Newsletters/Events, puzzles, suggested pages) is a decorative
+// placeholder that shows a "coming soon" toast on click rather than
+// claiming a feature -- or specific real people/pages -- that don't exist.
+function ProfileSidebarCard({
+  name,
+  image,
+  onAction,
+}: {
+  name: string;
+  image: string | null;
+  onAction: (label: string) => void;
+}) {
+  return (
+    <div className="w-[240px] shrink-0 space-y-2">
+      <div className="overflow-hidden rounded-lg border border-border bg-background">
+        <div className="h-14 bg-gradient-to-r from-amber-300 to-orange-500" />
+        <div className="-mt-7 px-3 pb-3">
+          {image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={image} alt="" className="h-14 w-14 rounded-full border-4 border-background object-cover" />
+          ) : (
+            <span className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-background bg-surface-2 text-lg font-semibold">
+              {name[0]?.toUpperCase() ?? "?"}
+            </span>
+          )}
+          <p className="mt-2 truncate text-[15px] font-semibold">{name}</p>
+          <p className="text-xs text-muted">On Quantara</p>
+          <button
+            type="button"
+            onClick={() => onAction("Experience")}
+            className="mt-3 flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs font-semibold text-muted transition-colors hover:text-foreground"
+          >
+            {BriefcaseIcon}
+            Experience
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => onAction("Connections")}
+          className="flex w-full items-center justify-between border-t border-border px-3 py-2 text-xs transition-colors hover:bg-surface-2"
+        >
+          <span className="text-muted">Connections</span>
+          <span className="font-semibold">0</span>
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onAction("Premium")}
+        className="flex w-full items-center gap-2 rounded-lg border border-border bg-background px-3 py-2.5 text-left text-xs text-muted transition-colors hover:text-foreground"
+      >
+        {StarIcon}
+        <span>Access exclusive tools &amp; insights</span>
+      </button>
+
+      <div className="rounded-lg border border-border bg-background py-1">
+        {[
+          { icon: BookmarkIcon, label: "Saved items" },
+          { icon: PeopleIcon, label: "Groups" },
+          { icon: CommentIcon, label: "Newsletters" },
+          { icon: CalendarIcon, label: "Events" },
+        ].map((row) => (
+          <button
+            key={row.label}
+            type="button"
+            onClick={() => onAction(row.label)}
+            className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-surface-2"
+          >
+            <span className="text-muted">{row.icon}</span>
+            {row.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SuggestionsSidebarCard({ onAction }: { onAction: (label: string) => void }) {
+  return (
+    <div className="w-[240px] shrink-0 space-y-2">
+      <div className="rounded-lg border border-border bg-background p-3">
+        <p className="mb-1.5 text-sm font-semibold">Today&apos;s puzzles</p>
+        <div className="space-y-1">
+          {[
+            { emoji: "🧩", label: "Quantara Quiz" },
+            { emoji: "🔤", label: "Word Chain" },
+            { emoji: "🎯", label: "Daily Pick" },
+          ].map((p) => (
+            <button
+              key={p.label}
+              type="button"
+              onClick={() => onAction(p.label)}
+              className="flex w-full items-center gap-3 rounded-lg px-1 py-1.5 text-left transition-colors hover:bg-surface-2"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-surface-2 text-base">{p.emoji}</span>
+              <span className="min-w-0 flex-1 truncate text-sm">{p.label}</span>
+              <span className="text-muted">{ChevronRightIcon}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-border bg-background p-3">
+        <p className="mb-2 text-sm font-semibold">Add to your feed</p>
+        <div className="space-y-3">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-sm font-semibold text-muted">
+                P{n}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">Suggested Page {n}</p>
+                <p className="text-xs text-muted">Suggested for you</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onAction(`Suggested Page ${n}`)}
+                aria-label="Follow"
+                className="shrink-0 rounded-full border border-border p-1.5 text-muted transition-colors hover:text-foreground"
+              >
+                {PlusSmallIcon}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -338,7 +505,7 @@ function PostCard({ post, myId, onLike, onDelete }: {
   const isOwnPost = post.authorId === myId;
 
   return (
-    <div className="rounded-2xl border border-border p-4">
+    <div className="rounded-2xl border border-border bg-background p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <Avatar src={post.authorImage} name={post.authorName} />
@@ -460,6 +627,10 @@ export default function ChatGizaMediaFeed({
     onWidthChange?.(canDock ? dockedWidth : 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canDock, dockedWidth]);
+  // The 3-column LinkedIn-style layout needs real room for both side cards
+  // plus a usable feed in the middle -- below this, drop to the single
+  // feed column instead of cramming everything.
+  const showSidebars = canDock && dockedWidth >= 900;
 
   function onResizeMove(e: PointerEvent) {
     const drag = dragRef.current;
@@ -791,9 +962,17 @@ export default function ChatGizaMediaFeed({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-6">
-        <div className="mx-auto max-w-2xl space-y-4">
-          <div className="rounded-2xl border border-border p-4">
+      <div className="flex-1 overflow-y-auto bg-surface-2 px-4 py-6">
+        <div className={`mx-auto flex items-start gap-4 ${showSidebars ? "max-w-4xl" : "max-w-2xl"}`}>
+          {showSidebars && (
+            <ProfileSidebarCard
+              name={session?.user?.name ?? "Guest"}
+              image={session?.user?.image ?? null}
+              onAction={showComingSoon}
+            />
+          )}
+          <div className="min-w-0 flex-1 space-y-4">
+          <div className="rounded-2xl border border-border bg-background p-4">
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -897,6 +1076,8 @@ export default function ChatGizaMediaFeed({
               ))}
             </div>
           )}
+          </div>
+          {showSidebars && <SuggestionsSidebarCard onAction={showComingSoon} />}
         </div>
       </div>
 
