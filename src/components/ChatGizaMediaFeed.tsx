@@ -176,6 +176,61 @@ const ChevronRightIcon = (
   </svg>
 );
 
+// Top nav bar icons -- LinkedIn-style structure requested as a visual
+// reference; these tabs are decorative placeholders for now (showComingSoon
+// on click), not wired to real features yet.
+const NavSearchIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="7" />
+    <path d="m21 21-4.35-4.35" />
+  </svg>
+);
+const NavHomeIcon = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 11.5 12 4l9 7.5" />
+    <path d="M5 10v10h14V10" />
+  </svg>
+);
+const NavNetworkIcon = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="8" cy="8" r="3" />
+    <circle cx="17" cy="6" r="2.3" />
+    <path d="M2.5 20a5.5 5.5 0 0 1 11 0" />
+    <path d="M14.5 20a4.2 4.2 0 0 1 7.8-2.2" />
+  </svg>
+);
+const NavJobsIcon = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="7" width="18" height="13" rx="2" />
+    <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    <path d="M3 12.5h18" />
+  </svg>
+);
+const NavBellIcon = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 8a6 6 0 0 1 12 0c0 4.5 1.5 6 2 6.5H4c.5-.5 2-2 2-6.5Z" />
+    <path d="M10 19a2 2 0 0 0 4 0" />
+  </svg>
+);
+const NavGridIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+    <circle cx="5" cy="5" r="1.6" />
+    <circle cx="12" cy="5" r="1.6" />
+    <circle cx="19" cy="5" r="1.6" />
+    <circle cx="5" cy="12" r="1.6" />
+    <circle cx="12" cy="12" r="1.6" />
+    <circle cx="19" cy="12" r="1.6" />
+    <circle cx="5" cy="19" r="1.6" />
+    <circle cx="12" cy="19" r="1.6" />
+    <circle cx="19" cy="19" r="1.6" />
+  </svg>
+);
+const NavChevronDownIcon = (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+);
+
 const SENTIMENTS: { key: Sentiment; label: string; className: string }[] = [
   { key: "bullish", label: "Bullish", className: "text-green-500 border-green-500/40 bg-green-500/10" },
   { key: "neutral", label: "Neutral", className: "text-muted border-border bg-surface-2" },
@@ -740,6 +795,96 @@ export default function ChatGizaMediaFeed({
           className="absolute left-0 top-0 z-10 h-full w-1.5 cursor-ew-resize touch-none hover:bg-foreground/10 active:bg-foreground/20"
         />
       )}
+      {/* Top nav bar, LinkedIn-style layout requested as a visual reference.
+          Decorative placeholder for now -- every tab besides Home (which
+          already has a real destination: back to the feed) shows a
+          "coming soon" toast rather than claiming a feature that doesn't
+          exist yet. */}
+      <div className="flex shrink-0 items-center gap-3 border-b border-border bg-surface px-3 py-2">
+        <button
+          type="button"
+          onClick={() => showComingSoon("Search")}
+          className="flex h-9 min-w-0 max-w-[220px] flex-1 items-center gap-2 rounded-full border border-border bg-background px-3 text-sm text-muted transition-colors hover:border-foreground/30"
+        >
+          {NavSearchIcon}
+          <span className="truncate">Search</span>
+        </button>
+        <div className="ml-auto flex items-center gap-3 overflow-x-auto sm:gap-4">
+          <button
+            type="button"
+            onClick={() => setSettingsOpen(false)}
+            className="flex shrink-0 flex-col items-center gap-0.5 border-b-2 border-foreground px-1 pb-1.5 pt-1 text-foreground"
+          >
+            {NavHomeIcon}
+            <span className="text-[11px] font-medium">Home</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => showComingSoon("My Network")}
+            className="flex shrink-0 flex-col items-center gap-0.5 border-b-2 border-transparent px-1 pb-1.5 pt-1 text-muted transition-colors hover:text-foreground"
+          >
+            {NavNetworkIcon}
+            <span className="text-[11px]">My Network</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => showComingSoon("Jobs")}
+            className="flex shrink-0 flex-col items-center gap-0.5 border-b-2 border-transparent px-1 pb-1.5 pt-1 text-muted transition-colors hover:text-foreground"
+          >
+            {NavJobsIcon}
+            <span className="text-[11px]">Jobs</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => showComingSoon("Messaging")}
+            className="flex shrink-0 flex-col items-center gap-0.5 border-b-2 border-transparent px-1 pb-1.5 pt-1 text-muted transition-colors hover:text-foreground"
+          >
+            {CommentIcon}
+            <span className="text-[11px]">Messaging</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => showComingSoon("Notifications")}
+            className="relative flex shrink-0 flex-col items-center gap-0.5 border-b-2 border-transparent px-1 pb-1.5 pt-1 text-muted transition-colors hover:text-foreground"
+          >
+            <span className="absolute -top-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold text-white">
+              11
+            </span>
+            {NavBellIcon}
+            <span className="text-[11px]">Notifications</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => showComingSoon("Me")}
+            className="flex shrink-0 flex-col items-center gap-0.5 border-b-2 border-transparent px-1 pb-1.5 pt-1 text-muted transition-colors hover:text-foreground"
+          >
+            <span className="flex h-5 w-5 items-center justify-center overflow-hidden rounded-full bg-surface-2 text-[10px] font-semibold text-foreground">
+              {session?.user?.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={session.user.image} alt="" className="h-5 w-5 object-cover" />
+              ) : (
+                (session?.user?.name?.[0] ?? "?")
+              )}
+            </span>
+            <span className="flex items-center gap-0.5 text-[11px]">
+              Me
+              {NavChevronDownIcon}
+            </span>
+          </button>
+          <span className="h-8 w-px shrink-0 bg-border" />
+          <button
+            type="button"
+            onClick={() => showComingSoon("For Business")}
+            className="flex shrink-0 flex-col items-center gap-0.5 border-b-2 border-transparent px-1 pb-1.5 pt-1 text-muted transition-colors hover:text-foreground"
+          >
+            {NavGridIcon}
+            <span className="flex items-center gap-0.5 text-[11px]">
+              For Business
+              {NavChevronDownIcon}
+            </span>
+          </button>
+        </div>
+      </div>
       <div className={`flex items-center gap-3 border-b border-border py-4 ${expanded ? "px-6 sm:px-10" : "px-4"}`}>
         <button
           onClick={settingsOpen ? () => setSettingsOpen(false) : onClose}
