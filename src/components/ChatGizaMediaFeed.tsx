@@ -256,7 +256,7 @@ function ProfileSidebarCard({
   onAction: (label: string) => void;
 }) {
   return (
-    <div className="space-y-2">
+    <div className="w-[240px] shrink-0 space-y-2">
       <div className="overflow-hidden rounded-lg border border-border bg-background">
         <div className="h-2 bg-gradient-to-r from-amber-300 to-orange-500" />
         <div className="px-2 pb-3 pt-2">
@@ -322,7 +322,7 @@ function ProfileSidebarCard({
 
 function SuggestionsSidebarCard({ onAction }: { onAction: (label: string) => void }) {
   return (
-    <div className="space-y-2">
+    <div className="w-[240px] shrink-0 space-y-2">
       <div className="rounded-lg border border-border bg-background px-2 py-3">
         <p className="mb-1.5 text-sm font-semibold">Today&apos;s puzzles</p>
         <div className="space-y-1">
@@ -1000,6 +1000,13 @@ export default function ChatGizaMediaFeed({
 
       <div className="flex-1 overflow-y-auto bg-surface-2 px-3 py-6">
         <div className={`mx-auto flex items-start gap-2 ${showSidebars ? "" : "max-w-2xl"}`}>
+          {showSidebars && (
+            <ProfileSidebarCard
+              name={session?.user?.name ?? "Guest"}
+              image={session?.user?.image ?? null}
+              onAction={showComingSoon}
+            />
+          )}
           <div className="min-w-0 flex-1 space-y-2">
           <div className="rounded-2xl border border-border bg-background px-3 py-4">
             <textarea
@@ -1099,16 +1106,7 @@ export default function ChatGizaMediaFeed({
             </div>
           )}
           </div>
-          {showSidebars && (
-            <div className="flex w-[240px] shrink-0 flex-col gap-2">
-              <ProfileSidebarCard
-                name={session?.user?.name ?? "Guest"}
-                image={session?.user?.image ?? null}
-                onAction={showComingSoon}
-              />
-              <SuggestionsSidebarCard onAction={showComingSoon} />
-            </div>
-          )}
+          {showSidebars && <SuggestionsSidebarCard onAction={showComingSoon} />}
         </div>
       </div>
 
