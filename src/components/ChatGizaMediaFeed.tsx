@@ -33,7 +33,14 @@ type Comment = {
 };
 
 const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
-const MAX_IMAGE_DIMENSION = 1080;
+// Caps WIDTH specifically, not whichever side is longer -- posts always
+// display images at full card width (see MediaCarousel), so width is what
+// actually determines sharpness/gutters there. Capping by the longer side
+// instead (as this used to) shrank a portrait phone screenshot's WIDTH way
+// down to keep its height in check, which is exactly what left it too
+// narrow to fill a feed card -- height is left alone here, however tall
+// that makes a portrait photo.
+const MAX_IMAGE_WIDTH = 1080;
 const MAX_IMAGES_PER_POST = 10;
 const ALLOWED_VIDEO_MIME = new Set(["video/mp4", "video/webm", "video/quicktime"]);
 
@@ -219,7 +226,7 @@ async function compressImageFile(file: File): Promise<string> {
     img.onerror = reject;
     img.src = original;
   });
-  const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(img.width, img.height));
+  const scale = Math.min(1, MAX_IMAGE_WIDTH / img.width);
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(img.width * scale);
   canvas.height = Math.round(img.height * scale);
@@ -461,15 +468,18 @@ function MediaCarousel({ imageUrls }: { imageUrls: string[] }) {
           src={imageUrls[index]}
           alt=""
           onClick={() => setLightboxOpen(true)}
-          // Twitter/Instagram-style: every photo crops to one consistent
-          // wide (16:9) frame in the feed, so a tall/narrow photo (a phone
-          // screenshot, say) never leaves big empty gutters beside a short,
-          // narrow render -- it fills the full card width instead, cropped
-          // top/bottom as needed. The full, uncropped photo is still just a
-          // click away via the lightbox below (object-contain there, no
-          // cropping), so nothing is actually lost, just not all shown at
-          // once in the feed.
-          className="aspect-video w-full cursor-zoom-in rounded-xl object-cover"
+          // Cropping to a fixed frame (tried, reverted) loses real content
+          // on phone-screenshot-shaped photos -- a portrait photo like a
+          // receipt or a chat screenshot needs to actually be readable, not
+          // sliced. So instead: no cropping, no forced/capped height --
+          // max-w-full lets the browser scale the photo down only as much
+          // as needed to fit the card's width (real camera/screenshot
+          // photos always have far more native pixels than any card width,
+          // so this reliably fills the full width with zero gutters), and
+          // the resulting height is whatever that photo's own aspect ratio
+          // needs -- tall for a portrait screenshot, short for a landscape
+          // photo. A tall card for a tall photo is expected, not a bug.
+          className="max-w-full cursor-zoom-in rounded-xl"
         />
         {multi && (
           <span className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-xs font-medium text-white">
