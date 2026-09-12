@@ -753,6 +753,18 @@ function ChatGizaInner() {
     if (searchParams.get("open") === "media") setMediaFeedOpen(true);
   }, [searchParams]);
 
+  // Quantara's open/closed state is remembered per-device -- a refresh
+  // shouldn't silently close it out from under you; only the panel's own
+  // close button should. Starts closed on every render (SSR-safe) and
+  // reopens right after mount if it was left open, same pattern as
+  // quantaraDark inside ChatGizaMediaFeed itself.
+  useEffect(() => {
+    if (localStorage.getItem("chatgiza:quantara-open") === "true") setMediaFeedOpen(true);
+  }, []);
+  useEffect(() => {
+    localStorage.setItem("chatgiza:quantara-open", String(mediaFeedOpen));
+  }, [mediaFeedOpen]);
+
   function handleEditMessage(messageId: string, newText: string) {
     if (guestQuotaExceeded()) return;
     if (!active) return;

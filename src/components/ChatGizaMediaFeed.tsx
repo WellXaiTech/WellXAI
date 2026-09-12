@@ -440,6 +440,66 @@ export default function ChatGizaMediaFeed({ onClose }: { onClose: () => void }) 
   // always starts back in the side-panel mode next time it's opened.
   const [expanded, setExpanded] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Docked-mode width is user-resizable (drag the left edge) and remembered
+  // per-device, same as quantaraDark below -- null means "use the default
+  // xl:/2xl: Tailwind width" until the user drags it at least once.
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
+  const [panelWidth, setPanelWidth] = useState<number | null>(null);
+  // Only docks (and so is only resizable) at xl+ -- below that the panel is
+  // always full-width, same breakpoint the Tailwind classes below use.
+  const [canDock, setCanDock] = useState(true);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("chatgiza:quantara-panel-width");
+    const n = stored ? Number(stored) : NaN;
+    if (!Number.isNaN(n)) setPanelWidth(n);
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1280px)");
+    const update = () => setCanDock(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  function onResizeMove(e: PointerEvent) {
+    const drag = dragRef.current;
+    if (!drag) return;
+    // Right-docked panel -- dragging the left edge further left (smaller
+    // clientX) should widen it.
+    const next = Math.min(1000, Math.max(420, drag.startWidth + (drag.startX - e.clientX)));
+    setPanelWidth(next);
+  }
+
+  function endResize() {
+    dragRef.current = null;
+    document.body.style.userSelect = "";
+    window.removeEventListener("pointermove", onResizeMove);
+    window.removeEventListener("pointerup", endResize);
+    setPanelWidth((w) => {
+      if (w != null) localStorage.setItem("chatgiza:quantara-panel-width", String(w));
+      return w;
+    });
+  }
+
+  function beginResize(e: React.PointerEvent) {
+    if (!panelRef.current) return;
+    dragRef.current = { startX: e.clientX, startWidth: panelRef.current.getBoundingClientRect().width };
+    document.body.style.userSelect = "none";
+    window.addEventListener("pointermove", onResizeMove);
+    window.addEventListener("pointerup", endResize);
+  }
+
+  useEffect(() => {
+    return () => {
+      window.removeEventListener("pointermove", onResizeMove);
+      window.removeEventListener("pointerup", endResize);
+      document.body.style.userSelect = "";
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Quantara's own light/dark toggle, independent of the main site's theme.
   // Defaults to light/white now (still toggleable, and still overridden by
   // any previously-stored per-device preference below).
@@ -610,13 +670,13 @@ export default function ChatGizaMediaFeed({ onClose }: { onClose: () => void }) 
   const canPost = (text.trim() || imagePreviews.length > 0 || videoFile) && !posting;
 
   return (
-    // Permanently dark regardless of the site's light/dark theme setting --
-    // matches the native app's Media feed/profile, which is also fixed
-    // dark rather than theme-toggle-dependent. Overriding these CSS vars
-    // here (instead of on every className below) cascades through every
+    // Independent of the site's light/dark theme setting -- quantaraDark
+    // above controls this instead. Overriding these CSS vars here (instead
+    // of on every className below) cascades through every
     // bg-background/text-muted/border-border/etc. Tailwind class used
     // throughout this file and its child components for free.
     <div
+      ref={panelRef}
       className={
         expanded
           ? "fixed inset-0 z-50 flex flex-col bg-background"
@@ -627,8 +687,8 @@ export default function ChatGizaMediaFeed({ onClose }: { onClose: () => void }) 
           // "w-full" as expanded mode, since there's no room to dock.
           : "fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border bg-background shadow-2xl xl:w-[600px] 2xl:w-[720px]"
       }
-      style={
-        quantaraDark
+      style={{
+        ...(quantaraDark
           ? ({
               "--background": "#10141f",
               "--foreground": "#e5ebfa",
@@ -644,9 +704,17 @@ export default function ChatGizaMediaFeed({ onClose }: { onClose: () => void }) 
               "--surface-2": "#eaecf1",
               "--border": "#dde0e8",
               "--muted": "#6b7280",
-            } as React.CSSProperties)
-      }
+            } as React.CSSProperties)),
+        ...(canDock && !expanded && panelWidth ? { width: panelWidth } : {}),
+      }}
     >
+      {canDock && !expanded && (
+        <div
+          onPointerDown={beginResize}
+          aria-hidden="true"
+          className="absolute left-0 top-0 z-10 h-full w-1.5 cursor-ew-resize touch-none hover:bg-foreground/10 active:bg-foreground/20"
+        />
+      )}
       <div className={`flex items-center gap-3 border-b border-border py-4 ${expanded ? "px-6 sm:px-10" : "px-4"}`}>
         <button
           onClick={settingsOpen ? () => setSettingsOpen(false) : onClose}
