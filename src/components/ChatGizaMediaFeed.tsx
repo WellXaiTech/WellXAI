@@ -561,12 +561,18 @@ function PostCard({ post, onLike }: {
 
 export default function ChatGizaMediaFeed({
   onWidthChange,
+  standalone,
 }: {
   // Reports how much horizontal space this panel actually occupies (0 when
   // it isn't docked, e.g. below the dock breakpoint) so the chat column in
   // page.tsx can push over by exactly that much instead of
-  // covering/being covered by it.
+  // covering/being covered by it. Not used in standalone mode.
   onWidthChange?: (width: number) => void;
+  // Renders as a normal full page (chatgiza.com/quantara) instead of the
+  // docked/resizable floating panel used inside the Ask chat -- no fixed
+  // positioning, no drag-to-resize, sidebars follow the real viewport width
+  // instead of a panel width someone dragged.
+  standalone?: boolean;
 }) {
   const { data: session } = useSession();
   // Docked-mode width is user-resizable (drag the left edge) and remembered
@@ -608,9 +614,11 @@ export default function ChatGizaMediaFeed({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canDock, dockedWidth]);
   // The 3-column LinkedIn-style layout needs real room for both side cards
-  // plus a usable feed in the middle -- below this, drop to the single
-  // feed column instead of cramming everything.
-  const showSidebars = canDock && dockedWidth >= 900;
+  // plus a usable feed in the middle -- below this, drop to the single feed
+  // column instead of cramming everything. Standalone has no panel-width
+  // concept (dockedWidth is a docked-panel thing) -- it just follows the
+  // real viewport width via canDock.
+  const showSidebars = standalone ? canDock : canDock && dockedWidth >= 900;
 
   function onResizeMove(e: PointerEvent) {
     const drag = dragRef.current;
@@ -730,14 +738,20 @@ export default function ChatGizaMediaFeed({
       // Side-panel mode only docks once the viewport is wide enough to
       // leave the chat genuinely usable next to it (see the matching
       // reported width read by page.tsx) -- below that it falls through to
-      // full-width, since there's no room to dock.
+      // full-width, since there's no room to dock. Standalone (its own real
+      // page at chatgiza.com/quantara) is never fixed/floating or
+      // resizable -- it's just a normal page filling the viewport.
       // text-foreground here (not just on individual elements) matters:
       // color is inherited, but only elements that re-declare it actually
       // re-resolve --foreground at this scope -- without this, any text
       // below that doesn't set its own text color falls back to the outer
       // app's (dark-mode) --foreground instead of Quantara's own, showing
       // up as near-invisible light-gray text on these light cards.
-      className="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border bg-background text-foreground shadow-2xl xl:w-[600px] 2xl:w-[720px]"
+      className={
+        standalone
+          ? "relative flex min-h-screen w-full flex-col bg-background text-foreground"
+          : "fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border bg-background text-foreground shadow-2xl xl:w-[600px] 2xl:w-[720px]"
+      }
       style={{
         ...(quantaraDark
           ? ({
@@ -756,10 +770,10 @@ export default function ChatGizaMediaFeed({
               "--border": "#dde0e8",
               "--muted": "#6b7280",
             } as React.CSSProperties)),
-        ...(canDock && panelWidth ? { width: panelWidth } : {}),
+        ...(!standalone && canDock && panelWidth ? { width: panelWidth } : {}),
       }}
     >
-      {canDock && (
+      {!standalone && canDock && (
         <div
           onPointerDown={beginResize}
           aria-hidden="true"

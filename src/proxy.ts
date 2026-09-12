@@ -23,8 +23,9 @@ import type { NextRequest } from "next/server";
 //  - chatgiza.com visiting a company-only path is redirected to the same
 //    path on wellxai.world instead of serving it locally.
 //  - wellxai.world visiting the product itself (/chatgiza and its
-//    sub-routes, e.g. /chatgiza/build) is redirected the other way, back
-//    to chatgiza.com -- wellxai.world must never render the chat app.
+//    sub-routes, e.g. /chatgiza/build) or Quantara's own standalone page
+//    (/quantara) is redirected the other way, back to chatgiza.com --
+//    wellxai.world must never render either.
 //
 // /terms and /privacy are deliberately NOT redirected away from
 // chatgiza.com: the sign-in page (src/app/login/page.tsx) links to them
@@ -84,8 +85,9 @@ const COMPANY_ONLY_EXACT = new Set([
   "/stories",
 ]);
 const COMPANY_ONLY_PREFIXES = ["/workspace", "/advertise"];
-// The chat product itself -- never allowed on the company domain.
-const PRODUCT_ONLY_PREFIXES = ["/chatgiza"];
+// The chat product itself, plus Quantara's own standalone page -- never
+// allowed on the company domain.
+const PRODUCT_ONLY_PREFIXES = ["/chatgiza", "/quantara"];
 
 function matchesAny(pathname: string, prefixes: string[]): boolean {
   return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
