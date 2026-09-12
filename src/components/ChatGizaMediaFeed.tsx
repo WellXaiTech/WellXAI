@@ -461,16 +461,15 @@ function MediaCarousel({ imageUrls }: { imageUrls: string[] }) {
           src={imageUrls[index]}
           alt=""
           onClick={() => setLightboxOpen(true)}
-          // No w-full here on purpose -- sizing to the image's own
-          // dimensions (capped by max-w/max-h) instead of stretching a
-          // fixed-width box is what stops narrower photos from leaving big
-          // empty bars on either side. max-h is a generous 80vh (not a
-          // small fixed px) specifically for portrait/tall photos -- too
-          // short a cap forces them narrow at that height, which is what
-          // actually causes the wide empty gutters beside them; a wide
-          // photo was never affected by this since its own height already
-          // stayed well under any reasonable cap.
-          className="max-h-[80vh] max-w-full cursor-zoom-in rounded-xl object-contain"
+          // Twitter/Instagram-style: every photo crops to one consistent
+          // wide (16:9) frame in the feed, so a tall/narrow photo (a phone
+          // screenshot, say) never leaves big empty gutters beside a short,
+          // narrow render -- it fills the full card width instead, cropped
+          // top/bottom as needed. The full, uncropped photo is still just a
+          // click away via the lightbox below (object-contain there, no
+          // cropping), so nothing is actually lost, just not all shown at
+          // once in the feed.
+          className="aspect-video w-full cursor-zoom-in rounded-xl object-cover"
         />
         {multi && (
           <span className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-xs font-medium text-white">
