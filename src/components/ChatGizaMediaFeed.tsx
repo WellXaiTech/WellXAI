@@ -464,8 +464,13 @@ function MediaCarousel({ imageUrls }: { imageUrls: string[] }) {
           // No w-full here on purpose -- sizing to the image's own
           // dimensions (capped by max-w/max-h) instead of stretching a
           // fixed-width box is what stops narrower photos from leaving big
-          // empty bars on either side.
-          className="max-h-[520px] max-w-full cursor-zoom-in rounded-xl object-contain"
+          // empty bars on either side. max-h is a generous 80vh (not a
+          // small fixed px) specifically for portrait/tall photos -- too
+          // short a cap forces them narrow at that height, which is what
+          // actually causes the wide empty gutters beside them; a wide
+          // photo was never affected by this since its own height already
+          // stayed well under any reasonable cap.
+          className="max-h-[80vh] max-w-full cursor-zoom-in rounded-xl object-contain"
         />
         {multi && (
           <span className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-xs font-medium text-white">
@@ -580,7 +585,7 @@ function PostCard({ post, onLike }: {
         // means several full videos competing for bandwidth at once. That
         // reads as "spinning a lot" regardless of how fast the connection
         // is, since it's simultaneous-download contention, not throughput.
-        <video src={post.videoUrl} controls preload="metadata" className="mt-3 max-h-[520px] w-full rounded-xl bg-black object-contain" />
+        <video src={post.videoUrl} controls preload="metadata" className="mt-3 max-h-[80vh] w-full rounded-xl bg-black object-contain" />
       )}
 
       <div className="mt-3 flex items-center gap-4 border-t border-border pt-3">
