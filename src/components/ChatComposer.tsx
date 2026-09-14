@@ -801,22 +801,19 @@ export default function ChatComposer({
 
   const actionButton = disabled && onStop ? stopButton : value.trim() || attachments.length > 0 ? sendButton : micButton;
 
-  // The hero composer keeps its own two-row shell (.box/.inner, from
-  // globals.css) -- message on top, icon row below -- since that's the
-  // large landing-page composer. The bar composer (once a chat is
-  // actually under way) instead mirrors Build's single-row composer
-  // exactly (same rounded-2xl/border-composer-border/bg-composer/px-4
-  // py-2 box, everything -- attach, textarea, mic, send -- inline in one
-  // slim row) rather than the taller two-row shell, which read as
-  // needlessly thick next to a reference like Claude Code's own composer.
+  // Reset from scratch, per feedback -- the old .box/.inner two-layer shell
+  // (globals.css) kept producing visible seams/gaps through several rounds
+  // of tweaking (gradient fill vs. page background, box-shadow border,
+  // justify-between stretch gap...) that were hard to fully pin down and
+  // fix one at a time. Dropped that whole approach; the hero composer now
+  // uses the exact same plain, single-layer shell (rounded-2xl border
+  // border-composer-border bg-composer) the bar composer below already
+  // uses without any of those issues -- just taller, for the landing page.
   const formEl = isHero ? (
-    // justify-start, not justify-between -- with min-height taller than the
-    // two rows' natural content, justify-between dumped ALL that slack into
-    // the one gap between them (a real ~19px void instead of the intended
-    // 8px gap-2), which is what got flagged as an unwanted line/band in
-    // that exact spot. A fixed gap-2 regardless of height, slack (if any)
-    // just becomes empty space after the icon row instead.
-    <form onSubmit={onSubmit} className="inner flex flex-col justify-start gap-2 px-4 pt-3 pb-2">
+    <form
+      onSubmit={onSubmit}
+      className="flex w-full flex-col gap-2 rounded-2xl border border-composer-border bg-composer px-4 pt-3 pb-2 shadow-sm"
+    >
       {fileInputEl}
 
       <div className="relative w-full">
@@ -887,7 +884,7 @@ export default function ChatComposer({
         <p className="mb-2 text-xs text-red-500">{error ?? voiceError}</p>
       )}
 
-      <div className={isHero ? "box mx-auto" : "mx-auto"}>{formEl}</div>
+      <div className={isHero ? "mx-auto w-full max-w-[var(--max-w-chat)]" : "mx-auto"}>{formEl}</div>
 
       {!isHero && (
         <div className="mt-1.5 flex justify-end px-1">{toolSelector}</div>
