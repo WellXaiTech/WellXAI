@@ -1925,10 +1925,8 @@ function ChatGizaInner() {
                 // highlight (bg-surface-2, not bg-surface, which was
                 // actually darker than the composer here), matching the
                 // reference screenshot's brighter active tab.
-                // Blue underline per feedback (reference screenshot),
-                // spanning the whole Chat/Work group.
                 modeSwitcher={
-                  <div className="flex items-center gap-1 rounded-full border-b-2 border-blue-500 p-1">
+                  <div className="flex items-center gap-1 rounded-full p-1">
                     <span className="rounded-full bg-surface-2 px-3 py-1 text-sm font-medium text-foreground shadow-sm">
                       Chat
                     </span>
