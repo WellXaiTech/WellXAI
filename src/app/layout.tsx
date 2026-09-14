@@ -186,6 +186,22 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
+        {/* Real dark backgrounds were showing through as a plain black flash
+            on first paint -- Tailwind's compiled stylesheet (large, external)
+            takes a real, visible moment to download and apply, and until it
+            does, html/body have no background at all, so the browser's own
+            unstyled-canvas default shows instead of this app's actual
+            --background (#151515). An inline <style> tag is render-blocking
+            and applies the instant the HTML parses, with zero dependency on
+            any external file's load time -- eliminates the flash outright
+            rather than just narrowing the window for it. */}
+        <style
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{
+            __html:
+              "html,body{background:#151515}@media (prefers-color-scheme:light){html,body{background:#fff}}",
+          }}
+        />
         {structuredData && (
           <script
             type="application/ld+json"
