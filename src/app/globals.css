@@ -154,7 +154,7 @@ textarea:-webkit-autofill:focus {
   /* Reverted -- the system-ui stack tried here was an honest guess at
      matching a screenshot of Claude's own chat text, not a confirmed
      match (no way to inspect that interface's actual CSS). Per
-     feedback: better to keep the app's real, known Roboto than keep an
+     feedback: better to keep the app's real typeface than keep an
      unverified approximation. */
   --chat-font-family: inherit;
 }
@@ -243,12 +243,12 @@ textarea:-webkit-autofill:focus {
   --color-border: var(--border);
   --color-muted: var(--muted);
   --color-pure-black: var(--pure-black);
-  /* Roboto (a real loaded Google typeface, see layout.tsx) -- same font
+  /* Inter (self-hosted variable font, see layout.tsx) -- same font
      everywhere regardless of OS, not a system stack that would otherwise
      show as Segoe UI on Windows, San Francisco on Mac, etc. Website only
      -- the native Android app has its own separate font handling and is
      untouched by this. */
-  --font-sans: var(--font-roboto), Arial, Helvetica, sans-serif;
+  --font-sans: var(--font-inter), Arial, Helvetica, sans-serif;
   --font-mono: var(--font-geist-mono);
 }
 
@@ -257,10 +257,32 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
   font-size: 16px;
-  /* Light (300) is the actual thin/lean face -- Regular (400) still read
-     as too heavy next to other AI chat sites' body text. */
-  font-weight: 300;
+  font-weight: 400;
   line-height: 26px;
+}
+
+/* Site-wide Inter weight scale: 400 body copy (above), 500 buttons/controls,
+   600-700 headings -- h1 at the top of that range as the "big heading"
+   weight. These are defaults only; a component's own Tailwind font-weight
+   utility (font-semibold, font-bold, etc.) still wins. */
+button,
+.btn-primary,
+[role="button"] {
+  font-weight: 500;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.heading {
+  font-weight: 600;
+}
+
+h1 {
+  font-weight: 700;
 }
 
 .heading {

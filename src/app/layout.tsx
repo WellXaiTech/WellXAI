@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Roboto } from "next/font/google";
+import { Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { headers } from "next/headers";
 import Script from "next/script";
 import AuthProvider from "@/components/AuthProvider";
@@ -13,15 +14,17 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Roboto specifically (not a generic OS-varying system-font stack) -- the
-// actual Google typeface, same one Android/ChromeOS show by default, so it
-// looks the same everywhere rather than as Segoe UI on Windows, San
-// Francisco on Mac, etc. Website only -- the native Android app has its
-// own separate font handling and is untouched by this.
-const roboto = Roboto({
-  variable: "--font-roboto",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
+// Self-hosted (not next/font/google) since it's the official variable
+// webfont file, not a Google Fonts axis subset -- one file covers the whole
+// 100-900 weight range, so every weight used across the site (400 body, 500
+// buttons, 600-700 headings) comes from a single cached download. Website
+// only -- the native Android app has its own separate font handling and is
+// untouched by this.
+const inter = localFont({
+  src: "../fonts/inter/InterVariable.woff2",
+  variable: "--font-inter",
+  weight: "100 900",
+  display: "swap",
 });
 
 const SITE_NAME = "ChatGiZa";
@@ -179,7 +182,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistMono.variable} ${roboto.variable} h-full antialiased`}
+      className={`${geistMono.variable} ${inter.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">

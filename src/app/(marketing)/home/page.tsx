@@ -49,7 +49,7 @@ export default function HomePage() {
   return (
     <div className="w-full">
       <section className="mx-auto max-w-5xl px-4 pt-20 pb-16 text-center">
-        <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
+        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
           AI that understands the language you speak
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-muted sm:text-lg">
