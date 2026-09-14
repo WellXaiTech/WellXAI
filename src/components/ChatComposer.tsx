@@ -528,7 +528,11 @@ export default function ChatComposer({
   // Deep Think is a response mode, not an attach-menu action — it only
   // belongs in the GiZa 5.6 model-selector dropdown, not the "+" menu.
   const attachMenuItems = visibleMenuItems.filter((item) => item.tool !== "deep_think");
-  const modelOnlyItems = visibleMenuItems.filter((item) => item.tool === "deep_think");
+  // SQL Helper and Business Assistant now also show in the model-selector
+  // dropdown, per feedback -- still available from the "+" menu too (not
+  // asked to remove them from there).
+  const MODEL_SHEET_TOOLS = new Set<Exclude<ComposerTool, null>>(["deep_think", "sql_helper", "business_assistant"]);
+  const modelOnlyItems = visibleMenuItems.filter((item) => item.tool && MODEL_SHEET_TOOLS.has(item.tool));
 
   const fileInputEl = (
     <input
@@ -648,12 +652,30 @@ export default function ChatComposer({
             }}
             className="z-50 w-96 overflow-hidden rounded-2xl border border-border bg-[#20201F] shadow-lg"
           >
-            {/* No close "X" and no GiZa Pro row, per feedback. */}
-            <div className="flex items-center justify-center border-b border-border px-3 py-4">
-              <span className="text-sm font-semibold">Select model</span>
-            </div>
-
+            {/* No "Select model" header and no divider under it, per
+                feedback -- the list starts right at the top edge now. */}
             <div className="p-1.5">
+              {/* Real and clickable now (was a disabled "Coming soon" row)
+                  -- per feedback. Selects the same base model GiZa 5.6
+                  does; no distinct backend tier exists yet, so no
+                  checkmark of its own (would otherwise show alongside
+                  GiZa 5.6's for the same underlying activeTool === null
+                  state, reading as two "selected" rows at once). */}
+              <button
+                type="button"
+                onClick={() => {
+                  onSelectTool(null);
+                  setToolMenuOpen(false);
+                }}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-2"
+              >
+                <span className="flex-1">
+                  <span className="block text-sm font-medium">GiZa Pro</span>
+                  <span className="block text-xs text-muted underline decoration-blue-500">
+                    Chat, create images, and more
+                  </span>
+                </span>
+              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -664,7 +686,9 @@ export default function ChatComposer({
               >
                 <span className="flex-1">
                   <span className="block text-sm font-medium">GiZa 5.6</span>
-                  <span className="block text-xs text-muted">Reliable, efficient performance for daily business tasks</span>
+                  <span className="block text-xs text-muted underline decoration-blue-500">
+                    Reliable, efficient performance for daily business tasks
+                  </span>
                 </span>
                 {!activeTool && <span className="text-foreground">{ModelCheckIcon}</span>}
               </button>
@@ -680,7 +704,7 @@ export default function ChatComposer({
                 >
                   <span className="flex-1">
                     <span className="block text-sm font-medium">{item.title}</span>
-                    <span className="block text-xs text-muted">{item.description}</span>
+                    <span className="block text-xs text-muted underline decoration-blue-500">{item.description}</span>
                   </span>
                   {item.tool === activeTool && <span className="text-foreground">{ModelCheckIcon}</span>}
                 </button>
