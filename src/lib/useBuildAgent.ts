@@ -766,6 +766,17 @@ export function useBuildAgent() {
   // ephemeral either way.
   const [devServerUrl, setDevServerUrl] = useState<string | null>(null);
 
+  // One-shot flag consumed by BuildWorkspace's Browse-panel auto-open effect:
+  // set true only when the mount-time restoration below actually populates
+  // `files` from a saved project, so that effect can tell "this update is
+  // just the page loading a project that already existed" apart from "the
+  // agent (or the user) just produced real new content" -- only the latter
+  // should auto-open the panel. Without this, reopening/refreshing a chat
+  // whose project already has files always forced Browse back open even if
+  // the user had just closed it, since restoring saved files is otherwise
+  // indistinguishable from the agent writing a new one.
+  const justRestoredFilesRef = useRef(false);
+
   // Restored one tick after mount (not as the initial useState value) so
   // server-rendered HTML and the client's first hydration pass agree --
   // reading localStorage during the initial render would mismatch them.
@@ -809,6 +820,7 @@ export function useBuildAgent() {
         filesRef.current = active.files;
         setFiles(active.files);
         setMessages(active.messages);
+        if (Object.keys(active.files).length > 0) justRestoredFilesRef.current = true;
       }
     } catch {
       // corrupted/unavailable storage -- start fresh
@@ -2226,5 +2238,6 @@ export function useBuildAgent() {
     activeProject: projects.find((p) => p.id === activeIdRef.current) ?? null,
     terminalHistory,
     devServerUrl,
+    justRestoredFilesRef,
   };
 }

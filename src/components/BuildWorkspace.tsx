@@ -1112,6 +1112,7 @@ export default function BuildWorkspace() {
     activeProject,
     terminalHistory,
     devServerUrl,
+    justRestoredFilesRef,
   } = useBuildAgent();
   // Drives BuildPreviewFrame's "Starting live server…" state -- derived
   // from the same live status line the rest of the UI already shows while
@@ -1180,9 +1181,10 @@ export default function BuildWorkspace() {
   // whenever this project actually has files and the user hasn't explicitly
   // searched/typed a URL, it defaults to showing BuildPreviewFrame instead
   // of the idle "search the web" placeholder -- covers the whole span the
-  // user asked for, start to finish (while the AI is actively writing,
-  // right after it finishes, and on reopening an older chat that already
-  // has a site), not just the narrow moment `sending` happens to be true.
+  // user asked for (while the AI is actively writing and right after it
+  // finishes), not just the narrow moment `sending` happens to be true.
+  // Does NOT auto-open on its own just from reopening/refreshing a chat
+  // that already has a site -- see justRestoredFilesRef below.
   const [browsePanelOpen, setBrowsePanelOpen] = useState(false);
   // A fresh turn starting clears out any manual browse/search the user
   // left this panel in -- otherwise a chat reopened mid-search would keep
@@ -1202,11 +1204,28 @@ export default function BuildWorkspace() {
   // the agent has written at least one file, or a live dev server is up.
   // This is the actual fix for the premature-open case above: a brand-new
   // chat's first message no longer pops the panel open onto nothing.
+  //
+  // justRestoredFilesRef (set by useBuildAgent's mount-time restoration,
+  // consumed here) tells this apart from the agent/user producing real new
+  // content -- without it, reopening a chat whose project already has
+  // files (e.g. a page refresh) always forced the panel back open even if
+  // the user had just closed it, since restoring saved files into `files`
+  // looks identical to the agent writing a new one. Per feedback, closing
+  // this panel should stick until the agent or the user opens it again --
+  // a refresh alone shouldn't. Checking `justRestoredFilesRef` only once
+  // `files`/`devServerUrl` actually have content (not on every effect fire)
+  // is what makes this safe to consume exactly once, on the one commit
+  // restoration itself produces -- later real writes flip `files` again
+  // with the flag already spent, so they still open the panel as before.
   useEffect(() => {
-    if (Object.keys(files).length > 0 || devServerUrl) {
-      setBrowsePanelOpen(true);
+    const hasContent = Object.keys(files).length > 0 || !!devServerUrl;
+    if (!hasContent) return;
+    if (justRestoredFilesRef.current) {
+      justRestoredFilesRef.current = false;
+      return;
     }
-  }, [files, devServerUrl]);
+    setBrowsePanelOpen(true);
+  }, [files, devServerUrl, justRestoredFilesRef]);
   // The Terminal icon's own panel -- independent of Browse (both can be
   // open at once), sliding up from the bottom of the chat column instead
   // of sharing Browse's side-panel space. Shows the real transcript of
