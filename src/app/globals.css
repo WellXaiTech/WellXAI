@@ -252,13 +252,20 @@ textarea:-webkit-autofill:focus {
   --font-mono: var(--font-geist-mono);
 }
 
+html {
+  /* Inter reads visibly larger than Roboto did at the same size -- scaled
+     down a notch so every rem-based Tailwind text size site-wide (not just
+     this file's own px values) comes out reading the same size as before. */
+  font-size: 15px;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 400;
-  line-height: 26px;
+  line-height: 24px;
 }
 
 /* Site-wide Inter weight scale: 400 body copy (above), 500 buttons/controls,
