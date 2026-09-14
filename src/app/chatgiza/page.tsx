@@ -1929,19 +1929,22 @@ function ChatGizaInner() {
                 // of it. A prior round dropped the track entirely, which
                 // read as missing depth -- the inactive tab had nothing
                 // behind it at all.
-                // Per feedback: wider (px-5 -> px-7), more space between
-                // Chat and Work (gap-3 -> gap-5), background #2B2B2A
-                // (specific hex given) -- switched the text to light
-                // (was dark #151515, made for the previous much-lighter
-                // #d9d9d8 fill; #2B2B2A is dark, so light text is what
-                // actually reads clearly against it).
+                // Per feedback -- the outer #2B2B2A/px-7/py-1.5/gap-5
+                // shell stays completely untouched. A new INNER moving
+                // piece (#414140) added on top of it: items-stretch makes
+                // it match the outer's height exactly (same fill
+                // technique verified working a few rounds back), width is
+                // just its own button's content + modest px-3 padding
+                // (a "piece" of the whole row, not the full outer width).
                 modeSwitcher={
-                  <div className="flex items-center gap-5 rounded-lg bg-[#2B2B2A] px-7 py-1.5">
+                  <div className="flex items-stretch gap-5 rounded-lg bg-[#2B2B2A] px-7 py-1.5">
                     <button
                       type="button"
                       onClick={() => setChatWorkMode("chat")}
-                      className={`text-sm transition-colors ${
-                        chatWorkMode === "chat" ? "font-semibold text-foreground" : "font-medium text-muted"
+                      className={`flex items-center rounded-md px-3 text-sm transition-colors ${
+                        chatWorkMode === "chat"
+                          ? "bg-[#414140] font-semibold text-foreground"
+                          : "font-medium text-muted"
                       }`}
                     >
                       Chat
@@ -1949,8 +1952,10 @@ function ChatGizaInner() {
                     <button
                       type="button"
                       onClick={() => setChatWorkMode("work")}
-                      className={`text-sm transition-colors ${
-                        chatWorkMode === "work" ? "font-semibold text-foreground" : "font-medium text-muted"
+                      className={`flex items-center rounded-md px-3 text-sm transition-colors ${
+                        chatWorkMode === "work"
+                          ? "bg-[#414140] font-semibold text-foreground"
+                          : "font-medium text-muted"
                       }`}
                     >
                       Work
