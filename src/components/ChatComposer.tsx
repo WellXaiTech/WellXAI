@@ -824,7 +824,8 @@ export default function ChatComposer({
   const formEl = isHero ? (
     <form
       onSubmit={onSubmit}
-      className="flex w-full flex-col gap-2 rounded-2xl border-2 border-composer-border bg-composer px-4 pt-4 pb-3 shadow-sm"
+      // bg-[#20201F], not bg-composer -- per feedback, its own real color.
+      className="flex w-full flex-col gap-2 rounded-2xl border-2 border-composer-border bg-[#20201F] px-4 pt-4 pb-3 shadow-sm"
     >
       {fileInputEl}
 
@@ -901,7 +902,11 @@ export default function ChatComposer({
         <p className="mb-2 text-xs text-red-500">{error ?? voiceError}</p>
       )}
 
-      <div className={isHero ? "mx-auto w-full max-w-[var(--max-w-chat)]" : "mx-auto"}>{formEl}</div>
+      {/* max-w-[640px], not the shared --max-w-chat (810px) -- per feedback
+          the composer itself read as too wide; --max-w-chat is shared with
+          unrelated layout (message list, header row) so narrowing it here
+          specifically, not globally. */}
+      <div className={isHero ? "mx-auto w-full max-w-[640px]" : "mx-auto"}>{formEl}</div>
 
       {!isHero && (
         <div className="mt-1.5 flex justify-end px-1">{toolSelector}</div>
