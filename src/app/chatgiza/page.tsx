@@ -2068,7 +2068,17 @@ function ChatGizaInner() {
 
 export default function ChatGizaPage() {
   return (
-    <Suspense>
+    // A real (if trivial) fallback matters here, not just style -- with none,
+    // React's streaming SSR has nothing cheap to swap in while this
+    // boundary resolves, so the pre-swap copy of the boundary's own
+    // children (the whole page, sidebar included) can be left behind as an
+    // orphaned hidden node instead of being cleanly discarded. That
+    // duplicate sidebar was invisible on its own, but its resize-drag
+    // handle (see ChatSidebar.tsx) is absolutely positioned and could still
+    // catch hover/drag events -- reported as a second, misplaced resize
+    // line. This fallback contains no sidebar-shaped markup at all, so
+    // nothing sidebar-like can ever be duplicated by this boundary again.
+    <Suspense fallback={<div className="flex h-dvh w-full" />}>
       <ChatGizaInner />
     </Suspense>
   );

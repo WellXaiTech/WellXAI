@@ -2339,7 +2339,9 @@ export default function BuildWorkspace() {
   // ChatSidebar.tsx's own matching implementation).
   const railRef = useRef<HTMLDivElement | null>(null);
   const railDragRef = useRef<{ startX: number; startWidth: number } | null>(null);
-  const RAIL_MIN_WIDTH = 200;
+  // 0, not some larger floor -- matches ChatSidebar.tsx's own drag: dragging
+  // inward should let this keep shrinking continuously until it's gone.
+  const RAIL_MIN_WIDTH = 0;
   const RAIL_MAX_WIDTH = 480;
   function onRailResizeMove(e: PointerEvent) {
     const drag = railDragRef.current;
@@ -2357,6 +2359,7 @@ export default function BuildWorkspace() {
   }
   function beginRailResize(e: React.PointerEvent) {
     if (!railRef.current) return;
+    e.preventDefault();
     railDragRef.current = { startX: e.clientX, startWidth: railRef.current.getBoundingClientRect().width };
     document.body.style.userSelect = "none";
     window.addEventListener("pointermove", onRailResizeMove);
@@ -2732,14 +2735,23 @@ export default function BuildWorkspace() {
   const rail = (
     <div
       ref={railRef}
-      className="relative flex h-full w-[var(--sidebar-width)] shrink-0 flex-col gap-3 border-r border-border bg-sidebar px-3 pt-0"
+      className="relative flex h-full w-[var(--sidebar-width)] shrink-0 flex-col gap-3 overflow-hidden border-r border-border bg-sidebar px-3 pt-0"
     >
       {/* Drag to resize -- see beginRailResize above; keeps this in sync
-          with the Ask side's own sidebar drag via the shared CSS variable. */}
+          with the Ask side's own sidebar drag via the shared CSS variable.
+          `fixed` (not `absolute` off the rail's own box) + `left` off the
+          CSS variable directly (clamped to never go negative), same reasons
+          as ChatSidebar.tsx's matching handle: stays reachable even once
+          the rail has shrunk to 0 width, and escapes this rail's own
+          overflow-hidden entirely rather than needing it restructured. */}
       <div
         onPointerDown={beginRailResize}
         aria-hidden="true"
-        className="absolute right-0 top-0 z-10 h-full w-1.5 -translate-x-1/2 cursor-ew-resize touch-none hover:bg-foreground/10 active:bg-foreground/20"
+        style={{ left: "max(0px, calc(var(--sidebar-width) - 5px))" }}
+        // Wider than it looks necessary -- see ChatSidebar.tsx's matching
+        // handle: a 6px hit target was easy to miss and fall through to a
+        // native text-selection drag instead.
+        className="fixed top-0 z-10 h-full w-2.5 cursor-ew-resize touch-none hover:bg-foreground/10 active:bg-foreground/20"
       />
       <div className="flex w-full items-center justify-between text-muted">
         <Link href="/chatgiza" aria-label="Menu" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">

@@ -17,7 +17,11 @@ export type ConversationSummary = {
 
 const COLLAPSED_KEY = "chatgiza:sidebar-collapsed";
 const SIDEBAR_WIDTH_KEY = "chatgiza:sidebar-width";
-const MIN_SIDEBAR_WIDTH = 200;
+// 0, not some larger floor -- per feedback, dragging inward should let the
+// sidebar keep shrinking continuously until it's gone, the same way
+// dragging it out keeps making it wider, rather than stopping at a hard
+// minimum partway there.
+const MIN_SIDEBAR_WIDTH = 0;
 const MAX_SIDEBAR_WIDTH = 480;
 
 
@@ -1258,6 +1262,7 @@ export default function ChatSidebar({
   }
   function beginSidebarResize(e: React.PointerEvent) {
     if (!sidebarRef.current) return;
+    e.preventDefault();
     sidebarDragRef.current = { startX: e.clientX, startWidth: sidebarRef.current.getBoundingClientRect().width };
     document.body.style.userSelect = "none";
     window.addEventListener("pointermove", onSidebarResizeMove);
@@ -1832,16 +1837,33 @@ export default function ChatSidebar({
       ) : (
         <aside
           ref={sidebarRef}
-          className="relative hidden w-[var(--sidebar-width)] shrink-0 flex-col border-r border-border bg-sidebar sm:flex"
+          className="relative hidden w-[var(--sidebar-width)] shrink-0 border-r border-border bg-sidebar sm:flex"
         >
-          {renderExpandedBody(toggleCollapsed, "Collapse sidebar")}
+          {/* overflow-hidden lives here, not on the <aside> itself -- the
+              resize handle below is positioned off var(--sidebar-width)
+              directly (not the aside's own shrinking box), so it can stay
+              reachable even once the sidebar has collapsed to 0; an
+              overflow-hidden aside would clip the handle away right along
+              with the content the moment that happened. */}
+          <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
+            {renderExpandedBody(toggleCollapsed, "Collapse sidebar")}
+          </div>
           {/* Drag to resize -- updates --sidebar-width live (see globals.css),
               which BuildWorkspace's own sidebar and ProjectsPanel also key
-              off, so they stay in sync automatically. */}
+              off, so they stay in sync automatically. Positioned via `left`
+              off the CSS variable (clamped to never go negative) rather than
+              `right-0` on the aside's own box, which would otherwise carry
+              the handle off-screen to the left as the sidebar shrinks toward
+              0 -- leaving no way to drag it back open. */}
           <div
             onPointerDown={beginSidebarResize}
             aria-hidden="true"
-            className="absolute right-0 top-0 z-10 hidden h-full w-1.5 -translate-x-1/2 cursor-ew-resize touch-none hover:bg-foreground/10 active:bg-foreground/20 sm:block"
+            style={{ left: "max(0px, calc(var(--sidebar-width) - 5px))" }}
+            // Wider than it looks necessary -- a 6px hit target was easy to
+            // miss (the pointerdown would land on the row content next to
+            // it instead, starting a native text-selection drag rather than
+            // the resize, which is what the reported "wrong line" was).
+            className="absolute top-0 z-10 hidden h-full w-2.5 cursor-ew-resize touch-none hover:bg-foreground/10 active:bg-foreground/20 sm:block"
           />
         </aside>
       )}
