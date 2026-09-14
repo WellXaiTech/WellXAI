@@ -2780,31 +2780,35 @@ export default function BuildWorkspace() {
         className="fixed top-0 z-10 h-full w-2.5 cursor-ew-resize touch-none"
       />
       <div className="flex w-full items-center justify-between text-muted">
-        <Link href="/chatgiza" aria-label="Menu" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
-          {ToolbarMenuIcon}
-        </Link>
-        <Link href="/chatgiza" aria-label="Toggle sidebar" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
-          {ToolbarSidebarIcon}
-        </Link>
-        <Link href="/chatgiza" aria-label="Search chats" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
-          {ToolbarSearchIcon}
-        </Link>
-        <button onClick={() => window.history.back()} aria-label="Back" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
-          {ToolbarBackIcon}
-        </button>
-        <button onClick={() => window.history.forward()} aria-label="Forward" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
-          {ToolbarForwardIcon}
-        </button>
-      </div>
-      <div className="flex items-center gap-1 rounded-full bg-surface-2 p-1">
-        <Link href="/chatgiza" className="flex flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-1 text-center text-sm font-medium text-muted transition-colors hover:text-foreground">
-          {AskPillIcon}
-          Ask
-        </Link>
-        <span className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-surface px-2 py-1 text-center text-sm font-medium text-foreground shadow-sm">
-          {CodePillIcon}
-          Code
-        </span>
+        <div className="flex items-center gap-1">
+          <Link href="/chatgiza" aria-label="Menu" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
+            {ToolbarMenuIcon}
+          </Link>
+          <Link href="/chatgiza" aria-label="Toggle sidebar" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
+            {ToolbarSidebarIcon}
+          </Link>
+          <Link href="/chatgiza" aria-label="Search chats" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
+            {ToolbarSearchIcon}
+          </Link>
+          <button onClick={() => window.history.back()} aria-label="Back" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
+            {ToolbarBackIcon}
+          </button>
+          <button onClick={() => window.history.forward()} aria-label="Forward" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
+            {ToolbarForwardIcon}
+          </button>
+        </div>
+        {/* Ask/Code now live here as plain icons (moved up from the
+            labeled pill that used to sit further down) -- per feedback,
+            matching this same icon-only top-row treatment on both sides
+            (see ChatSidebar.tsx's matching top row). */}
+        <div className="flex items-center gap-1">
+          <Link href="/chatgiza" aria-label="Ask" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
+            {AskPillIcon}
+          </Link>
+          <span aria-label="Code" className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-2 text-foreground">
+            {CodePillIcon}
+          </span>
+        </div>
       </div>
       <button
         onClick={startNewChat}

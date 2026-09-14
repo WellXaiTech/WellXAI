@@ -1456,41 +1456,62 @@ export default function ChatSidebar({
             // after -- and sit close to the top of the window/titlebar,
             // not with a large gap above it.
             <div className="hidden w-full items-center justify-between text-muted sm:flex">
-              <button
-                onClick={toggleCollapsed}
-                aria-label="Menu"
-                className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
-              >
-                {AppToolbarMenuIcon}
-              </button>
-              <button
-                onClick={toggleCollapsed}
-                aria-label="Toggle sidebar"
-                className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
-              >
-                {AppToolbarSidebarIcon}
-              </button>
-              <button
-                onClick={closeMobileThen(onOpenSearch)}
-                aria-label="Search chats"
-                className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
-              >
-                {AppToolbarSearchIcon}
-              </button>
-              <button
-                onClick={() => window.history.back()}
-                aria-label="Back"
-                className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
-              >
-                {AppToolbarBackIcon}
-              </button>
-              <button
-                onClick={() => window.history.forward()}
-                aria-label="Forward"
-                className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
-              >
-                {AppToolbarForwardIcon}
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={toggleCollapsed}
+                  aria-label="Menu"
+                  className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
+                >
+                  {AppToolbarMenuIcon}
+                </button>
+                <button
+                  onClick={toggleCollapsed}
+                  aria-label="Toggle sidebar"
+                  className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
+                >
+                  {AppToolbarSidebarIcon}
+                </button>
+                <button
+                  onClick={closeMobileThen(onOpenSearch)}
+                  aria-label="Search chats"
+                  className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
+                >
+                  {AppToolbarSearchIcon}
+                </button>
+                <button
+                  onClick={() => window.history.back()}
+                  aria-label="Back"
+                  className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
+                >
+                  {AppToolbarBackIcon}
+                </button>
+                <button
+                  onClick={() => window.history.forward()}
+                  aria-label="Forward"
+                  className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
+                >
+                  {AppToolbarForwardIcon}
+                </button>
+              </div>
+              {/* Ask/Code now live here as plain icons (moved up from the
+                  labeled pill that used to sit further down the list) --
+                  per feedback, matching this same icon-only top-row
+                  treatment on both sides (see BuildWorkspace.tsx's rail). */}
+              <div className="flex items-center gap-1">
+                <span
+                  aria-label="Ask"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-2 text-foreground"
+                >
+                  {AskPillIcon}
+                </span>
+                <Link
+                  href="/chatgiza/build"
+                  aria-label="Code"
+                  className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
+                >
+                  {CodePillIcon}
+                </Link>
+              </div>
             </div>
           ) : (
             <button onClick={onNewChat} className="hidden items-center gap-2 text-sm font-bold sm:flex">
@@ -1538,23 +1559,6 @@ export default function ChatSidebar({
             <span className="text-muted">{QuantaraIcon}</span>
             Quantara
           </Link>
-
-          {/* Was only shown in standalone/installed-app mode -- now
-              always shown, replacing the separate "Code" row further
-              down in the nav list with this pill instead. */}
-          <div className="mb-2 hidden items-center gap-1 rounded-xl bg-[#212121] p-1 sm:flex">
-            <span className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-surface px-2 py-1 text-center text-sm font-medium text-foreground shadow-sm">
-              {AskPillIcon}
-              Ask
-            </span>
-            <Link
-              href="/chatgiza/build"
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1 text-center text-sm font-medium text-muted transition-colors hover:text-foreground"
-            >
-              {CodePillIcon}
-              Code
-            </Link>
-          </div>
 
           <button
             onClick={closeMobileThen(onNewChat)}
