@@ -320,20 +320,22 @@ textarea::placeholder {
 
   padding: 6px;
 
-  border-radius: 0;
+  /* Per feedback -- back to a small amount of rounding (marked by hand at
+     each corner), not the fully square corners from the previous round. */
+  border-radius: 14px;
 
-  /* Was a tinted rgba(box-rgb) fill -- visibly lighter than the page's own
-     --background (dark mode: #1e1e1e-ish blended vs #151515), which is
-     exactly what traced out as a big rectangular "line" once the corners
-     went square (no curve left to soften it). Matches the real page
-     background now -- no fill contrast, no edge to see. */
-  background: var(--background);
+  /* Per feedback -- the box should have its own real color again, not
+     blend fully into the page. Safe to bring the tinted fill back now:
+     the earlier "big line" complaint was this contrast combined with
+     fully SQUARE corners (a hard-edged rectangle with no curve to soften
+     it); with real rounding restored above, the same fill no longer
+     traces out that way. */
+  background: linear-gradient(
+    to bottom,
+    rgba(var(--box-rgb), 0.65),
+    rgba(var(--box-rgb), 0.65)
+  );
 
-  /* Per feedback -- a genuinely faint outline is wanted back (the earlier
-     "big line" complaint was the background-fill contrast above, not
-     this), just enough to mark where the box ends, not a bold edge. Lower
-     opacity than the original (0.14 -> 0.08) since it's meant to be barely
-     there. Square corners stay square -- explicitly not rounded. */
   box-shadow: inset 0 0 0 1px rgba(var(--glow-rgb), 0.08);
 }
 
@@ -341,12 +343,11 @@ textarea::placeholder {
   width: 100%;
   min-height: 108px;
 
-  border-radius: 0;
+  /* 8px, not 14px -- keeps the same 6px nesting gap as .box's own padding
+     so the two curves stay concentric. */
+  border-radius: 8px;
 
-  /* Same reasoning as .box above -- was --composer-bg (#212121), visibly
-     lighter than the page background and the other half of that traced
-     rectangle. */
-  background: var(--background);
+  background: var(--composer-bg);
 
   overflow: hidden;
 }
