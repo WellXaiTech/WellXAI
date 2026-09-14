@@ -322,11 +322,12 @@ textarea::placeholder {
 
   border-radius: 0;
 
-  background: linear-gradient(
-    to bottom,
-    rgba(var(--box-rgb), 0.65),
-    rgba(var(--box-rgb), 0.65)
-  );
+  /* Was a tinted rgba(box-rgb) fill -- visibly lighter than the page's own
+     --background (dark mode: #1e1e1e-ish blended vs #151515), which is
+     exactly what traced out as a big rectangular "line" once the corners
+     went square (no curve left to soften it). Matches the real page
+     background now -- no fill contrast, no edge to see. */
+  background: var(--background);
 }
 
 .box > .inner {
@@ -335,7 +336,10 @@ textarea::placeholder {
 
   border-radius: 0;
 
-  background: var(--composer-bg);
+  /* Same reasoning as .box above -- was --composer-bg (#212121), visibly
+     lighter than the page background and the other half of that traced
+     rectangle. */
+  background: var(--background);
 
   overflow: hidden;
 }
