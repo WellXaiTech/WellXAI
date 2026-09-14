@@ -116,13 +116,6 @@ const ModelCheckIcon = (
     <path d="M20 6 9 17l-5-5" />
   </svg>
 );
-const ModelCloseIcon = (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 6 6 18" />
-    <path d="m6 6 12 12" />
-  </svg>
-);
-
 const ArrowUpIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24">
     <path d="M0 0h24v24H0z" fill="none" />
@@ -348,10 +341,27 @@ export default function ChatComposer({
     return { left: rect.left, bottom: window.innerHeight - rect.top + 8 };
   }
 
+  // GiZa 5.6 sits on the composer's right side now (used to be next to
+  // "+", on the left) -- computeDropdownCoords' shared composer-wide
+  // anchor left the model sheet opening under the far-left edge, nowhere
+  // near its own trigger. Anchored to toolMenuRef's own rect instead, same
+  // flip-if-no-room-below logic, right-aligned since the trigger itself
+  // sits at the row's right edge.
+  function computeToolMenuCoords(estimatedHeight = 240): DropdownCoords | null {
+    const rect = toolMenuRef.current?.getBoundingClientRect();
+    if (!rect) return null;
+    const left = Math.max(8, rect.right - 384);
+    const spaceBelow = window.innerHeight - rect.bottom;
+    if (spaceBelow >= estimatedHeight + 16) {
+      return { left, top: rect.bottom + 8 };
+    }
+    return { left, bottom: window.innerHeight - rect.top + 8 };
+  }
+
   function openToolMenu() {
     setToolMenuOpen((v) => {
       const next = !v;
-      if (next) setToolMenuCoords(computeDropdownCoords(240));
+      if (next) setToolMenuCoords(computeToolMenuCoords());
       return next;
     });
   }
@@ -636,41 +646,14 @@ export default function ChatComposer({
                 ? { top: toolMenuCoords.top }
                 : { bottom: toolMenuCoords.bottom }),
             }}
-            className="z-50 w-80 overflow-hidden rounded-2xl border border-border bg-surface shadow-lg"
+            className="z-50 w-96 overflow-hidden rounded-2xl border border-border bg-[#20201F] shadow-lg"
           >
-            <div className="relative flex items-center justify-center border-b border-border px-3 py-3">
-              <button
-                type="button"
-                aria-label="Close"
-                onClick={() => setToolMenuOpen(false)}
-                className="absolute left-2 flex h-7 w-7 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
-              >
-                {ModelCloseIcon}
-              </button>
+            {/* No close "X" and no GiZa Pro row, per feedback. */}
+            <div className="flex items-center justify-center border-b border-border px-3 py-4">
               <span className="text-sm font-semibold">Select model</span>
             </div>
 
             <div className="p-1.5">
-              {/* Not wired to anything real yet -- billing/upgrade flow is
-                  being rebuilt elsewhere; this is just the entry point so
-                  it has a home in the redesigned sheet, matching the rest
-                  of this list's style instead of a bare "Coming soon" line. */}
-              <button
-                type="button"
-                onClick={() => setToolMenuOpen(false)}
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-2"
-              >
-                <span className="flex-1 min-w-0">
-                  <span className="flex items-center gap-2">
-                    <span className="text-sm font-medium">GiZa Pro</span>
-                    <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-medium text-muted">
-                      Coming soon
-                    </span>
-                  </span>
-                  <span className="block text-xs text-muted">For your toughest challenges</span>
-                </span>
-              </button>
-
               <button
                 type="button"
                 onClick={() => {
@@ -718,18 +701,11 @@ export default function ChatComposer({
       onPointerLeave={stopListening}
       onPointerCancel={stopListening}
       disabled={disabled}
-      className={
-        isHero
-          ? `flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-500 disabled:opacity-40 ${
-              isListening ? "ring-2 ring-blue-300" : ""
-            }`
-          // No blue fill in the bar composer -- per feedback, only the
-          // hero's own hold-to-talk button keeps it; here it's just
-          // another plain muted icon like the rest of the row.
-          : `flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-40 ${
-              isListening ? "ring-2 ring-blue-300" : ""
-            }`
-      }
+      // No more blue fill in the hero composer either, per feedback -- both
+      // variants are now the same plain muted icon style.
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-40 ${
+        isListening ? "ring-2 ring-blue-300" : ""
+      }`}
     >
       {/* Per feedback -- the hero composer's own idle button shows a plain
           mic now, not the waveform (bar composer keeps the waveform,

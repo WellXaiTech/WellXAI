@@ -1917,8 +1917,10 @@ function ChatGizaInner() {
                   e.preventDefault();
                   handleSend(input, pendingAttachments);
                 }}
+                // #20201F, not the old #212121 -- per feedback, matches
+                // the composer's own background now.
                 modeSwitcher={
-                  <div className="flex items-center gap-1 rounded-full bg-[#212121] p-1">
+                  <div className="flex items-center gap-1 rounded-full bg-[#20201F] p-1">
                     <span className="rounded-full bg-surface px-3 py-1 text-sm font-medium text-foreground shadow-sm">
                       Chat
                     </span>
