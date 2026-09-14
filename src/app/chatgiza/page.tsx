@@ -1563,17 +1563,10 @@ function ChatGizaInner() {
           )}
           {!active ? (
             <>
-              <div className="flex items-center justify-self-center gap-1 rounded-full bg-[#212121] p-1">
-                <span className="rounded-full bg-surface px-3 py-1 text-sm font-medium text-foreground shadow-sm">
-                  Chat
-                </span>
-                <button
-                  onClick={() => setComingSoonTitle("Work")}
-                  className="rounded-full px-3 py-1 text-sm font-medium text-muted transition-colors hover:text-foreground"
-                >
-                  Work
-                </button>
-              </div>
+              {/* Per feedback -- moved into the hero composer itself (see
+                  the modeSwitcher prop below), where GiZa 5.6 used to sit.
+                  Empty placeholder keeps this grid cell's width reserved. */}
+              <span />
               <button
                 onClick={() => setTemporaryMode((v) => !v)}
                 aria-label={temporaryMode ? "Turn off Temporary Chat" : "Turn on Temporary Chat"}
@@ -1916,6 +1909,20 @@ function ChatGizaInner() {
                   e.preventDefault();
                   handleSend(input, pendingAttachments);
                 }}
+                modeSwitcher={
+                  <div className="flex items-center gap-1 rounded-full bg-[#212121] p-1">
+                    <span className="rounded-full bg-surface px-3 py-1 text-sm font-medium text-foreground shadow-sm">
+                      Chat
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setComingSoonTitle("Work")}
+                      className="rounded-full px-3 py-1 text-sm font-medium text-muted transition-colors hover:text-foreground"
+                    >
+                      Work
+                    </button>
+                  </div>
+                }
               />
             </div>
           </div>

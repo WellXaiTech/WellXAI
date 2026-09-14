@@ -256,6 +256,7 @@ export default function ChatComposer({
   temporaryMode,
   onToggleTemporary,
   onSubmit,
+  modeSwitcher,
 }: {
   variant: "hero" | "bar";
   value: string;
@@ -275,6 +276,11 @@ export default function ChatComposer({
   temporaryMode?: boolean;
   onToggleTemporary?: () => void;
   onSubmit: (e: React.FormEvent) => void;
+  // The Chat/Work pill -- per feedback, moved here from the page's own top
+  // bar (where GiZa 5.6 used to sit). Passed in rather than owned here
+  // since its state (setComingSoonTitle) lives in the parent page; only
+  // relevant for variant="hero".
+  modeSwitcher?: React.ReactNode;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
@@ -599,7 +605,9 @@ export default function ChatComposer({
         <button
           type="button"
           onClick={openToolMenu}
-          className="flex h-9 items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-2"
+          // No border/bg, per feedback -- moved from next to "+" to the
+          // secondaryMicButton's old spot (see formEl below), plain now.
+          className="flex h-9 items-center gap-1 rounded-xl px-2 text-sm font-semibold text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
         >
           {!activeTool && LightningIcon}
           {activeTool === "deep_think" && BrainIcon}
@@ -723,12 +731,16 @@ export default function ChatComposer({
             }`
       }
     >
-      {WaveformIcon}
+      {/* Per feedback -- the hero composer's own idle button shows a plain
+          mic now, not the waveform (bar composer keeps the waveform,
+          unaffected). */}
+      {isHero ? MicIcon : WaveformIcon}
     </button>
   );
 
   // A second, separate mic entry point sitting right next to the blue
-  // waveform button -- not replacing it, per feedback.
+  // waveform button -- not replacing it, per feedback. (Hero no longer
+  // renders this one -- see formEl below; still used by the bar composer.)
   const secondaryMicButton = (
     <button
       type="button"
@@ -827,11 +839,16 @@ export default function ChatComposer({
         )}
       </div>
 
+      {/* Per feedback: "+" alone on the left, the Chat/Work pill (moved
+          here from the page's own top bar) next to it, GiZa 5.6 (no more
+          border/bg) moved to the right where the second mic button used to
+          sit, that second mic button dropped entirely -- the action button
+          alone covers hold-to-talk/send now. */}
       <div className="flex items-center gap-2">
         {attachMenu}
-        {toolSelector}
+        {modeSwitcher}
         <div className="flex-1" />
-        {secondaryMicButton}
+        {toolSelector}
         {actionButton}
       </div>
     </form>
