@@ -1917,16 +1917,15 @@ function ChatGizaInner() {
                   e.preventDefault();
                   handleSend(input, pendingAttachments);
                 }}
-                // #20201F, not the old #212121 -- per feedback, matches
-                // the composer's own background now.
-                // No outer pill background anymore (it matched the
-                // composer's own #20201F exactly, so was invisible either
-                // way) -- just the active tab gets a real, LIGHTER
-                // highlight (bg-surface-2, not bg-surface, which was
-                // actually darker than the composer here), matching the
-                // reference screenshot's brighter active tab.
+                // Two-layer background, per feedback -- a faint shared
+                // "track" behind BOTH tabs (bg-white/5, visible but subtle
+                // against the composer's own #20201F), with the active
+                // tab's own stronger bg-surface-2 highlight sitting on top
+                // of it. A prior round dropped the track entirely, which
+                // read as missing depth -- the inactive tab had nothing
+                // behind it at all.
                 modeSwitcher={
-                  <div className="flex items-center gap-1 rounded-full p-1">
+                  <div className="flex items-center gap-1 rounded-full bg-white/5 p-1">
                     <span className="rounded-full bg-surface-2 px-3 py-1 text-sm font-medium text-foreground shadow-sm">
                       Chat
                     </span>
