@@ -2768,7 +2768,10 @@ export default function BuildWorkspace() {
       // content (see railMobileOpen below), where it should fill the
       // drawer rather than sit at the desktop --sidebar-width and leave
       // dead space beside it.
-      className="relative flex h-full w-full shrink-0 flex-col gap-3 overflow-hidden border-r border-border bg-sidebar px-3 pt-0 sm:w-[var(--sidebar-width)]"
+      // pt-2, not pt-0 -- matches ChatSidebar.tsx's own header wrapper
+      // exactly (pb-4 pt-2 there), which sits 7.5px lower than this rail's
+      // icon row did without it; per feedback, the two should align.
+      className="relative flex h-full w-full shrink-0 flex-col gap-3 overflow-hidden border-r border-border bg-sidebar px-3 pt-2 sm:w-[var(--sidebar-width)]"
     >
       {/* Drag to resize -- see beginRailResize above; keeps this in sync
           with the Ask side's own sidebar drag via the shared CSS variable.
