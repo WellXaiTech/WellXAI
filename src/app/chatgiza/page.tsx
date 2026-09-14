@@ -193,41 +193,6 @@ const BrowseGlobeBigIcon = (
   </svg>
 );
 
-const QUICK_ACTIONS = [
-  {
-    label: "Write or edit",
-    prefill: "Help me write ",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M12 20h9" />
-        <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-      </svg>
-    ),
-  },
-  {
-    label: "Look something up",
-    prefill: "What's the latest on ",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <circle cx="12" cy="12" r="9" />
-        <path d="M3 12h18" />
-        <path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18" />
-      </svg>
-    ),
-  },
-  {
-    label: "Brainstorm ideas",
-    prefill: "Give me ideas for ",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M9 18h6" />
-        <path d="M10 22h4" />
-        <path d="M12 2a6 6 0 0 0-4 10.5c.6.6 1 1.4 1 2.5h6c0-1.1.4-1.9 1-2.5A6 6 0 0 0 12 2Z" />
-      </svg>
-    ),
-  },
-];
-
 function truncateTitle(text: string) {
   const clean = text.trim().replace(/\s+/g, " ");
   return clean.length > 40 ? `${clean.slice(0, 40)}…` : clean;
@@ -1952,19 +1917,6 @@ function ChatGizaInner() {
                   handleSend(input, pendingAttachments);
                 }}
               />
-            </div>
-
-            <div className="relative z-10 mt-4 hidden flex-wrap items-center justify-center gap-2 sm:flex">
-              {QUICK_ACTIONS.map((action) => (
-                <button
-                  key={action.label}
-                  onClick={() => setInput(action.prefill)}
-                  className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm text-muted hover:text-foreground hover:border-foreground/40 transition-colors"
-                >
-                  {action.icon}
-                  {action.label}
-                </button>
-              ))}
             </div>
           </div>
         ) : (

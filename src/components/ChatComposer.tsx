@@ -543,7 +543,7 @@ export default function ChatComposer({
           });
         }}
         className={`flex items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent ${
-          isHero ? "h-10 w-10 border border-white/10 bg-white/5" : "h-8 w-8"
+          isHero ? "h-10 w-10" : "h-8 w-8"
         }`}
       >
         {PlusIcon}
@@ -600,7 +600,7 @@ export default function ChatComposer({
         <button
           type="button"
           onClick={openToolMenu}
-          className="flex h-10 items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-surface-2"
+          className="flex h-9 items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-2"
         >
           {!activeTool && LightningIcon}
           {activeTool === "deep_think" && BrainIcon}
