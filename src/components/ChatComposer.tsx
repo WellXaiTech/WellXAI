@@ -672,7 +672,7 @@ export default function ChatComposer({
               >
                 <span className="flex-1">
                   <span className="block text-sm font-medium">GiZa Pro</span>
-                  <span className="block text-xs text-muted underline decoration-blue-500">
+                  <span className="block text-xs text-muted ">
                     Chat, create images, and more
                   </span>
                 </span>
@@ -687,7 +687,7 @@ export default function ChatComposer({
               >
                 <span className="flex-1">
                   <span className="block text-sm font-medium">GiZa 5.6</span>
-                  <span className="block text-xs text-muted underline decoration-blue-500">
+                  <span className="block text-xs text-muted ">
                     Reliable, efficient performance for daily business tasks
                   </span>
                 </span>
@@ -705,7 +705,7 @@ export default function ChatComposer({
                 >
                   <span className="flex-1">
                     <span className="block text-sm font-medium">{item.title}</span>
-                    <span className="block text-xs text-muted underline decoration-blue-500">{item.description}</span>
+                    <span className="block text-xs text-muted ">{item.description}</span>
                   </span>
                   {item.tool === activeTool && <span className="text-foreground">{ModelCheckIcon}</span>}
                 </button>
