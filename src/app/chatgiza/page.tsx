@@ -1929,19 +1929,19 @@ function ChatGizaInner() {
                 // of it. A prior round dropped the track entirely, which
                 // read as missing depth -- the inactive tab had nothing
                 // behind it at all.
-                // New direction, per feedback -- ONE shared light
-                // background holding BOTH Chat and Work together (not a
-                // per-tab highlight anymore), moderate/ordinary rounding
-                // (rounded-lg, not a full pill), wide (generous px-5) but
-                // not tall (modest py-1.5). Which one is active now reads
-                // via text weight/color only, not a separate background.
+                // Per feedback: wider (px-5 -> px-7), more space between
+                // Chat and Work (gap-3 -> gap-5), background #2B2B2A
+                // (specific hex given) -- switched the text to light
+                // (was dark #151515, made for the previous much-lighter
+                // #d9d9d8 fill; #2B2B2A is dark, so light text is what
+                // actually reads clearly against it).
                 modeSwitcher={
-                  <div className="flex items-center gap-3 rounded-lg bg-[#d9d9d8] px-5 py-1.5">
+                  <div className="flex items-center gap-5 rounded-lg bg-[#2B2B2A] px-7 py-1.5">
                     <button
                       type="button"
                       onClick={() => setChatWorkMode("chat")}
                       className={`text-sm transition-colors ${
-                        chatWorkMode === "chat" ? "font-semibold text-[#151515]" : "font-medium text-[#151515]/60"
+                        chatWorkMode === "chat" ? "font-semibold text-foreground" : "font-medium text-muted"
                       }`}
                     >
                       Chat
@@ -1950,7 +1950,7 @@ function ChatGizaInner() {
                       type="button"
                       onClick={() => setChatWorkMode("work")}
                       className={`text-sm transition-colors ${
-                        chatWorkMode === "work" ? "font-semibold text-[#151515]" : "font-medium text-[#151515]/60"
+                        chatWorkMode === "work" ? "font-semibold text-foreground" : "font-medium text-muted"
                       }`}
                     >
                       Work
