@@ -571,6 +571,17 @@ textarea::placeholder {
   animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* The browser's default root transition cross-fades the ENTIRE old page
+   out and the new one in -- with two dark pages whose content differs,
+   that blend reads as a visible darkening flash through the middle of
+   the screen. Turning it off leaves just the named indicator above
+   sliding; everything else swaps instantly with no fade at all. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
 @keyframes hero-shimmer-appear {
   0% {
     opacity: 0;
