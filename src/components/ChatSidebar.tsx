@@ -16,6 +16,9 @@ export type ConversationSummary = {
 };
 
 const COLLAPSED_KEY = "chatgiza:sidebar-collapsed";
+const SIDEBAR_WIDTH_KEY = "chatgiza:sidebar-width";
+const MIN_SIDEBAR_WIDTH = 200;
+const MAX_SIDEBAR_WIDTH = 480;
 
 
 const PencilIcon = (
@@ -1219,6 +1222,13 @@ export default function ChatSidebar({
   const [kycOpen, setKycOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  // Drag-to-resize, same pattern as the Quantara/Live/Browse panels --
+  // writes the real --sidebar-width CSS variable (see globals.css) rather
+  // than owning its own width, since BuildWorkspace's own sidebar and
+  // ProjectsPanel already size/position off that same variable and would
+  // otherwise fall out of sync with whatever width gets dragged here.
+  const sidebarRef = useRef<HTMLElement | null>(null);
+  const sidebarDragRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
   useEffect(() => {
     // Hydration escape hatch: localStorage isn't available during SSR, so
@@ -1226,6 +1236,40 @@ export default function ChatSidebar({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     setCollapsed(localStorage.getItem(COLLAPSED_KEY) === "1");
+    const storedWidth = Number(localStorage.getItem(SIDEBAR_WIDTH_KEY));
+    if (storedWidth >= MIN_SIDEBAR_WIDTH && storedWidth <= MAX_SIDEBAR_WIDTH) {
+      document.documentElement.style.setProperty("--sidebar-width", `${storedWidth}px`);
+    }
+  }, []);
+
+  function onSidebarResizeMove(e: PointerEvent) {
+    const drag = sidebarDragRef.current;
+    if (!drag) return;
+    const next = Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, drag.startWidth + (e.clientX - drag.startX)));
+    document.documentElement.style.setProperty("--sidebar-width", `${next}px`);
+  }
+  function endSidebarResize() {
+    sidebarDragRef.current = null;
+    document.body.style.userSelect = "";
+    window.removeEventListener("pointermove", onSidebarResizeMove);
+    window.removeEventListener("pointerup", endSidebarResize);
+    const width = getComputedStyle(document.documentElement).getPropertyValue("--sidebar-width").trim();
+    if (width) localStorage.setItem(SIDEBAR_WIDTH_KEY, width.replace("px", ""));
+  }
+  function beginSidebarResize(e: React.PointerEvent) {
+    if (!sidebarRef.current) return;
+    sidebarDragRef.current = { startX: e.clientX, startWidth: sidebarRef.current.getBoundingClientRect().width };
+    document.body.style.userSelect = "none";
+    window.addEventListener("pointermove", onSidebarResizeMove);
+    window.addEventListener("pointerup", endSidebarResize);
+  }
+  useEffect(() => {
+    return () => {
+      window.removeEventListener("pointermove", onSidebarResizeMove);
+      window.removeEventListener("pointerup", endSidebarResize);
+      document.body.style.userSelect = "";
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -1786,8 +1830,19 @@ export default function ChatSidebar({
           {collapsedBody}
         </aside>
       ) : (
-        <aside className="hidden w-[var(--sidebar-width)] shrink-0 flex-col border-r border-border bg-sidebar sm:flex">
+        <aside
+          ref={sidebarRef}
+          className="relative hidden w-[var(--sidebar-width)] shrink-0 flex-col border-r border-border bg-sidebar sm:flex"
+        >
           {renderExpandedBody(toggleCollapsed, "Collapse sidebar")}
+          {/* Drag to resize -- updates --sidebar-width live (see globals.css),
+              which BuildWorkspace's own sidebar and ProjectsPanel also key
+              off, so they stay in sync automatically. */}
+          <div
+            onPointerDown={beginSidebarResize}
+            aria-hidden="true"
+            className="absolute right-0 top-0 z-10 hidden h-full w-1.5 -translate-x-1/2 cursor-ew-resize touch-none hover:bg-foreground/10 active:bg-foreground/20 sm:block"
+          />
         </aside>
       )}
     </>

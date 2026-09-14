@@ -2333,6 +2333,48 @@ export default function BuildWorkspace() {
   // grow, so chat is never squeezed away to nothing.
   const rowRef = useRef<HTMLDivElement>(null);
 
+  // Drag-to-resize for the rail (the Code side's own sidebar) -- writes the
+  // same --sidebar-width CSS variable ChatSidebar's Ask-side sidebar drags,
+  // so either side can resize it and both stay in sync (see globals.css and
+  // ChatSidebar.tsx's own matching implementation).
+  const railRef = useRef<HTMLDivElement | null>(null);
+  const railDragRef = useRef<{ startX: number; startWidth: number } | null>(null);
+  const RAIL_MIN_WIDTH = 200;
+  const RAIL_MAX_WIDTH = 480;
+  function onRailResizeMove(e: PointerEvent) {
+    const drag = railDragRef.current;
+    if (!drag) return;
+    const next = Math.min(RAIL_MAX_WIDTH, Math.max(RAIL_MIN_WIDTH, drag.startWidth + (e.clientX - drag.startX)));
+    document.documentElement.style.setProperty("--sidebar-width", `${next}px`);
+  }
+  function endRailResize() {
+    railDragRef.current = null;
+    document.body.style.userSelect = "";
+    window.removeEventListener("pointermove", onRailResizeMove);
+    window.removeEventListener("pointerup", endRailResize);
+    const width = getComputedStyle(document.documentElement).getPropertyValue("--sidebar-width").trim();
+    if (width) localStorage.setItem("chatgiza:sidebar-width", width.replace("px", ""));
+  }
+  function beginRailResize(e: React.PointerEvent) {
+    if (!railRef.current) return;
+    railDragRef.current = { startX: e.clientX, startWidth: railRef.current.getBoundingClientRect().width };
+    document.body.style.userSelect = "none";
+    window.addEventListener("pointermove", onRailResizeMove);
+    window.addEventListener("pointerup", endRailResize);
+  }
+  useEffect(() => {
+    const storedWidth = Number(localStorage.getItem("chatgiza:sidebar-width"));
+    if (storedWidth >= RAIL_MIN_WIDTH && storedWidth <= RAIL_MAX_WIDTH) {
+      document.documentElement.style.setProperty("--sidebar-width", `${storedWidth}px`);
+    }
+    return () => {
+      window.removeEventListener("pointermove", onRailResizeMove);
+      window.removeEventListener("pointerup", endRailResize);
+      document.body.style.userSelect = "";
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     function stopResizing() {
       isResizingRef.current = false;
@@ -2688,7 +2730,17 @@ export default function BuildWorkspace() {
   // AccountMenu at the bottom) so switching the Home/Code pill feels like
   // one product, not two differently-shaped tools.
   const rail = (
-    <div className="flex h-full w-[var(--sidebar-width)] shrink-0 flex-col gap-3 border-r border-border bg-sidebar px-3 pt-0">
+    <div
+      ref={railRef}
+      className="relative flex h-full w-[var(--sidebar-width)] shrink-0 flex-col gap-3 border-r border-border bg-sidebar px-3 pt-0"
+    >
+      {/* Drag to resize -- see beginRailResize above; keeps this in sync
+          with the Ask side's own sidebar drag via the shared CSS variable. */}
+      <div
+        onPointerDown={beginRailResize}
+        aria-hidden="true"
+        className="absolute right-0 top-0 z-10 h-full w-1.5 -translate-x-1/2 cursor-ew-resize touch-none hover:bg-foreground/10 active:bg-foreground/20"
+      />
       <div className="flex w-full items-center justify-between text-muted">
         <Link href="/chatgiza" aria-label="Menu" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
           {ToolbarMenuIcon}
