@@ -812,7 +812,7 @@ export default function ChatComposer({
   const formEl = isHero ? (
     <form
       onSubmit={onSubmit}
-      className="flex w-full flex-col gap-2 rounded-2xl border border-composer-border bg-composer px-4 pt-4 pb-3 shadow-sm"
+      className="flex w-full flex-col gap-2 rounded-2xl border-2 border-composer-border bg-composer px-4 pt-4 pb-3 shadow-sm"
     >
       {fileInputEl}
 
