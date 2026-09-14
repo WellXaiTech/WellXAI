@@ -1929,14 +1929,19 @@ function ChatGizaInner() {
                 // of it. A prior round dropped the track entirely, which
                 // read as missing depth -- the inactive tab had nothing
                 // behind it at all.
+                // Per feedback: the moving active-tab highlight is
+                // #414140 now (was bg-surface-2); shorter (py-1 ->
+                // py-0.5) and a bit wider (px-3 -> px-4); rounded-lg, not
+                // rounded-full -- the full pill read as too aggressively
+                // curved.
                 modeSwitcher={
-                  <div className="flex items-center gap-1 rounded-full bg-white/5 p-1">
+                  <div className="flex items-center gap-1 rounded-lg bg-white/5 p-1">
                     <button
                       type="button"
                       onClick={() => setChatWorkMode("chat")}
-                      className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                      className={`rounded-lg px-4 py-0.5 text-sm font-medium transition-colors ${
                         chatWorkMode === "chat"
-                          ? "bg-surface-2 text-foreground shadow-sm"
+                          ? "bg-[#414140] text-foreground shadow-sm"
                           : "text-muted hover:text-foreground"
                       }`}
                     >
@@ -1945,9 +1950,9 @@ function ChatGizaInner() {
                     <button
                       type="button"
                       onClick={() => setChatWorkMode("work")}
-                      className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                      className={`rounded-lg px-4 py-0.5 text-sm font-medium transition-colors ${
                         chatWorkMode === "work"
-                          ? "bg-surface-2 text-foreground shadow-sm"
+                          ? "bg-[#414140] text-foreground shadow-sm"
                           : "text-muted hover:text-foreground"
                       }`}
                     >
