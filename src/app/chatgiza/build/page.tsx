@@ -13,16 +13,32 @@ import BuildWorkspace from "@/components/BuildWorkspace";
 // through Google each time. Remove/flip the env var before going public.
 const DEV_SKIP_SIGNIN = process.env.NEXT_PUBLIC_DEV_SKIP_SIGNIN === "true";
 
+// Once /api/build/access has confirmed "allowed" for this browser tab, skip
+// the check (and the blank frame while it's in flight) on every later visit
+// to this page in the same session -- clicking Ask<->Code back and forth
+// was re-running this real network round trip every single time, and the
+// blank gate it sits behind while "checking" was reported as a real,
+// repeated dark flash: unlike a plain client-side route swap (e.g. the
+// Quantara link), this page has nothing at all to show -- no sidebar, no
+// content -- until that fetch resolves. A page reload still re-checks once,
+// same as before; this only short-circuits repeat SPA navigations.
+let cachedAccessAllowed = false;
+
 export default function BuildPage() {
   const { status } = useSession();
-  const [access, setAccess] = useState<"checking" | "allowed" | "denied">(DEV_SKIP_SIGNIN ? "allowed" : "checking");
+  const [access, setAccess] = useState<"checking" | "allowed" | "denied">(
+    DEV_SKIP_SIGNIN || cachedAccessAllowed ? "allowed" : "checking"
+  );
 
   useEffect(() => {
-    if (DEV_SKIP_SIGNIN) return;
+    if (DEV_SKIP_SIGNIN || cachedAccessAllowed) return;
     if (status !== "authenticated") return;
     fetch("/api/build/access")
       .then((r) => r.json())
-      .then((d) => setAccess(d.allowed ? "allowed" : "denied"))
+      .then((d) => {
+        if (d.allowed) cachedAccessAllowed = true;
+        setAccess(d.allowed ? "allowed" : "denied");
+      })
       .catch(() => setAccess("denied"));
   }, [status]);
 
