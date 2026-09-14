@@ -2366,7 +2366,11 @@ export default function BuildWorkspace() {
     window.addEventListener("pointerup", endRailResize);
   }
   useEffect(() => {
-    const storedWidth = Number(localStorage.getItem("chatgiza:sidebar-width"));
+    // Explicit null-check, not just Number(null) -- see ChatSidebar.tsx's
+    // matching restore effect for why (RAIL_MIN_WIDTH of 0 makes that
+    // distinction matter now).
+    const storedWidthRaw = localStorage.getItem("chatgiza:sidebar-width");
+    const storedWidth = storedWidthRaw !== null ? Number(storedWidthRaw) : NaN;
     if (storedWidth >= RAIL_MIN_WIDTH && storedWidth <= RAIL_MAX_WIDTH) {
       document.documentElement.style.setProperty("--sidebar-width", `${storedWidth}px`);
     }
@@ -2751,7 +2755,9 @@ export default function BuildWorkspace() {
         // Wider than it looks necessary -- see ChatSidebar.tsx's matching
         // handle: a 6px hit target was easy to miss and fall through to a
         // native text-selection drag instead.
-        className="fixed top-0 z-10 h-full w-2.5 cursor-ew-resize touch-none hover:bg-foreground/10 active:bg-foreground/20"
+        // No hover/active highlight -- see ChatSidebar.tsx's matching
+        // handle; the resize cursor alone is enough.
+        className="fixed top-0 z-10 h-full w-2.5 cursor-ew-resize touch-none"
       />
       <div className="flex w-full items-center justify-between text-muted">
         <Link href="/chatgiza" aria-label="Menu" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">

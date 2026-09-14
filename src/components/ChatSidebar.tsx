@@ -1240,7 +1240,12 @@ export default function ChatSidebar({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     setCollapsed(localStorage.getItem(COLLAPSED_KEY) === "1");
-    const storedWidth = Number(localStorage.getItem(SIDEBAR_WIDTH_KEY));
+    // Explicit null-check, not just Number(null) -- with MIN_SIDEBAR_WIDTH
+    // now 0, Number(null) (0) would otherwise pass the bounds check below
+    // and wrongly collapse a first-ever visit (nothing stored yet) to 0
+    // instead of leaving globals.css's own 260px default alone.
+    const storedWidthRaw = localStorage.getItem(SIDEBAR_WIDTH_KEY);
+    const storedWidth = storedWidthRaw !== null ? Number(storedWidthRaw) : NaN;
     if (storedWidth >= MIN_SIDEBAR_WIDTH && storedWidth <= MAX_SIDEBAR_WIDTH) {
       document.documentElement.style.setProperty("--sidebar-width", `${storedWidth}px`);
     }
@@ -1863,7 +1868,12 @@ export default function ChatSidebar({
             // miss (the pointerdown would land on the row content next to
             // it instead, starting a native text-selection drag rather than
             // the resize, which is what the reported "wrong line" was).
-            className="absolute top-0 z-10 hidden h-full w-2.5 cursor-ew-resize touch-none hover:bg-foreground/10 active:bg-foreground/20 sm:block"
+            // No hover/active highlight on purpose -- per feedback, the
+            // wide hit target (for a reliable grab, see the comment above)
+            // shouldn't paint a visible bar; the resize cursor alone is
+            // enough to show it's draggable, same as a plain browser
+            // splitter.
+            className="absolute top-0 z-10 hidden h-full w-2.5 cursor-ew-resize touch-none sm:block"
           />
         </aside>
       )}
