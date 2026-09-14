@@ -328,6 +328,13 @@ textarea::placeholder {
      went square (no curve left to soften it). Matches the real page
      background now -- no fill contrast, no edge to see. */
   background: var(--background);
+
+  /* Per feedback -- a genuinely faint outline is wanted back (the earlier
+     "big line" complaint was the background-fill contrast above, not
+     this), just enough to mark where the box ends, not a bold edge. Lower
+     opacity than the original (0.14 -> 0.08) since it's meant to be barely
+     there. Square corners stay square -- explicitly not rounded. */
+  box-shadow: inset 0 0 0 1px rgba(var(--glow-rgb), 0.08);
 }
 
 .box > .inner {
