@@ -257,6 +257,12 @@ html {
      down a notch so every rem-based Tailwind text size site-wide (not just
      this file's own px values) comes out reading the same size as before. */
   font-size: 15px;
+  /* Without this, the browser doesn't know this page supports dark mode
+     until our own CSS paints it -- Chromium falls back to a plain black
+     canvas (not this app's real --background) for any transient unpainted
+     moment, including the gaps a View Transition's snapshot compositing
+     can briefly expose. */
+  color-scheme: light dark;
 }
 
 body {

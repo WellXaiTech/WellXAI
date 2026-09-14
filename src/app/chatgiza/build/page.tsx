@@ -33,10 +33,12 @@ export default function BuildPage() {
   if (status === "loading") {
     // No "Loading…" text -- this flashes right as the Ask/Code icon's
     // sliding view-transition lands, which read as a jarring interruption
-    // instead of a smooth handoff. A blank frame the same size/background
-    // as the real content underneath is imperceptible either way, since
-    // this state is normally only up for a moment.
-    return <div className="h-full w-full" />;
+    // instead of a smooth handoff. bg-background explicitly, not just an
+    // unstyled div -- an unpainted frame during a route transition can
+    // show through to the browser's own default dark canvas instead of
+    // this app's real (slightly different) dark background, which reads
+    // as a visible dark flash rather than a truly seamless handoff.
+    return <div className="h-full w-full bg-background" />;
   }
 
   if (status !== "authenticated") {
@@ -57,10 +59,12 @@ export default function BuildPage() {
   if (access === "checking") {
     // No "Loading…" text -- this flashes right as the Ask/Code icon's
     // sliding view-transition lands, which read as a jarring interruption
-    // instead of a smooth handoff. A blank frame the same size/background
-    // as the real content underneath is imperceptible either way, since
-    // this state is normally only up for a moment.
-    return <div className="h-full w-full" />;
+    // instead of a smooth handoff. bg-background explicitly, not just an
+    // unstyled div -- an unpainted frame during a route transition can
+    // show through to the browser's own default dark canvas instead of
+    // this app's real (slightly different) dark background, which reads
+    // as a visible dark flash rather than a truly seamless handoff.
+    return <div className="h-full w-full bg-background" />;
   }
 
   if (access === "denied") {
