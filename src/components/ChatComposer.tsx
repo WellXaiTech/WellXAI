@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Attachment } from "@/lib/attachments";
+import TypingPlaceholder from "@/components/TypingPlaceholder";
 import { openExternalQuery } from "@/lib/addressBar";
 
 // The composer scrolls internally past this height rather than continuing
@@ -831,11 +832,11 @@ export default function ChatComposer({
 
       <div className="relative w-full">
         {messageTextarea}
-        {/* Per feedback -- a fixed line, not the cycling TypingPlaceholder
-            this replaced. */}
+        {/* Cycling again, per feedback (reverses the earlier "make it
+            static" request). */}
         {!value && (
           <div className="pointer-events-none absolute inset-0 flex items-center px-1 text-sm font-bold text-muted">
-            Type / for commands
+            <TypingPlaceholder />
           </div>
         )}
       </div>

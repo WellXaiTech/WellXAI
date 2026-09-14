@@ -1919,9 +1919,15 @@ function ChatGizaInner() {
                 }}
                 // #20201F, not the old #212121 -- per feedback, matches
                 // the composer's own background now.
+                // No outer pill background anymore (it matched the
+                // composer's own #20201F exactly, so was invisible either
+                // way) -- just the active tab gets a real, LIGHTER
+                // highlight (bg-surface-2, not bg-surface, which was
+                // actually darker than the composer here), matching the
+                // reference screenshot's brighter active tab.
                 modeSwitcher={
-                  <div className="flex items-center gap-1 rounded-full bg-[#20201F] p-1">
-                    <span className="rounded-full bg-surface px-3 py-1 text-sm font-medium text-foreground shadow-sm">
+                  <div className="flex items-center gap-1 rounded-full p-1">
+                    <span className="rounded-full bg-surface-2 px-3 py-1 text-sm font-medium text-foreground shadow-sm">
                       Chat
                     </span>
                     <button
