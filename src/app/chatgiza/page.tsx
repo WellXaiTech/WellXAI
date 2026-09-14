@@ -1939,12 +1939,19 @@ function ChatGizaInner() {
                 // px-9, not px-7 -- per feedback, pushes Chat further left
                 // and Work further right within the same untouched
                 // #2B2B2A shell.
+                // Vertical padding lives on the BUTTONS now, not the outer
+                // div -- per feedback, the moving #414140 highlight must
+                // fill the outer capsule's full height edge-to-edge (no
+                // gap top/bottom), matching the blue rectangle traced
+                // tightly around "Chat" in the reference image. The outer
+                // #2B2B2A only remains visible on the inactive side and in
+                // the gap/edges between the two buttons.
                 modeSwitcher={
-                  <div className="flex items-stretch gap-5 rounded-lg bg-[#2B2B2A] px-9 py-1.5">
+                  <div className="flex items-stretch gap-5 rounded-lg bg-[#2B2B2A] px-9">
                     <button
                       type="button"
                       onClick={() => setChatWorkMode("chat")}
-                      className={`flex items-center rounded-md px-3 text-sm transition-colors ${
+                      className={`flex items-center rounded-md px-3 py-1.5 text-sm transition-colors ${
                         chatWorkMode === "chat"
                           ? "bg-[#414140] font-semibold text-foreground"
                           : "font-medium text-muted"
@@ -1955,7 +1962,7 @@ function ChatGizaInner() {
                     <button
                       type="button"
                       onClick={() => setChatWorkMode("work")}
-                      className={`flex items-center rounded-md px-3 text-sm transition-colors ${
+                      className={`flex items-center rounded-md px-3 py-1.5 text-sm transition-colors ${
                         chatWorkMode === "work"
                           ? "bg-[#414140] font-semibold text-foreground"
                           : "font-medium text-muted"
