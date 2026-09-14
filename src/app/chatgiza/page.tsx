@@ -1929,21 +1929,19 @@ function ChatGizaInner() {
                 // of it. A prior round dropped the track entirely, which
                 // read as missing depth -- the inactive tab had nothing
                 // behind it at all.
-                // Reverted back to the very first version of this, per
-                // feedback -- many rounds of styling tweaks (track on/off,
-                // color, radius, fill) never landed right. Same markup as
-                // the original commit that first moved Chat/Work into the
-                // composer, just with the working toggle (chatWorkMode,
-                // no modal) kept instead of Work reopening ComingSoonModal.
+                // New direction, per feedback -- ONE shared light
+                // background holding BOTH Chat and Work together (not a
+                // per-tab highlight anymore), moderate/ordinary rounding
+                // (rounded-lg, not a full pill), wide (generous px-5) but
+                // not tall (modest py-1.5). Which one is active now reads
+                // via text weight/color only, not a separate background.
                 modeSwitcher={
-                  <div className="flex items-center gap-1 rounded-full bg-[#212121] p-1">
+                  <div className="flex items-center gap-3 rounded-lg bg-[#d9d9d8] px-5 py-1.5">
                     <button
                       type="button"
                       onClick={() => setChatWorkMode("chat")}
-                      className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-                        chatWorkMode === "chat"
-                          ? "bg-surface text-foreground shadow-sm"
-                          : "text-muted hover:text-foreground"
+                      className={`text-sm transition-colors ${
+                        chatWorkMode === "chat" ? "font-semibold text-[#151515]" : "font-medium text-[#151515]/60"
                       }`}
                     >
                       Chat
@@ -1951,10 +1949,8 @@ function ChatGizaInner() {
                     <button
                       type="button"
                       onClick={() => setChatWorkMode("work")}
-                      className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-                        chatWorkMode === "work"
-                          ? "bg-surface text-foreground shadow-sm"
-                          : "text-muted hover:text-foreground"
+                      className={`text-sm transition-colors ${
+                        chatWorkMode === "work" ? "font-semibold text-[#151515]" : "font-medium text-[#151515]/60"
                       }`}
                     >
                       Work
