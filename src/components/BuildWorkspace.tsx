@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import CodeMirror from "@uiw/react-codemirror";
@@ -2339,6 +2340,15 @@ export default function BuildWorkspace() {
   // ChatSidebar.tsx's own matching implementation).
   const railRef = useRef<HTMLDivElement | null>(null);
   const railDragRef = useRef<{ startX: number; startWidth: number } | null>(null);
+  // The rail is hidden in normal flow below the sm breakpoint (it was
+  // eating half a phone-width screen and squeezing the actual content) --
+  // this drives the mobile hamburger + full-screen drawer instead, same
+  // pattern as ChatSidebar.tsx's own mobileOpen.
+  const [railMobileOpen, setRailMobileOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   // 0, not some larger floor -- matches ChatSidebar.tsx's own drag: dragging
   // inward should let this keep shrinking continuously until it's gone.
   const RAIL_MIN_WIDTH = 0;
@@ -2739,7 +2749,11 @@ export default function BuildWorkspace() {
   const rail = (
     <div
       ref={railRef}
-      className="relative flex h-full w-[var(--sidebar-width)] shrink-0 flex-col gap-3 overflow-hidden border-r border-border bg-sidebar px-3 pt-0"
+      // w-full below sm -- this same node is reused as the mobile drawer's
+      // content (see railMobileOpen below), where it should fill the
+      // drawer rather than sit at the desktop --sidebar-width and leave
+      // dead space beside it.
+      className="relative flex h-full w-full shrink-0 flex-col gap-3 overflow-hidden border-r border-border bg-sidebar px-3 pt-0 sm:w-[var(--sidebar-width)]"
     >
       {/* Drag to resize -- see beginRailResize above; keeps this in sync
           with the Ask side's own sidebar drag via the shared CSS variable.
@@ -3078,11 +3092,50 @@ export default function BuildWorkspace() {
     </div>
   );
 
+  // Same mobile-drawer pattern as ChatSidebar.tsx: a fixed hamburger
+  // (portaled to escape this row's own overflow-hidden) toggles a
+  // full-screen overlay containing the exact same rail content, reused
+  // as-is rather than duplicated.
+  const railMobileControls = mounted && (
+    <>
+      {createPortal(
+        <button
+          onClick={() => setRailMobileOpen(true)}
+          aria-label="Open menu"
+          className="fixed left-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-sidebar text-foreground shadow-md sm:hidden"
+        >
+          {ToolbarMenuIcon}
+        </button>,
+        document.body
+      )}
+      {railMobileOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-40 flex sm:hidden">
+            <div className="absolute inset-0 bg-black/50" onClick={() => setRailMobileOpen(false)} />
+            {/* rail fills this drawer completely (same as ChatSidebar's own
+                mobile aside), so the backdrop above is never actually
+                reachable underneath it -- this is the real, always-visible
+                way to close. */}
+            <button
+              onClick={() => setRailMobileOpen(false)}
+              aria-label="Close menu"
+              className="fixed right-3 top-3 z-50 flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-sidebar text-foreground shadow-md"
+            >
+              {CloseIcon}
+            </button>
+            <div className="relative z-10 flex h-full w-full flex-col bg-sidebar shadow-xl">{rail}</div>
+          </div>,
+          document.body
+        )}
+    </>
+  );
+
   if (!started) {
     return (
       <>
+      {railMobileControls}
       <div className="flex h-full w-full overflow-hidden">
-        {rail}
+        <div className="hidden sm:contents">{rail}</div>
         {projects.length > 0 ? (
           // A returning user (real history to show): content starts right
           // under the top bar and scrolls independently, while the
@@ -3206,13 +3259,14 @@ export default function BuildWorkspace() {
 
   return (
     <>
+    {railMobileControls}
     <div className="flex h-full w-full overflow-hidden">
       {/* History steps out of the way while Live is open -- per feedback,
           Live specifically belongs in this exact spot (not appended after
           Files like Progress/Terminal/Browse), so it gets the room History
           just vacated instead of squeezing in in addition to it. Comes
           back the instant Live closes (with Files, or by hand). */}
-      {!livePanelOpen && rail}
+      {!livePanelOpen && <div className="hidden sm:contents">{rail}</div>}
       {/* min-w-0 -- without it, this row (itself a flex item next to
           ChatSidebar) defaulted to a content-based min-width, so it could
           render wider than the space it was actually given and rely on the

@@ -1520,6 +1520,24 @@ export default function ChatSidebar({
             Automations
           </button>
 
+          {/* E-book and Quantara were only reachable through the sm:block
+              NavItem list below, which is invisible on phone-width
+              viewports -- mobile users had no way to open either. */}
+          <button
+            onClick={closeMobileThen(onOpenEbook)}
+            className="mb-3 flex h-12 w-full items-center gap-3 rounded-xl bg-surface-2 px-3 text-base font-medium transition-colors hover:bg-surface sm:hidden"
+          >
+            <span className="text-muted">{BookIcon}</span>
+            E-book
+          </button>
+          <Link
+            href="/quantara"
+            onClick={closeMobileThen(() => {})}
+            className="mb-3 flex h-12 w-full items-center gap-3 rounded-xl bg-surface-2 px-3 text-base font-medium transition-colors hover:bg-surface sm:hidden"
+          >
+            <span className="text-muted">{QuantaraIcon}</span>
+            Quantara
+          </Link>
 
           {/* Was only shown in standalone/installed-app mode -- now
               always shown, replacing the separate "Code" row further
