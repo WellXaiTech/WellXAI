@@ -2824,7 +2824,7 @@ export default function BuildWorkspace() {
             thinly across every gap. The faint shared bg-surface-2/50
             track (not the stronger solid bg-surface-2 the active icon
             itself uses) reads as a loose grouping without its own box. */}
-        <div className="flex items-center gap-0.5 rounded-xl bg-surface-2/50 px-1 py-0.5">
+        <div className="flex items-center gap-1 rounded-xl bg-surface-2/50 px-2 py-1">
           <Link
             href="/chatgiza"
             aria-label="Ask"
