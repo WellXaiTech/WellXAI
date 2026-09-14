@@ -2780,32 +2780,36 @@ export default function BuildWorkspace() {
         className="fixed top-0 z-10 h-full w-2.5 cursor-ew-resize touch-none"
       />
       <div className="flex w-full items-center justify-between text-muted">
-        <div className="flex items-center gap-1">
-          <Link href="/chatgiza" aria-label="Menu" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
-            {ToolbarMenuIcon}
-          </Link>
-          <Link href="/chatgiza" aria-label="Toggle sidebar" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
-            {ToolbarSidebarIcon}
-          </Link>
-          <Link href="/chatgiza" aria-label="Search chats" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
-            {ToolbarSearchIcon}
-          </Link>
-          <button onClick={() => window.history.back()} aria-label="Back" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
-            {ToolbarBackIcon}
-          </button>
-          <button onClick={() => window.history.forward()} aria-label="Forward" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
-            {ToolbarForwardIcon}
-          </button>
-        </div>
+        <Link href="/chatgiza" aria-label="Menu" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
+          {ToolbarMenuIcon}
+        </Link>
+        <Link href="/chatgiza" aria-label="Toggle sidebar" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
+          {ToolbarSidebarIcon}
+        </Link>
+        <Link href="/chatgiza" aria-label="Search chats" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
+          {ToolbarSearchIcon}
+        </Link>
+        <button onClick={() => window.history.back()} aria-label="Back" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
+          {ToolbarBackIcon}
+        </button>
+        <button onClick={() => window.history.forward()} aria-label="Forward" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
+          {ToolbarForwardIcon}
+        </button>
         {/* Ask/Code now live here as plain icons (moved up from the
             labeled pill that used to sit further down) -- per feedback,
             matching this same icon-only top-row treatment on both sides
-            (see ChatSidebar.tsx's matching top row). */}
-        <div className="flex items-center gap-1">
-          <Link href="/chatgiza" aria-label="Ask" className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground">
+            (see ChatSidebar.tsx's matching top row). A single flex item
+            (not its own justify-between'd group) -- see ChatSidebar.tsx's
+            matching comment: that concentrated all the row's slack into
+            one big gap right before this pair instead of spreading it
+            thinly across every gap. The faint shared bg-surface-2/50
+            track (not the stronger solid bg-surface-2 the active icon
+            itself uses) reads as a loose grouping without its own box. */}
+        <div className="flex items-center gap-0.5 rounded-full bg-surface-2/50 p-0.5">
+          <Link href="/chatgiza" aria-label="Ask" className="flex h-7 w-7 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground">
             {AskPillIcon}
           </Link>
-          <span aria-label="Code" className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-2 text-foreground">
+          <span aria-label="Code" className="flex h-7 w-7 items-center justify-center rounded-full bg-surface-2 text-foreground">
             {CodePillIcon}
           </span>
         </div>

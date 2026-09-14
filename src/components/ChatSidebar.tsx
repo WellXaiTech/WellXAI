@@ -1456,58 +1456,64 @@ export default function ChatSidebar({
             // after -- and sit close to the top of the window/titlebar,
             // not with a large gap above it.
             <div className="hidden w-full items-center justify-between text-muted sm:flex">
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={toggleCollapsed}
-                  aria-label="Menu"
-                  className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
-                >
-                  {AppToolbarMenuIcon}
-                </button>
-                <button
-                  onClick={toggleCollapsed}
-                  aria-label="Toggle sidebar"
-                  className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
-                >
-                  {AppToolbarSidebarIcon}
-                </button>
-                <button
-                  onClick={closeMobileThen(onOpenSearch)}
-                  aria-label="Search chats"
-                  className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
-                >
-                  {AppToolbarSearchIcon}
-                </button>
-                <button
-                  onClick={() => window.history.back()}
-                  aria-label="Back"
-                  className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
-                >
-                  {AppToolbarBackIcon}
-                </button>
-                <button
-                  onClick={() => window.history.forward()}
-                  aria-label="Forward"
-                  className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
-                >
-                  {AppToolbarForwardIcon}
-                </button>
-              </div>
+              <button
+                onClick={toggleCollapsed}
+                aria-label="Menu"
+                className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
+              >
+                {AppToolbarMenuIcon}
+              </button>
+              <button
+                onClick={toggleCollapsed}
+                aria-label="Toggle sidebar"
+                className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
+              >
+                {AppToolbarSidebarIcon}
+              </button>
+              <button
+                onClick={closeMobileThen(onOpenSearch)}
+                aria-label="Search chats"
+                className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
+              >
+                {AppToolbarSearchIcon}
+              </button>
+              <button
+                onClick={() => window.history.back()}
+                aria-label="Back"
+                className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
+              >
+                {AppToolbarBackIcon}
+              </button>
+              <button
+                onClick={() => window.history.forward()}
+                aria-label="Forward"
+                className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
+              >
+                {AppToolbarForwardIcon}
+              </button>
               {/* Ask/Code now live here as plain icons (moved up from the
                   labeled pill that used to sit further down the list) --
                   per feedback, matching this same icon-only top-row
-                  treatment on both sides (see BuildWorkspace.tsx's rail). */}
-              <div className="flex items-center gap-1">
+                  treatment on both sides (see BuildWorkspace.tsx's rail).
+                  A single flex item (not two separately justify-between'd
+                  groups) -- that concentrated ALL the row's slack into one
+                  big gap right before Ask; as one item among the other 6,
+                  justify-between spreads that same slack thinly across
+                  every gap instead, so Ask sits close to Forward. The
+                  faint shared bg-surface-2/50 track (not the stronger
+                  solid bg-surface-2 the active icon itself uses) reads as
+                  a loose grouping without standing out as its own box. */}
+              <div className="flex items-center gap-0.5 rounded-full bg-surface-2/50 p-0.5">
                 <span
                   aria-label="Ask"
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-2 text-foreground"
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-surface-2 text-foreground"
                 >
                   {AskPillIcon}
                 </span>
                 <Link
                   href="/chatgiza/build"
                   aria-label="Code"
-                  className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-surface-2 hover:text-foreground"
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
                 >
                   {CodePillIcon}
                 </Link>
