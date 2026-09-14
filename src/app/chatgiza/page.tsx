@@ -1954,7 +1954,7 @@ function ChatGizaInner() {
                       onClick={() => setChatWorkMode("chat")}
                       className={`flex items-center rounded-lg px-4 text-sm font-medium transition-colors ${
                         chatWorkMode === "chat"
-                          ? "bg-[#6e6e6c] text-foreground shadow-sm"
+                          ? "bg-[#d9d9d8] text-[#151515] shadow-sm"
                           : "text-muted hover:text-foreground"
                       }`}
                     >
@@ -1965,7 +1965,7 @@ function ChatGizaInner() {
                       onClick={() => setChatWorkMode("work")}
                       className={`flex items-center rounded-lg px-4 text-sm font-medium transition-colors ${
                         chatWorkMode === "work"
-                          ? "bg-[#6e6e6c] text-foreground shadow-sm"
+                          ? "bg-[#d9d9d8] text-[#151515] shadow-sm"
                           : "text-muted hover:text-foreground"
                       }`}
                     >
