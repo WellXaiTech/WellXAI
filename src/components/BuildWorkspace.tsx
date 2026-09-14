@@ -1320,10 +1320,13 @@ export default function BuildWorkspace() {
   // the row's left edge, in History's own spot -- per feedback, that's
   // specifically where it belongs, not appended after Files like
   // Progress/Terminal/Browse. A real fixed, shrink-0 width with its own
-  // handle either way; the width itself starts bigger than the other
-  // panels' defaults, per feedback that it should open noticeably wide.
+  // handle either way -- but modest on first open (matches the Ask side's
+  // own Browse panel default), not filling most of the screen; per
+  // feedback, the user drags it wider themselves when they want that, a
+  // panel opening full-screen uninvited doesn't respect the rest of the
+  // workspace.
   const [livePanelOpen, setLivePanelOpen] = useState(false);
-  const [liveWidth, setLiveWidth] = useState(900);
+  const [liveWidth, setLiveWidth] = useState(640);
   const liveResizing = useRef(false);
   const livePendingX = useRef<number | null>(null);
   const liveRafId = useRef<number | null>(null);
@@ -1409,7 +1412,10 @@ export default function BuildWorkspace() {
   const [browseSearchLoading, setBrowseSearchLoading] = useState(false);
   const [browseScreenshotLoaded, setBrowseScreenshotLoaded] = useState(false);
   const [browseScreenshotError, setBrowseScreenshotError] = useState(false);
-  const [browseWidth, setBrowseWidth] = useState(950);
+  // Modest on first open, same reasoning as liveWidth above -- was 950
+  // (close to filling most laptop screens on its own); the user drags it
+  // wider themselves if they want that.
+  const [browseWidth, setBrowseWidth] = useState(640);
   const browseResizing = useRef(false);
   const browsePendingX = useRef<number | null>(null);
   const browseRafId = useRef<number | null>(null);
