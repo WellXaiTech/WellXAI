@@ -1929,32 +1929,20 @@ function ChatGizaInner() {
                 // of it. A prior round dropped the track entirely, which
                 // read as missing depth -- the inactive tab had nothing
                 // behind it at all.
-                // Per feedback -- the active tab's own highlight wasn't
-                // filling the full height of the outer track (items-center
-                // centered a shorter, py-0.5-padded button inside it,
-                // leaving a visible gap above/below). items-stretch on the
-                // track + no vertical padding on the buttons (centering
-                // their own text via flex instead) makes the active
-                // highlight reach the track's full height exactly, so the
-                // only visible "gap" is beside the inactive tab, not
-                // around the active one.
-                // No track background at all, per feedback -- was wrong
-                // to add one (bg-white/5, then /10 trying to make it more
-                // visible): the reference has NO shared container color
-                // whatsoever, only the active tab's own #414140 fill.
-                // Where you're not selected should show nothing -- not a
-                // faint track, the page/composer's own background right
-                // through. items-stretch stays (that part was correct --
-                // it's what makes the active fill reach the full height
-                // with no gap of its own).
+                // Reverted back to the very first version of this, per
+                // feedback -- many rounds of styling tweaks (track on/off,
+                // color, radius, fill) never landed right. Same markup as
+                // the original commit that first moved Chat/Work into the
+                // composer, just with the working toggle (chatWorkMode,
+                // no modal) kept instead of Work reopening ComingSoonModal.
                 modeSwitcher={
-                  <div className="flex items-stretch gap-1 rounded-lg p-1">
+                  <div className="flex items-center gap-1 rounded-full bg-[#212121] p-1">
                     <button
                       type="button"
                       onClick={() => setChatWorkMode("chat")}
-                      className={`flex items-center rounded-lg px-4 text-sm font-medium transition-colors ${
+                      className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
                         chatWorkMode === "chat"
-                          ? "bg-[#d9d9d8] text-[#151515] shadow-sm"
+                          ? "bg-surface text-foreground shadow-sm"
                           : "text-muted hover:text-foreground"
                       }`}
                     >
@@ -1963,9 +1951,9 @@ function ChatGizaInner() {
                     <button
                       type="button"
                       onClick={() => setChatWorkMode("work")}
-                      className={`flex items-center rounded-lg px-4 text-sm font-medium transition-colors ${
+                      className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
                         chatWorkMode === "work"
-                          ? "bg-[#d9d9d8] text-[#151515] shadow-sm"
+                          ? "bg-surface text-foreground shadow-sm"
                           : "text-muted hover:text-foreground"
                       }`}
                     >
