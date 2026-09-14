@@ -29,5 +29,12 @@ export async function getRequestUser(req: Request): Promise<RequestUser | null> 
     }
   }
 
+  // TEMPORARY dev convenience, see NEXT_PUBLIC_DEV_SKIP_SIGNIN in .env --
+  // production is excluded on top of that flag so this can never fire on
+  // the deployed site even if the env var leaked there by mistake.
+  if (process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_DEV_SKIP_SIGNIN === "true") {
+    return { id: "107434379596253959921", name: "WellX AI", image: null };
+  }
+
   return null;
 }

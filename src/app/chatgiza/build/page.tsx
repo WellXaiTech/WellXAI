@@ -7,11 +7,18 @@ import BuildWorkspace from "@/components/BuildWorkspace";
 // Build now works directly on the website, not just inside the desktop
 // app -- the earlier "Get ChatGiZa for Desktop" gate (standalone-only)
 // was removed so entering /chatgiza/build never blocks you.
+// TEMPORARY dev convenience, see NEXT_PUBLIC_DEV_SKIP_SIGNIN in .env -- lets
+// Build be reached and used repeatedly (real API calls included, via the
+// matching fallback in src/lib/requestUser.ts) without re-authenticating
+// through Google each time. Remove/flip the env var before going public.
+const DEV_SKIP_SIGNIN = process.env.NEXT_PUBLIC_DEV_SKIP_SIGNIN === "true";
+
 export default function BuildPage() {
   const { status } = useSession();
-  const [access, setAccess] = useState<"checking" | "allowed" | "denied">("checking");
+  const [access, setAccess] = useState<"checking" | "allowed" | "denied">(DEV_SKIP_SIGNIN ? "allowed" : "checking");
 
   useEffect(() => {
+    if (DEV_SKIP_SIGNIN) return;
     if (status !== "authenticated") return;
     fetch("/api/build/access")
       .then((r) => r.json())
@@ -19,8 +26,17 @@ export default function BuildPage() {
       .catch(() => setAccess("denied"));
   }, [status]);
 
+  if (DEV_SKIP_SIGNIN) {
+    return <BuildWorkspace />;
+  }
+
   if (status === "loading") {
-    return <div className="flex h-full w-full items-center justify-center text-sm text-muted">Loading…</div>;
+    // No "Loading…" text -- this flashes right as the Ask/Code icon's
+    // sliding view-transition lands, which read as a jarring interruption
+    // instead of a smooth handoff. A blank frame the same size/background
+    // as the real content underneath is imperceptible either way, since
+    // this state is normally only up for a moment.
+    return <div className="h-full w-full" />;
   }
 
   if (status !== "authenticated") {
@@ -39,7 +55,12 @@ export default function BuildPage() {
   // the sign-in gate left signed-out visitors stuck on "Loading…" forever,
   // since access can never leave "checking" without that fetch ever firing.
   if (access === "checking") {
-    return <div className="flex h-full w-full items-center justify-center text-sm text-muted">Loading…</div>;
+    // No "Loading…" text -- this flashes right as the Ask/Code icon's
+    // sliding view-transition lands, which read as a jarring interruption
+    // instead of a smooth handoff. A blank frame the same size/background
+    // as the real content underneath is imperceptible either way, since
+    // this state is normally only up for a moment.
+    return <div className="h-full w-full" />;
   }
 
   if (access === "denied") {
