@@ -1938,14 +1938,17 @@ function ChatGizaInner() {
                 // highlight reach the track's full height exactly, so the
                 // only visible "gap" is beside the inactive tab, not
                 // around the active one.
-                // bg-white/10, not /5 -- verified the geometry was already
-                // pixel-exact (symmetric on all four sides), so the
-                // remaining complaint was that the track's own background
-                // was too faint to actually perceive, reading as no
-                // container at all behind the inactive tab ("empty
-                // space") rather than a genuinely unfilled gap.
+                // No track background at all, per feedback -- was wrong
+                // to add one (bg-white/5, then /10 trying to make it more
+                // visible): the reference has NO shared container color
+                // whatsoever, only the active tab's own #414140 fill.
+                // Where you're not selected should show nothing -- not a
+                // faint track, the page/composer's own background right
+                // through. items-stretch stays (that part was correct --
+                // it's what makes the active fill reach the full height
+                // with no gap of its own).
                 modeSwitcher={
-                  <div className="flex items-stretch gap-1 rounded-lg bg-white/10 p-1">
+                  <div className="flex items-stretch gap-1 rounded-lg p-1">
                     <button
                       type="button"
                       onClick={() => setChatWorkMode("chat")}
