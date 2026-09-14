@@ -840,7 +840,7 @@ function ConversationRow({
             {generating && (
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-foreground opacity-75" />
             )}
-            <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${generating ? "bg-foreground" : "bg-muted"}`} />
+            <span className={`relative inline-flex h-1.5 w-1.5 rounded-full border ${generating ? "border-foreground" : "border-muted"}`} />
           </span>
           <span className="min-w-0 truncate text-sm font-medium text-foreground">{c.title}</span>
         </span>
