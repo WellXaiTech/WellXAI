@@ -1228,12 +1228,12 @@ export default function SettingsPanel({
   const videosGenerated = allMessages.filter((m) => m.videoUrl).length;
 
   return (
-    // Docked to the right edge, full height -- same pattern as Quantara and
-    // the Build page's own side panels, instead of a large centered modal
-    // taking up nearly the whole screen.
-    <div className="fixed inset-0 z-50 flex bg-black/60" onClick={onClose}>
+    // Centered modal, moderate width -- docking it to the right edge (tried,
+    // reverted) pushed it too far and squeezed the content; the original
+    // 96vw/1600px was too wide the other way. 1100px splits that difference.
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-0 sm:items-center sm:p-6" onClick={onClose}>
       <div
-        className="card ml-auto flex h-full max-h-full w-full flex-col overflow-hidden rounded-none sm:w-[900px] sm:max-w-[90vw] sm:rounded-l-2xl"
+        className="card flex h-full max-h-full w-full flex-col overflow-hidden rounded-none sm:h-[92vh] sm:max-h-[92vh] sm:w-[1100px] sm:max-w-[92vw] sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative hidden shrink-0 px-5 pb-3 pt-4 sm:block">
