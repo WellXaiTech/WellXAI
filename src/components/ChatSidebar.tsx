@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import AccountMenu, { type SettingsTab } from "@/components/AccountMenu";
@@ -1210,7 +1209,6 @@ export default function ChatSidebar({
   projects: { id: string; name: string; pinned?: boolean }[];
   onMoveToProject: (conversationId: string, projectId: string) => void;
 }) {
-  const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -1344,25 +1342,15 @@ export default function ChatSidebar({
     };
   }
 
-  // Ask<->Code is a real route change (ChatSidebar and BuildWorkspace.tsx's
-  // rail are two entirely separate components -- there's no shared parent
-  // that could hold one indicator sliding between them via ordinary
-  // React/Framer-style layout animation). The native View Transitions API
-  // handles exactly this case: give the highlighted pill the same
-  // view-transition-name on both pages (see the "ask-code-indicator" style
-  // below and its match in BuildWorkspace.tsx) and the browser morphs its
-  // position/size across the navigation on its own. Falls back to a plain
-  // navigation with no animation on browsers without the API (Safari, at
-  // the time of writing) -- never breaks the click either way.
-  function navigateWithTransition(path: string) {
-    return (e: React.MouseEvent) => {
-      if (typeof document === "undefined" || !("startViewTransition" in document)) return;
-      e.preventDefault();
-      (document as unknown as { startViewTransition: (cb: () => void) => void }).startViewTransition(() => {
-        router.push(path);
-      });
-    };
-  }
+  // A native View Transition (sliding the highlighted pill between the
+  // Ask and Code pages) was tried here, but router.push() doesn't give
+  // any reliable signal for when the new route has actually finished
+  // rendering -- every heuristic for "wait then snapshot" either fired
+  // too early (transition animates a stale/blank snapshot, then the
+  // real content pops in on top of it -- the exact dark flash this was
+  // meant to prevent) or too late (the browser's own internal timeout
+  // aborts the transition with a thrown error). Plain navigation below;
+  // no animation, but no flash either.
 
   function toggleCollapsed() {
     setCollapsed((prev) => {
@@ -1528,7 +1516,6 @@ export default function ChatSidebar({
               <div className="flex items-center gap-1 rounded-xl bg-surface-2/50 px-2 py-1">
                 <span
                   aria-label="Ask"
-                  style={{ viewTransitionName: "ask-code-indicator" }}
                   className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-2 text-foreground"
                 >
                   {AskPillIcon}
@@ -1536,7 +1523,6 @@ export default function ChatSidebar({
                 <Link
                   href="/chatgiza/build"
                   aria-label="Code"
-                  onClick={navigateWithTransition("/chatgiza/build")}
                   className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
                 >
                   {CodePillIcon}

@@ -31,13 +31,10 @@ export default function BuildPage() {
   }
 
   if (status === "loading") {
-    // No "Loading…" text -- this flashes right as the Ask/Code icon's
-    // sliding view-transition lands, which read as a jarring interruption
-    // instead of a smooth handoff. bg-background explicitly, not just an
-    // unstyled div -- an unpainted frame during a route transition can
-    // show through to the browser's own default dark canvas instead of
-    // this app's real (slightly different) dark background, which reads
-    // as a visible dark flash rather than a truly seamless handoff.
+    // No "Loading…" text, per feedback -- a blank frame instead. Explicit
+    // bg-background, not just an unstyled div, since an unpainted frame
+    // can otherwise show through to the browser's own default dark canvas
+    // instead of this app's real background.
     return <div className="h-full w-full bg-background" />;
   }
 
@@ -57,13 +54,10 @@ export default function BuildPage() {
   // the sign-in gate left signed-out visitors stuck on "Loading…" forever,
   // since access can never leave "checking" without that fetch ever firing.
   if (access === "checking") {
-    // No "Loading…" text -- this flashes right as the Ask/Code icon's
-    // sliding view-transition lands, which read as a jarring interruption
-    // instead of a smooth handoff. bg-background explicitly, not just an
-    // unstyled div -- an unpainted frame during a route transition can
-    // show through to the browser's own default dark canvas instead of
-    // this app's real (slightly different) dark background, which reads
-    // as a visible dark flash rather than a truly seamless handoff.
+    // No "Loading…" text, per feedback -- a blank frame instead. Explicit
+    // bg-background, not just an unstyled div, since an unpainted frame
+    // can otherwise show through to the browser's own default dark canvas
+    // instead of this app's real background.
     return <div className="h-full w-full bg-background" />;
   }
 
