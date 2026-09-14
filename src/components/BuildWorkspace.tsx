@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import CodeMirror from "@uiw/react-codemirror";
 import { vscodeDark } from "@uiw/codemirror-theme-vscode";
@@ -1072,6 +1073,7 @@ const ConnectorsIcon = (
 // written something -- "opens by itself" as the user builds, rather than
 // showing three empty panes from the first paint.
 export default function BuildWorkspace() {
+  const router = useRouter();
   const { openSettingsTab, setSupportOpen, language, setLanguage } = useChatGizaShell();
   const [languageOpen, setLanguageOpen] = useState(false);
   const {
@@ -2655,6 +2657,23 @@ export default function BuildWorkspace() {
   // one still requires the explicit choice of clicking that specific
   // repo group's own "+" (startNewChatInGroup above). Falls back to the
   // normal onboarding picker when no folder is connected yet.
+  // Ask<->Code is a real route change (ChatSidebar.tsx and this rail are
+  // two entirely separate components), so a same-page layout animation
+  // can't slide the highlight between them -- the native View Transitions
+  // API handles exactly this: give the highlighted pill the same
+  // view-transition-name on both pages (see the "ask-code-indicator"
+  // style here and its match in ChatSidebar.tsx) and the browser morphs
+  // its position/size across the navigation on its own. Falls back to a
+  // plain navigation with no animation on browsers without the API.
+  function navigateWithTransition(path: string) {
+    return (e: React.MouseEvent) => {
+      if (typeof document === "undefined" || !("startViewTransition" in document)) return;
+      e.preventDefault();
+      (document as unknown as { startViewTransition: (cb: () => void) => void }).startViewTransition(() => {
+        router.push(path);
+      });
+    };
+  }
   function startNewChat() {
     const folderProject = sortedProjects.find((p) => p.manualGroupName && !p.githubRepoUrl);
     if (folderProject?.manualGroupName) {
@@ -2805,11 +2824,20 @@ export default function BuildWorkspace() {
             thinly across every gap. The faint shared bg-surface-2/50
             track (not the stronger solid bg-surface-2 the active icon
             itself uses) reads as a loose grouping without its own box. */}
-        <div className="flex items-center gap-0.5 rounded-full bg-surface-2/50 p-0.5">
-          <Link href="/chatgiza" aria-label="Ask" className="flex h-7 w-7 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground">
+        <div className="flex items-center gap-0.5 rounded-xl bg-surface-2/50 px-1 py-0.5">
+          <Link
+            href="/chatgiza"
+            aria-label="Ask"
+            onClick={navigateWithTransition("/chatgiza")}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+          >
             {AskPillIcon}
           </Link>
-          <span aria-label="Code" className="flex h-7 w-7 items-center justify-center rounded-full bg-surface-2 text-foreground">
+          <span
+            aria-label="Code"
+            style={{ viewTransitionName: "ask-code-indicator" }}
+            className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-2 text-foreground"
+          >
             {CodePillIcon}
           </span>
         </div>

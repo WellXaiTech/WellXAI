@@ -560,6 +560,17 @@ textarea::placeholder {
   animation: hero-shimmer-appear 1.4s ease-out 1;
 }
 
+/* The Ask/Code toggle's highlighted pill shares this name on both the
+   Ask (ChatSidebar.tsx) and Code (BuildWorkspace.tsx) pages -- the
+   browser morphs its position/size across that route change on its own.
+   Just a faster, snappier easing than the (very noticeable) 0.25s
+   default. */
+::view-transition-old(ask-code-indicator),
+::view-transition-new(ask-code-indicator) {
+  animation-duration: 0.18s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 @keyframes hero-shimmer-appear {
   0% {
     opacity: 0;

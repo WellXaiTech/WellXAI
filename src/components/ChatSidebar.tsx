@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import AccountMenu, { type SettingsTab } from "@/components/AccountMenu";
@@ -1209,6 +1210,7 @@ export default function ChatSidebar({
   projects: { id: string; name: string; pinned?: boolean }[];
   onMoveToProject: (conversationId: string, projectId: string) => void;
 }) {
+  const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -1339,6 +1341,26 @@ export default function ChatSidebar({
     return () => {
       setMobileOpen(false);
       fn();
+    };
+  }
+
+  // Ask<->Code is a real route change (ChatSidebar and BuildWorkspace.tsx's
+  // rail are two entirely separate components -- there's no shared parent
+  // that could hold one indicator sliding between them via ordinary
+  // React/Framer-style layout animation). The native View Transitions API
+  // handles exactly this case: give the highlighted pill the same
+  // view-transition-name on both pages (see the "ask-code-indicator" style
+  // below and its match in BuildWorkspace.tsx) and the browser morphs its
+  // position/size across the navigation on its own. Falls back to a plain
+  // navigation with no animation on browsers without the API (Safari, at
+  // the time of writing) -- never breaks the click either way.
+  function navigateWithTransition(path: string) {
+    return (e: React.MouseEvent) => {
+      if (typeof document === "undefined" || !("startViewTransition" in document)) return;
+      e.preventDefault();
+      (document as unknown as { startViewTransition: (cb: () => void) => void }).startViewTransition(() => {
+        router.push(path);
+      });
     };
   }
 
@@ -1503,17 +1525,19 @@ export default function ChatSidebar({
                   faint shared bg-surface-2/50 track (not the stronger
                   solid bg-surface-2 the active icon itself uses) reads as
                   a loose grouping without standing out as its own box. */}
-              <div className="flex items-center gap-0.5 rounded-full bg-surface-2/50 p-0.5">
+              <div className="flex items-center gap-0.5 rounded-xl bg-surface-2/50 px-1 py-0.5">
                 <span
                   aria-label="Ask"
-                  className="flex h-7 w-7 items-center justify-center rounded-full bg-surface-2 text-foreground"
+                  style={{ viewTransitionName: "ask-code-indicator" }}
+                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-2 text-foreground"
                 >
                   {AskPillIcon}
                 </span>
                 <Link
                   href="/chatgiza/build"
                   aria-label="Code"
-                  className="flex h-7 w-7 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                  onClick={navigateWithTransition("/chatgiza/build")}
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
                 >
                   {CodePillIcon}
                 </Link>
