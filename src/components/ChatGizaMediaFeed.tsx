@@ -671,9 +671,9 @@ export default function ChatGizaMediaFeed({
     return () => mq.removeEventListener("change", update);
   }, []);
 
-  // Wider defaults -- this panel is where photos/videos on posts actually
-  // get seen and posted, so it needs real room, not a cramped strip.
-  const dockedWidth = panelWidth ?? (is2xl ? 1000 : 800);
+  // Moderate defaults -- wider than the original cramped strip, but the
+  // 800/1000 tried before was too wide per feedback.
+  const dockedWidth = panelWidth ?? (is2xl ? 850 : 700);
   useEffect(() => {
     onWidthChange?.(canDock ? dockedWidth : 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -690,7 +690,7 @@ export default function ChatGizaMediaFeed({
     if (!drag) return;
     // Right-docked panel -- dragging the left edge further left (smaller
     // clientX) should widen it.
-    const next = Math.min(1400, Math.max(420, drag.startWidth + (drag.startX - e.clientX)));
+    const next = Math.min(1200, Math.max(420, drag.startWidth + (drag.startX - e.clientX)));
     setPanelWidth(next);
   }
 
@@ -895,7 +895,7 @@ export default function ChatGizaMediaFeed({
       className={
         standalone
           ? "relative flex min-h-screen w-full flex-col bg-background text-foreground"
-          : "fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border bg-background text-foreground shadow-2xl xl:w-[800px] 2xl:w-[1000px]"
+          : "fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border bg-background text-foreground shadow-2xl xl:w-[700px] 2xl:w-[850px]"
       }
       style={{
         ...(quantaraDark
