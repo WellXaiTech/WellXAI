@@ -105,12 +105,6 @@ const BrainIcon = (
   </svg>
 );
 
-const ChevronDownIcon = (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M6 9l6 6 6-6" />
-  </svg>
-);
-
 // Model-selector sheet: current pick gets this instead of the row's own icon.
 const ModelCheckIcon = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -147,16 +141,6 @@ const WaveformIcon = (
     <rect x="12.2" y="2" width="2.6" height="20" rx="1.3" />
     <rect x="15.8" y="5" width="2.6" height="14" rx="1.3" />
     <rect x="19.4" y="8" width="2.6" height="8" rx="1.3" />
-  </svg>
-);
-
-const LightningIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M13 16a3 3 0 0 1 2.24 5" />
-    <path d="M18 12h.01" />
-    <path d="M18 21h-8a4 4 0 0 1-4-4 7 7 0 0 1 7-7h.2L9.6 6.4a1 1 0 1 1 2.8-2.8L15.8 7h.2c3.3 0 6 2.7 6 6v1a2 2 0 0 1-2 2h-1a3 3 0 0 0-3 3" />
-    <path d="M20 8.54V4a2 2 0 1 0-4 0v3" />
-    <path d="M7.612 12.524a3 3 0 1 0-1.6 4.3" />
   </svg>
 );
 
@@ -624,10 +608,13 @@ export default function ChatComposer({
           // secondaryMicButton's old spot (see formEl below), plain now.
           className="flex h-9 items-center gap-1 rounded-xl px-2 text-sm font-semibold text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
         >
-          {!activeTool && LightningIcon}
-          {activeTool === "deep_think" && BrainIcon}
+          {/* No leading icon, no chevron, per feedback -- the whole
+              button (already onClick={openToolMenu}) opens the menu on
+              its own, no separate "this is clickable" indicator needed.
+              "High" appended in muted gray, matching the reference
+              screenshot's "Sonnet 5 High" pattern. */}
           {activeTool ? TOOL_LABELS[activeTool] : "GiZa 5.6"}
-          {ChevronDownIcon}
+          <span className="text-muted">High</span>
         </button>
       ) : (
         <button
