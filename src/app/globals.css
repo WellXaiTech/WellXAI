@@ -320,7 +320,7 @@ textarea::placeholder {
 
   padding: 6px;
 
-  border-radius: 40px;
+  border-radius: 36px;
 
   box-shadow: inset 0 0 0 1px rgba(var(--glow-rgb), 0.14);
 
@@ -333,9 +333,9 @@ textarea::placeholder {
 
 .box > .inner {
   width: 100%;
-  min-height: 132px;
+  min-height: 108px;
 
-  border-radius: 34px;
+  border-radius: 30px;
 
   background: var(--composer-bg);
 
