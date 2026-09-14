@@ -368,6 +368,11 @@ function ChatGizaInner() {
   }, []);
   const [input, setInput] = useState("");
   const [showHeroShimmer, setShowHeroShimmer] = useState(true);
+  // Per feedback -- Work no longer opens the "Coming soon" gate; the user
+  // is building the real Work feature themselves, this just needs to stop
+  // being blocked. A real toggle (was hardcoded to always show Chat as
+  // active), no other behavior behind it yet.
+  const [chatWorkMode, setChatWorkMode] = useState<"chat" | "work">("chat");
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
   const [attachError, setAttachError] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<ComposerTool>(null);
@@ -1926,13 +1931,25 @@ function ChatGizaInner() {
                 // behind it at all.
                 modeSwitcher={
                   <div className="flex items-center gap-1 rounded-full bg-white/5 p-1">
-                    <span className="rounded-full bg-surface-2 px-3 py-1 text-sm font-medium text-foreground shadow-sm">
-                      Chat
-                    </span>
                     <button
                       type="button"
-                      onClick={() => setComingSoonTitle("Work")}
-                      className="rounded-full px-3 py-1 text-sm font-medium text-muted transition-colors hover:text-foreground"
+                      onClick={() => setChatWorkMode("chat")}
+                      className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                        chatWorkMode === "chat"
+                          ? "bg-surface-2 text-foreground shadow-sm"
+                          : "text-muted hover:text-foreground"
+                      }`}
+                    >
+                      Chat
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setChatWorkMode("work")}
+                      className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                        chatWorkMode === "work"
+                          ? "bg-surface-2 text-foreground shadow-sm"
+                          : "text-muted hover:text-foreground"
+                      }`}
                     >
                       Work
                     </button>
