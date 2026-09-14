@@ -810,7 +810,13 @@ export default function ChatComposer({
   // slim row) rather than the taller two-row shell, which read as
   // needlessly thick next to a reference like Claude Code's own composer.
   const formEl = isHero ? (
-    <form onSubmit={onSubmit} className="inner flex flex-col justify-between gap-2 px-4 pt-3 pb-2">
+    // justify-start, not justify-between -- with min-height taller than the
+    // two rows' natural content, justify-between dumped ALL that slack into
+    // the one gap between them (a real ~19px void instead of the intended
+    // 8px gap-2), which is what got flagged as an unwanted line/band in
+    // that exact spot. A fixed gap-2 regardless of height, slack (if any)
+    // just becomes empty space after the icon row instead.
+    <form onSubmit={onSubmit} className="inner flex flex-col justify-start gap-2 px-4 pt-3 pb-2">
       {fileInputEl}
 
       <div className="relative w-full">

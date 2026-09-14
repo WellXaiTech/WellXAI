@@ -341,7 +341,11 @@ textarea::placeholder {
 
 .box > .inner {
   width: 100%;
-  min-height: 108px;
+  /* Close to the two rows' real natural height (padding + textarea line +
+     gap-2 + icon row) -- 108px left real leftover slack that justify-
+     between (now justify-start, see the form's own className) was
+     stretching into an unwanted gap between them. */
+  min-height: 96px;
 
   /* 8px, not 14px -- keeps the same 6px nesting gap as .box's own padding
      so the two curves stay concentric. */
