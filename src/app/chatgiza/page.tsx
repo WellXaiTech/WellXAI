@@ -1936,8 +1936,11 @@ function ChatGizaInner() {
                 // technique verified working a few rounds back), width is
                 // just its own button's content + modest px-3 padding
                 // (a "piece" of the whole row, not the full outer width).
+                // px-9, not px-7 -- per feedback, pushes Chat further left
+                // and Work further right within the same untouched
+                // #2B2B2A shell.
                 modeSwitcher={
-                  <div className="flex items-stretch gap-5 rounded-lg bg-[#2B2B2A] px-7 py-1.5">
+                  <div className="flex items-stretch gap-5 rounded-lg bg-[#2B2B2A] px-9 py-1.5">
                     <button
                       type="button"
                       onClick={() => setChatWorkMode("chat")}
@@ -1958,7 +1961,7 @@ function ChatGizaInner() {
                           : "font-medium text-muted"
                       }`}
                     >
-                      Work
+                      Cowork
                     </button>
                   </div>
                 }
