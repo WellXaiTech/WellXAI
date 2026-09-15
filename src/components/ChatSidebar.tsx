@@ -1586,10 +1586,6 @@ export default function ChatSidebar({
           <div className="hidden sm:block">
             <NavItem icon={SearchIcon} label="Search chats" onClick={closeMobileThen(onOpenSearch)} />
             <NavItem icon={AutomationIcon} label="Automations" onClick={closeMobileThen(onOpenScheduled)} />
-            <NavItem icon={BookIcon} label="E-book" onClick={closeMobileThen(onOpenEbook)} />
-            {/* Its own real page (chatgiza.com/quantara) now, not the
-                in-chat docked panel -- a genuine link, not a button action. */}
-            <NavItem icon={QuantaraIcon} label="Quantara" href="/quantara" onClick={closeMobileThen(() => {})} />
           </div>
 
         <div className="mt-3 pt-1">
@@ -1806,6 +1802,16 @@ export default function ChatSidebar({
             </div>
           )}
         </div>
+        </div>
+
+        {/* E-book and Quantara moved down here, per feedback -- they now
+            sit directly above the profile row instead of up near the top
+            with Search/Automations. */}
+        <div className="hidden px-2 pb-2 sm:block">
+          <NavItem icon={BookIcon} label="E-book" onClick={closeMobileThen(onOpenEbook)} />
+          {/* Its own real page (chatgiza.com/quantara) now, not the
+              in-chat docked panel -- a genuine link, not a button action. */}
+          <NavItem icon={QuantaraIcon} label="Quantara" href="/quantara" onClick={closeMobileThen(() => {})} />
         </div>
 
         <div className="hidden items-center border-t border-border px-3 py-3 sm:flex">
