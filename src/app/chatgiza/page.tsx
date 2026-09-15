@@ -1953,7 +1953,7 @@ function ChatGizaInner() {
                     <button
                       type="button"
                       onClick={() => setChatWorkMode("chat")}
-                      className={`flex items-center rounded-md px-2 py-1.5 text-sm transition-colors ${
+                      className={`flex items-center rounded-md px-1 py-1.5 text-sm transition-colors ${
                         chatWorkMode === "chat"
                           ? "bg-[#414140] font-semibold text-foreground"
                           : "font-medium text-muted"
@@ -1964,7 +1964,7 @@ function ChatGizaInner() {
                     <button
                       type="button"
                       onClick={() => setChatWorkMode("work")}
-                      className={`flex items-center rounded-md px-2 py-1.5 text-sm transition-colors ${
+                      className={`flex items-center rounded-md px-1 py-1.5 text-sm transition-colors ${
                         chatWorkMode === "work"
                           ? "bg-[#414140] font-semibold text-foreground"
                           : "font-medium text-muted"
