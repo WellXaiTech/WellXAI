@@ -1936,21 +1936,24 @@ function ChatGizaInner() {
                 // technique verified working a few rounds back), width is
                 // just its own button's content + modest px-3 padding
                 // (a "piece" of the whole row, not the full outer width).
-                // px-2, way down from px-9 -- per feedback, the outer
-                // shell's overall width had gotten far too wide.
+                // No outer padding, no gap between buttons -- per feedback,
+                // the leftover sliver of space before "Chat" needed to
+                // disappear too, and "Cowork" must start exactly where the
+                // moving #414140 highlight ends (touching, zero gap) so
+                // switching between them reads as one smooth slide instead
+                // of a jump.
                 // Vertical padding lives on the BUTTONS now, not the outer
                 // div -- per feedback, the moving #414140 highlight must
                 // fill the outer capsule's full height edge-to-edge (no
                 // gap top/bottom), matching the blue rectangle traced
                 // tightly around "Chat" in the reference image. The outer
-                // #2B2B2A only remains visible on the inactive side and in
-                // the gap/edges between the two buttons.
+                // #2B2B2A only remains visible on the inactive side.
                 modeSwitcher={
-                  <div className="flex items-stretch gap-5 rounded-lg bg-[#2B2B2A] px-2">
+                  <div className="flex items-stretch rounded-lg bg-[#2B2B2A]">
                     <button
                       type="button"
                       onClick={() => setChatWorkMode("chat")}
-                      className={`flex items-center rounded-md px-3 py-1.5 text-sm transition-colors ${
+                      className={`flex items-center rounded-md px-2 py-1.5 text-sm transition-colors ${
                         chatWorkMode === "chat"
                           ? "bg-[#414140] font-semibold text-foreground"
                           : "font-medium text-muted"
@@ -1961,7 +1964,7 @@ function ChatGizaInner() {
                     <button
                       type="button"
                       onClick={() => setChatWorkMode("work")}
-                      className={`flex items-center rounded-md px-3 py-1.5 text-sm transition-colors ${
+                      className={`flex items-center rounded-md px-2 py-1.5 text-sm transition-colors ${
                         chatWorkMode === "work"
                           ? "bg-[#414140] font-semibold text-foreground"
                           : "font-medium text-muted"
