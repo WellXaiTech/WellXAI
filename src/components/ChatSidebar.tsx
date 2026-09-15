@@ -298,6 +298,7 @@ function NavItem({
   icon,
   label,
   href,
+  target,
   onClick,
   trailing,
 }: {
@@ -307,6 +308,9 @@ function NavItem({
   // in-app action -- renders as an <a> so it's a genuine navigable URL
   // (open in new tab, copy link, etc.) rather than a button.
   href?: string;
+  // "_blank" opens it in a new tab (Quantara, per feedback) instead of
+  // navigating away from the current one.
+  target?: string;
   onClick?: () => void;
   trailing?: React.ReactNode;
 }) {
@@ -319,7 +323,13 @@ function NavItem({
     </>
   );
   return href ? (
-    <Link href={href} onClick={onClick} className={className}>
+    <Link
+      href={href}
+      target={target}
+      rel={target === "_blank" ? "noopener noreferrer" : undefined}
+      onClick={onClick}
+      className={className}
+    >
       {content}
     </Link>
   ) : (
@@ -1569,6 +1579,8 @@ export default function ChatSidebar({
           </button>
           <Link
             href="/quantara"
+            target="_blank"
+            rel="noopener noreferrer"
             onClick={closeMobileThen(() => {})}
             className="mb-3 flex h-12 w-full items-center gap-3 rounded-xl bg-surface-2 px-3 text-base font-medium transition-colors hover:bg-surface sm:hidden"
           >
@@ -1811,7 +1823,7 @@ export default function ChatSidebar({
           <NavItem icon={BookIcon} label="E-book" onClick={closeMobileThen(onOpenEbook)} />
           {/* Its own real page (chatgiza.com/quantara) now, not the
               in-chat docked panel -- a genuine link, not a button action. */}
-          <NavItem icon={QuantaraIcon} label="Quantara" href="/quantara" onClick={closeMobileThen(() => {})} />
+          <NavItem icon={QuantaraIcon} label="Quantara" href="/quantara" target="_blank" onClick={closeMobileThen(() => {})} />
         </div>
 
         <div className="hidden items-center border-t border-border px-3 py-3 sm:flex">
