@@ -311,7 +311,7 @@ function NavItem({
   // "_blank" opens it in a new tab (Quantara, per feedback) instead of
   // navigating away from the current one.
   target?: string;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent) => void;
   trailing?: React.ReactNode;
 }) {
   const className = "flex h-10 w-full items-center gap-2.5 rounded-xl px-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-2";
@@ -1352,6 +1352,19 @@ export default function ChatSidebar({
     };
   }
 
+  // Plain target="_blank" on the <Link> wasn't reliably opening a new tab
+  // (reported still landing in the same tab/window) -- an explicit
+  // window.open call is respected consistently across both a normal
+  // browser tab and the installed standalone app, where a bare anchor
+  // target is more likely to just navigate in place since there's no tab
+  // strip to open into. preventDefault stops next/link's own client-side
+  // navigation from also firing on the same click.
+  function openQuantara(e: React.MouseEvent) {
+    e.preventDefault();
+    setMobileOpen(false);
+    window.open("/quantara", "_blank", "noopener,noreferrer");
+  }
+
   // A native View Transition (sliding the highlighted pill between the
   // Ask and Code pages) was tried here, but router.push() doesn't give
   // any reliable signal for when the new route has actually finished
@@ -1581,7 +1594,7 @@ export default function ChatSidebar({
             href="/quantara"
             target="_blank"
             rel="noopener noreferrer"
-            onClick={closeMobileThen(() => {})}
+            onClick={openQuantara}
             className="mb-3 flex h-12 w-full items-center gap-3 rounded-xl bg-surface-2 px-3 text-base font-medium transition-colors hover:bg-surface sm:hidden"
           >
             <span className="text-muted">{QuantaraIcon}</span>
@@ -1823,7 +1836,7 @@ export default function ChatSidebar({
           <NavItem icon={BookIcon} label="E-book" onClick={closeMobileThen(onOpenEbook)} />
           {/* Its own real page (chatgiza.com/quantara) now, not the
               in-chat docked panel -- a genuine link, not a button action. */}
-          <NavItem icon={QuantaraIcon} label="Quantara" href="/quantara" target="_blank" onClick={closeMobileThen(() => {})} />
+          <NavItem icon={QuantaraIcon} label="Quantara" href="/quantara" target="_blank" onClick={openQuantara} />
         </div>
 
         <div className="hidden items-center border-t border-border px-3 py-3 sm:flex">
