@@ -1976,8 +1976,19 @@ export default function BuildWorkspace() {
   function renderProjectRow(p: BuildProject) {
     const isRenaming = renamingId === p.id;
     const menuOpen = historyMenuId === p.id;
+    // Same treatment as ChatSidebar.tsx's chat history rows, per feedback
+    // that the Ask-side history styling (row bg, active color, title
+    // color) also needed to land on the Code side: active gets its own
+    // #333333 (distinct from hover's #262626, so a selected-but-not-
+    // hovered row still visibly reads as selected), title text #909191.
+    const active = p.id === activeProject?.id;
     return (
-      <div key={p.id} className="group relative flex items-center gap-1 rounded-xl px-2 py-1.5 hover:bg-surface-2">
+      <div
+        key={p.id}
+        className={`group relative flex items-center gap-1 rounded-xl px-2 py-1.5 ${
+          active ? "bg-[#333333]" : "hover:bg-[#262626]"
+        }`}
+      >
         {p.pinned && <span className="shrink-0 text-muted">{PinIcon}</span>}
         {/* A small filled dot -- the same idiom an inbox/chat list uses for
             "you haven't opened this yet". Real state (unread?: boolean on
@@ -2004,7 +2015,7 @@ export default function BuildWorkspace() {
           // no trailing "..." ellipsis.
           <button
             onClick={() => selectProject(p.id)}
-            className="min-w-0 flex-1 overflow-hidden whitespace-nowrap text-left text-sm font-medium"
+            className="min-w-0 flex-1 overflow-hidden whitespace-nowrap text-left text-sm font-medium text-[#909191]"
           >
             {p.name}
           </button>
