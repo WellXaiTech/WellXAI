@@ -849,10 +849,13 @@ function ConversationRow({
         // space after a clipped long title (the "..." menu is an absolutely
         // positioned overlay sibling, not actually in the button's own
         // flow, so it doesn't need much flow-padding clearance).
-        // bg-[#262626], lighter than the earlier #111111 -- per feedback,
-        // that read as too heavy/intense a black.
+        // active gets its OWN, slightly stronger color (#333333) than hover
+        // (#262626) -- per feedback that the selected row's background
+        // "wasn't coming through": sharing one identical shade meant a
+        // selected-but-not-currently-hovered row and an idle row could read
+        // as indistinguishable.
         className={`flex min-h-9 w-full flex-col justify-center gap-0.5 rounded-xl px-2 py-1.5 pr-1 text-left transition-colors ${
-          active ? "bg-[#262626]" : "hover:bg-[#262626]"
+          active ? "bg-[#333333]" : "hover:bg-[#262626]"
         }`}
       >
         <span className="flex min-w-0 items-center gap-1.5">
