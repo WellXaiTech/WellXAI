@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { isStandaloneApp } from "@/lib/useInstallPrompt";
@@ -373,6 +373,16 @@ function ChatGizaInner() {
   // being blocked. A real toggle (was hardcoded to always show Chat as
   // active), no other behavior behind it yet.
   const [chatWorkMode, setChatWorkMode] = useState<"chat" | "work">("chat");
+  // Sliding highlight, per feedback -- the pill now animates left/width
+  // to the active button's own measured position instead of the bg color
+  // just instantly jumping to the other tab.
+  const chatModeBtnRef = useRef<HTMLButtonElement>(null);
+  const coworkModeBtnRef = useRef<HTMLButtonElement>(null);
+  const [modeHighlight, setModeHighlight] = useState({ left: 0, width: 0 });
+  useLayoutEffect(() => {
+    const btn = chatWorkMode === "chat" ? chatModeBtnRef.current : coworkModeBtnRef.current;
+    if (btn) setModeHighlight({ left: btn.offsetLeft, width: btn.offsetWidth });
+  }, [chatWorkMode]);
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
   const [attachError, setAttachError] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<ComposerTool>(null);
@@ -1948,26 +1958,33 @@ function ChatGizaInner() {
                 // gap top/bottom), matching the blue rectangle traced
                 // tightly around "Chat" in the reference image. The outer
                 // #2B2B2A only remains visible on the inactive side.
+                // The highlight is now ONE absolutely-positioned piece that
+                // slides (left/width, measured off the real buttons) instead
+                // of each button just flipping its own bg on/off -- per
+                // feedback, switching should read as a smooth slide, not an
+                // instant jump.
                 modeSwitcher={
-                  <div className="flex items-stretch rounded-lg bg-[#2B2B2A]">
+                  <div className="relative flex items-stretch rounded-lg bg-[#2B2B2A]">
+                    <div
+                      className="absolute inset-y-0 rounded-md bg-[#414140] transition-all duration-300 ease-out"
+                      style={{ left: modeHighlight.left, width: modeHighlight.width }}
+                    />
                     <button
+                      ref={chatModeBtnRef}
                       type="button"
                       onClick={() => setChatWorkMode("chat")}
-                      className={`flex items-center rounded-md px-1 py-1.5 text-sm transition-colors ${
-                        chatWorkMode === "chat"
-                          ? "bg-[#414140] font-semibold text-foreground"
-                          : "font-medium text-muted"
+                      className={`relative z-10 flex items-center rounded-md px-2 py-1.5 text-sm transition-colors ${
+                        chatWorkMode === "chat" ? "font-semibold text-foreground" : "font-medium text-muted"
                       }`}
                     >
                       Chat
                     </button>
                     <button
+                      ref={coworkModeBtnRef}
                       type="button"
                       onClick={() => setChatWorkMode("work")}
-                      className={`flex items-center rounded-md px-1 py-1.5 text-sm transition-colors ${
-                        chatWorkMode === "work"
-                          ? "bg-[#414140] font-semibold text-foreground"
-                          : "font-medium text-muted"
+                      className={`relative z-10 flex items-center rounded-md px-2 py-1.5 text-sm transition-colors ${
+                        chatWorkMode === "work" ? "font-semibold text-foreground" : "font-medium text-muted"
                       }`}
                     >
                       Cowork
