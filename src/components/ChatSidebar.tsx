@@ -856,7 +856,10 @@ function ConversationRow({
             )}
             <span className={`relative inline-flex h-1.5 w-1.5 rounded-full border ${generating ? "border-foreground" : "border-muted"}`} />
           </span>
-          <span className="min-w-0 truncate text-sm font-medium text-foreground">{c.title}</span>
+          {/* overflow-hidden + whitespace-nowrap, NOT Tailwind's `truncate`
+              -- per feedback/reference image, a long title should just get
+              cut off flush at the edge, no trailing "..." ellipsis. */}
+          <span className="min-w-0 overflow-hidden whitespace-nowrap text-sm font-medium text-foreground">{c.title}</span>
         </span>
       </button>
       <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5">

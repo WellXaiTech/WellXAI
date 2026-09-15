@@ -1998,7 +1998,14 @@ export default function BuildWorkspace() {
             className="min-w-0 flex-1 rounded-md border border-border bg-background px-1.5 py-0.5 text-sm outline-none"
           />
         ) : (
-          <button onClick={() => selectProject(p.id)} className="min-w-0 flex-1 truncate text-left text-sm font-medium">
+          // overflow-hidden + whitespace-nowrap, NOT Tailwind's `truncate` --
+          // per feedback/reference image (same fix as ChatSidebar.tsx's chat
+          // titles), a long name should just get cut off flush at the edge,
+          // no trailing "..." ellipsis.
+          <button
+            onClick={() => selectProject(p.id)}
+            className="min-w-0 flex-1 overflow-hidden whitespace-nowrap text-left text-sm font-medium"
+          >
             {p.name}
           </button>
         )}
