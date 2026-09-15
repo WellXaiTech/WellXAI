@@ -1719,7 +1719,10 @@ export default function ChatSidebar({
                           isCurrent ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
                         }`}
                       >
-                        <ul className="space-y-0 overflow-hidden pl-4">
+                        {/* space-y-1, not space-y-0 -- per feedback, active/
+                            hover row backgrounds were touching with zero
+                            gap, reading as one stuck-together block. */}
+                        <ul className="space-y-1 overflow-hidden pl-4">
                           {projectChats.map((c) => (
                             <ConversationRow
                               key={c.id}
@@ -1780,7 +1783,10 @@ export default function ChatSidebar({
               </div>
 
               {chatsSectionOpen && pinnedConversations.length > 0 && (
-                <ul className="mb-2 space-y-0">
+                // space-y-1, not space-y-0 -- per feedback, active/hover row
+                // backgrounds were touching with zero gap, reading as one
+                // stuck-together block.
+                <ul className="mb-2 space-y-1">
                   {pinnedConversations.map((c) => (
                     <ConversationRow
                       key={c.id}
@@ -1809,7 +1815,7 @@ export default function ChatSidebar({
               )}
 
               {chatsSectionOpen && recentConversations.length > 0 && (
-                <ul className="space-y-0">
+                <ul className="space-y-1">
                   {recentConversations.map((c) => (
                     <ConversationRow
                       key={c.id}
