@@ -7,7 +7,10 @@ import ChatGizaMediaFeed from "@/components/ChatGizaMediaFeed";
 // fixed/resizable floating panel. Reachable directly, without opening Ask
 // first.
 export const metadata: Metadata = {
-  title: "Quantara",
+  // "absolute", not a plain string -- the root layout's title.template
+  // ("%s — ChatGiZa") would otherwise append the site name, so the tab
+  // read "Quantara — ChatGiZa" instead of just "Quantara" per feedback.
+  title: { absolute: "Quantara" },
   description: "ChatGiZa's media feed -- share and discover posts from the community.",
 };
 
