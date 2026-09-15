@@ -166,11 +166,13 @@ const SmallTrashIcon = (
 // other not-yet-built control in this sidebar uses, e.g. Search chats'
 // neighbors -- no sort order to switch between yet).
 const SortIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="m21 16-4 4-4-4" />
-    <path d="M17 20V4" />
-    <path d="m3 8 4-4 4 4" />
-    <path d="M7 4v16" />
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+    <path
+      fill="currentColor"
+      fillRule="evenodd"
+      d="M8.5 2v2.09c1.43.34 2.5 1.625 2.5 3.16s-1.07 2.82-2.5 3.16V22H7V10.41a3.254 3.254 0 0 1-2.5-3.16c0-1.535 1.07-2.82 2.5-3.16V2zM6 7.25C6 8.215 6.785 9 7.75 9S9.5 8.215 9.5 7.25S8.715 5.5 7.75 5.5S6 6.285 6 7.25m11 5.84c1.43.34 2.5 1.625 2.5 3.16s-1.07 2.82-2.5 3.16V22h-1.5v-2.59a3.254 3.254 0 0 1-2.5-3.16c0-1.535 1.07-2.82 2.5-3.16V2H17zm-2.5 3.16c0 .965.785 1.75 1.75 1.75S18 17.215 18 16.25s-.785-1.75-1.75-1.75s-1.75.785-1.75 1.75"
+      clipRule="evenodd"
+    />
   </svg>
 );
 
