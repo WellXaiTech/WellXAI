@@ -848,8 +848,10 @@ function ConversationRow({
         // pr-8, not pr-16 -- per feedback, that much reserved space left a
         // big empty gap after a clipped long title (the "..." menu button
         // it was clearing only shows on hover and is itself quite small).
+        // bg-[#111111], not bg-surface-2, for the row's own
+        // active/hover background -- per feedback.
         className={`flex min-h-9 w-full flex-col justify-center gap-0.5 rounded-xl px-2 py-1.5 pr-8 text-left transition-colors ${
-          active ? "bg-surface-2" : "hover:bg-surface-2"
+          active ? "bg-[#111111]" : "hover:bg-[#111111]"
         }`}
       >
         <span className="flex min-w-0 items-center gap-1.5">
@@ -862,9 +864,7 @@ function ConversationRow({
           {/* overflow-hidden + whitespace-nowrap, NOT Tailwind's `truncate`
               -- per feedback/reference image, a long title should just get
               cut off flush at the edge, no trailing "..." ellipsis. */}
-          {/* #A48F6D darkened slightly per feedback, to match the muted
-              reference tone. */}
-          <span className="min-w-0 overflow-hidden whitespace-nowrap text-sm font-medium text-[#8B7A5D]">{c.title}</span>
+          <span className="min-w-0 overflow-hidden whitespace-nowrap text-sm font-medium text-[#909191]">{c.title}</span>
         </span>
       </button>
       <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
