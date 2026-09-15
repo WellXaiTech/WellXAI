@@ -165,21 +165,24 @@ const SmallTrashIcon = (
 // reference layout (currently opens the same "coming soon" toast every
 // other not-yet-built control in this sidebar uses, e.g. Search chats'
 // neighbors -- no sort order to switch between yet).
-// lucide "list-sort-descending", per feedback (swapped in for the
-// previous generic up/down-arrows icon).
 const SortIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M15 12H3" />
-    <path d="M3 5h18" />
-    <path d="M9 19H3" />
+    <path d="m21 16-4 4-4-4" />
+    <path d="M17 20V4" />
+    <path d="m3 8 4-4 4 4" />
+    <path d="M7 4v16" />
   </svg>
 );
 
 // App-mode toolbar icons (only shown when hideWordmark -- the installed
 // PWA or the Electron desktop app -- replacing the "ChatGiZa" wordmark).
+// lucide "list-sort-descending", per feedback -- the earlier attempt put
+// this on the Sort button instead of here, which was the actual target.
 const AppToolbarMenuIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 6h18M3 12h18M3 18h18" />
+    <path d="M15 12H3" />
+    <path d="M3 5h18" />
+    <path d="M9 19H3" />
   </svg>
 );
 const AppToolbarSidebarIcon = (
