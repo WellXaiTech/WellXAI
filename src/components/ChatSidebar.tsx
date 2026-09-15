@@ -845,13 +845,14 @@ function ConversationRow({
         onTouchEnd={handleTouchEnd}
         onTouchMove={clearPressTimer}
         onTouchCancel={clearPressTimer}
-        // pr-8, not pr-16 -- per feedback, that much reserved space left a
-        // big empty gap after a clipped long title (the "..." menu button
-        // it was clearing only shows on hover and is itself quite small).
-        // bg-[#111111], not bg-surface-2, for the row's own
-        // active/hover background -- per feedback.
-        className={`flex min-h-9 w-full flex-col justify-center gap-0.5 rounded-xl px-2 py-1.5 pr-8 text-left transition-colors ${
-          active ? "bg-[#111111]" : "hover:bg-[#111111]"
+        // pr-1, way down from pr-8 -- per feedback, still too much reserved
+        // space after a clipped long title (the "..." menu is an absolutely
+        // positioned overlay sibling, not actually in the button's own
+        // flow, so it doesn't need much flow-padding clearance).
+        // bg-[#262626], lighter than the earlier #111111 -- per feedback,
+        // that read as too heavy/intense a black.
+        className={`flex min-h-9 w-full flex-col justify-center gap-0.5 rounded-xl px-2 py-1.5 pr-1 text-left transition-colors ${
+          active ? "bg-[#262626]" : "hover:bg-[#262626]"
         }`}
       >
         <span className="flex min-w-0 items-center gap-1.5">
