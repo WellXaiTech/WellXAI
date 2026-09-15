@@ -859,9 +859,7 @@ function ConversationRow({
           {/* overflow-hidden + whitespace-nowrap, NOT Tailwind's `truncate`
               -- per feedback/reference image, a long title should just get
               cut off flush at the edge, no trailing "..." ellipsis. */}
-          {/* #A6A38A read as too dark/strong -- per feedback, lightened
-              toward a more moderate, ordinary tone in the same family. */}
-          <span className="min-w-0 overflow-hidden whitespace-nowrap text-sm font-medium text-[#C4C2AC]">{c.title}</span>
+          <span className="min-w-0 overflow-hidden whitespace-nowrap text-sm font-medium text-[#A48F6D]">{c.title}</span>
         </span>
       </button>
       <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
